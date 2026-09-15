@@ -454,5 +454,11 @@ export const DB = {
   // Format USD currency
   formatUSD(amount) {
     return 'US$' + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  },
+
+  // Reset database to default seed state
+  reset() {
+    localStorage.removeItem(DB_KEY);
+    return this.get();
   }
 };

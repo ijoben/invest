@@ -639,11 +639,6 @@
         </nav>
       </div>
 
-      <!-- Floating Quick Admin Link Button -->
-      <a class="floating-admin-btn" href="admin.html" style="text-decoration: none;">
-        <span>Panel Admin</span>
-      </a>
-
     </div>
   </div>
 
@@ -689,18 +684,14 @@
           <span>Masuk Sekarang</span>
         </button>
 
-        <!-- Quick 1-Click Demo Logins -->
+        <!-- Quick 1-Click Demo Login -->
         <div class="quick-demo-login">
-          <button class="btn-demo-pill" onclick="
+          <button class="btn-demo-pill" style="width: 100%;" onclick="
             Auth.quickLogin('user');
             App.closeAllModals();
-            App.showToast('Login sebagai Demo Investor!', 'success');
+            App.showToast('Login sebagai Demo Investor.', 'success');
             App.renderAll();
-          ">Demo User (Alex)</button>
-          
-          <button class="btn-demo-pill" onclick="
-            window.location.href = 'admin.html';
-          ">Master Admin</button>
+          ">Gunakan Akun Demo (Alex)</button>
         </div>
       </div>
 

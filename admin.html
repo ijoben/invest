@@ -9,175 +9,135 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin.css">
   <link rel="stylesheet" href="css/responsive.css">
-  <style>
-    /* Dedicated Standalone Admin Layout */
-    body {
-      background: #0B0F19;
-      color: #F1F5F9;
-      font-family: var(--font-main);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    .admin-standalone-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 16px 40px 16px;
-    }
-
-    .admin-topbar {
-      background: #111827;
-      border-bottom: 1px solid #1F2937;
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-
-    .admin-nav-bar {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding: 14px 0;
-      border-bottom: 1px solid #1E293B;
-      scrollbar-width: none;
-    }
-
-    .admin-nav-bar::-webkit-scrollbar {
-      display: none;
-    }
-
-    .admin-nav-btn {
-      background: #111827;
-      color: #94A3B8;
-      border: 1px solid #1F2937;
-      padding: 10px 16px;
-      border-radius: var(--radius-md);
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-    }
-
-    .admin-nav-btn:hover {
-      background: #1E293B;
-      color: #FFFFFF;
-      border-color: #374151;
-    }
-
-    .admin-nav-btn.active {
-      background: #1E293B;
-      color: #FDE89C;
-      border-color: #C89338;
-      box-shadow: 0 2px 10px rgba(200, 147, 56, 0.2);
-    }
-
-    .admin-nav-badge {
-      background: #EF4444;
-      color: #FFFFFF;
-      font-size: 10px;
-      font-weight: 800;
-      padding: 2px 7px;
-      border-radius: 10px;
-    }
-
-    .admin-btn-action-primary {
-      background: linear-gradient(135deg, #C89338 0%, #DF9E30 100%);
-      color: #0F172A;
-      font-weight: 800;
-      padding: 8px 16px;
-      border-radius: var(--radius-md);
-      border: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      transition: transform 0.15s ease;
-    }
-
-    .admin-btn-action-primary:active {
-      transform: scale(0.97);
-    }
-
-    .admin-view-panel {
-      display: none;
-      flex-direction: column;
-      gap: 20px;
-      margin-top: 20px;
-      animation: fadeInAdmin 0.25s ease;
-    }
-
-    .admin-view-panel.active {
-      display: flex;
-    }
-
-    @keyframes fadeInAdmin {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
 </head>
-<body>
+<body class="admin-body">
 
-  <!-- Topbar Header -->
-  <header class="admin-topbar">
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(200, 147, 56, 0.15); display: flex; align-items: center; justify-content: center;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+  <!-- Backdrop Overlay for Mobile/Sliding Sidebar -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <!-- Left Sliding Drawer Sidebar -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <!-- Sidebar Header -->
+    <div class="admin-sidebar-header">
+      <div class="admin-sidebar-brand">
+        <div class="sidebar-logo-badge">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div>
+          <div class="sidebar-brand-name">FGT PRO</div>
+          <div class="sidebar-brand-role">Master Admin Control</div>
+        </div>
       </div>
-      <div>
-        <div style="font-weight: 800; font-size: 16px; letter-spacing: -0.3px; color: #FFFFFF;">FGT PRO MASTER ADMIN</div>
-        <span class="admin-badge-tag">Sistem Manajemen & Kontrol Penuh</span>
+      <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Tutup Menu Admin">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Sidebar Navigation Body -->
+    <div class="admin-sidebar-body">
+      <div class="sidebar-group-title">IKHTISAR UTAMA</div>
+      <nav class="sidebar-menu">
+        <button class="admin-nav-btn active" data-tab="dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span>Dashboard Overview</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-group-title">TRANSAKSI & KEUANGAN</div>
+      <nav class="sidebar-menu">
+        <button class="admin-nav-btn" data-tab="deposits">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
+          <span>Konfirmasi Deposit</span>
+          <span class="admin-nav-badge" id="badgePendingDep">0</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="withdrawals">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
+          <span>Konfirmasi Penarikan</span>
+          <span class="admin-nav-badge" id="badgePendingWd">0</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="gateways">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+          <span>Gateway & Rekening</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-group-title">SISTEM & INVESTASI</div>
+      <nav class="sidebar-menu">
+        <button class="admin-nav-btn" data-tab="plans">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Plan Investasi & Profit</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="affiliate">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          <span>Sponsor & Rabat ROI</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="signals">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <span>Sinyal Prof GPT</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-group-title">PENGGUNA & DATA</div>
+      <nav class="sidebar-menu">
+        <button class="admin-nav-btn" data-tab="users">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>Kelola Pengguna</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Sidebar Footer Quick Actions -->
+    <div class="admin-sidebar-footer">
+      <a href="./" class="sidebar-action-btn portal-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <span>Lihat Tampilan User</span>
+      </a>
+      <button class="sidebar-action-btn reset-btn" onclick="AdminPage.resetDemoDatabase()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+        <span>Reset Database Demo</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Sticky Topbar Header with Hamburger Button -->
+  <header class="admin-topbar">
+    <div class="admin-topbar-left">
+      <!-- Hamburger Button -->
+      <button class="admin-hamburger-btn" id="sidebarToggleBtn" aria-label="Buka Menu Admin" title="Buka Menu Navigasi">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="admin-topbar-brand">
+        <div class="admin-brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div>
+          <div class="admin-topbar-title">FGT PRO ADMIN</div>
+          <div class="admin-topbar-subtitle" id="currentSectionTitle">Dashboard Overview</div>
+        </div>
       </div>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <a href="index.html" class="admin-back-btn" style="text-decoration: none;">
-        <span>Lihat Tampilan User</span>
+    <div class="admin-topbar-right">
+      <div class="admin-live-badge">
+        <span class="live-dot"></span>
+        <span class="live-text">ONLINE</span>
+      </div>
+      <a href="./" class="admin-back-btn" title="Buka Tampilan User">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <span>Portal User</span>
       </a>
     </div>
   </header>
 
   <div class="admin-standalone-container">
-
-    <!-- Navigation Bar -->
-    <nav class="admin-nav-bar">
-      <button class="admin-nav-btn active" data-tab="dashboard">
-        <span>Dashboard</span>
-      </button>
-      <button class="admin-nav-btn" data-tab="deposits">
-        <span>Konfirmasi Deposit</span>
-        <span class="admin-nav-badge" id="badgePendingDep">0</span>
-      </button>
-      <button class="admin-nav-btn" data-tab="withdrawals">
-        <span>Konfirmasi Penarikan</span>
-        <span class="admin-nav-badge" id="badgePendingWd">0</span>
-      </button>
-      <button class="admin-nav-btn" data-tab="plans">
-        <span>Plan Investasi & Profit</span>
-      </button>
-      <button class="admin-nav-btn" data-tab="affiliate">
-        <span>Pengaturan Sponsor & Rabat</span>
-      </button>
-      <button class="admin-nav-btn" data-tab="gateways">
-        <span>Gateway & Rekening</span>
-      </button>
-      <button class="admin-nav-btn" data-tab="users">
-        <span>Kelola Pengguna</span>
-      </button>
-      <button class="admin-nav-btn" data-tab="signals">
-        <span>Sinyal Prof GPT</span>
-      </button>
-    </nav>
 
     <!-- ====================================================================
          1. PANEL DASHBOARD OVERVIEW

@@ -193,6 +193,43 @@ export const AdminPage = {
     `).join('');
   },
 
+  tabTitles: {
+    dashboard: 'Dashboard Overview',
+    deposits: 'Konfirmasi Deposit',
+    withdrawals: 'Konfirmasi Penarikan',
+    gateways: 'Gateway & Rekening',
+    plans: 'Plan Investasi & Profit',
+    affiliate: 'Sponsor & Rabat ROI',
+    signals: 'Sinyal Prof GPT',
+    users: 'Kelola Pengguna'
+  },
+
+  // Sidebar Drawer Controls
+  openSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (sidebar) sidebar.classList.add('open');
+    if (backdrop) backdrop.classList.add('active');
+    document.body.classList.add('sidebar-open');
+  },
+
+  closeSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (sidebar) sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('active');
+    document.body.classList.remove('sidebar-open');
+  },
+
+  toggleSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    if (sidebar && sidebar.classList.contains('open')) {
+      this.closeSidebar();
+    } else {
+      this.openSidebar();
+    }
+  },
+
   // Actions
   switchTab(tabId) {
     this.currentTab = tabId;
@@ -202,6 +239,24 @@ export const AdminPage = {
     document.querySelectorAll('.admin-view-panel').forEach(pane => {
       pane.classList.toggle('active', pane.id === `pane-${tabId}`);
     });
+
+    const titleEl = document.getElementById('currentSectionTitle');
+    if (titleEl && this.tabTitles[tabId]) {
+      titleEl.textContent = this.tabTitles[tabId];
+    }
+
+    // Auto close sliding sidebar drawer on item select
+    this.closeSidebar();
+  },
+
+  resetDemoDatabase() {
+    if (!confirm('Apakah Anda yakin ingin mereset seluruh database demo ke kondisi awal?')) {
+      return;
+    }
+    DB.reset();
+    this.showToast('Database demo berhasil di-reset ke kondisi awal!', 'success');
+    this.renderAll();
+    this.closeSidebar();
   },
 
   triggerDailyProfit() {
@@ -461,6 +516,31 @@ export const AdminPage = {
   },
 
   bindEvents() {
+    // Sidebar toggle buttons
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => this.toggleSidebar());
+    }
+
+    const closeBtn = document.getElementById('sidebarCloseBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.closeSidebar());
+    }
+
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (backdrop) {
+      backdrop.addEventListener('click', () => this.closeSidebar());
+    }
+
+    // Keyboard ESC to close sidebar or modals
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeSidebar();
+        this.closeAllModals();
+      }
+    });
+
+    // Navigation Buttons
     document.querySelectorAll('.admin-nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
@@ -468,13 +548,15 @@ export const AdminPage = {
       });
     });
 
+    // Modal Close Buttons
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
       btn.addEventListener('click', () => this.closeAllModals());
     });
 
-    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-      backdrop.addEventListener('click', (e) => {
-        if (e.target === backdrop) this.closeAllModals();
+    // Modal Backdrop Clicks
+    document.querySelectorAll('.modal-backdrop').forEach(modalBackdrop => {
+      modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) this.closeAllModals();
       });
     });
   }
