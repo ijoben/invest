@@ -293,7 +293,7 @@ const defaultDB = {
       sl: '2.1520',
       confidence: 88,
       timeAgo: '25 min(s) ago',
-      flags: ['🇬🇧', '🇳🇿'],
+      flags: ['GB', 'NZ'],
       status: 'active'
     },
     {
@@ -305,7 +305,7 @@ const defaultDB = {
       sl: '163.50',
       confidence: 92,
       timeAgo: '29 min(s) ago',
-      flags: ['🇪🇺', '🇯🇵'],
+      flags: ['EU', 'JP'],
       status: 'active'
     },
     {
@@ -317,7 +317,7 @@ const defaultDB = {
       sl: '4320.00',
       confidence: 95,
       timeAgo: '42 min(s) ago',
-      flags: ['🪙', '🇺🇸'],
+      flags: ['AU', 'US'],
       status: 'active'
     },
     {
@@ -329,19 +329,19 @@ const defaultDB = {
       sl: '66800.00',
       confidence: 89,
       timeAgo: '1 hour ago',
-      flags: ['₿', '💵'],
+      flags: ['BTC', 'USD'],
       status: 'active'
     }
   ],
 
   // Live Market Tickers
   marketTickers: [
-    { id: 'XAUUSD', name: 'XAUUSD', price: 4343.65, change: 1.18, isUp: true, time: '19:13 WIB', icon1: '🪙', icon2: '🇺🇸' },
-    { id: 'EURUSD', name: 'EURUSD', price: 1.15352, change: -0.01, isUp: false, time: '19:13 WIB', icon1: '🇪🇺', icon2: '🇺🇸' },
-    { id: 'GBPUSD', name: 'GBPUSD', price: 1.34531, change: -0.09, isUp: false, time: '19:13 WIB', icon1: '🇬🇧', icon2: '🇺🇸' },
-    { id: 'APPLE.US', name: 'APPLE.US', price: 331.52, change: -0.44, isUp: false, time: '02:54 WIB', icon1: '🍎', icon2: '🇺🇸' },
-    { id: 'BTCUSDT', name: 'BTCUSDT', price: 68420.00, change: 3.42, isUp: true, time: '19:15 WIB', icon1: '₿', icon2: '💵' },
-    { id: 'NVDA.US', name: 'NVDA.US', price: 128.90, change: 2.15, isUp: true, time: '02:54 WIB', icon1: '🟢', icon2: '🇺🇸' }
+    { id: 'XAUUSD', name: 'XAUUSD', price: 4343.65, change: 1.18, isUp: true, time: '19:13 WIB', code1: 'AU', code2: 'US' },
+    { id: 'EURUSD', name: 'EURUSD', price: 1.15352, change: -0.01, isUp: false, time: '19:13 WIB', code1: 'EU', code2: 'US' },
+    { id: 'GBPUSD', name: 'GBPUSD', price: 1.34531, change: -0.09, isUp: false, time: '19:13 WIB', code1: 'GB', code2: 'US' },
+    { id: 'APPLE.US', name: 'APPLE.US', price: 331.52, change: -0.44, isUp: false, time: '02:54 WIB', code1: 'AP', code2: 'US' },
+    { id: 'BTCUSDT', name: 'BTCUSDT', price: 68420.00, change: 3.42, isUp: true, time: '19:15 WIB', code1: 'BTC', code2: 'USD' },
+    { id: 'NVDA.US', name: 'NVDA.US', price: 128.90, change: 2.15, isUp: true, time: '02:54 WIB', code1: 'NV', code2: 'US' }
   ],
 
   // Active Session

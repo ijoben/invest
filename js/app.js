@@ -1,6 +1,7 @@
 /**
  * FGT PRO - MAIN APPLICATION CONTROLLER & UI RENDERER
  * Connects DOM events, handles SPA routing, renders views, and synchronizes real-time state.
+ * Premium Fintech Edition: Vector SVG Icons & Polished UI.
  */
 
 import { DB } from './db.js';
@@ -9,16 +10,14 @@ import { Plans } from './plans.js';
 import { Affiliate } from './affiliate.js';
 import { Payment } from './payment.js';
 import { Signals } from './signals.js';
-import { Admin } from './admin.js';
 
 // Application State
 const App = {
   currentTab: 'home',
-  adminTab: 'dashboard',
   marketInterval: null,
 
   init() {
-    // Check URL parameters (e.g. ?ref=KODE & ?view=admin)
+    // Check URL parameters (e.g. ?ref=KODE)
     const urlParams = new URLSearchParams(window.location.search);
     const refParam = urlParams.get('ref');
     if (refParam) {
@@ -35,7 +34,7 @@ const App = {
     // Show quick welcome toast
     setTimeout(() => {
       if (!Auth.isLoggedIn()) {
-        this.showToast('Selamat datang di FGT Pro! Silakan login untuk fitur lengkap.', 'info');
+        this.showToast('Selamat datang di FGT Pro. Silakan login untuk mengakses fitur lengkap.', 'info');
       }
     }, 800);
   },
@@ -91,7 +90,12 @@ const App = {
     } else {
       greetingEl.innerHTML = `Hi guest,`;
       avatarEl.classList.remove('logged-in');
-      avatarEl.innerHTML = `<span>👤</span>`;
+      avatarEl.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      `;
     }
   },
 
@@ -132,7 +136,7 @@ const App = {
             <span class="tier-amount">${plan.priceDisplay || 'US$0.00'}</span>
           </div>
           <div class="tier-badge-profit">
-            <span>📈 Profit Harian: ${plan.minDailyProfit}% - ${plan.maxDailyProfit}%</span>
+            <span>Profit Harian: ${plan.minDailyProfit}% - ${plan.maxDailyProfit}%</span>
           </div>
           <div class="tier-actions">
             <button class="tier-btn btn-topup" onclick="App.handlePlanTopUp('${plan.id}')">
@@ -143,7 +147,7 @@ const App = {
             </button>
             ${isUserActiveInPlan ? `
               <button class="tier-btn btn-active">
-                <span>✓ Active</span>
+                <span>Active</span>
               </button>
             ` : `
               <button class="tier-btn ${plan.theme === 'theme-rookie' ? 'btn-change' : 'btn-active'}" onclick="App.handlePlanAction('${plan.id}')">
@@ -169,8 +173,8 @@ const App = {
         <div class="ticker-card" onclick="App.switchTab('markets')">
           <div class="ticker-top">
             <div class="ticker-flag-pair">
-              <span class="flag-icon first">${t.icon1 || '🌐'}</span>
-              <span class="flag-icon second">${t.icon2 || '🇺🇸'}</span>
+              <span class="flag-icon first" style="background:#E2E8F0; color:#1E293B;">${t.code1 || t.name.substring(0,2)}</span>
+              <span class="flag-icon second" style="background:#3B82F6; color:#FFFFFF;">US</span>
             </div>
             <span class="ticker-symbol">${t.name}</span>
           </div>
@@ -204,11 +208,11 @@ const App = {
 
       const claimBtn = document.getElementById('btnClaimProfit');
       if (totalPendingProfit > 0) {
-        claimBtn.innerHTML = `<span>💰 Klaim Profit Harian (${DB.formatIDR(totalPendingProfit)})</span>`;
+        claimBtn.innerHTML = `<span>Klaim Profit Harian (${DB.formatIDR(totalPendingProfit)})</span>`;
         claimBtn.style.opacity = '1';
         claimBtn.removeAttribute('disabled');
       } else {
-        claimBtn.innerHTML = `<span>⏳ Menunggu Siklus Profit Berikutnya</span>`;
+        claimBtn.innerHTML = `<span>Menunggu Siklus Profit 24 Jam</span>`;
         claimBtn.style.opacity = '0.75';
       }
     } else {
@@ -228,8 +232,8 @@ const App = {
         <div class="signal-card-header">
           <div class="signal-pair-wrap">
             <div class="ticker-flag-pair">
-              <span class="flag-icon first">${sig.flags[0] || '🇬🇧'}</span>
-              <span class="flag-icon second">${sig.flags[1] || '🇳🇿'}</span>
+              <span class="flag-icon first" style="background:#1E293B; color:#FDE89C;">${sig.pair.substring(0,2)}</span>
+              <span class="flag-icon second" style="background:#3B82F6; color:#FFFFFF;">${sig.pair.substring(3,5) || 'FX'}</span>
             </div>
             <div>
               <span class="signal-pair-name">${sig.pair}</span>
@@ -281,7 +285,6 @@ const App = {
     }
 
     txListEl.innerHTML = txs.map(t => {
-      let icon = '💵';
       let title = t.paymentMethod || t.type;
       let isPlus = t.type === 'deposit' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus';
       let amountColor = isPlus ? '#22C55E' : '#EF4444';
@@ -290,8 +293,8 @@ const App = {
       return `
         <div style="background:#FFFFFF; border-radius:14px; padding:12px 14px; box-shadow:var(--card-shadow); border:1px solid #F1F5F9; display:flex; align-items:center; justify-content:space-between;">
           <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:36px; height:36px; border-radius:10px; background:#F8FAFC; display:flex; align-items:center; justify-content:center; font-size:18px;">
-              ${icon}
+            <div style="width:36px; height:36px; border-radius:10px; background:#F8FAFC; display:flex; align-items:center; justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
             <div>
               <div style="font-weight:700; font-size:13px; color:#1E293B;">${title}</div>
@@ -313,7 +316,9 @@ const App = {
     if (!user) {
       listEl.innerHTML = `
         <div style="text-align:center; padding:30px 20px; background:#FFFFFF; border-radius:18px; box-shadow:var(--card-shadow);">
-          <div style="font-size:36px; margin-bottom:10px;">📊</div>
+          <div style="width:48px; height:48px; border-radius:50%; background:#EFF6FF; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-3 3"/></svg>
+          </div>
           <h3 style="font-size:16px; font-weight:800; margin-bottom:6px;">Trading & Investasi AI</h3>
           <p style="font-size:12px; color:#64748B; margin-bottom:16px;">Login sekarang untuk melihat portofolio investasi dan klaim profit harian.</p>
           <button class="btn-cta-gold" onclick="App.openModal('authModal')">Login Sekarang</button>
@@ -326,9 +331,11 @@ const App = {
     if (investments.length === 0) {
       listEl.innerHTML = `
         <div style="text-align:center; padding:30px 20px; background:#FFFFFF; border-radius:18px; box-shadow:var(--card-shadow);">
-          <div style="font-size:36px; margin-bottom:10px;">🚀</div>
+          <div style="width:48px; height:48px; border-radius:50%; background:#FEF3C7; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
           <h3 style="font-size:16px; font-weight:800; margin-bottom:6px;">Belum Ada Paket Aktif</h3>
-          <p style="font-size:12px; color:#64748B; margin-bottom:16px;">Pilih salah satu paket trading AI di bawah untuk mulai mendapatkan profit harian acak!</p>
+          <p style="font-size:12px; color:#64748B; margin-bottom:16px;">Pilih salah satu paket trading AI di bawah untuk mulai mendapatkan profit harian acak.</p>
           <button class="btn-cta-gold" onclick="App.openPlanModal('plan-learn')">Pilih Paket Sekarang</button>
         </div>
       `;
@@ -393,7 +400,7 @@ const App = {
     // Render Downline List
     const listEl = document.getElementById('affDownlineList');
     if (downlines.totalMembers === 0) {
-      listEl.innerHTML = '<div style="text-align:center; padding:15px; color:#94A3B8; font-size:12px;">Belum ada anggota di tim Anda. Bagikan kode referral Anda untuk mendapatkan bonus sponsor & rabat!</div>';
+      listEl.innerHTML = '<div style="text-align:center; padding:15px; color:#94A3B8; font-size:12px;">Belum ada anggota di tim Anda. Bagikan kode referral Anda untuk mendapatkan bonus sponsor & rabat.</div>';
     } else {
       listEl.innerHTML = [
         ...downlines.level1.map(u => ({ ...u, levelStr: 'Level 1 (Sponsor Langsung 10%)' })),
@@ -421,7 +428,7 @@ const App = {
 
       ctx.clearRect(0, 0, w, h);
       
-      // Draw smooth candlestick / area line
+      // Draw smooth line
       ctx.beginPath();
       ctx.moveTo(0, h * 0.7);
       const points = [0.7, 0.65, 0.68, 0.5, 0.55, 0.42, 0.48, 0.35, 0.38, 0.25, 0.3, 0.2];
@@ -447,93 +454,6 @@ const App = {
     }
   },
 
-  // Render Full Admin Control Panel
-  renderAdminView() {
-    const stats = Admin.getStats();
-    const db = DB.get();
-
-    // Stats Counters
-    document.getElementById('adminStatUsers').textContent = stats.totalUsers;
-    document.getElementById('adminStatDeposits').textContent = DB.formatIDR(stats.totalDeposits);
-    document.getElementById('adminStatWithdrawals').textContent = DB.formatIDR(stats.totalWithdrawals);
-    document.getElementById('adminStatActiveCapital').textContent = DB.formatIDR(stats.activeCapital);
-
-    // Badges on Tab
-    document.getElementById('badgePendingDep').textContent = stats.pendingDepositsCount;
-    document.getElementById('badgePendingWd').textContent = stats.pendingWithdrawalsCount;
-
-    // Render Deposit Requests Table
-    const depTable = document.getElementById('adminDepositTable');
-    const depList = db.transactions.filter(t => t.type === 'deposit');
-    depTable.innerHTML = depList.length === 0 ? '<tr><td colspan="6" style="text-align:center;">Tidak ada data deposit</td></tr>' : depList.map(t => `
-      <tr>
-        <td><strong>${t.id}</strong></td>
-        <td>${t.username}</td>
-        <td>${t.paymentMethod}</td>
-        <td><strong>${DB.formatIDR(t.amount)}</strong></td>
-        <td><span class="badge-status ${t.status}">${t.status.toUpperCase()}</span></td>
-        <td>
-          ${t.status === 'pending' ? `
-            <div class="btn-action-group">
-              <button class="btn-admin-action approve" onclick="App.approveDeposit('${t.id}')">✓ Approve</button>
-              <button class="btn-admin-action reject" onclick="App.rejectDeposit('${t.id}')">✕ Reject</button>
-            </div>
-          ` : '<span style="color:#64748B;">Selesai</span>'}
-        </td>
-      </tr>
-    `).join('');
-
-    // Render Withdrawal Requests Table
-    const wdTable = document.getElementById('adminWithdrawTable');
-    const wdList = db.transactions.filter(t => t.type === 'withdraw');
-    wdTable.innerHTML = wdList.length === 0 ? '<tr><td colspan="6" style="text-align:center;">Tidak ada data penarikan</td></tr>' : wdList.map(t => `
-      <tr>
-        <td><strong>${t.id}</strong></td>
-        <td>${t.username}</td>
-        <td>${t.destinationAccount || t.paymentMethod}</td>
-        <td><strong>${DB.formatIDR(t.amount)}</strong> (Net: ${DB.formatIDR(t.netAmount || t.amount)})</td>
-        <td><span class="badge-status ${t.status}">${t.status.toUpperCase()}</span></td>
-        <td>
-          ${t.status === 'pending' ? `
-            <div class="btn-action-group">
-              <button class="btn-admin-action approve" onclick="App.approveWithdraw('${t.id}')">✓ Approve</button>
-              <button class="btn-admin-action reject" onclick="App.rejectWithdraw('${t.id}')">✕ Reject</button>
-            </div>
-          ` : '<span style="color:#64748B;">Selesai</span>'}
-        </td>
-      </tr>
-    `).join('');
-
-    // Render Plan Settings Table
-    const planTable = document.getElementById('adminPlansTable');
-    planTable.innerHTML = db.plans.map(p => `
-      <tr>
-        <td><strong>${p.name}</strong></td>
-        <td>${DB.formatIDR(p.minDeposit)} - ${DB.formatIDR(p.maxDeposit)}</td>
-        <td><span style="color:#22C55E; font-weight:700;">${p.minDailyProfit}% - ${p.maxDailyProfit}%</span></td>
-        <td>${p.durationDays} Hari</td>
-        <td>
-          <button class="btn-admin-action edit" onclick="App.editPlan('${p.id}')">Edit</button>
-        </td>
-      </tr>
-    `).join('');
-
-    // Render Users Table
-    const userTable = document.getElementById('adminUsersTable');
-    userTable.innerHTML = db.users.map(u => `
-      <tr>
-        <td><strong>${u.username}</strong></td>
-        <td>${u.fullName || '-'}</td>
-        <td>${DB.formatIDR(u.walletBalance)}</td>
-        <td>${DB.formatIDR(u.affiliateBalance)}</td>
-        <td><span class="badge-status ${u.role === 'admin' ? 'active' : 'pending'}">${u.role.toUpperCase()}</span></td>
-        <td>
-          <button class="btn-admin-action edit" onclick="App.openEditUserModal('${u.id}')">Kelola</button>
-        </td>
-      </tr>
-    `).join('');
-  },
-
   // Tab Navigation Switching
   switchTab(tabId) {
     this.currentTab = tabId;
@@ -550,17 +470,6 @@ const App = {
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
     this.renderAll();
-  },
-
-  // Switch Admin Sub-tab
-  switchAdminTab(tabName) {
-    this.adminTab = tabName;
-    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-admin-tab') === tabName);
-    });
-    document.querySelectorAll('.admin-tab-pane').forEach(pane => {
-      pane.classList.toggle('active', pane.id === `admin-pane-${tabName}`);
-    });
   },
 
   // Modals Controller
@@ -585,24 +494,48 @@ const App = {
     document.body.style.overflow = '';
   },
 
-  // Toast Notification System
+  // Ultra-Refined Vector SVG Toast Notification System
   showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    let icon = '🔔';
-    if (type === 'success') icon = '✅';
-    if (type === 'error') icon = '❌';
+    
+    let iconSvg = `
+      <div class="toast-icon-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>`;
 
-    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    if (type === 'success') {
+      iconSvg = `
+        <div class="toast-icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>`;
+    } else if (type === 'error') {
+      iconSvg = `
+        <div class="toast-icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>`;
+    }
+
+    toast.innerHTML = `${iconSvg} <span>${message}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => {
       toast.style.opacity = '0';
-      toast.style.transform = 'translateY(-10px)';
-      toast.style.transition = 'all 0.3s ease';
+      toast.style.transform = 'translateY(-12px)';
+      toast.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
       setTimeout(() => toast.remove(), 300);
     }, 3500);
   },
@@ -762,7 +695,7 @@ const App = {
     const user = Auth.getUser();
     if (!user) return;
 
-    const amount = prompt(`Masukkan jumlah yang ingin ditransfer ke Wallet Balance (Maksimal: ${DB.formatIDR(user.affiliateBalance)}):`, user.affiliateBalance);
+    const amount = prompt(`Masukkan nominal yang ingin ditransfer ke Wallet Balance (Maksimal: ${DB.formatIDR(user.affiliateBalance)}):`, user.affiliateBalance);
     if (!amount) return;
 
     const res = Affiliate.transferToMainBalance(user.id, amount);
@@ -790,111 +723,8 @@ const App = {
     this.openModal('signalModal');
   },
 
-  // Auth helper
   isLoggedIn() {
     return Auth.isLoggedIn();
-  },
-
-  // Edit Plan (Admin)
-  editPlan(planId) {
-    const plan = Plans.getPlanById(planId);
-    if (!plan) return;
-
-    const newMinRate = prompt(`Ubah Min Profit Harian (%) untuk ${plan.name}:`, plan.minDailyProfit);
-    if (newMinRate === null) return;
-
-    const newMaxRate = prompt(`Ubah Max Profit Harian (%) untuk ${plan.name}:`, plan.maxDailyProfit);
-    if (newMaxRate === null) return;
-
-    const newDuration = prompt(`Ubah Durasi Kontrak (Hari) untuk ${plan.name}:`, plan.durationDays);
-    if (newDuration === null) return;
-
-    const res = Admin.savePlan({
-      id: plan.id,
-      name: plan.name,
-      minDailyProfit: parseFloat(newMinRate) || plan.minDailyProfit,
-      maxDailyProfit: parseFloat(newMaxRate) || plan.maxDailyProfit,
-      durationDays: parseInt(newDuration) || plan.durationDays
-    });
-
-    if (res.success) {
-      this.showToast(`Paket ${plan.name} berhasil diperbarui!`, 'success');
-      this.renderAll();
-    }
-  },
-
-  // Admin Actions
-  approveDeposit(id) {
-    const res = Admin.approveDeposit(id);
-    if (res.success) {
-      this.showToast(res.message, 'success');
-      this.renderAll();
-    } else {
-      this.showToast(res.message, 'error');
-    }
-  },
-
-  rejectDeposit(id) {
-    const reason = prompt('Masukkan alasan penolakan:', 'Bukti transfer tidak sesuai');
-    if (reason === null) return;
-
-    const res = Admin.rejectDeposit(id, reason);
-    if (res.success) {
-      this.showToast(res.message, 'info');
-      this.renderAll();
-    }
-  },
-
-  approveWithdraw(id) {
-    const res = Admin.approveWithdrawal(id);
-    if (res.success) {
-      this.showToast(res.message, 'success');
-      this.renderAll();
-    }
-  },
-
-  rejectWithdraw(id) {
-    const reason = prompt('Masukkan alasan penolakan:', 'Data rekening tidak valid');
-    if (reason === null) return;
-
-    const res = Admin.rejectWithdrawal(id, reason);
-    if (res.success) {
-      this.showToast(res.message, 'info');
-      this.renderAll();
-    }
-  },
-
-  triggerDailyProfitAdmin() {
-    const res = Admin.triggerProfitYield();
-    this.showToast(`Sukses mendistribusikan profit harian acak ke ${res.updatedCount} investasi aktif!`, 'success');
-    this.renderAll();
-  },
-
-  openEditUserModal(userId) {
-    const user = DB.getUserById(userId);
-    if (!user) return;
-
-    document.getElementById('adminEditUserId').value = user.id;
-    document.getElementById('adminEditUsername').textContent = user.username;
-    document.getElementById('adminEditWalletBal').value = user.walletBalance;
-    document.getElementById('adminEditAffBal').value = user.affiliateBalance;
-    document.getElementById('adminEditPoints').value = user.points || 0;
-
-    this.openModal('adminUserModal');
-  },
-
-  saveUserBalanceAdmin() {
-    const userId = document.getElementById('adminEditUserId').value;
-    const walletBalance = document.getElementById('adminEditWalletBal').value;
-    const affiliateBalance = document.getElementById('adminEditAffBal').value;
-    const points = document.getElementById('adminEditPoints').value;
-
-    const res = Admin.adjustUserBalance(userId, { walletBalance, affiliateBalance, points });
-    if (res.success) {
-      this.closeModal('adminUserModal');
-      this.showToast(res.message, 'success');
-      this.renderAll();
-    }
   },
 
   // Bind All Event Listeners
@@ -905,14 +735,6 @@ const App = {
         e.preventDefault();
         const tab = btn.getAttribute('data-tab');
         this.switchTab(tab);
-      });
-    });
-
-    // Admin Sub Tabs
-    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tabName = btn.getAttribute('data-admin-tab');
-        this.switchAdminTab(tabName);
       });
     });
 
@@ -979,16 +801,15 @@ const App = {
   // Clipboard copy helper
   copyText(text, label = 'Teks') {
     navigator.clipboard.writeText(text).then(() => {
-      this.showToast(`${label} berhasil disalin ke clipboard!`, 'success');
+      this.showToast(`${label} berhasil disalin ke clipboard.`, 'success');
     }).catch(() => {
-      // Fallback
       const temp = document.createElement('input');
       temp.value = text;
       document.body.appendChild(temp);
       temp.select();
       document.execCommand('copy');
       temp.remove();
-      this.showToast(`${label} berhasil disalin!`, 'success');
+      this.showToast(`${label} berhasil disalin.`, 'success');
     });
   }
 };
@@ -1000,7 +821,6 @@ window.DB = DB;
 window.Plans = Plans;
 window.Affiliate = Affiliate;
 window.Payment = Payment;
-window.Admin = Admin;
 
 // Launch App on DOM ready
 document.addEventListener('DOMContentLoaded', () => {

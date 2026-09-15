@@ -1,12 +1,13 @@
 /* ==========================================================================
-   FGT PRO INVESTMENT SYSTEM - CORE STYLESHEET
-   100% Pixel-Accurate Mobile-First UI matching reference image
+   FGT PRO INVESTMENT SYSTEM - CORE STYLESHEET (PREMIUM FINTECH EDITION)
+   100% Ultra-High-End Visual Replication matching reference image 1000836359.jpg
+   No Cartoon/AI Emojis - Pure High-Precision Vector SVG & Gradient Components
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap');
 
 :root {
-  /* Color Palette matching Reference Screenshot */
+  /* Exact Color Palette matching Screenshot */
   --bg-gradient-top: #FDE8B3;
   --bg-gradient-mid1: #FDF4E3;
   --bg-gradient-mid2: #F4F6F9;
@@ -16,7 +17,7 @@
   --primary-gold-hover: #B8822A;
   --primary-gold-light: #FDE89C;
   --primary-gold-dark: #A57321;
-  --primary-gold-gradient: linear-gradient(135deg, #DF9E30 0%, #C89338 50%, #B27F29 100%);
+  --primary-gold-gradient: linear-gradient(135deg, #E5A83B 0%, #C89338 50%, #B27F29 100%);
   
   --tier-learn-grad: linear-gradient(135deg, #FDEBB2 0%, #F6D365 50%, #FDA085 100%);
   --tier-rookie-grad: linear-gradient(135deg, #DCE2E6 0%, #B8C2CC 50%, #9EAAB7 100%);
@@ -25,10 +26,10 @@
 
   --card-bg: #FFFFFF;
   --card-border: rgba(0, 0, 0, 0.04);
-  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
   --card-shadow-hover: 0 10px 25px -3px rgba(200, 147, 56, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
 
-  --text-main: #1E293B;
+  --text-main: #0F172A;
   --text-muted: #64748B;
   --text-light: #94A3B8;
   --text-gold: #B8822A;
@@ -41,7 +42,7 @@
   --color-blue-soft: #DBEAFE;
   --color-purple: #D946EF;
   --color-purple-soft: #F5D0FE;
-  --color-dark: #334155;
+  --color-dark: #1E293B;
 
   --radius-sm: 8px;
   --radius-md: 14px;
@@ -106,7 +107,7 @@ html, body {
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
-  padding-bottom: 95px; /* Space for bottom nav */
+  padding-bottom: 100px; /* Space for floating bottom nav */
   border-radius: 28px;
   overflow: hidden;
 }
@@ -135,7 +136,7 @@ html, body {
 }
 
 /* ==========================================================================
-   1. TOP HEADER (Identical to Screenshot)
+   1. TOP HEADER (Identical to Screenshot 1000836359.jpg)
    ========================================================================== */
 .top-header {
   display: flex;
@@ -147,7 +148,7 @@ html, body {
   z-index: 40;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: rgba(253, 232, 179, 0.88);
+  background: rgba(253, 232, 179, 0.9);
   border-bottom: 1px solid rgba(200, 147, 56, 0.15);
 }
 
@@ -160,18 +161,23 @@ html, body {
 }
 
 .user-avatar-badge {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: #3B82F6;
   color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
   border: 2px solid #FFFFFF;
   position: relative;
+}
+
+.user-avatar-badge svg {
+  width: 20px;
+  height: 20px;
+  stroke: #FFFFFF;
 }
 
 .user-avatar-badge.logged-in {
@@ -183,10 +189,10 @@ html, body {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   background: #22C55E;
-  border: 2px solid #FFFFFF;
+  border: 1.5px solid #FFFFFF;
   border-radius: 50%;
 }
 
@@ -210,14 +216,13 @@ html, body {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .header-btn {
   background: transparent;
   border: none;
-  color: #475569;
-  font-size: 20px;
+  color: #334155;
   width: 36px;
   height: 36px;
   display: flex;
@@ -229,24 +234,30 @@ html, body {
   transition: var(--transition-fast);
 }
 
+.header-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: #334155;
+  stroke-width: 1.8;
+}
+
 .header-btn:hover {
   background: rgba(255, 255, 255, 0.6);
-  color: #1E293B;
 }
 
 .header-btn .badge-dot {
   position: absolute;
   top: 6px;
   right: 6px;
-  width: 7px;
-  height: 7px;
+  width: 6.5px;
+  height: 6.5px;
   background: #EF4444;
   border-radius: 50%;
   border: 1.5px solid #FDE8B3;
 }
 
 /* ==========================================================================
-   2. WALLET 3-COLUMN BALANCE CARD
+   2. WALLET 3-COLUMN BALANCE CARD (High-End Vector SVGs)
    ========================================================================== */
 .wallet-card-container {
   padding: 6px 18px 10px 18px;
@@ -301,10 +312,18 @@ html, body {
   transform: scale(0.96);
 }
 
-.wallet-icon {
-  font-size: 24px;
+.wallet-icon-svg-wrap {
+  width: 28px;
+  height: 28px;
   margin-bottom: 4px;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wallet-icon-svg-wrap svg {
+  width: 26px;
+  height: 26px;
 }
 
 .wallet-val {
@@ -365,7 +384,6 @@ html, body {
   transform: translateY(-2px);
 }
 
-/* Specific Card Themes */
 .tier-card.theme-learn {
   background: var(--tier-learn-grad);
   border: 1.5px solid #F6D365;
@@ -497,7 +515,7 @@ html, body {
 }
 
 /* ==========================================================================
-   4. QUICK ACTION GRID (8 Icons: 2 Rows x 4 Cols)
+   4. QUICK ACTION GRID (8 Vector Icons: 2 Rows x 4 Cols)
    ========================================================================== */
 .quick-actions-container {
   padding: 2px 18px 12px 18px;
@@ -535,14 +553,18 @@ html, body {
 .quick-icon-wrap {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 6px;
   transition: var(--transition-normal);
   position: relative;
-  font-size: 24px;
+}
+
+.quick-icon-wrap svg {
+  width: 26px;
+  height: 26px;
 }
 
 .quick-label {
@@ -616,10 +638,12 @@ html, body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 800;
   border: 1.5px solid #FFFFFF;
   position: absolute;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  overflow: hidden;
 }
 
 .flag-icon.first {
@@ -794,9 +818,14 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   border: 2px solid #C89338;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.signal-avatar-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: #FDE89C;
 }
 
 .signal-section-title {
@@ -811,7 +840,6 @@ html, body {
   gap: 12px;
 }
 
-/* Neon Gradient Border Card */
 .signal-card {
   background: #FFFFFF;
   border-radius: var(--radius-lg);
@@ -1015,9 +1043,9 @@ html, body {
   right: 0;
   bottom: 0;
   background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 100;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
   display: none;
   align-items: flex-end;
   justify-content: center;
@@ -1040,7 +1068,7 @@ html, body {
   overflow-y: auto;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.25);
 }
 
 .modal-backdrop.show .modal-sheet {
@@ -1145,42 +1173,88 @@ html, body {
   color: #0F172A;
 }
 
-/* Toast Notification */
+/* ==========================================================================
+   ULTRA-PREMIUM TOAST NOTIFICATION (No Cartoonish AI Emojis)
+   ========================================================================== */
 .toast-container {
   position: fixed;
-  top: 20px;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 999;
+  z-index: 2000;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   pointer-events: none;
-  width: calc(100% - 36px);
-  max-width: 380px;
+  width: calc(100% - 32px);
+  max-width: 400px;
 }
 
 .toast {
-  background: #0F172A;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   color: #FFFFFF;
   padding: 12px 16px;
-  border-radius: var(--radius-md);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
   font-size: 13px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-left: 4px solid var(--primary-gold);
-  animation: slideInToast 0.3s ease;
+  animation: slideInToast 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: -0.1px;
 }
 
-.toast.success { border-left-color: var(--color-green); }
-.toast.error { border-left-color: var(--color-red); }
-.toast.info { border-left-color: var(--color-blue); }
+.toast.success {
+  border-left-color: #22C55E;
+}
+
+.toast.error {
+  border-left-color: #EF4444;
+}
+
+.toast.info {
+  border-left-color: #38BDF8;
+}
+
+.toast-icon-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast.success .toast-icon-badge {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22C55E;
+}
+
+.toast.error .toast-icon-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #EF4444;
+}
+
+.toast.info .toast-icon-badge {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38BDF8;
+}
+
+.toast-icon-badge svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+  stroke: currentColor;
+}
 
 @keyframes slideInToast {
-  from { opacity: 0; transform: translateY(-12px); }
+  from { opacity: 0; transform: translateY(-16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
