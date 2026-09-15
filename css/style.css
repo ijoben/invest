@@ -1285,6 +1285,50 @@ html, body {
   margin-top: 2px;
 }
 
+/* Demo & Quick Role Login Buttons */
+.quick-demo-login {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #E2E8F0;
+}
+
+.btn-demo-pill {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn-demo-pill:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+  transform: translateY(-1px);
+}
+
+.btn-demo-pill.admin-pill {
+  background: rgba(200, 147, 56, 0.08);
+  border-color: rgba(200, 147, 56, 0.4);
+  color: #B45309;
+}
+
+.btn-demo-pill.admin-pill:hover {
+  background: rgba(200, 147, 56, 0.16);
+  border-color: #C89338;
+  color: #92400E;
+}
+
+
 .page-content-wrap {
   padding: 0 18px 20px 18px;
   display: flex;
