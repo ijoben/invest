@@ -26,6 +26,34 @@ export const Plans = {
     return db.investments.filter(inv => inv.userId === userId && inv.status === 'active');
   },
 
+  // Calculate today profit % for a specific user
+  getUserTodayProfitRate(userId) {
+    if (!userId) return 0;
+    const userInvs = this.getUserInvestments(userId);
+    if (!userInvs || userInvs.length === 0) return 0;
+
+    let totalCapital = 0;
+    let totalWeightedRate = 0;
+    const todayStr = new Date().toLocaleDateString('id-ID');
+
+    userInvs.forEach(inv => {
+      totalCapital += inv.capital;
+      // Check if profit yielded today in history
+      const todayHistory = inv.history && inv.history.find(h => h.date === todayStr);
+      let rate = 0;
+      if (todayHistory) {
+        rate = todayHistory.rate;
+      } else {
+        // Average active range or base daily rate
+        rate = (inv.minRate + inv.maxRate) / 2;
+      }
+      totalWeightedRate += (rate * inv.capital);
+    });
+
+    if (totalCapital === 0) return 0;
+    return parseFloat((totalWeightedRate / totalCapital).toFixed(2));
+  },
+
   // Buy / Activate Plan
   invest({ userId, planId, amount }) {
     const db = DB.get();

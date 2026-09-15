@@ -122,6 +122,21 @@
               <div class="wallet-val" id="valPoint">0</div>
               <div class="wallet-lbl">Point</div>
             </div>
+
+            <!-- Col 4: Today Profit Percentage -->
+            <div class="wallet-col" onclick="App.showTodayProfitDetails()">
+              <div class="wallet-icon-svg-wrap">
+                <!-- Glowing Emerald Profit Trend Chart Vector -->
+                <svg viewBox="0 0 28 28" fill="none">
+                  <circle cx="14" cy="14" r="11" fill="#10B981" fill-opacity="0.16"/>
+                  <circle cx="14" cy="14" r="11" stroke="#10B981" stroke-width="1.4"/>
+                  <path d="M7 16.5L11.5 12L14.5 15L20 9.5" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="16 9.5 20 9.5 20 13.5" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="wallet-val" id="valTodayProfit" style="color: #10B981;">+0.00%</div>
+              <div class="wallet-lbl">Profit Hari Ini</div>
+            </div>
           </div>
         </section>
 

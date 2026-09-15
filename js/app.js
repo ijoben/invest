@@ -99,20 +99,29 @@ const App = {
     }
   },
 
-  // 2. 3-Column Wallet Balance Card
+  // 2. 4-Column Wallet Balance Card
   renderWalletSummary(user) {
     const mainBalEl = document.getElementById('valMainBalance');
     const affBalEl = document.getElementById('valAffiliateBalance');
     const pointEl = document.getElementById('valPoint');
+    const profitEl = document.getElementById('valTodayProfit');
 
     if (user) {
       mainBalEl.textContent = DB.formatIDR(user.walletBalance);
       affBalEl.textContent = DB.formatIDR(user.affiliateBalance);
       pointEl.textContent = user.points || 0;
+      
+      const rate = Plans.getUserTodayProfitRate(user.id);
+      if (profitEl) {
+        profitEl.textContent = rate > 0 ? `+${rate.toFixed(2)}%` : '+0.00%';
+      }
     } else {
       mainBalEl.textContent = 'IDR 0';
       affBalEl.textContent = 'IDR 0';
       pointEl.textContent = '0';
+      if (profitEl) {
+        profitEl.textContent = '+0.00%';
+      }
     }
   },
 
@@ -795,6 +804,22 @@ const App = {
         const rate = DB.get().settings.usdIdrRate || 16250;
         document.getElementById('depUsdtCalculatedIdr').textContent = DB.formatIDR(val * rate);
       });
+    }
+  },
+
+  // Profit percentage info toast/modal helper
+  showTodayProfitDetails() {
+    const user = Auth.getCurrentUser();
+    if (!user) {
+      this.showToast('Silakan login untuk melihat persentase profit harian paket investasi Anda.', 'info');
+      return;
+    }
+    const rate = Plans.getUserTodayProfitRate(user.id);
+    const userInvs = Plans.getUserInvestments(user.id);
+    if (userInvs.length === 0) {
+      this.showToast('Anda belum memiliki paket investasi aktif. Aktifkan paket di bawah untuk menghasilkan profit harian!', 'info');
+    } else {
+      this.showToast(`Persentase profit harian rata-rata berjalan Anda saat ini: +${rate.toFixed(2)}% dari ${userInvs.length} paket aktif.`, 'success');
     }
   },
 

@@ -132,3 +132,26 @@
 .gap-1 { gap: 4px; }
 .gap-2 { gap: 8px; }
 .gap-3 { gap: 12px; }
+
+/* Small screen wallet optimization */
+@media (max-width: 380px) {
+  .wallet-summary-card {
+    padding: 10px 3px;
+  }
+  .wallet-val {
+    font-size: 11px;
+    letter-spacing: -0.4px;
+  }
+  .wallet-lbl {
+    font-size: 8.5px;
+  }
+  .wallet-icon-svg-wrap {
+    width: 22px;
+    height: 22px;
+  }
+  .wallet-icon-svg-wrap svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+

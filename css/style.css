@@ -266,9 +266,9 @@ html, body {
 .wallet-summary-card {
   background: var(--card-bg);
   border-radius: var(--radius-lg);
-  padding: 16px 10px;
+  padding: 14px 6px;
   display: grid;
-  grid-template-columns: 1.15fr 1.25fr 0.8fr;
+  grid-template-columns: repeat(4, 1fr);
   align-items: center;
   text-align: center;
   box-shadow: var(--card-shadow);
@@ -292,10 +292,11 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 6px;
+  padding: 2px 3px;
   position: relative;
   cursor: pointer;
   transition: transform 0.15s ease;
+  min-width: 0;
 }
 
 .wallet-col:not(:last-child)::after {
@@ -313,8 +314,8 @@ html, body {
 }
 
 .wallet-icon-svg-wrap {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   margin-bottom: 4px;
   display: inline-flex;
   align-items: center;
@@ -322,24 +323,30 @@ html, body {
 }
 
 .wallet-icon-svg-wrap svg {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
 }
 
 .wallet-val {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: #0F172A;
   letter-spacing: -0.3px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .wallet-lbl {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 9.5px;
+  font-weight: 700;
   color: #64748B;
   margin-top: 2px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* ==========================================================================
