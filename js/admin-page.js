@@ -30,6 +30,8 @@ export const AdminPage = {
     // Badges
     document.getElementById('badgePendingDep').textContent = stats.pendingDepositsCount;
     document.getElementById('badgePendingWd').textContent = stats.pendingWithdrawalsCount;
+    const annBadge = document.getElementById('badgeAnnouncementsCount');
+    if (annBadge) annBadge.textContent = (db.announcements || []).length;
 
     // 2. Deposit Table
     this.renderDeposits(db);
@@ -51,6 +53,9 @@ export const AdminPage = {
 
     // 8. Signals Table
     this.renderSignals(db);
+
+    // 9. Announcements Running Text Table
+    this.renderAnnouncements(db);
   },
 
   // 2. Deposit Table
@@ -193,6 +198,46 @@ export const AdminPage = {
     `).join('');
   },
 
+  // 9. Announcements / Running Text Table
+  renderAnnouncements(db) {
+    const tbody = document.getElementById('announcementsTableBody');
+    if (!tbody) return;
+    const list = db.announcements || [];
+
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#94A3B8;">Belum ada teks berjalan pengumuman. Klik "+ Tambah Teks Berjalan Baru" di atas.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map(a => `
+      <tr>
+        <td><strong style="font-family:var(--font-mono); font-size:11px;">${a.id}</strong></td>
+        <td style="white-space:normal; max-width:400px; line-height:1.4;">
+          <div style="font-weight:600; color:#F8FAFC;">${a.text}</div>
+        </td>
+        <td><span style="font-size:11px; color:#94A3B8;">${new Date(a.createdAt).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</span></td>
+        <td>
+          <span class="badge-status ${a.active ? 'approved' : 'rejected'}">
+            ${a.active ? '● AKTIF' : '○ NONAKTIF'}
+          </span>
+        </td>
+        <td style="text-align:right;">
+          <div class="btn-action-group" style="justify-content: flex-end;">
+            <button class="btn-admin-action ${a.active ? 'reject' : 'approve'}" onclick="AdminPage.toggleAnnouncementStatus('${a.id}')" title="${a.active ? 'Nonaktifkan' : 'Aktifkan'}">
+              ${a.active ? 'Nonaktifkan' : 'Aktifkan'}
+            </button>
+            <button class="btn-admin-action edit" onclick="AdminPage.openEditAnnouncementModal('${a.id}')" title="Edit Teks">
+              Edit
+            </button>
+            <button class="btn-admin-action delete" onclick="AdminPage.deleteAnnouncement('${a.id}')" title="Hapus">
+              Hapus
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  },
+
   tabTitles: {
     dashboard: 'Dashboard Overview',
     deposits: 'Konfirmasi Deposit',
@@ -201,6 +246,7 @@ export const AdminPage = {
     plans: 'Plan Investasi & Profit',
     affiliate: 'Sponsor & Rabat ROI',
     signals: 'Sinyal Prof GPT',
+    announcements: 'Teks Berjalan & Notif',
     users: 'Kelola Pengguna'
   },
 
@@ -452,6 +498,66 @@ export const AdminPage = {
     Signals.addSignal({ pair, action, entry, tp, sl, confidence });
     this.closeModal('adminSignalModal');
     this.showToast(`Sinyal ${pair} (${action}) berhasil diterbitkan!`, 'success');
+    this.renderAll();
+  },
+
+  // Modal Announcements (Running Text CRUD)
+  openAddAnnouncementModal() {
+    document.getElementById('announcementModalId').value = '';
+    document.getElementById('announcementModalTitle').textContent = 'Tambah Teks Berjalan Baru';
+    document.getElementById('announcementModalText').value = '';
+    document.getElementById('announcementModalActive').value = 'true';
+    this.openModal('adminAnnouncementModal');
+  },
+
+  openEditAnnouncementModal(id) {
+    const db = DB.get();
+    const ann = (db.announcements || []).find(a => a.id === id);
+    if (!ann) return;
+
+    document.getElementById('announcementModalId').value = ann.id;
+    document.getElementById('announcementModalTitle').textContent = 'Edit Teks Berjalan';
+    document.getElementById('announcementModalText').value = ann.text;
+    document.getElementById('announcementModalActive').value = ann.active ? 'true' : 'false';
+    this.openModal('adminAnnouncementModal');
+  },
+
+  saveAnnouncementModal() {
+    const id = document.getElementById('announcementModalId').value;
+    const text = document.getElementById('announcementModalText').value.trim();
+    const active = document.getElementById('announcementModalActive').value === 'true';
+
+    if (!text) {
+      this.showToast('Harap masukkan isi teks pengumuman!', 'error');
+      return;
+    }
+
+    if (id) {
+      DB.updateAnnouncement(id, { text, active });
+      this.showToast('Teks berjalan berhasil diperbarui!', 'success');
+    } else {
+      DB.addAnnouncement(text, active);
+      this.showToast('Teks berjalan baru berhasil ditambahkan!', 'success');
+    }
+
+    this.closeModal('adminAnnouncementModal');
+    this.renderAll();
+  },
+
+  toggleAnnouncementStatus(id) {
+    const db = DB.get();
+    const ann = (db.announcements || []).find(a => a.id === id);
+    if (!ann) return;
+
+    DB.updateAnnouncement(id, { active: !ann.active });
+    this.showToast(`Status teks berjalan berhasil diubah menjadi ${!ann.active ? 'Aktif' : 'Nonaktif'}!`, 'info');
+    this.renderAll();
+  },
+
+  deleteAnnouncement(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus teks berjalan pengumuman ini?')) return;
+    DB.deleteAnnouncement(id);
+    this.showToast('Teks berjalan berhasil dihapus.', 'success');
     this.renderAll();
   },
 

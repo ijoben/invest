@@ -78,6 +78,11 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
           <span>Sinyal Prof GPT</span>
         </button>
+        <button class="admin-nav-btn" data-tab="announcements">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+          <span>Teks Berjalan (Speaker)</span>
+          <span class="admin-nav-badge" id="badgeAnnouncementsCount" style="background: #3B82F6;">0</span>
+        </button>
       </nav>
 
       <div class="sidebar-group-title">PENGGUNA & DATA</div>
@@ -422,6 +427,33 @@
             </thead>
             <tbody id="signalsTableBody"></tbody>
           </table>
+    <!-- ====================================================================
+         9. PANEL RUNNING TEXT / ANNOUNCEMENTS CRUD
+         ==================================================================== -->
+    <section id="pane-announcements" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📢 Kelola Teks Berjalan Frontend (Running Text)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Kelola pengumuman teks berjalan dengan ikon speaker yang tayang secara realtime di halaman depan.</p>
+          </div>
+          <button class="admin-btn-action-primary" onclick="AdminPage.openAddAnnouncementModal()">
+            <span>➕ Tambah Teks Berjalan Baru</span>
+          </button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width: 80px;">ID</th>
+                <th style="min-width: 280px;">Isi Pesan Teks Berjalan</th>
+                <th style="width: 140px;">Tanggal Dibuat</th>
+                <th style="width: 100px;">Status</th>
+                <th style="width: 180px; text-align: right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="announcementsTableBody"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -556,6 +588,36 @@
 
       <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="AdminPage.publishSignal()">
         <span>🚀 Terbitkan Sinyal Sekarang</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Add / Edit Announcement -->
+  <div class="modal-backdrop" id="adminAnnouncementModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title" id="announcementModalTitle">Tambah Teks Berjalan Baru</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <input type="hidden" id="announcementModalId">
+
+      <div class="form-group">
+        <label class="form-label">Isi Pesan Teks Berjalan (Running Text):</label>
+        <textarea class="form-input" id="announcementModalText" rows="4" placeholder="Masukkan pengumuman yang akan ditampilkan di running text frontend..." style="resize: vertical; font-size: 13px;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status Teks Berjalan:</label>
+        <select class="form-select" id="announcementModalActive">
+          <option value="true">Aktif (Tampil di Running Text)</option>
+          <option value="false">Nonaktif (Sembunyikan)</option>
+        </select>
+      </div>
+
+      <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="AdminPage.saveAnnouncementModal()">
+        <span>💾 Simpan Teks Berjalan</span>
       </button>
     </div>
   </div>

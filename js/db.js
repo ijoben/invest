@@ -342,6 +342,26 @@ const defaultDB = {
     { id: 'APPLE.US', name: 'APPLE.US', price: 331.52, change: -0.44, isUp: false, time: '02:54 WIB', code1: 'AP', code2: 'US' },
     { id: 'BTCUSDT', name: 'BTCUSDT', price: 68420.00, change: 3.42, isUp: true, time: '19:15 WIB', code1: 'BTC', code2: 'USD' },
     { id: 'NVDA.US', name: 'NVDA.US', price: 128.90, change: 2.15, isUp: true, time: '02:54 WIB', code1: 'NV', code2: 'US' }
+  // Running Text / Announcements Ticker
+  announcements: [
+    {
+      id: 'ann-1',
+      text: 'Selamat datang di FGT Pro Platform Investasi AI Trading Resmi 2026. Dapatkan bonus sponsor 10% dan profit harian otomatis 24/7!',
+      active: true,
+      createdAt: '2026-09-15T00:00:00.000Z'
+    },
+    {
+      id: 'ann-2',
+      text: 'Deposit instant via QRIS & Transfer Bank BCA, Mandiri, BRI serta USDT TRC20/BEP20 telah aktif otomatis tanpa antre.',
+      active: true,
+      createdAt: '2026-09-15T01:00:00.000Z'
+    },
+    {
+      id: 'ann-3',
+      text: 'Sinyal akurasi tinggi Prof GPT telah diperbarui. Cek menu Signal untuk eksekusi order trading dengan akurasi 94%+.',
+      active: true,
+      createdAt: '2026-09-15T02:00:00.000Z'
+    }
   ],
 
   // Active Session
@@ -357,7 +377,12 @@ export const DB = {
         this.save(defaultDB);
         return defaultDB;
       }
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      if (!parsed.announcements) {
+        parsed.announcements = defaultDB.announcements;
+        this.save(parsed);
+      }
+      return parsed;
     } catch (e) {
       console.error('Error loading DB from localStorage:', e);
       return defaultDB;
@@ -454,6 +479,50 @@ export const DB = {
   // Format USD currency
   formatUSD(amount) {
     return 'US$' + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  },
+
+  // Announcements / Running Text CRUD
+  getAnnouncements() {
+    const db = this.get();
+    return db.announcements || [];
+  },
+
+  getActiveAnnouncements() {
+    const db = this.get();
+    return (db.announcements || []).filter(a => a.active);
+  },
+
+  addAnnouncement(text, active = true) {
+    const db = this.get();
+    db.announcements = db.announcements || [];
+    const newAnn = {
+      id: 'ann-' + Date.now(),
+      text: text.trim(),
+      active: Boolean(active),
+      createdAt: new Date().toISOString()
+    };
+    db.announcements.unshift(newAnn);
+    this.save(db);
+    return newAnn;
+  },
+
+  updateAnnouncement(id, updates) {
+    const db = this.get();
+    db.announcements = db.announcements || [];
+    const idx = db.announcements.findIndex(a => a.id === id);
+    if (idx !== -1) {
+      db.announcements[idx] = { ...db.announcements[idx], ...updates };
+      this.save(db);
+      return db.announcements[idx];
+    }
+    return null;
+  },
+
+  deleteAnnouncement(id) {
+    const db = this.get();
+    db.announcements = (db.announcements || []).filter(a => a.id !== id);
+    this.save(db);
+    return true;
   },
 
   // Reset database to default seed state

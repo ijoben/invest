@@ -56,7 +56,10 @@ const App = {
     // 1. Render Top Header
     this.renderHeader(user);
 
-    // 2. Render 3-Column Wallet Balance Card
+    // 1.5 Render Running Text / Announcement Ticker
+    this.renderRunningText();
+
+    // 2. Render 4-Column Wallet Balance Card
     this.renderWalletSummary(user);
 
     // 3. Render Plan / VIP Tier Carousel
@@ -97,6 +100,19 @@ const App = {
         </svg>
       `;
     }
+  // 1.5 Announcement Ticker / Running Text
+  renderRunningText() {
+    const el = document.getElementById('frontendRunningText');
+    if (!el) return;
+
+    const announcements = DB.getActiveAnnouncements();
+    if (announcements.length === 0) {
+      el.textContent = 'Selamat datang di FGT Pro Platform Investasi AI Trading Resmi 2026.';
+      return;
+    }
+
+    const textJoined = announcements.map(a => a.text).join('   ✦✦✦   ');
+    el.textContent = textJoined;
   },
 
   // 2. 4-Column Wallet Balance Card
