@@ -909,27 +909,28 @@ html, body {
 }
 
 /* ==========================================================================
-   8. BOTTOM NAVIGATION BAR (Floating Pill matching Image)
+   8. BOTTOM NAVIGATION BAR (Floating Pill matching Image 1000836359.jpg)
    ========================================================================== */
 .bottom-nav-wrap {
   position: fixed;
-  bottom: 12px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 32px);
-  max-width: 410px;
-  z-index: 50;
+  width: calc(100% - 24px);
+  max-width: 416px;
+  z-index: 999;
+  pointer-events: auto;
 }
 
 .bottom-nav {
   background: #FFFFFF;
-  border-radius: var(--radius-pill);
-  padding: 8px 10px;
+  border-radius: 40px;
+  padding: 8px 14px 7px 14px;
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  justify-content: space-between;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .nav-item {
@@ -937,36 +938,51 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #94A3B8;
+  color: #8E9CAE;
   text-decoration: none;
   cursor: pointer;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: var(--radius-pill);
-  transition: var(--transition-fast);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  flex: 1;
 }
 
 .nav-item.active {
-  color: var(--primary-gold);
+  color: #C89338;
 }
 
-.nav-item .nav-icon {
-  font-size: 20px;
-  margin-bottom: 2px;
+.nav-icon-box {
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 2px;
+}
+
+.nav-svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  transition: transform 0.15s ease;
+}
+
+.nav-item:active .nav-svg {
+  transform: scale(0.9);
 }
 
 .nav-item .nav-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1.1;
 }
 
 /* Floating Quick Admin Access Pill */
 .floating-admin-btn {
   position: fixed;
-  bottom: 78px;
+  bottom: 84px;
   right: 18px;
   background: #0F172A;
   color: #FDE89C;
@@ -979,9 +995,10 @@ html, body {
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  z-index: 45;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 900;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   transition: transform 0.15s ease;
+  text-decoration: none;
 }
 
 .floating-admin-btn:hover {
