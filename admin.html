@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FGT Pro - Master Admin Control Panel</title>
+  
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    /* Dedicated Standalone Admin Layout */
+    body {
+      background: #0B0F19;
+      color: #F1F5F9;
+      font-family: var(--font-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .admin-standalone-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 16px 40px 16px;
+    }
+
+    .admin-topbar {
+      background: #111827;
+      border-bottom: 1px solid #1F2937;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .admin-nav-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 14px 0;
+      border-bottom: 1px solid #1E293B;
+      scrollbar-width: none;
+    }
+
+    .admin-nav-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .admin-nav-btn {
+      background: #111827;
+      color: #94A3B8;
+      border: 1px solid #1F2937;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .admin-nav-btn:hover {
+      background: #1E293B;
+      color: #FFFFFF;
+      border-color: #374151;
+    }
+
+    .admin-nav-btn.active {
+      background: #1E293B;
+      color: #FDE89C;
+      border-color: #C89338;
+      box-shadow: 0 2px 10px rgba(200, 147, 56, 0.2);
+    }
+
+    .admin-nav-badge {
+      background: #EF4444;
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    .admin-btn-action-primary {
+      background: linear-gradient(135deg, #C89338 0%, #DF9E30 100%);
+      color: #0F172A;
+      font-weight: 800;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      transition: transform 0.15s ease;
+    }
+
+    .admin-btn-action-primary:active {
+      transform: scale(0.97);
+    }
+
+    .admin-view-panel {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 20px;
+      animation: fadeInAdmin 0.25s ease;
+    }
+
+    .admin-view-panel.active {
+      display: flex;
+    }
+
+    @keyframes fadeInAdmin {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar Header -->
+  <header class="admin-topbar">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 26px;">🛡️</span>
+      <div>
+        <div style="font-weight: 800; font-size: 16px; letter-spacing: -0.3px; color: #FFFFFF;">FGT PRO MASTER ADMIN</div>
+        <span class="admin-badge-tag">Sistem Manajemen & Kontrol Penuh</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="index.html" class="admin-back-btn" style="text-decoration: none;">
+        <span>📱 Lihat Tampilan User (Frontend)</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="admin-standalone-container">
+
+    <!-- Navigation Bar -->
+    <nav class="admin-nav-bar">
+      <button class="admin-nav-btn active" data-tab="dashboard">
+        <span>📊 Dashboard</span>
+      </button>
+      <button class="admin-nav-btn" data-tab="deposits">
+        <span>💳 Konfirmasi Deposit</span>
+        <span class="admin-nav-badge" id="badgePendingDep">0</span>
+      </button>
+      <button class="admin-nav-btn" data-tab="withdrawals">
+        <span>💸 Konfirmasi Penarikan</span>
+        <span class="admin-nav-badge" id="badgePendingWd">0</span>
+      </button>
+      <button class="admin-nav-btn" data-tab="plans">
+        <span>📈 Plan Investasi & Profit</span>
+      </button>
+      <button class="admin-nav-btn" data-tab="affiliate">
+        <span>👥 Pengaturan Sponsor & Rabat</span>
+      </button>
+      <button class="admin-nav-btn" data-tab="gateways">
+        <span>🏦 Gateway & Rekening</span>
+      </button>
+      <button class="admin-nav-btn" data-tab="users">
+        <span>👤 Kelola Pengguna</span>
+      </button>
+      <button class="admin-nav-btn" data-tab="signals">
+        <span>🤖 Sinyal Prof GPT</span>
+      </button>
+    </nav>
+
+    <!-- ====================================================================
+         1. PANEL DASHBOARD OVERVIEW
+         ==================================================================== -->
+    <section id="pane-dashboard" class="admin-view-panel active">
+      <!-- Stats Counters -->
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Total Pengguna Terdaftar</span>
+          <span class="admin-stat-value" id="statTotalUsers">0</span>
+          <span class="admin-stat-change positive">✓ Sistem Aktif Realtime</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Total Deposit Masuk (Approved)</span>
+          <span class="admin-stat-value" id="statTotalDeposits" style="color: #22C55E;">IDR 0</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Total Penarikan Keluar</span>
+          <span class="admin-stat-value" id="statTotalWithdrawals" style="color: #EF4444;">IDR 0</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">Modal Trading Berjalan (Investasi)</span>
+          <span class="admin-stat-value" id="statActiveCapital" style="color: #C89338;">IDR 0</span>
+        </div>
+      </div>
+
+      <!-- Quick Action: Instant Daily Profit Trigger -->
+      <div class="admin-card" style="border-left: 4px solid #C89338;">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">⚡ Pemicu Distribusi Profit Harian Acak (Random Daily Engine)</h3>
+        </div>
+        <p style="font-size: 13px; color: #94A3B8; margin-bottom: 16px; line-height: 1.5;">
+          Algoritma akan menghitung dividen harian secara acak dalam batas rentang (min% - max%) masing-masing paket investasi aktif dan menambahkan dividen yang dapat diklaim oleh pengguna.
+        </p>
+        <button class="admin-btn-action-primary" onclick="AdminPage.triggerDailyProfit()">
+          <span>▶ Pemicu Distribusi Profit Hari Ini Sekarang</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         2. PANEL DEPOSIT APPROVALS
+         ==================================================================== -->
+    <section id="pane-deposits" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">Permintaan Deposit Pengguna (Bank Lokal, QRIS & USDT)</h3>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID Transaksi</th>
+                <th>Waktu</th>
+                <th>User</th>
+                <th>Metode Pembayaran</th>
+                <th>Nominal</th>
+                <th>Kode / TxID</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="depositTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         3. PANEL WITHDRAWAL APPROVALS
+         ==================================================================== -->
+    <section id="pane-withdrawals" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">Permintaan Penarikan Dana (Withdrawal)</h3>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID Transaksi</th>
+                <th>Waktu</th>
+                <th>User</th>
+                <th>Sumber Saldo</th>
+                <th>Tujuan Rekening / E-Wallet</th>
+                <th>Nominal Bersih (Net)</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="withdrawTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         4. PANEL PLANS CONFIGURATION
+         ==================================================================== -->
+    <section id="pane-plans" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">Daftar Paket Investasi & Rentang Profit Acak</h3>
+          <button class="admin-btn-action-primary" onclick="AdminPage.openAddPlanModal()">
+            <span>➕ Tambah Paket Baru</span>
+          </button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nama Paket</th>
+                <th>Minimal Deposit</th>
+                <th>Maksimal Deposit</th>
+                <th>Rentang Profit Harian</th>
+                <th>Durasi (Hari)</th>
+                <th>Investor Aktif</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="plansTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         5. PANEL AFFILIATE & RABAT SETTINGS
+         ==================================================================== -->
+    <section id="pane-affiliate" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">Pengaturan Komisi Sponsor Langsung & Rabat Level</h3>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Bonus Sponsor Langsung (%)</div>
+            <div class="setting-desc">Komisi instan ke upline saat downline langsung mengaktifkan paket investasi</div>
+          </div>
+          <div class="setting-input-wrap">
+            <input type="number" class="admin-input" id="affCfgSponsor" value="10">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Bonus Rabat Level 1 (%)</div>
+            <div class="setting-desc">Komisi matching ROI dari dividen harian yang diklaim downline Level 1</div>
+          </div>
+          <div class="setting-input-wrap">
+            <input type="number" class="admin-input" id="affCfgL1" value="5.0" step="0.1">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Bonus Rabat Level 2 (%)</div>
+            <div class="setting-desc">Komisi matching ROI dari dividen harian yang diklaim downline Level 2</div>
+          </div>
+          <div class="setting-input-wrap">
+            <input type="number" class="admin-input" id="affCfgL2" value="3.0" step="0.1">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Bonus Rabat Level 3 (%)</div>
+            <div class="setting-desc">Komisi matching ROI dari dividen harian yang diklaim downline Level 3</div>
+          </div>
+          <div class="setting-input-wrap">
+            <input type="number" class="admin-input" id="affCfgL3" value="1.5" step="0.1">
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.saveAffiliateSettings()">
+            <span>💾 Simpan Pengaturan Komisi</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         6. PANEL PAYMENT GATEWAYS & RATES
+         ==================================================================== -->
+    <section id="pane-gateways" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">Pengaturan Rekening Bank, QRIS & USDT</h3>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Kurs USD / IDR (1 USDT)</div>
+            <div class="setting-desc">Nilai konversi 1 USDT dalam Rupiah untuk deposit dan penarikan</div>
+          </div>
+          <div class="setting-input-wrap">
+            <input type="number" class="admin-input" id="gwCfgUsdRate" value="16250">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Alamat USDT TRC20 Resmi</div>
+            <div class="setting-desc">Alamat deposit wallet crypto TRC20 yang ditampilkan kepada pengguna</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <input type="text" class="admin-input" id="gwCfgTrc20" value="TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Biaya Admin Penarikan (%)</div>
+            <div class="setting-desc">Potongan biaya admin otomatis saat pengguna melakukan penarikan dana</div>
+          </div>
+          <div class="setting-input-wrap">
+            <input type="number" class="admin-input" id="gwCfgWdFee" value="1.0" step="0.1">
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.saveGatewaySettings()">
+            <span>💾 Simpan Pengaturan Gateway</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         7. PANEL USERS MANAGEMENT
+         ==================================================================== -->
+    <section id="pane-users" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">Manajemen Data & Saldo Pengguna</h3>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Nama Lengkap</th>
+                <th>Email / Kontak</th>
+                <th>Wallet Balance</th>
+                <th>Wallet Tambah Teman</th>
+                <th>Point</th>
+                <th>Upline Sponsor</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         8. PANEL PROF GPT SIGNALS
+         ==================================================================== -->
+    <section id="pane-signals" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">Kelola Sinyal Trading AI Prof GPT</h3>
+          <button class="admin-btn-action-primary" onclick="AdminPage.openAddSignalModal()">
+            <span>➕ Terbitkan Sinyal Baru</span>
+          </button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Pasangan Mata Uang</th>
+                <th>Aksi</th>
+                <th>Entry</th>
+                <th>Take Profit (TP)</th>
+                <th>Stop Loss (SL)</th>
+                <th>Akurasi AI</th>
+                <th>Waktu Rilis</th>
+              </tr>
+            </thead>
+            <tbody id="signalsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Modal Edit Plan -->
+  <div class="modal-backdrop" id="adminPlanModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title" id="adminPlanModalTitle">Edit Paket Investasi</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <input type="hidden" id="planModalId">
+
+      <div class="form-group">
+        <label class="form-label">Nama Paket:</label>
+        <input type="text" class="form-input" id="planModalName">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Min Deposit (IDR):</label>
+          <input type="number" class="form-input" id="planModalMin">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Max Deposit (IDR):</label>
+          <input type="number" class="form-input" id="planModalMax">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Min Profit / Hari (%):</label>
+          <input type="number" class="form-input" id="planModalMinRate" step="0.1">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Max Profit / Hari (%):</label>
+          <input type="number" class="form-input" id="planModalMaxRate" step="0.1">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Durasi Kontrak (Hari):</label>
+        <input type="number" class="form-input" id="planModalDuration">
+      </div>
+
+      <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="AdminPage.savePlanModal()">
+        <span>Simpan Paket Investasi</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Edit User Balance -->
+  <div class="modal-backdrop" id="adminUserModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Kelola Saldo Pengguna</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <input type="hidden" id="adminUserId">
+      <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px;" id="adminUserLabel"></div>
+
+      <div class="form-group">
+        <label class="form-label">Wallet Balance (IDR):</label>
+        <input type="number" class="form-input" id="adminUserWalletBal">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Wallet Tambah Teman (Komisi IDR):</label>
+        <input type="number" class="form-input" id="adminUserAffBal">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Point Reward:</label>
+        <input type="number" class="form-input" id="adminUserPoints">
+      </div>
+
+      <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="AdminPage.saveUserModal()">
+        <span>Simpan Perubahan Saldo</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Publish Signal -->
+  <div class="modal-backdrop" id="adminSignalModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Terbitkan Sinyal Prof GPT Baru</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Pasangan Mata Uang / Komoditas:</label>
+        <input type="text" class="form-input" id="sigNewPair" placeholder="Contoh: XAUUSD / EURUSD / BTCUSDT" style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Aksi Trading:</label>
+        <select class="form-select" id="sigNewAction">
+          <option value="SELL">SELL (Jual)</option>
+          <option value="BUY">BUY (Beli)</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Entry Target:</label>
+          <input type="text" class="form-input" id="sigNewEntry" placeholder="2.1450">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Take Profit (TP):</label>
+          <input type="text" class="form-input" id="sigNewTp" placeholder="2.1280">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Stop Loss (SL):</label>
+          <input type="text" class="form-input" id="sigNewSl" placeholder="2.1520">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Akurasi AI (%):</label>
+          <input type="number" class="form-input" id="sigNewConf" value="92">
+        </div>
+      </div>
+
+      <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="AdminPage.publishSignal()">
+        <span>🚀 Terbitkan Sinyal Sekarang</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Admin Page Script -->
+  <script type="module" src="js/admin-page.js"></script>
+
+</body>
+</html>

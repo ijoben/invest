@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FGT Pro - Sistem Investasi & Trading AI Mobile</title>
+  
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- App Wrapper for Desktop Frame / Responsive Shell -->
+  <div class="app-wrapper">
+    <div class="app-container">
+
+      <!-- Desktop Simulator Top Notch Bar -->
+      <div class="simulator-device-bar">
+        <span class="simulator-time">19:13</span>
+        <div class="simulator-notch"></div>
+        <div class="simulator-icons">
+          <span>📶</span>
+          <span>5G</span>
+          <span>🔋 100%</span>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           1. TOP HEADER (Identical to 1000836359.jpg)
+           ==================================================================== -->
+      <header class="top-header">
+        <div class="header-user" onclick="App.isLoggedIn() ? App.switchTab('profile') : App.openModal('authModal')">
+          <div class="user-avatar-badge" id="userAvatarBadge">
+            <span>👤</span>
+          </div>
+          <div class="user-greeting" id="userGreetingText">
+            Hi guest,
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Notification Bell -->
+          <button class="header-btn" onclick="App.openModal('notifModal')" title="Notifikasi">
+            <span>🔔</span>
+            <span class="badge-dot"></span>
+          </button>
+          
+          <!-- Megaphone / Announcement -->
+          <button class="header-btn" onclick="App.openModal('announcementModal')" title="Pengumuman">
+            <span>📢</span>
+          </button>
+          
+          <!-- Customer Support Chat -->
+          <button class="header-btn" onclick="App.openModal('supportModal')" title="Customer Support">
+            <span>💬</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ====================================================================
+           TAB VIEW 1: HOME (Dashboard Identical to Screenshot)
+           ==================================================================== -->
+      <main id="tab-home" class="tab-content active">
+
+        <!-- 2. WALLET 3-COLUMN SUMMARY CARD -->
+        <section class="wallet-card-container">
+          <div class="wallet-summary-card">
+            <!-- Col 1: Wallet Balance -->
+            <div class="wallet-col" onclick="App.openDepositModal()">
+              <div class="wallet-icon">👛</div>
+              <div class="wallet-val" id="valMainBalance">IDR 0</div>
+              <div class="wallet-lbl">Wallet Balance</div>
+            </div>
+
+            <!-- Col 2: Wallet Tambah Teman (Affiliate / Rabat) -->
+            <div class="wallet-col" onclick="App.switchTab('profile')">
+              <div class="wallet-icon">💵</div>
+              <div class="wallet-val" id="valAffiliateBalance">IDR 0</div>
+              <div class="wallet-lbl">Wallet Tambah Teman</div>
+            </div>
+
+            <!-- Col 3: Points -->
+            <div class="wallet-col" onclick="App.showToast('Point reward dapat ditukarkan dengan saldo atau merchandise eksklusif FGT Pro!', 'info')">
+              <div class="wallet-icon">🪙</div>
+              <div class="wallet-val" id="valPoint">0</div>
+              <div class="wallet-lbl">Point</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. VIP / INVESTMENT PLAN CAROUSEL (Horizontal Scroll) -->
+        <section class="tier-carousel-container">
+          <div class="tier-carousel" id="tierCarouselContainer">
+            <!-- Dynamic Plans Rendered via JS -->
+          </div>
+        </section>
+
+        <!-- 4. QUICK ACTIONS GRID (8 Icons: 2 Rows x 4 Cols) -->
+        <section class="quick-actions-container">
+          <div class="quick-actions-card">
+            <div class="quick-grid">
+              
+              <!-- 1. Deposit -->
+              <div class="quick-item" onclick="App.openDepositModal()">
+                <div class="quick-icon-wrap" style="background: #E0F2FE;">
+                  <span>💳</span>
+                </div>
+                <span class="quick-label">Deposit</span>
+              </div>
+
+              <!-- 2. Markets -->
+              <div class="quick-item" onclick="App.switchTab('markets')">
+                <div class="quick-icon-wrap" style="background: #FEE2E2;">
+                  <span>🔄</span>
+                </div>
+                <span class="quick-label">Markets</span>
+              </div>
+
+              <!-- 3. Trade -->
+              <div class="quick-item" onclick="App.switchTab('trade')">
+                <div class="quick-icon-wrap" style="background: #DCFCE7;">
+                  <span>📊</span>
+                </div>
+                <span class="quick-label">Trade</span>
+              </div>
+
+              <!-- 4. Signal -->
+              <div class="quick-item" onclick="document.getElementById('signalSection').scrollIntoView({ behavior: 'smooth' })">
+                <div class="quick-icon-wrap" style="background: #E0E7FF;">
+                  <span>📶</span>
+                </div>
+                <span class="quick-label">Signal</span>
+              </div>
+
+              <!-- 5. My Statistic -->
+              <div class="quick-item" onclick="App.switchTab('trade')">
+                <div class="quick-icon-wrap" style="background: #FEF3C7;">
+                  <span>📈</span>
+                </div>
+                <span class="quick-label">My Statistic</span>
+              </div>
+
+              <!-- 6. Trading Idea -->
+              <div class="quick-item" onclick="App.openModal('supportModal')">
+                <div class="quick-icon-wrap" style="background: #FCE7F3;">
+                  <span>💡</span>
+                </div>
+                <span class="quick-label">Trading Idea</span>
+              </div>
+
+              <!-- 7. Leaderboard -->
+              <div class="quick-item" onclick="App.showToast('Peringkat Leaderboard Profit Mingguan diperbarui setiap hari Senin!', 'info')">
+                <div class="quick-icon-wrap" style="background: #FEF9C3;">
+                  <span>🏆</span>
+                </div>
+                <span class="quick-label">Leaderboard</span>
+              </div>
+
+              <!-- 8. Tambah Teman (Affiliate) -->
+              <div class="quick-item" onclick="App.switchTab('profile')">
+                <div class="quick-icon-wrap" style="background: #DBEAFE;">
+                  <span>👥</span>
+                </div>
+                <span class="quick-label">Tambah Teman</span>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. LIVE MARKET TICKERS (Horizontal Cards) -->
+        <section class="market-ticker-container">
+          <div class="market-ticker-scroll" id="marketTickerContainer">
+            <!-- Dynamic Tickers Rendered via JS -->
+          </div>
+        </section>
+
+        <!-- 6. CTA / TRADING BANNER (Guest vs Logged In) -->
+        <section class="trading-banner-container">
+          <div class="trading-banner-card">
+            
+            <!-- Guest State -->
+            <div id="tradingBannerGuest">
+              <h2 class="trading-banner-title">Mulai Trading di FGT Pro</h2>
+              <p class="trading-banner-subtitle">Agar bisa deposit & trading, kamu perlu login dulu.</p>
+              <button class="btn-cta-gold" onclick="App.openModal('authModal')">
+                <span>Login</span>
+              </button>
+            </div>
+
+            <!-- Logged-in State (Active Capital & Profit Claim Engine) -->
+            <div id="tradingBannerAuth" class="invest-active-box" style="display: none;">
+              <div class="invest-active-header">
+                <div>
+                  <div style="font-size: 11px; color: #64748B; font-weight: 600;">Modal Trading Aktif</div>
+                  <div style="font-size: 18px; font-weight: 800; color: #0F172A;" id="authTotalCapital">IDR 0</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 11px; color: #64748B; font-weight: 600;">Total Profit Diterima</div>
+                  <div style="font-size: 18px; font-weight: 800; color: #22C55E;" id="authTotalEarned">IDR 0</div>
+                </div>
+              </div>
+
+              <div class="profit-meter-wrap">
+                <div class="profit-meter-top">
+                  <span>Profit Harian Menunggu Klaim:</span>
+                  <span id="authPendingProfit" style="color: #16A34A;">IDR 0</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" style="width: 75%;"></div>
+                </div>
+              </div>
+
+              <button class="btn-cta-gold" id="btnClaimProfit" onclick="App.claimProfit()">
+                <span>💰 Klaim Profit Harian</span>
+              </button>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 7. PROF GPT SIGNAL SECTION (Neon Border & Cards) -->
+        <section class="signal-section-container" id="signalSection">
+          <div class="signal-section-title-wrap">
+            <div class="signal-avatar-icon">🤖</div>
+            <h2 class="signal-section-title">Prof GPT Signal</h2>
+          </div>
+
+          <div class="signal-feed" id="signalFeedContainer">
+            <!-- Dynamic Signals Rendered via JS -->
+          </div>
+        </section>
+
+      </main>
+
+      <!-- ====================================================================
+           TAB VIEW 2: MARKETS
+           ==================================================================== -->
+      <section id="tab-markets" class="tab-content">
+        <div class="section-page-header">
+          <div>
+            <h1 class="section-page-title">Pasar Global</h1>
+            <p class="section-page-subtitle">Harga Real-time Forex, Komoditas, Crypto & Saham</p>
+          </div>
+          <button class="tier-btn btn-topup" onclick="App.openDepositModal()">Deposit</button>
+        </div>
+
+        <div class="page-content-wrap">
+          <!-- Interactive Chart Simulator -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 16px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
+            <div class="flex-between mb-3">
+              <div>
+                <span style="font-weight: 800; font-size: 16px;">XAU/USD (Gold)</span>
+                <span style="color: #22C55E; font-weight: 700; font-size: 12px; margin-left: 6px;">+1.18% 🟢</span>
+              </div>
+              <span style="font-family: var(--font-mono); font-weight: 800; font-size: 16px;">4,343.65</span>
+            </div>
+            <canvas id="marketChartCanvas" style="width: 100%; height: 180px;"></canvas>
+          </div>
+
+          <!-- Watchlist Items -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 16px; box-shadow: var(--card-shadow);">
+            <h3 style="font-size: 14px; font-weight: 800; margin-bottom: 12px;">Daftar Instrumen Populer</h3>
+            <div id="marketFullWatchlist" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Item XAUUSD -->
+              <div class="flex-between" style="padding: 8px 0; border-bottom: 1px solid #F1F5F9;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 20px;">🪙</span>
+                  <div>
+                    <div style="font-weight: 700; font-size: 13px;">XAUUSD</div>
+                    <div style="font-size: 10px; color: #94A3B8;">Gold Spot / US Dollar</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13px;">4,343.65</div>
+                  <div style="font-size: 10px; color: #22C55E; font-weight: 700;">+1.18%</div>
+                </div>
+              </div>
+
+              <!-- Item EURUSD -->
+              <div class="flex-between" style="padding: 8px 0; border-bottom: 1px solid #F1F5F9;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 20px;">💶</span>
+                  <div>
+                    <div style="font-weight: 700; font-size: 13px;">EURUSD</div>
+                    <div style="font-size: 10px; color: #94A3B8;">Euro / US Dollar</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13px;">1.15352</div>
+                  <div style="font-size: 10px; color: #EF4444; font-weight: 700;">-0.01%</div>
+                </div>
+              </div>
+
+              <!-- Item BTCUSDT -->
+              <div class="flex-between" style="padding: 8px 0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 20px;">₿</span>
+                  <div>
+                    <div style="font-weight: 700; font-size: 13px;">BTCUSDT</div>
+                    <div style="font-size: 10px; color: #94A3B8;">Bitcoin / Tether USDT</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13px;">68,420.00</div>
+                  <div style="font-size: 10px; color: #22C55E; font-weight: 700;">+3.42%</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB VIEW 3: TRADE / INVEST
+           ==================================================================== -->
+      <section id="tab-trade" class="tab-content">
+        <div class="section-page-header">
+          <div>
+            <h1 class="section-page-title">Portofolio AI Trade</h1>
+            <p class="section-page-subtitle">Sistem Investasi dengan Random Daily Profit</p>
+          </div>
+        </div>
+
+        <div class="page-content-wrap">
+          <!-- Active Plans List -->
+          <div id="tradeActivePlansList" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Rendered via JS -->
+          </div>
+
+          <!-- Profit Simulator Card -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 18px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
+            <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 8px;">Kalkulator Estimasi Profit</h3>
+            <p style="font-size: 11px; color: #64748B; margin-bottom: 14px;">Simulasikan potensi dividen profit harian acak berdasarkan modal Anda.</p>
+            
+            <div class="form-group">
+              <label class="form-label">Nominal Investasi (IDR):</label>
+              <input type="number" class="form-input" id="calcNominal" value="10000000" oninput="
+                const val = Number(this.value) || 0;
+                document.getElementById('calcResMin').textContent = DB.formatIDR(val * 0.02);
+                document.getElementById('calcResMax').textContent = DB.formatIDR(val * 0.035);
+                document.getElementById('calcRes30d').textContent = DB.formatIDR(val * 0.0275 * 30);
+              ">
+            </div>
+
+            <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: center; border: 1px solid #E2E8F0;">
+              <div>
+                <div style="font-size: 10px; color: #64748B;">Estimasi Profit / Hari</div>
+                <div style="font-weight: 800; font-size: 13px; color: #22C55E;"><span id="calcResMin">IDR 200.000</span> - <span id="calcResMax">IDR 350.000</span></div>
+              </div>
+              <div>
+                <div style="font-size: 10px; color: #64748B;">Estimasi 30 Hari</div>
+                <div style="font-weight: 800; font-size: 13px; color: #C89338;" id="calcRes30d">IDR 8.250.000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB VIEW 4: WALLET
+           ==================================================================== -->
+      <section id="tab-wallet" class="tab-content">
+        <div class="section-page-header">
+          <div>
+            <h1 class="section-page-title">Dompet Finansial</h1>
+            <p class="section-page-subtitle">Manajemen Deposit, Penarikan & Riwayat</p>
+          </div>
+        </div>
+
+        <div class="page-content-wrap">
+          <!-- Balances Card -->
+          <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); color: #FFFFFF; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+            <div class="flex-between mb-2">
+              <span style="font-size: 11px; color: #94A3B8; font-weight: 600;">Total Saldo Tersedia</span>
+              <span class="badge-status approved">VERIFIED</span>
+            </div>
+            <div style="font-size: 24px; font-weight: 800; color: #FDE89C; font-family: var(--font-mono); margin-bottom: 16px;" id="walletPageMainBal">IDR 0</div>
+
+            <div style="display: flex; gap: 10px;">
+              <button class="btn-cta-gold" style="flex: 1; padding: 10px;" onclick="App.openDepositModal()">
+                <span>➕ Deposit</span>
+              </button>
+              <button class="btn-cta-gold" style="flex: 1; padding: 10px; background: #334155;" onclick="App.openWithdrawModal()">
+                <span>💸 Tarik Dana</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Secondary Balance: Wallet Tambah Teman -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 16px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 11px; color: #64748B; font-weight: 600;">Wallet Tambah Teman (Komisi Afiliasi)</div>
+              <div style="font-size: 18px; font-weight: 800; color: #0F172A;" id="walletPageAffBal">IDR 0</div>
+            </div>
+            <button class="tier-btn btn-topup" onclick="App.transferAffiliateBalance()">Transfer Saldo</button>
+          </div>
+
+          <!-- Transaction History -->
+          <div>
+            <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 10px;">Riwayat Transaksi</h3>
+            <div id="walletTransactionList" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB VIEW 5: PROFILE & AFFILIATE
+           ==================================================================== -->
+      <section id="tab-profile" class="tab-content">
+        <div class="section-page-header">
+          <div>
+            <h1 class="section-page-title">Profil & Afiliasi</h1>
+            <p class="section-page-subtitle">Program Kemitraan, Bonus Sponsor & Rabat Level</p>
+          </div>
+        </div>
+
+        <div class="page-content-wrap">
+          <!-- Profile Card -->
+          <div style="background: #FFFFFF; border-radius: 20px; padding: 18px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0; display: flex; align-items: center; gap: 14px;">
+            <div class="user-avatar-badge logged-in" style="width: 52px; height: 52px; font-size: 26px;">
+              <span>👤</span>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-weight: 800; font-size: 16px; color: #0F172A;" id="profileUsername">Alex Investor</div>
+              <div style="font-size: 11px; color: #64748B;" id="profileEmail">alex@gmail.com</div>
+              <span class="badge-status approved" style="margin-top: 4px;">Akun Terverifikasi</span>
+            </div>
+          </div>
+
+          <!-- Referral Link Box -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 18px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
+            <div class="flex-between mb-2">
+              <span style="font-weight: 800; font-size: 14px;">Link Referral Anda</span>
+              <span style="font-weight: 800; color: #C89338;" id="profileRefCode">ALEX88</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="profileRefLinkInput" readonly style="font-size: 11px;">
+              <button class="tier-btn btn-topup" style="flex: 0 0 70px;" onclick="App.copyText(document.getElementById('profileRefLinkInput').value, 'Link Referral')">Salin</button>
+            </div>
+            <p style="font-size: 10px; color: #64748B; margin-top: 8px;">Dapatkan <strong>Bonus Sponsor Langsung 10%</strong> dan <strong>Bonus Rabat Matching Profit hingga 5 Level</strong> dari setiap transaksi tim Anda.</p>
+          </div>
+
+          <!-- Downline Tree & Turnover Stats -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 18px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
+            <h3 style="font-size: 14px; font-weight: 800; margin-bottom: 12px;">Struktur Jaringan Tim</h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; margin-bottom: 14px;">
+              <div style="background: #F8FAFC; border-radius: 10px; padding: 8px;">
+                <div style="font-size: 10px; color: #64748B;">Level 1</div>
+                <div style="font-weight: 800; font-size: 15px; color: #2563EB;" id="affL1Count">0</div>
+              </div>
+              <div style="background: #F8FAFC; border-radius: 10px; padding: 8px;">
+                <div style="font-size: 10px; color: #64748B;">Level 2</div>
+                <div style="font-weight: 800; font-size: 15px; color: #D946EF;" id="affL2Count">0</div>
+              </div>
+              <div style="background: #F8FAFC; border-radius: 10px; padding: 8px;">
+                <div style="font-size: 10px; color: #64748B;">Level 3</div>
+                <div style="font-weight: 800; font-size: 15px; color: #C89338;" id="affL3Count">0</div>
+              </div>
+            </div>
+
+            <div class="flex-between mb-3" style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 10px 12px; border-radius: 12px;">
+              <span style="font-size: 12px; font-weight: 700; color: #166534;">Total Omset Tim:</span>
+              <span style="font-size: 14px; font-weight: 800; color: #15803D;" id="affTotalTurnover">IDR 0</span>
+            </div>
+
+            <div id="affDownlineList" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Downline list rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Account Settings & Logout -->
+          <button class="btn-cta-gold" style="background: #EF4444;" onclick="
+            Auth.logout();
+            App.showToast('Berhasil logout.', 'info');
+            App.switchTab('home');
+          ">
+            <span>🚪 Logout Keluar</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Floating Quick Admin Link Button -->
+      <a class="floating-admin-btn" href="admin.html" style="text-decoration: none;">
+        <span>⚙️ Panel Admin</span>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 1: AUTH (LOGIN & REGISTER & FORGOT PASSWORD)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="authModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Akses Akun FGT Pro</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Switch Tabs -->
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button id="authTabLogin" class="btn-cta-gold" style="flex: 1; padding: 10px;">Login</button>
+        <button id="authTabRegister" class="tier-btn" style="flex: 1; padding: 10px; background: #F1F5F9; color: #475569;">Daftar Akun</button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Username / Email / No. HP</label>
+          <input type="text" class="form-input" id="loginIdentifier" placeholder="Contoh: alex_investor" value="alex_investor">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password" value="user123">
+        </div>
+        <button class="btn-cta-gold" onclick="
+          const id = document.getElementById('loginIdentifier').value;
+          const pw = document.getElementById('loginPassword').value;
+          const res = Auth.login(id, pw);
+          if (res.success) {
+            App.closeAllModals();
+            App.showToast(res.message, 'success');
+            App.renderAll();
+          } else {
+            App.showToast(res.message, 'error');
+          }
+        ">
+          <span>Masuk Sekarang</span>
+        </button>
+
+        <!-- Quick 1-Click Demo Logins -->
+        <div class="quick-demo-login">
+          <button class="btn-demo-pill" onclick="
+            Auth.quickLogin('user');
+            App.closeAllModals();
+            App.showToast('Login sebagai Demo Investor!', 'success');
+            App.renderAll();
+          ">👤 Demo User (Alex)</button>
+          
+          <button class="btn-demo-pill" onclick="
+            Auth.quickLogin('admin');
+            App.closeAllModals();
+            App.showToast('Login sebagai Administrator!', 'success');
+            App.switchTab('admin');
+          ">🛡️ Demo Admin</button>
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <div id="registerForm" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-input" id="regUsername" placeholder="Contoh: investor_pro">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" class="form-input" id="regFullName" placeholder="Nama lengkap Anda">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="regEmail" placeholder="nama@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">No. WhatsApp / HP</label>
+          <input type="tel" class="form-input" id="regPhone" placeholder="0812xxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="regPassword" placeholder="Minimal 6 karakter">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kode Referral (Opsional)</label>
+          <input type="text" class="form-input" id="regReferral" placeholder="KODE SPONSOR" style="text-transform: uppercase;">
+        </div>
+        <button class="btn-cta-gold" onclick="
+          const res = Auth.register({
+            username: document.getElementById('regUsername').value,
+            fullName: document.getElementById('regFullName').value,
+            email: document.getElementById('regEmail').value,
+            phone: document.getElementById('regPhone').value,
+            password: document.getElementById('regPassword').value,
+            referralCode: document.getElementById('regReferral').value
+          });
+          if (res.success) {
+            App.closeAllModals();
+            App.showToast(res.message, 'success');
+            App.renderAll();
+          } else {
+            App.showToast(res.message, 'error');
+          }
+        ">
+          <span>Buat Akun & Mulai</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 2: DEPOSIT (BANK, QRIS, USDT)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="depositModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Deposit Saldo</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Pilih Saluran Pembayaran:</label>
+        <select class="form-select" id="depMethodSelect">
+          <option value="bank">Transfer Bank Lokal (BCA, Mandiri, BRI)</option>
+          <option value="qris">QRIS Instant (Semua Bank & E-Wallet)</option>
+          <option value="usdt">Crypto USDT (TRC20 / BEP20)</option>
+        </select>
+      </div>
+
+      <!-- Bank Transfer Fields -->
+      <div id="depBankFields">
+        <div class="form-group">
+          <label class="form-label">Pilih Bank Tujuan:</label>
+          <select class="form-select" id="depBankSelect">
+            <option value="bca">BCA - 8271928374 (PT FGT PRO INVESTASI)</option>
+            <option value="mandiri">MANDIRI - 1370029384721 (PT FGT PRO INVESTASI)</option>
+            <option value="bri">BRI - 034101002938531 (PT FGT PRO INVESTASI)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- QRIS Fields -->
+      <div id="depQrisFields" style="display: none; text-align: center; padding: 10px 0;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=FGT_PRO_OFFICIAL_QRIS_DEPOSIT" alt="QRIS FGT Pro" style="border-radius: 12px; border: 1px solid #E2E8F0; margin-bottom: 8px;">
+        <div style="font-size: 11px; font-weight: 700; color: #1E293B;">NMID: ID1029384756201 (FGT PRO OFFICIAL)</div>
+        <p style="font-size: 10px; color: #64748B;">Scan menggunakan BCA, Mandiri Livin, BRImo, DANA, OVO, GoPay, ShopeePay</p>
+      </div>
+
+      <!-- USDT Fields -->
+      <div id="depUsdtFields" style="display: none;">
+        <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
+          <div style="font-size: 11px; color: #64748B;">Alamat USDT TRC20 Resmi:</div>
+          <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; word-break: break-all; margin: 4px 0;" id="depUsdtAddress">TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1</div>
+          <button class="tier-btn btn-topup" style="padding: 4px 8px; font-size: 10px;" onclick="App.copyText('TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1', 'Alamat USDT')">Salin Alamat</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Jumlah USDT:</label>
+          <input type="number" class="form-input" id="depUsdtAmountInput" placeholder="Contoh: 100 USDT" value="100">
+          <div style="font-size: 11px; color: #C89338; margin-top: 4px; font-weight: 700;">
+            Estimasi Rupiah (Kurs 1 USDT = Rp 16.250): <span id="depUsdtCalculatedIdr">IDR 1.625.000</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Transaction Hash (TXID):</label>
+          <input type="text" class="form-input" id="depTxidInput" placeholder="Tempel TxID bukti transfer blockchain">
+        </div>
+      </div>
+
+      <!-- Nominal Amount for Bank/QRIS -->
+      <div class="form-group" id="depNominalWrap">
+        <label class="form-label">Nominal Deposit (IDR):</label>
+        <input type="number" class="form-input" id="depAmountInput" value="500000" placeholder="Minimal Rp 50.000">
+      </div>
+
+      <button class="btn-cta-gold" onclick="App.submitDeposit()">
+        <span>Konfirmasi Deposit</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 3: WITHDRAWAL
+       ====================================================================== -->
+  <div class="modal-backdrop" id="withdrawModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Penarikan Dana</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Sumber Saldo:</label>
+        <select class="form-select" id="wdWalletType">
+          <option value="main">Wallet Balance</option>
+          <option value="affiliate">Wallet Tambah Teman (Komisi)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Metode Penarikan:</label>
+        <select class="form-select" id="wdMethod">
+          <option value="bank">Transfer Bank Lokal</option>
+          <option value="ewallet">E-Wallet (DANA, OVO, GoPay, ShopeePay)</option>
+          <option value="usdt">USDT TRC20 / BEP20</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Bank / E-Wallet / Jaringan:</label>
+        <input type="text" class="form-input" id="wdBankName" placeholder="Contoh: BCA / DANA / TRC20" value="BCA">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor Rekening / No. HP / Alamat USDT:</label>
+        <input type="text" class="form-input" id="wdAccountNumber" placeholder="Nomor tujuan penarikan" value="8271029384">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Pemilik Akun:</label>
+        <input type="text" class="form-input" id="wdAccountHolder" placeholder="Nama sesuai buku tabungan" value="Alex Sutanto">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nominal Penarikan (IDR):</label>
+        <input type="number" class="form-input" id="wdAmountInput" value="500000" placeholder="Minimal Rp 50.000">
+        <div style="font-size: 11px; color: #64748B; margin-top: 4px;">Biaya admin 1% dipotong otomatis.</div>
+      </div>
+
+      <button class="btn-cta-gold" onclick="App.submitWithdraw()">
+        <span>Kirim Permintaan Penarikan</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 4: PLAN INVESTMENT DETAILS & PURCHASE
+       ====================================================================== -->
+  <div class="modal-backdrop" id="planModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalPlanTitle">Detail Paket</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="background: #F8FAFC; border-radius: 14px; padding: 14px; margin-bottom: 14px; border: 1px solid #E2E8F0;">
+        <p id="modalPlanDesc" style="font-size: 12px; color: #475569; margin-bottom: 10px;"></p>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 12px;">
+          <div><strong>Min Deposit:</strong> <span id="modalPlanMin"></span></div>
+          <div><strong>Max Deposit:</strong> <span id="modalPlanMax"></span></div>
+          <div><strong>Profit Harian:</strong> <span id="modalPlanProfit" style="color: #22C55E; font-weight: 700;"></span></div>
+          <div><strong>Durasi Kontrak:</strong> <span id="modalPlanDuration"></span></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nominal Investasi (IDR):</label>
+        <input type="number" class="form-input" id="investAmountInput" data-plan-id="" value="1000000">
+      </div>
+
+      <button class="btn-cta-gold" onclick="App.submitInvestment()">
+        <span>Konfirmasi Beli Paket</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 5: PROF GPT SIGNAL DETAILS
+       ====================================================================== -->
+  <div class="modal-backdrop" id="signalModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Detail Sinyal AI Prof GPT</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="text-align: center; padding: 10px 0 16px 0;">
+        <span id="sigModalAction" class="badge-signal-action sell" style="font-size: 16px; padding: 6px 20px;">SELL</span>
+        <h2 style="font-size: 24px; font-weight: 800; margin-top: 8px;" id="sigModalPair">GBPNZD</h2>
+        <p style="font-size: 12px; color: #64748B;">Sinyal dieksekusi otomatis oleh algoritma Machine Learning FGT Pro.</p>
+      </div>
+
+      <div style="background: #F8FAFC; border-radius: 14px; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; text-align: center; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 11px; color: #64748B;">Entry Target</div>
+          <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono);" id="sigModalEntry">-</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: #64748B;">Take Profit (TP)</div>
+          <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #22C55E;" id="sigModalTp">-</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: #64748B;">Stop Loss (SL)</div>
+          <div style="font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #EF4444;" id="sigModalSl">-</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: #64748B;">Akurasi AI</div>
+          <div style="font-size: 16px; font-weight: 800; color: #D946EF;" id="sigModalConf">-</div>
+        </div>
+      </div>
+
+      <button class="btn-cta-gold" onclick="
+        App.closeModal('signalModal');
+        App.showToast('Sinyal telah disalin ke trading desk Anda!', 'success');
+      ">
+        <span>Terapkan ke Akun Trading</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 6: NOTIFICATIONS & ANNOUNCEMENTS
+       ====================================================================== -->
+  <div class="modal-backdrop" id="notifModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Pemberitahuan Sistem</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; border-left: 4px solid #22C55E;">
+          <div style="font-weight: 700; font-size: 13px;">Dividen Profit Harian Berhasil!</div>
+          <div style="font-size: 11px; color: #64748B; margin-top: 2px;">Profit acak harian telah dihitung untuk semua paket aktif. Klik tombol klaim untuk mencairkannya.</div>
+        </div>
+        <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; border-left: 4px solid #C89338;">
+          <div style="font-weight: 700; font-size: 13px;">Bonus Sponsor Masuk</div>
+          <div style="font-size: 11px; color: #64748B; margin-top: 2px;">Selamat! Anda mendapatkan komisi sponsor 10% dari deposit anggota tim Anda.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="announcementModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Pengumuman Resmi</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div style="font-size: 13px; line-height: 1.6; color: #334155;">
+        <h4 style="font-weight: 800; color: #0F172A; margin-bottom: 6px;">🎉 Update Server AI & Gateway 2026</h4>
+        <p style="margin-bottom: 10px;">Selamat datang di platform investasi FGT Pro. Kami telah meningkatkan kecepatan transaksi deposit instan menggunakan QRIS dinamis serta jaringan USDT TRC20 & BEP20.</p>
+        <p>Dividen profit harian beroperasi secara realtime 24/7 dan dapat diklaim setiap hari ke saldo utama dompet Anda.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="supportModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Layanan Bantuan 24/7</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div style="text-align: center; padding: 10px 0;">
+        <div style="font-size: 40px; margin-bottom: 10px;">🎧</div>
+        <h4 style="font-weight: 800; margin-bottom: 4px;">Customer Service & Konsultasi</h4>
+        <p style="font-size: 12px; color: #64748B; margin-bottom: 16px;">Hubungi tim representatif resmi FGT Pro jika Anda membutuhkan bantuan seputar deposit, penarikan, atau bonus kemitraan.</p>
+        
+        <button class="btn-cta-gold" style="background: #25D366; margin-bottom: 8px;" onclick="window.open('https://wa.me/', '_blank')">
+          <span>💬 WhatsApp CS Resmi</span>
+        </button>
+        <button class="btn-cta-gold" style="background: #0088CC;" onclick="window.open('https://t.me/', '_blank')">
+          <span>✈️ Telegram Support Center</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 7: ADMIN USER BALANCE EDITOR
+       ====================================================================== -->
+  <div class="modal-backdrop" id="adminUserModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Kelola Saldo Pengguna</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <input type="hidden" id="adminEditUserId">
+      <div style="font-weight: 800; font-size: 14px; margin-bottom: 12px;" id="adminEditUsername"></div>
+
+      <div class="form-group">
+        <label class="form-label">Wallet Balance (IDR):</label>
+        <input type="number" class="form-input" id="adminEditWalletBal">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Wallet Tambah Teman / Afiliasi (IDR):</label>
+        <input type="number" class="form-input" id="adminEditAffBal">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Point Reward:</label>
+        <input type="number" class="form-input" id="adminEditPoints">
+      </div>
+
+      <button class="admin-btn-primary" style="width: 100%; justify-content: center;" onclick="App.saveUserBalanceAdmin()">
+        <span>Simpan Perubahan Saldo</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Javascript Modules Entry Point -->
+  <script type="module" src="js/app.js"></script>
+
+</body>
+</html>

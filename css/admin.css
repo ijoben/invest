@@ -1,0 +1,346 @@
+/* ==========================================================================
+   FGT PRO - INTEGRATED ADMIN PANEL STYLESHEET
+   Sleek Fintech Admin Dashboard
+   ========================================================================== */
+
+.admin-wrapper {
+  background: #0B0F19;
+  color: #F1F5F9;
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+.admin-header-bar {
+  background: #111827;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #1F2937;
+  position: sticky;
+  top: 0;
+  z-index: 60;
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-badge-tag {
+  background: linear-gradient(135deg, #C89338 0%, #DF9E30 100%);
+  color: #0F172A;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-back-btn {
+  background: #1F2937;
+  color: #94A3B8;
+  border: 1px solid #374151;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-fast);
+}
+
+.admin-back-btn:hover {
+  background: #374151;
+  color: #FFFFFF;
+}
+
+/* Admin Tabs Navigation */
+.admin-nav-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 12px 18px;
+  background: #0F172A;
+  border-bottom: 1px solid #1E293B;
+  scrollbar-width: none;
+}
+
+.admin-nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-tab-btn {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-tab-btn.active {
+  background: #1E293B;
+  color: #FDE89C;
+  border: 1px solid rgba(200, 147, 56, 0.4);
+}
+
+.admin-tab-badge {
+  background: #EF4444;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* Admin Content Panels */
+.admin-panel-content {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.admin-tab-pane {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-tab-pane.active {
+  display: flex;
+}
+
+/* Stats Cards Grid */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .admin-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.admin-stat-card {
+  background: #111827;
+  border: 1px solid #1F2937;
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #C89338, #38BDF8);
+}
+
+.admin-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  margin-bottom: 6px;
+}
+
+.admin-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #F8FAFC;
+  font-family: var(--font-mono);
+}
+
+.admin-stat-change {
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.admin-stat-change.positive { color: #22C55E; }
+.admin-stat-change.negative { color: #EF4444; }
+
+/* Admin Action Cards */
+.admin-card {
+  background: #111827;
+  border: 1px solid #1F2937;
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.admin-card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #F8FAFC;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Tables in Admin */
+.admin-table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid #1F2937;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.admin-table th {
+  background: #0F172A;
+  color: #94A3B8;
+  font-weight: 700;
+  padding: 10px 12px;
+  border-bottom: 1px solid #1E293B;
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 12px;
+  border-bottom: 1px solid #1F2937;
+  color: #E2E8F0;
+  white-space: nowrap;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tr:hover {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+/* Status Badges */
+.badge-status {
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-status.pending { background: #78350F; color: #FDE68A; }
+.badge-status.approved { background: #064E3B; color: #6EE7B7; }
+.badge-status.rejected { background: #7F1D1D; color: #FCA5A5; }
+.badge-status.active { background: #1E3A8A; color: #93C5FD; }
+
+/* Admin Buttons */
+.btn-action-group {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-admin-action {
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.btn-admin-action.approve { background: #10B981; color: #FFFFFF; }
+.btn-admin-action.reject { background: #EF4444; color: #FFFFFF; }
+.btn-admin-action.edit { background: #3B82F6; color: #FFFFFF; }
+.btn-admin-action.delete { background: #64748B; color: #FFFFFF; }
+
+.btn-admin-action:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Setting form rows */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #1F2937;
+}
+
+.setting-info {
+  flex: 1;
+}
+
+.setting-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #F8FAFC;
+}
+
+.setting-desc {
+  font-size: 11px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.setting-input-wrap {
+  width: 140px;
+}
+
+.admin-input {
+  width: 100%;
+  background: #0F172A;
+  border: 1px solid #374151;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  color: #F8FAFC;
+  font-size: 12px;
+  outline: none;
+}
+
+.admin-input:focus {
+  border-color: #C89338;
+}
+
+.admin-btn-primary {
+  background: linear-gradient(135deg, #C89338 0%, #DF9E30 100%);
+  color: #0F172A;
+  border: none;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease;
+}
+
+.admin-btn-primary:active {
+  transform: scale(0.97);
+}
