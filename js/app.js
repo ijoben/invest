@@ -1019,52 +1019,60 @@ const App = {
       return;
     }
 
-    const investments = Plans.getUserInvestments(user.id);
-    if (investments.length === 0) {
+    const allInvestments = Plans.getAllUserInvestments(user.id);
+    if (allInvestments.length === 0) {
       listEl.innerHTML = `
         <div style="text-align:center; padding:30px 20px; background:#FFFFFF; border-radius:18px; box-shadow:var(--card-shadow);">
           <div style="width:48px; height:48px; border-radius:50%; background:#FEF3C7; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           </div>
-          <h3 style="font-size:16px; font-weight:800; margin-bottom:6px;">Belum Ada Paket Aktif</h3>
-          <p style="font-size:12px; color:#64748B; margin-bottom:16px;">Pilih salah satu paket trading AI di bawah untuk mulai mendapatkan profit harian acak.</p>
+          <h3 style="font-size:16px; font-weight:800; margin-bottom:6px;">Belum Ada Paket Investasi</h3>
+          <p style="font-size:12px; color:#64748B; margin-bottom:16px;">Aktifkan salah satu paket trading AI di bawah menggunakan Saldo Utama untuk mulai mendapatkan profit harian nyata.</p>
           <button class="btn-cta-gold" onclick="App.openPlanModal('plan-learn')">Pilih Paket Sekarang</button>
         </div>
       `;
       return;
     }
 
-    listEl.innerHTML = investments.map(inv => `
-      <div style="background:#FFFFFF; border-radius:18px; padding:16px; box-shadow:var(--card-shadow); border:1px solid #E2E8F0; display:flex; flex-direction:column; gap:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:800; font-size:15px; color:#0F172A;">Paket ${inv.planName}</span>
-          <span class="badge-status active">AKTIF (${inv.daysElapsed}/${inv.durationDays} Hari)</span>
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); background:#F8FAFC; border-radius:12px; padding:10px; text-align:center; gap:6px;">
-          <div>
-            <div style="font-size:10px; color:#64748B;">Modal</div>
-            <div style="font-weight:800; font-size:12px;">${DB.formatIDR(inv.capital)}</div>
+    listEl.innerHTML = allInvestments.map(inv => {
+      const isActive = inv.status === 'active';
+      return `
+        <div style="background:#FFFFFF; border-radius:18px; padding:16px; box-shadow:var(--card-shadow); border:1px solid ${isActive ? '#E2E8F0' : '#E2E8F0'}; display:flex; flex-direction:column; gap:10px; opacity:${isActive ? '1' : '0.85'};">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:800; font-size:15px; color:#0F172A;">Paket ${inv.planName}</span>
+            <span class="badge-status ${isActive ? 'approved' : 'rejected'}">${isActive ? `BERJALAN (${inv.daysElapsed}/${inv.durationDays} Hari)` : `SELESAI (Modal Kembali)`}</span>
           </div>
-          <div>
-            <div style="font-size:10px; color:#64748B;">Rentang Profit</div>
-            <div style="font-weight:800; font-size:12px; color:#22C55E;">${inv.minRate}% - ${inv.maxRate}%</div>
-          </div>
-          <div>
-            <div style="font-size:10px; color:#64748B;">Profit Terkumpul</div>
-            <div style="font-weight:800; font-size:12px; color:#C89338;">${DB.formatIDR(inv.totalProfitEarned)}</div>
-          </div>
-        </div>
-        ${inv.pendingProfitClaim > 0 ? `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:#DCFCE7; border:1px solid #86EFAC; padding:10px 14px; border-radius:12px;">
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); background:#F8FAFC; border-radius:12px; padding:10px; text-align:center; gap:6px;">
             <div>
-              <div style="font-size:10px; font-weight:700; color:#15803D;">Profit Siap Diklaim Hari Ini:</div>
-              <div style="font-size:14px; font-weight:800; color:#166534;">${DB.formatIDR(inv.pendingProfitClaim)}</div>
+              <div style="font-size:10px; color:#64748B;">Modal Awal</div>
+              <div style="font-weight:800; font-size:12px;">${DB.formatIDR(inv.capital)}</div>
             </div>
-            <button class="tier-btn btn-topup" onclick="App.claimProfit()">Klaim Sekarang</button>
+            <div>
+              <div style="font-size:10px; color:#64748B;">Rentang Profit</div>
+              <div style="font-weight:800; font-size:12px; color:#22C55E;">${inv.minRate}% - ${inv.maxRate}%</div>
+            </div>
+            <div>
+              <div style="font-size:10px; color:#64748B;">Total Profit Didapat</div>
+              <div style="font-weight:800; font-size:12px; color:#C89338;">${DB.formatIDR(inv.totalProfitEarned)}</div>
+            </div>
           </div>
-        ` : ''}
-      </div>
-    `).join('');
+          ${isActive && inv.pendingProfitClaim > 0 ? `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#DCFCE7; border:1px solid #86EFAC; padding:10px 14px; border-radius:12px;">
+              <div>
+                <div style="font-size:10px; font-weight:700; color:#15803D;">Profit Siap Diklaim:</div>
+                <div style="font-size:14px; font-weight:800; color:#166534;">${DB.formatIDR(inv.pendingProfitClaim)}</div>
+              </div>
+              <button class="tier-btn btn-topup" onclick="App.claimProfit()">Klaim Sekarang</button>
+            </div>
+          ` : ''}
+          ${!isActive ? `
+            <div style="font-size:11px; color:#059669; font-weight:700; background:#ECFDF5; padding:8px 12px; border-radius:10px; text-align:center;">
+              ✓ Periode ${inv.durationDays} hari telah selesai. Modal ${DB.formatIDR(inv.capital)} telah dikembalikan ke Saldo Utama.
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
   },
 
   // Render Profile & Affiliate View Page

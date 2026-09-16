@@ -20,10 +20,87 @@ export const Plans = {
     return db.plans.find(p => p.id === planId) || null;
   },
 
-  // Get user active investments
-  getUserInvestments(userId) {
+  // Synchronize user investments with real timestamps (auto-settles completed cycles)
+  syncUserInvestments(userId) {
+    if (!userId) return [];
     const db = DB.get();
+    let modified = false;
+    const now = Date.now();
+    const cycleDurationMs = (db.settings.profitCycleDurationHours || 24) * 3600 * 1000;
+
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return [];
+
+    db.investments = db.investments || [];
+    const userInvs = db.investments.filter(inv => inv.userId === userId && inv.status === 'active');
+
+    userInvs.forEach(inv => {
+      // 1. Check if investment duration has expired
+      if (inv.daysElapsed >= inv.durationDays) {
+        inv.status = 'completed';
+        inv.completedAt = new Date().toISOString();
+        if (!inv.capitalReturned) {
+          user.walletBalance = (user.walletBalance || 0) + inv.capital;
+          inv.capitalReturned = true;
+          db.transactions.unshift({
+            id: 'TRX-CAP-' + Math.floor(100000 + Math.random() * 900000),
+            userId: user.id,
+            username: user.username,
+            type: 'capital_return',
+            planName: inv.planName,
+            amount: inv.capital,
+            note: `Pengembalian modal investasi paket ${inv.planName} (${inv.durationDays} hari selesai)`,
+            status: 'approved',
+            createdAt: new Date().toISOString()
+          });
+        }
+        modified = true;
+        return;
+      }
+
+      // 2. Check if a real 24-hour cycle has passed and no profit is pending claim
+      const lastYieldTime = new Date(inv.lastProfitYieldDate || inv.startDate || now).getTime();
+      const elapsedMs = now - lastYieldTime;
+
+      if (elapsedMs >= cycleDurationMs && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
+        // Yield exactly 1 day profit for this completed cycle
+        const rate = this.generateRandomDailyRate(inv.minRate, inv.maxRate);
+        const profitAmount = Math.floor((inv.capital * rate) / 100);
+
+        inv.pendingProfitClaim = profitAmount;
+        inv.history = inv.history || [];
+        inv.history.push({
+          day: (inv.daysElapsed || 0) + 1,
+          date: new Date().toLocaleDateString('id-ID'),
+          rate: rate,
+          amount: profitAmount,
+          status: 'pending_claim'
+        });
+        modified = true;
+      }
+    });
+
+    if (modified) {
+      DB.save(db);
+    }
+
     return db.investments.filter(inv => inv.userId === userId && inv.status === 'active');
+  },
+
+  // Get user active investments (auto-synced with real timestamps)
+  getUserInvestments(userId) {
+    if (!userId) return [];
+    this.syncUserInvestments(userId);
+    const db = DB.get();
+    return (db.investments || []).filter(inv => inv.userId === userId && inv.status === 'active');
+  },
+
+  // Get all user investments including completed
+  getAllUserInvestments(userId) {
+    if (!userId) return [];
+    this.syncUserInvestments(userId);
+    const db = DB.get();
+    return (db.investments || []).filter(inv => inv.userId === userId);
   },
 
   // Calculate today profit % for a specific user
@@ -57,7 +134,7 @@ export const Plans = {
   // Buy / Activate Plan
   invest({ userId, planId, amount }) {
     const db = DB.get();
-    const user = DB.getUserById(userId);
+    const user = db.users.find(u => u.id === userId);
     const plan = this.getPlanById(planId);
 
     if (!user) return { success: false, message: 'User tidak ditemukan!' };
@@ -72,14 +149,13 @@ export const Plans = {
       return { success: false, message: `Maksimal deposit untuk ${plan.name} adalah ${DB.formatIDR(plan.maxDeposit)}` };
     }
 
-    if (user.walletBalance < parsedAmount) {
-      return { success: false, message: `Saldo Wallet Balance tidak mencukupi! Anda memiliki ${DB.formatIDR(user.walletBalance)}` };
+    if ((user.walletBalance || 0) < parsedAmount) {
+      return { success: false, message: `Saldo Wallet Balance tidak mencukupi! Anda memiliki ${DB.formatIDR(user.walletBalance || 0)}, butuh ${DB.formatIDR(parsedAmount)}` };
     }
 
     // Deduct user balance
-    DB.updateUser(user.id, {
-      walletBalance: user.walletBalance - parsedAmount
-    });
+    user.walletBalance -= parsedAmount;
+    user.points = (user.points || 0) + 50; // Loyalty points reward for new investment
 
     // Create active investment record
     const newInvestment = {
@@ -97,19 +173,23 @@ export const Plans = {
       startDate: new Date().toISOString(),
       lastProfitYieldDate: new Date().toISOString(),
       pendingProfitClaim: 0,
+      capitalReturned: false,
       history: []
     };
 
+    db.investments = db.investments || [];
     db.investments.push(newInvestment);
 
     // Record Transaction
+    db.transactions = db.transactions || [];
     db.transactions.unshift({
-      id: 'TRX-' + Math.floor(100000 + Math.random() * 900000),
+      id: 'TRX-INV-' + Math.floor(100000 + Math.random() * 900000),
       userId: user.id,
       username: user.username,
       type: 'invest_plan',
       planName: plan.name,
       amount: parsedAmount,
+      note: `Aktivasi paket investasi ${plan.name} (${plan.durationDays} hari)`,
       status: 'approved',
       createdAt: new Date().toISOString()
     });
@@ -121,7 +201,11 @@ export const Plans = {
       Affiliate.distributeSponsorBonus(user, parsedAmount);
     }
 
-    return { success: true, message: `Sukses mengaktifkan paket ${plan.name} sebesar ${DB.formatIDR(parsedAmount)}!`, investment: newInvestment };
+    return {
+      success: true,
+      message: `Sukses mengaktifkan paket ${plan.name} sebesar ${DB.formatIDR(parsedAmount)}!`,
+      investment: newInvestment
+    };
   },
 
   // Calculate random daily profit % between minRate and maxRate
@@ -132,42 +216,34 @@ export const Plans = {
     return parseFloat(random.toFixed(2)); // e.g. 2.45%
   },
 
-  // Trigger Daily Profit Yield (Called periodically or manually in admin/test button)
+  // Trigger Daily Profit Yield (Manual / Scheduled admin maintenance cycle)
   yieldDailyProfits() {
     const db = DB.get();
     let totalYielded = 0;
     let updatedCount = 0;
 
+    db.investments = db.investments || [];
     db.investments.forEach(inv => {
       if (inv.status === 'active') {
-        // Generate random rate today
-        const rate = this.generateRandomDailyRate(inv.minRate, inv.maxRate);
-        const profitAmount = Math.floor((inv.capital * rate) / 100);
+        if (inv.daysElapsed < inv.durationDays && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
+          const rate = this.generateRandomDailyRate(inv.minRate, inv.maxRate);
+          const profitAmount = Math.floor((inv.capital * rate) / 100);
 
-        inv.pendingProfitClaim = (inv.pendingProfitClaim || 0) + profitAmount;
-        inv.daysElapsed = (inv.daysElapsed || 0) + 1;
-        inv.lastProfitYieldDate = new Date().toISOString();
+          inv.pendingProfitClaim = profitAmount;
+          inv.lastProfitYieldDate = new Date().toISOString();
 
-        inv.history = inv.history || [];
-        inv.history.push({
-          date: new Date().toLocaleDateString('id-ID'),
-          rate: rate,
-          amount: profitAmount,
-          status: 'pending_claim'
-        });
+          inv.history = inv.history || [];
+          inv.history.push({
+            day: (inv.daysElapsed || 0) + 1,
+            date: new Date().toLocaleDateString('id-ID'),
+            rate: rate,
+            amount: profitAmount,
+            status: 'pending_claim'
+          });
 
-        // Check if plan duration reached
-        if (inv.daysElapsed >= inv.durationDays) {
-          inv.status = 'completed';
-          // Return principal capital to user wallet
-          const user = db.users.find(u => u.id === inv.userId);
-          if (user) {
-            user.walletBalance += inv.capital;
-          }
+          totalYielded += profitAmount;
+          updatedCount++;
         }
-
-        totalYielded += profitAmount;
-        updatedCount++;
       }
     });
 
@@ -181,14 +257,17 @@ export const Plans = {
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
 
-    const userInvs = db.investments.filter(inv => inv.userId === userId && inv.status === 'active');
+    const userInvs = (db.investments || []).filter(inv => inv.userId === userId && inv.status === 'active');
     let totalClaimable = 0;
+    let completedPlans = [];
 
     userInvs.forEach(inv => {
       if (inv.pendingProfitClaim > 0) {
         totalClaimable += inv.pendingProfitClaim;
-        inv.totalProfitEarned += inv.pendingProfitClaim;
+        inv.totalProfitEarned = (inv.totalProfitEarned || 0) + inv.pendingProfitClaim;
         inv.pendingProfitClaim = 0;
+        inv.daysElapsed = (inv.daysElapsed || 0) + 1;
+        inv.lastProfitYieldDate = new Date().toISOString();
 
         // Mark history records as claimed
         if (inv.history) {
@@ -196,15 +275,38 @@ export const Plans = {
             if (h.status === 'pending_claim') h.status = 'claimed';
           });
         }
+
+        // Check if plan duration reached upon this claim
+        if (inv.daysElapsed >= inv.durationDays) {
+          inv.status = 'completed';
+          inv.completedAt = new Date().toISOString();
+          if (!inv.capitalReturned) {
+            user.walletBalance = (user.walletBalance || 0) + inv.capital;
+            inv.capitalReturned = true;
+            completedPlans.push(inv);
+            db.transactions.unshift({
+              id: 'TRX-CAP-' + Math.floor(100000 + Math.random() * 900000),
+              userId: user.id,
+              username: user.username,
+              type: 'capital_return',
+              planName: inv.planName,
+              amount: inv.capital,
+              note: `Pengembalian modal paket ${inv.planName} (${inv.durationDays} hari selesai)`,
+              status: 'approved',
+              createdAt: new Date().toISOString()
+            });
+          }
+        }
       }
     });
 
     if (totalClaimable <= 0) {
-      return { success: false, message: 'Belum ada profit yang siap diklaim saat ini. Profit bertambah setiap 24 jam.' };
+      return { success: false, message: 'Belum ada profit yang siap diklaim saat ini. Hitung mundur siklus 24 jam sedang berjalan.' };
     }
 
     // Add to user wallet balance
-    user.walletBalance += totalClaimable;
+    user.walletBalance = (user.walletBalance || 0) + totalClaimable;
+    user.points = (user.points || 0) + 2; // Daily loyalty points reward
 
     // Record Transaction
     db.transactions.unshift({
@@ -213,6 +315,7 @@ export const Plans = {
       username: user.username,
       type: 'profit_claim',
       amount: totalClaimable,
+      note: `Klaim profit harian investasi AI (${DB.formatIDR(totalClaimable)})`,
       status: 'approved',
       createdAt: new Date().toISOString()
     });
@@ -224,10 +327,16 @@ export const Plans = {
       Affiliate.distributeRabatBonus(user, totalClaimable);
     }
 
+    let msg = `Berhasil klaim profit harian sebesar ${DB.formatIDR(totalClaimable)} ke Saldo Utama!`;
+    if (completedPlans.length > 0) {
+      const capReturned = completedPlans.reduce((sum, p) => sum + p.capital, 0);
+      msg += ` Paket investasi telah selesai (${completedPlans[0].durationDays}/${completedPlans[0].durationDays} hari) dan modal ${DB.formatIDR(capReturned)} telah dikembalikan ke Saldo Utama.`;
+    }
+
     return {
       success: true,
       amount: totalClaimable,
-      message: `Berhasil klaim profit harian sebesar ${DB.formatIDR(totalClaimable)} ke Wallet Balance!`
+      message: msg
     };
   }
 };

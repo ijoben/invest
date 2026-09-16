@@ -1258,6 +1258,16 @@ export const AdminPage = {
     this.renderAll();
   },
 
+  triggerDailyProfit() {
+    const res = Admin.yieldDailyProfits();
+    if (res.updatedCount > 0) {
+      this.showToast(`Sukses mendistribusikan dividen profit ke ${res.updatedCount} paket investasi aktif (Total: ${DB.formatIDR(res.totalYielded)})!`, 'success');
+    } else {
+      this.showToast('Tidak ada paket aktif yang siap menerima dividen baru saat ini (semua paket sudah menerima dividen hari ini atau telah selesai).', 'info');
+    }
+    this.renderAll();
+  },
+
   // Modals & Toast
   openModal(id) {
     const el = document.getElementById(id);

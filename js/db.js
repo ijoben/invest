@@ -15,7 +15,8 @@ const defaultDB = {
     minDeposit: 50000,
     minWithdraw: 50000,
     withdrawFeePercent: 1.0, // 1% admin fee
-    autoProfitIntervalSeconds: 3600, // interval in seconds for simulated daily tick
+    profitCycleDurationHours: 24, // Real 24-hour cycle
+    autoProfitIntervalSeconds: 86400, // 24 hours in seconds
     sponsorBonusPercent: 10, // 10% direct sponsor bonus
     rabatLevels: [
       { level: 1, percent: 5.0 },
@@ -130,9 +131,9 @@ const defaultDB = {
       phone: '081234567890',
       password: 'user123',
       role: 'user',
-      walletBalance: 2500000,
-      affiliateBalance: 450000,
-      points: 120,
+      walletBalance: 684000, // Real balance: 2.5jt dep - 2jt inv + 184rb claimed profit
+      affiliateBalance: 102600, // Real commission: 100rb sponsor + 2.6rb rabat
+      points: 20,
       referralCode: 'ALEX88',
       referredBy: 'ADMINVIP',
       kycStatus: 'verified',
@@ -146,9 +147,9 @@ const defaultDB = {
       phone: '081233344455',
       password: 'user123',
       role: 'user',
-      walletBalance: 1200000,
-      affiliateBalance: 150000,
-      points: 50,
+      walletBalance: 52000, // Real balance: 1jt dep - 1jt inv + 52rb claimed profit
+      affiliateBalance: 0,
+      points: 10,
       referralCode: 'SARAH77',
       referredBy: 'ALEX88',
       kycStatus: 'verified',
@@ -162,9 +163,9 @@ const defaultDB = {
       phone: '081277788899',
       password: 'user123',
       role: 'user',
-      walletBalance: 5000000,
-      affiliateBalance: 320000,
-      points: 80,
+      walletBalance: 0, // Waiting for pending deposit approval
+      affiliateBalance: 0,
+      points: 10,
       referralCode: 'BUDI99',
       referredBy: 'ALEX88',
       kycStatus: 'verified',
@@ -178,9 +179,9 @@ const defaultDB = {
       phone: '081399887766',
       password: 'user123',
       role: 'user',
-      walletBalance: 800000,
-      affiliateBalance: 40000,
-      points: 20,
+      walletBalance: 0,
+      affiliateBalance: 0,
+      points: 10,
       referralCode: 'RENDY01',
       referredBy: 'SARAH77', // Level 2 for Alex
       kycStatus: 'verified',
@@ -205,10 +206,11 @@ const defaultDB = {
       startDate: new Date(Date.now() - 3 * 86400000).toISOString(),
       lastProfitYieldDate: new Date(Date.now() - 3600000).toISOString(),
       pendingProfitClaim: 52000, // Today's pending claimable profit
+      capitalReturned: false,
       history: [
-        { date: '2026-09-13', rate: 2.8, amount: 56000, status: 'claimed' },
-        { date: '2026-09-14', rate: 3.2, amount: 64000, status: 'claimed' },
-        { date: '2026-09-15', rate: 3.2, amount: 64000, status: 'claimed' }
+        { day: 1, date: '13/09/2026', rate: 2.8, amount: 56000, status: 'claimed' },
+        { day: 2, date: '14/09/2026', rate: 3.2, amount: 64000, status: 'claimed' },
+        { day: 3, date: '15/09/2026', rate: 3.2, amount: 64000, status: 'claimed' }
       ]
     },
     {
@@ -226,24 +228,153 @@ const defaultDB = {
       startDate: new Date(Date.now() - 3 * 86400000).toISOString(),
       lastProfitYieldDate: new Date(Date.now() - 3600000).toISOString(),
       pendingProfitClaim: 18000,
-      history: []
+      capitalReturned: false,
+      history: [
+        { day: 1, date: '13/09/2026', rate: 1.6, amount: 16000, status: 'claimed' },
+        { day: 2, date: '14/09/2026', rate: 1.8, amount: 18000, status: 'claimed' },
+        { day: 3, date: '15/09/2026', rate: 1.8, amount: 18000, status: 'claimed' }
+      ]
     }
   ],
 
-  // Transactions (Deposit, Withdraw, Profit, Sponsor, Rabat)
+  // Transactions (Deposit, Withdraw, Profit, Sponsor, Rabat, Capital Return)
   transactions: [
     {
-      id: 'TRX-1001',
+      id: 'TRX-1015',
+      userId: 'usr-downline-2',
+      username: 'budi_crypto',
+      type: 'deposit',
+      paymentMethod: 'USDT TRC20',
+      amountUsdt: 300,
+      amount: 4875000, // 300 * 16250
+      txid: '9f8e7d6c5b4a3210fedcba9876543210abcdef1234567890',
+      status: 'pending',
+      createdAt: '2026-09-16T07:30:00.000Z'
+    },
+    {
+      id: 'TRX-1014',
       userId: 'usr-demo',
       username: 'alex_investor',
-      type: 'deposit',
-      paymentMethod: 'BCA Transfer',
-      amount: 2500000,
-      uniqueCode: 124,
-      proofImage: '',
+      type: 'rabat_bonus',
+      level: 1,
+      amount: 900,
+      note: 'Bonus Rabat Level 1 (5%) dari profit sarah_trader (Rp 18.000)',
       status: 'approved',
-      createdAt: '2026-09-10T14:20:00.000Z',
-      updatedAt: '2026-09-10T14:35:00.000Z'
+      createdAt: '2026-09-15T15:00:00.000Z'
+    },
+    {
+      id: 'TRX-1013',
+      userId: 'usr-downline-1',
+      username: 'sarah_trader',
+      type: 'profit_claim',
+      amount: 18000,
+      note: 'Klaim profit harian Hari ke-3 paket Learn',
+      status: 'approved',
+      createdAt: '2026-09-15T15:00:00.000Z'
+    },
+    {
+      id: 'TRX-1012',
+      userId: 'usr-demo',
+      username: 'alex_investor',
+      type: 'profit_claim',
+      amount: 64000,
+      note: 'Klaim profit harian Hari ke-3 paket Rookie',
+      status: 'approved',
+      createdAt: '2026-09-15T14:30:00.000Z'
+    },
+    {
+      id: 'TRX-1011',
+      userId: 'usr-demo',
+      username: 'alex_investor',
+      type: 'rabat_bonus',
+      level: 1,
+      amount: 900,
+      note: 'Bonus Rabat Level 1 (5%) dari profit sarah_trader (Rp 18.000)',
+      status: 'approved',
+      createdAt: '2026-09-14T15:00:00.000Z'
+    },
+    {
+      id: 'TRX-1010',
+      userId: 'usr-downline-1',
+      username: 'sarah_trader',
+      type: 'profit_claim',
+      amount: 18000,
+      note: 'Klaim profit harian Hari ke-2 paket Learn',
+      status: 'approved',
+      createdAt: '2026-09-14T15:00:00.000Z'
+    },
+    {
+      id: 'TRX-1009',
+      userId: 'usr-demo',
+      username: 'alex_investor',
+      type: 'profit_claim',
+      amount: 64000,
+      note: 'Klaim profit harian Hari ke-2 paket Rookie',
+      status: 'approved',
+      createdAt: '2026-09-14T14:30:00.000Z'
+    },
+    {
+      id: 'TRX-1008',
+      userId: 'usr-demo',
+      username: 'alex_investor',
+      type: 'rabat_bonus',
+      level: 1,
+      amount: 800,
+      note: 'Bonus Rabat Level 1 (5%) dari profit sarah_trader (Rp 16.000)',
+      status: 'approved',
+      createdAt: '2026-09-13T15:00:00.000Z'
+    },
+    {
+      id: 'TRX-1007',
+      userId: 'usr-downline-1',
+      username: 'sarah_trader',
+      type: 'profit_claim',
+      amount: 16000,
+      note: 'Klaim profit harian Hari ke-1 paket Learn',
+      status: 'approved',
+      createdAt: '2026-09-13T15:00:00.000Z'
+    },
+    {
+      id: 'TRX-1006',
+      userId: 'usr-demo',
+      username: 'alex_investor',
+      type: 'profit_claim',
+      amount: 56000,
+      note: 'Klaim profit harian Hari ke-1 paket Rookie',
+      status: 'approved',
+      createdAt: '2026-09-13T14:30:00.000Z'
+    },
+    {
+      id: 'TRX-1005',
+      userId: 'usr-demo',
+      username: 'alex_investor',
+      type: 'sponsor_bonus',
+      amount: 100000,
+      note: 'Bonus Sponsor 10% dari aktivasi paket sarah_trader (Rp 1.000.000)',
+      status: 'approved',
+      createdAt: '2026-09-12T09:20:00.000Z'
+    },
+    {
+      id: 'TRX-1004',
+      userId: 'usr-downline-1',
+      username: 'sarah_trader',
+      type: 'invest_plan',
+      planName: 'Learn',
+      amount: 1000000,
+      note: 'Aktivasi paket investasi Learn',
+      status: 'approved',
+      createdAt: '2026-09-12T09:20:00.000Z'
+    },
+    {
+      id: 'TRX-1003',
+      userId: 'usr-demo',
+      username: 'alex_investor',
+      type: 'invest_plan',
+      planName: 'Rookie',
+      amount: 2000000,
+      note: 'Aktivasi paket investasi Rookie',
+      status: 'approved',
+      createdAt: '2026-09-11T10:00:00.000Z'
     },
     {
       id: 'TRX-1002',
@@ -253,32 +384,19 @@ const defaultDB = {
       paymentMethod: 'QRIS Instant',
       amount: 1000000,
       uniqueCode: 382,
-      proofImage: '',
       status: 'approved',
-      createdAt: '2026-09-12T09:15:00.000Z',
-      updatedAt: '2026-09-12T09:20:00.000Z'
+      createdAt: '2026-09-12T09:15:00.000Z'
     },
     {
-      id: 'TRX-1003',
+      id: 'TRX-1001',
       userId: 'usr-demo',
       username: 'alex_investor',
-      type: 'sponsor_bonus',
-      amount: 100000, // 10% from Sarah's 1,000,000
-      note: 'Bonus Sponsor dari deposit sarah_trader (Rp 1.000.000)',
-      status: 'approved',
-      createdAt: '2026-09-12T09:20:00.000Z'
-    },
-    {
-      id: 'TRX-1004',
-      userId: 'usr-downline-2',
-      username: 'budi_crypto',
       type: 'deposit',
-      paymentMethod: 'USDT TRC20',
-      amountUsdt: 300,
-      amount: 4875000, // 300 * 16250
-      txid: '9f8e7d6c5b4a3210fedcba9876543210abcdef1234567890',
-      status: 'pending',
-      createdAt: new Date().toISOString()
+      paymentMethod: 'BCA Transfer',
+      amount: 2500000,
+      uniqueCode: 124,
+      status: 'approved',
+      createdAt: '2026-09-10T14:20:00.000Z'
     }
   ],
 

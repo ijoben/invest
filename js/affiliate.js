@@ -12,7 +12,7 @@ export const Affiliate = {
     if (!buyerUser || !buyerUser.referredBy) return;
 
     const db = DB.get();
-    const upline = DB.getUserByReferralCode(buyerUser.referredBy);
+    const upline = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === buyerUser.referredBy.toUpperCase());
     if (!upline) return;
 
     const percent = db.settings.sponsorBonusPercent || 10;
@@ -56,7 +56,7 @@ export const Affiliate = {
     let currentLevel = 1;
 
     while (currentRefCode && currentLevel <= rabatLevels.length) {
-      const upline = DB.getUserByReferralCode(currentRefCode);
+      const upline = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === currentRefCode.toUpperCase());
       if (!upline) break;
 
       const levelConfig = rabatLevels.find(l => l.level === currentLevel);
