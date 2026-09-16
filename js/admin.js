@@ -37,6 +37,11 @@ export const Admin = {
     const pendingWithdrawalsCount = db.transactions
       .filter(t => t.type === 'withdraw' && t.status === 'pending').length;
 
+    const pendingRedemptionsCount = (db.redemptions || [])
+      .filter(r => r.status === 'pending').length;
+
+    const totalRewardsCount = (db.rewards || []).length;
+
     return {
       totalUsers,
       totalDeposits,
@@ -44,7 +49,9 @@ export const Admin = {
       activeCapital,
       totalProfitPaid,
       pendingDepositsCount,
-      pendingWithdrawalsCount
+      pendingWithdrawalsCount,
+      pendingRedemptionsCount,
+      totalRewardsCount
     };
   },
 
@@ -182,6 +189,67 @@ export const Admin = {
 
     DB.save(db);
     return { success: true, message: `Saldo pengguna ${user.username} berhasil diubah!` };
+  },
+
+  // Process / Approve Redemption (Set to processing)
+  approveRedemption(redemptionId, adminNote = 'Hadiah sedang diproses / dikirim') {
+    const db = DB.get();
+    const rdm = (db.redemptions || []).find(r => r.id === redemptionId);
+    if (!rdm) return { success: false, message: 'Data penukaran tidak ditemukan!' };
+
+    rdm.status = 'processing';
+    rdm.adminNote = adminNote;
+    rdm.updatedAt = new Date().toISOString();
+
+    DB.save(db);
+    return { success: true, message: `Penukaran ${rdm.id} (${rdm.rewardTitle}) berhasil disetujui dan sedang diproses!` };
+  },
+
+  // Complete Redemption (Set to completed / delivered)
+  completeRedemption(redemptionId, adminNote = 'Hadiah telah berhasil dikirim / ditransfer ke pengguna') {
+    const db = DB.get();
+    const rdm = (db.redemptions || []).find(r => r.id === redemptionId);
+    if (!rdm) return { success: false, message: 'Data penukaran tidak ditemukan!' };
+
+    rdm.status = 'completed';
+    rdm.adminNote = adminNote;
+    rdm.updatedAt = new Date().toISOString();
+
+    DB.save(db);
+    return { success: true, message: `Penukaran ${rdm.id} telah diselesaikan!` };
+  },
+
+  // Reject Redemption (Refunds user points & restocks reward)
+  rejectRedemption(redemptionId, reason = 'Data kontak atau alamat tidak valid') {
+    const db = DB.get();
+    const rdm = (db.redemptions || []).find(r => r.id === redemptionId);
+    if (!rdm) return { success: false, message: 'Data penukaran tidak ditemukan!' };
+
+    if (rdm.status === 'rejected') {
+      return { success: false, message: 'Penukaran ini sudah pernah ditolak sebelumnya!' };
+    }
+
+    // Refund points to user
+    const user = db.users.find(u => u.id === rdm.userId);
+    if (user) {
+      user.points = (Number(user.points) || 0) + Number(rdm.pointsSpent || 0);
+    }
+
+    // Restock reward
+    const reward = (db.rewards || []).find(r => r.id === rdm.rewardId);
+    if (reward) {
+      reward.stock = (Number(reward.stock) || 0) + 1;
+    }
+
+    rdm.status = 'rejected';
+    rdm.adminNote = reason;
+    rdm.updatedAt = new Date().toISOString();
+
+    DB.save(db);
+    return {
+      success: true,
+      message: `Penukaran ${rdm.id} ditolak. Poin ${rdm.pointsSpent} telah dikembalikan secara otomatis ke pengguna ${rdm.username}.`
+    };
   },
 
   // Trigger Daily Profit Yield manually from Admin

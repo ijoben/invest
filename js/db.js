@@ -400,6 +400,100 @@ const defaultDB = {
     }
   ],
 
+  // Point Rewards Catalog (Tukar Poin Hadiah)
+  rewards: [
+    {
+      id: 'rew-1',
+      title: 'Saldo E-Wallet Rp 50.000 (DANA / OVO / GoPay)',
+      category: 'E-Wallet',
+      badge: 'POPULER',
+      pointsCost: 50,
+      stock: 100,
+      description: 'Penukaran saldo e-wallet instant langsung ke nomor akun DANA / OVO / GoPay kamu.',
+      imageUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80',
+      active: true,
+      createdAt: '2026-09-15T00:00:00.000Z'
+    },
+    {
+      id: 'rew-2',
+      title: 'Saldo E-Wallet Rp 100.000 (Semua Bank / E-Wallet)',
+      category: 'E-Wallet',
+      badge: 'TERLARIS',
+      pointsCost: 100,
+      stock: 50,
+      description: 'Voucher transfer saldo tunai Rp 100.000 ke rekening bank atau e-wallet pilihan kamu.',
+      imageUrl: 'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?w=600&auto=format&fit=crop&q=80',
+      active: true,
+      createdAt: '2026-09-15T01:00:00.000Z'
+    },
+    {
+      id: 'rew-3',
+      title: 'Kaos Eksklusif FGT Pro Trader 2026 Edition',
+      category: 'Merchandise',
+      badge: 'OFFICIAL',
+      pointsCost: 150,
+      stock: 35,
+      description: 'T-Shirt Cotton Combed 24s premium dengan bordir emas logo FGT Pro Trading AI.',
+      imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=80',
+      active: true,
+      createdAt: '2026-09-15T02:00:00.000Z'
+    },
+    {
+      id: 'rew-4',
+      title: 'Smartwatch Fitness & Crypto Price Tracker',
+      category: 'Gadget',
+      badge: 'PREMIUM',
+      pointsCost: 500,
+      stock: 15,
+      description: 'Smartwatch layar AMOLED dengan fitur notifikasi harga trading forex dan crypto realtime.',
+      imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80',
+      active: true,
+      createdAt: '2026-09-15T03:00:00.000Z'
+    },
+    {
+      id: 'rew-5',
+      title: 'Logam Mulia Emas Antam 0.5 Gram Bersertifikat',
+      category: 'Emas Fisik',
+      badge: 'INVESTASI',
+      pointsCost: 850,
+      stock: 10,
+      description: 'Emas murni 99.99% bersertifikat resmi PT ANTAM Tbk dikirim aman ke alamat kamu.',
+      imageUrl: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=600&auto=format&fit=crop&q=80',
+      active: true,
+      createdAt: '2026-09-15T04:00:00.000Z'
+    },
+    {
+      id: 'rew-6',
+      title: 'Smartphone Flagship 5G (Trading Edition)',
+      category: 'Gadget',
+      badge: 'SPECIAL VIP',
+      pointsCost: 2500,
+      stock: 3,
+      description: 'Smartphone 5G performa tinggi layar 120Hz untuk eksekusi order trading super mulus.',
+      imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&auto=format&fit=crop&q=80',
+      active: true,
+      createdAt: '2026-09-15T05:00:00.000Z'
+    }
+  ],
+
+  // User Point Redemptions Log (Riwayat Klaim Hadiah)
+  redemptions: [
+    {
+      id: 'RDM-8001',
+      userId: 'usr-demo',
+      username: 'alex_investor',
+      rewardId: 'rew-1',
+      rewardTitle: 'Saldo E-Wallet Rp 50.000 (DANA / OVO / GoPay)',
+      pointsSpent: 50,
+      targetContact: 'DANA / 081298765432 / Alex',
+      deliveryAddress: 'Jl. Sudirman Kav 25, Jakarta Selatan',
+      status: 'completed',
+      adminNote: 'Saldo telah ditransfer via DANA',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      updatedAt: '2026-09-14T10:30:00.000Z'
+    }
+  ],
+
   // Active Session
   currentSession: null // null indicates Guest mode
 };
@@ -419,6 +513,12 @@ export const DB = {
       }
       if (!parsed.banners) {
         parsed.banners = defaultDB.banners;
+      }
+      if (!parsed.rewards) {
+        parsed.rewards = defaultDB.rewards;
+      }
+      if (!parsed.redemptions) {
+        parsed.redemptions = defaultDB.redemptions;
       }
       this.save(parsed);
       return parsed;
@@ -610,6 +710,99 @@ export const DB = {
     db.banners = (db.banners || []).filter(b => b.id !== id);
     this.save(db);
     return true;
+  },
+
+  // Point Rewards Catalog CRUD
+  getRewards() {
+    const db = this.get();
+    return db.rewards || [];
+  },
+
+  getActiveRewards() {
+    const db = this.get();
+    return (db.rewards || []).filter(r => r.active);
+  },
+
+  addReward({ title, category, badge, pointsCost, stock, description, imageUrl, active = true }) {
+    const db = this.get();
+    db.rewards = db.rewards || [];
+    const newReward = {
+      id: 'rew-' + Date.now(),
+      title: (title || '').trim(),
+      category: (category || 'E-Wallet').trim(),
+      badge: (badge || 'POPULER').trim(),
+      pointsCost: Number(pointsCost) || 50,
+      stock: Number(stock) || 0,
+      description: (description || '').trim(),
+      imageUrl: (imageUrl || '').trim(),
+      active: Boolean(active),
+      createdAt: new Date().toISOString()
+    };
+    db.rewards.unshift(newReward);
+    this.save(db);
+    return newReward;
+  },
+
+  updateReward(id, updates) {
+    const db = this.get();
+    db.rewards = db.rewards || [];
+    const idx = db.rewards.findIndex(r => r.id === id);
+    if (idx !== -1) {
+      if (updates.pointsCost !== undefined) updates.pointsCost = Number(updates.pointsCost);
+      if (updates.stock !== undefined) updates.stock = Number(updates.stock);
+      db.rewards[idx] = { ...db.rewards[idx], ...updates };
+      this.save(db);
+      return db.rewards[idx];
+    }
+    return null;
+  },
+
+  deleteReward(id) {
+    const db = this.get();
+    db.rewards = (db.rewards || []).filter(r => r.id !== id);
+    this.save(db);
+    return true;
+  },
+
+  // Redemptions Log CRUD
+  getRedemptions() {
+    const db = this.get();
+    return db.redemptions || [];
+  },
+
+  addRedemption({ userId, username, rewardId, rewardTitle, pointsSpent, targetContact, deliveryAddress, note = '' }) {
+    const db = this.get();
+    db.redemptions = db.redemptions || [];
+    const newRedemption = {
+      id: 'RDM-' + Math.floor(1000 + Math.random() * 9000),
+      userId,
+      username,
+      rewardId,
+      rewardTitle,
+      pointsSpent: Number(pointsSpent),
+      targetContact: (targetContact || '').trim(),
+      deliveryAddress: (deliveryAddress || '').trim(),
+      note: (note || '').trim(),
+      status: 'pending', // 'pending' | 'processing' | 'completed' | 'rejected'
+      adminNote: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    db.redemptions.unshift(newRedemption);
+    this.save(db);
+    return newRedemption;
+  },
+
+  updateRedemption(id, updates) {
+    const db = this.get();
+    db.redemptions = db.redemptions || [];
+    const idx = db.redemptions.findIndex(r => r.id === id);
+    if (idx !== -1) {
+      db.redemptions[idx] = { ...db.redemptions[idx], ...updates, updatedAt: new Date().toISOString() };
+      this.save(db);
+      return db.redemptions[idx];
+    }
+    return null;
   },
 
   // Reset database to default seed state

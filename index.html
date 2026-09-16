@@ -407,6 +407,57 @@
           </div>
         </section>
 
+        <!-- 8. REWARD POINTS REDEEM CAROUSEL (Under Signal Section) -->
+        <section class="rewards-section-container" id="rewardsSection">
+          <div class="rewards-section-header">
+            <div class="rewards-header-left">
+              <div class="rewards-avatar-icon">
+                <!-- Golden Diamond / Trophy Vector SVG -->
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+                  <path d="M6 3H18L21 8.5L12 21L3 8.5L6 3Z" stroke="#C89338" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="rgba(200, 147, 56, 0.18)"/>
+                  <path d="M3 8.5H21M12 21L7.5 8.5L10 3M12 21L16.5 8.5L14 3" stroke="#C89338" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <h2 class="rewards-section-title">Tukar Poin Hadiah</h2>
+                <p class="rewards-section-subtitle">Tukarkan poin loyalty trading Anda dengan berbagai reward eksklusif</p>
+              </div>
+            </div>
+
+            <!-- User Points Pill Badge & My Redemptions Button -->
+            <div class="rewards-header-right">
+              <div class="rewards-user-points-pill" onclick="App.isLoggedIn() ? App.openMyRedemptionsModal() : App.openModal('authModal')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#C89338"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>Poin Saya: <strong id="rewardsUserPointsBadge">0</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Horizontal Swipeable Reward Cards Carousel -->
+          <div class="rewards-carousel-wrapper" id="rewardsCarouselWrapper">
+            <div class="rewards-carousel-track" id="rewardsCarouselTrack">
+              <!-- Dynamically populated by App.renderRewardsCarousel() -->
+            </div>
+
+            <!-- Carousel Arrow Navigation Controls -->
+            <button class="rewards-arrow-btn rewards-prev-btn" id="rewardsPrevBtn" onclick="App.scrollRewardsCarousel(-1)" aria-label="Previous Reward">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button class="rewards-arrow-btn rewards-next-btn" id="rewardsNextBtn" onclick="App.scrollRewardsCarousel(1)" aria-label="Next Reward">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <div class="rewards-footer-hint">
+            <span>✦ Kumpulkan poin otomatis dari setiap aktivitas trading, klaim profit harian, dan referral tim!</span>
+            <button class="rewards-history-link" onclick="App.openMyRedemptionsModal()">Riwayat Tukar Poin ›</button>
+          </div>
+        </section>
+
       </main>
 
       <!-- ====================================================================
@@ -1115,6 +1166,91 @@
         <button class="btn-cta-gold" style="background: #0088CC;" onclick="window.open('https://t.me/', '_blank')">
           <span>Telegram Support Center</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 7: REDEEM REWARD CONFIRMATION
+       ====================================================================== -->
+  <div class="modal-backdrop" id="redeemConfirmModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Konfirmasi Tukar Poin Hadiah</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <input type="hidden" id="redeemSelectedRewardId">
+
+      <!-- Reward Summary Box -->
+      <div class="redeem-summary-card">
+        <div class="redeem-summary-img-wrap">
+          <img id="redeemSummaryImg" src="" alt="Reward Preview">
+        </div>
+        <div class="redeem-summary-info">
+          <span class="redeem-summary-badge" id="redeemSummaryBadge">POPULER</span>
+          <h4 class="redeem-summary-title" id="redeemSummaryTitle">-</h4>
+          <div class="redeem-summary-points">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#C89338"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span id="redeemSummaryPoints">0 Poin</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Points Calculation Breakdown -->
+      <div class="redeem-calc-box">
+        <div class="redeem-calc-row">
+          <span>Poin Anda Saat Ini:</span>
+          <strong id="redeemUserCurrentPoints">0 Poin</strong>
+        </div>
+        <div class="redeem-calc-row">
+          <span>Biaya Penukaran:</span>
+          <strong style="color: #EF4444;" id="redeemCostPoints">-0 Poin</strong>
+        </div>
+        <div class="redeem-calc-divider"></div>
+        <div class="redeem-calc-row total">
+          <span>Sisa Poin Setelah Tukar:</span>
+          <strong style="color: #22C55E;" id="redeemRemainingPoints">0 Poin</strong>
+        </div>
+      </div>
+
+      <!-- Destination Target Inputs -->
+      <div class="form-group" style="margin-top: 14px;">
+        <label class="form-label">No. HP / WhatsApp / Akun E-Wallet / No. Rekening Tujuan: <span style="color: #EF4444;">*</span></label>
+        <input type="text" class="form-input" id="redeemTargetContact" placeholder="Contoh: DANA 081234567890 an. Alex">
+        <span style="font-size: 10px; color: #94A3B8; margin-top: 3px; display: block;">Untuk hadiah saldo/pulsa/voucher atau konfirmasi pengiriman barang fisik.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Alamat Lengkap Pengiriman (Untuk Hadiah Fisik / Kaos / Gadget / Emas):</label>
+        <textarea class="form-input" id="redeemDeliveryAddress" rows="2" placeholder="Nama Penerima, No HP, Alamat Jalan, RT/RW, Kelurahan, Kecamatan, Kota/Kab, Kode Pos" style="font-size: 12px; resize: vertical;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Catatan Tambahan (Opsional):</label>
+        <input type="text" class="form-input" id="redeemNote" placeholder="Contoh: Ukuran Kaos L / Warna Hitam" style="font-size: 12px;">
+      </div>
+
+      <button class="btn-cta-gold" style="width: 100%; margin-top: 8px;" onclick="App.submitRedeemReward()">
+        <span>✦ Konfirmasi & Tukar Poin Sekarang</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 8: USER REDEMPTIONS HISTORY
+       ====================================================================== -->
+  <div class="modal-backdrop" id="myRedemptionsModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">Riwayat Penukaran Poin Hadiah</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="redemptions-history-list" id="myRedemptionsList">
+        <!-- Rendered dynamically via JS -->
       </div>
     </div>
   </div>

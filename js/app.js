@@ -10,6 +10,7 @@ import { Plans } from './plans.js';
 import { Affiliate } from './affiliate.js';
 import { Payment } from './payment.js';
 import { Signals } from './signals.js';
+import { Rewards } from './rewards.js';
 
 // Application State
 const App = {
@@ -89,6 +90,9 @@ const App = {
 
     // 6. Render Prof GPT Signals
     this.renderSignals();
+
+    // 6.5 Render Rewards Points Carousel (Under Signals Section)
+    this.renderRewardsCarousel(user);
 
     // 7. Render Other Views if active
     if (this.currentTab === 'wallet') this.renderWalletView(user);
@@ -572,6 +576,225 @@ const App = {
         </div>
       </div>
     `).join('');
+  },
+
+  // 6.5 Reward Points Redeem Carousel (Under Signals Section)
+  renderRewardsCarousel(user) {
+    const track = document.getElementById('rewardsCarouselTrack');
+    const userPointsBadge = document.getElementById('rewardsUserPointsBadge');
+    if (!track) return;
+
+    const currentPoints = user ? Number(user.points || 0) : 0;
+    if (userPointsBadge) {
+      userPointsBadge.textContent = currentPoints;
+    }
+
+    const rewards = Rewards.getActiveRewards();
+    if (rewards.length === 0) {
+      track.innerHTML = `
+        <div style="width: 100%; text-align: center; padding: 24px; color: #94A3B8; font-size: 12px;">
+          Katalog hadiah sedang disiapkan oleh Admin. Nantikan update segera!
+        </div>
+      `;
+      return;
+    }
+
+    track.innerHTML = rewards.map(r => {
+      const pointsCost = Number(r.pointsCost || 0);
+      const stock = Number(r.stock || 0);
+      const isSufficient = currentPoints >= pointsCost;
+      const pointsDiff = pointsCost - currentPoints;
+      const isOutOfStock = stock <= 0;
+      const imgSource = r.imageUrl || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
+
+      let buttonHtml = '';
+      let statusTextHtml = '';
+
+      if (isOutOfStock) {
+        buttonHtml = `<button class="reward-action-btn out-of-stock" disabled>Stok Habis</button>`;
+        statusTextHtml = `<span class="reward-user-status-text" style="color: #94A3B8;">Habis</span>`;
+      } else if (isSufficient) {
+        buttonHtml = `
+          <button class="reward-action-btn active" onclick="App.openRedeemModal('${r.id}')">
+            <span>✦ Tukar Sekarang</span>
+          </button>
+        `;
+        statusTextHtml = `<span class="reward-user-status-text sufficient">✓ Poin Cukup</span>`;
+      } else {
+        buttonHtml = `
+          <button class="reward-action-btn insufficient" onclick="App.openRedeemModal('${r.id}')">
+            <span>Kurang ${pointsDiff} Poin</span>
+          </button>
+        `;
+        statusTextHtml = `<span class="reward-user-status-text insufficient">Kurang ${pointsDiff} Poin</span>`;
+      }
+
+      return `
+        <div class="reward-card" data-reward-id="${r.id}">
+          <div class="reward-card-img-wrap">
+            <img class="reward-card-img" src="${imgSource}" alt="${r.title}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80'">
+            ${r.badge ? `<span class="reward-badge-pill">${r.badge}</span>` : ''}
+            <span class="reward-stock-pill">Stok: ${stock}</span>
+          </div>
+          <div class="reward-card-body">
+            <span class="reward-category-label">${r.category || 'HADIAH'}</span>
+            <h4 class="reward-title" title="${r.title}">${r.title}</h4>
+            <p class="reward-desc-snippet">${r.description || 'Tukarkan poin loyalty trading FGT Pro Anda.'}</p>
+            <div class="reward-points-row">
+              <div class="reward-points-tag">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#C89338"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>${pointsCost} Poin</span>
+              </div>
+              ${statusTextHtml}
+            </div>
+            ${buttonHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  // Carousel Arrow Scroll Helper
+  scrollRewardsCarousel(direction) {
+    const track = document.getElementById('rewardsCarouselTrack');
+    if (!track) return;
+    const cardWidth = 232; // 220px + 12px gap
+    track.scrollBy({ left: direction * cardWidth, behavior: 'smooth' });
+  },
+
+  // Open Redeem Confirmation Modal
+  openRedeemModal(rewardId) {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      this.showToast('Silakan login terlebih dahulu untuk menukarkan poin reward Anda.', 'info');
+      return;
+    }
+
+    const reward = Rewards.getRewardById(rewardId);
+    if (!reward) {
+      this.showToast('Hadiah tidak ditemukan!', 'error');
+      return;
+    }
+
+    if (reward.stock <= 0) {
+      this.showToast('Maaf, persediaan stok hadiah ini sedang habis!', 'error');
+      return;
+    }
+
+    const currentPoints = Number(user.points || 0);
+    const pointsCost = Number(reward.pointsCost || 0);
+
+    if (currentPoints < pointsCost) {
+      const diff = pointsCost - currentPoints;
+      this.showToast(`Poin Anda belum cukup (${currentPoints} Poin). Anda butuh ${diff} poin lagi untuk menukar hadiah ini!`, 'info');
+      return;
+    }
+
+    // Populate Modal Info
+    document.getElementById('redeemSelectedRewardId').value = reward.id;
+    document.getElementById('redeemSummaryImg').src = reward.imageUrl || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
+    document.getElementById('redeemSummaryBadge').textContent = reward.badge || reward.category || 'HADIAH';
+    document.getElementById('redeemSummaryTitle').textContent = reward.title;
+    document.getElementById('redeemSummaryPoints').textContent = `${pointsCost} Poin`;
+
+    document.getElementById('redeemUserCurrentPoints').textContent = `${currentPoints} Poin`;
+    document.getElementById('redeemCostPoints').textContent = `-${pointsCost} Poin`;
+    document.getElementById('redeemRemainingPoints').textContent = `${currentPoints - pointsCost} Poin`;
+
+    // Clear and autofill inputs if available
+    const contactInput = document.getElementById('redeemTargetContact');
+    if (contactInput && !contactInput.value) {
+      contactInput.value = user.phone ? `0${user.phone}` : '';
+    }
+
+    this.openModal('redeemConfirmModal');
+  },
+
+  // Submit Point Redemption
+  submitRedeemReward() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      return;
+    }
+
+    const rewardId = document.getElementById('redeemSelectedRewardId').value;
+    const targetContact = document.getElementById('redeemTargetContact').value.trim();
+    const deliveryAddress = document.getElementById('redeemDeliveryAddress').value.trim();
+    const note = document.getElementById('redeemNote').value.trim();
+
+    if (!targetContact) {
+      this.showToast('Harap masukkan nomor WhatsApp / Akun E-Wallet / Nomor Rekening tujuan!', 'error');
+      return;
+    }
+
+    const res = Rewards.redeemReward(user.id, rewardId, {
+      targetContact,
+      deliveryAddress,
+      note
+    });
+
+    if (res.success) {
+      this.closeModal('redeemConfirmModal');
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  // Open User's Redemption History Modal
+  openMyRedemptionsModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      this.showToast('Silakan login untuk melihat riwayat penukaran poin Anda.', 'info');
+      return;
+    }
+
+    const listContainer = document.getElementById('myRedemptionsList');
+    if (!listContainer) return;
+
+    const redemptions = Rewards.getUserRedemptions(user.id);
+
+    if (redemptions.length === 0) {
+      listContainer.innerHTML = `
+        <div style="text-align: center; padding: 30px 15px; color: #94A3B8;">
+          <div style="font-size: 32px; margin-bottom: 8px;">🎁</div>
+          <div style="font-weight: 700; color: #475569; font-size: 14px;">Belum Ada Riwayat Penukaran</div>
+          <div style="font-size: 11.5px; margin-top: 4px;">Kumpulkan poin dari profit dan ajak teman untuk menukarkan hadiah menarik di atas!</div>
+        </div>
+      `;
+    } else {
+      listContainer.innerHTML = redemptions.map(r => {
+        let statusLabel = 'MENUNGGU VERIFIKASI';
+        if (r.status === 'processing') statusLabel = 'SEDANG DIPROSES';
+        if (r.status === 'completed') statusLabel = 'SELESAI / TERKIRIM';
+        if (r.status === 'rejected') statusLabel = 'DITOLAK (POIN REFUND)';
+
+        return `
+          <div class="redemption-history-item">
+            <div class="redemption-history-header">
+              <span class="redemption-id">${r.id}</span>
+              <span class="redemption-badge-status ${r.status}">${statusLabel}</span>
+            </div>
+            <div class="redemption-title-bold">${r.rewardTitle}</div>
+            <div class="redemption-meta-row">
+              <span>Poin Digunakan: <strong style="color: #B8822A;">${r.pointsSpent} Poin</strong></span>
+              <span>${new Date(r.createdAt).toLocaleDateString('id-ID')}</span>
+            </div>
+            <div style="font-size: 11px; color: #64748B; background: #FFFFFF; padding: 6px 8px; border-radius: 8px; border: 1px solid #F1F5F9;">
+              <div><strong>Tujuan:</strong> ${r.targetContact}</div>
+              ${r.deliveryAddress ? `<div><strong>Alamat:</strong> ${r.deliveryAddress}</div>` : ''}
+              ${r.adminNote ? `<div style="color: #2563EB; margin-top: 2px;"><strong>Catatan Admin:</strong> ${r.adminNote}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    this.openModal('myRedemptionsModal');
   },
 
   // Render Wallet View Page
@@ -1147,8 +1370,10 @@ window.DB = DB;
 window.Plans = Plans;
 window.Affiliate = Affiliate;
 window.Payment = Payment;
+window.Rewards = Rewards;
 
 // Launch App on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
 });
+

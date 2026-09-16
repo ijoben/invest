@@ -9,6 +9,7 @@ import { Auth } from './auth.js';
 import { Plans } from './plans.js';
 import { Affiliate } from './affiliate.js';
 import { Signals } from './signals.js';
+import { Rewards } from './rewards.js';
 
 export const AdminPage = {
   currentTab: 'dashboard',
@@ -31,6 +32,10 @@ export const AdminPage = {
     // Badges
     document.getElementById('badgePendingDep').textContent = stats.pendingDepositsCount;
     document.getElementById('badgePendingWd').textContent = stats.pendingWithdrawalsCount;
+    const rdmBadge = document.getElementById('badgePendingRdm');
+    if (rdmBadge) rdmBadge.textContent = stats.pendingRedemptionsCount || 0;
+    const rewBadge = document.getElementById('badgeRewardsCount');
+    if (rewBadge) rewBadge.textContent = (db.rewards || []).length;
     const annBadge = document.getElementById('badgeAnnouncementsCount');
     if (annBadge) annBadge.textContent = (db.announcements || []).length;
     const banBadge = document.getElementById('badgeBannersCount');
@@ -62,6 +67,12 @@ export const AdminPage = {
 
     // 10. Banner Slider Carousel Table
     this.renderBanners(db);
+
+    // 11. Redemptions Table
+    this.renderRedemptions(db);
+
+    // 12. Rewards Catalog Table
+    this.renderRewards(db);
   },
 
   // 2. Deposit Table
@@ -292,6 +303,136 @@ export const AdminPage = {
           </td>
         </tr>
       `;
+  // 11. Redemptions Table
+  renderRedemptions(db) {
+    const tbody = document.getElementById('redemptionsTableBody');
+    if (!tbody) return;
+    const redemptions = db.redemptions || [];
+
+    if (redemptions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#94A3B8;">Belum ada riwayat klaim tukar poin hadiah dari user.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = redemptions.map(r => {
+      let statusBadge = `<span class="badge-status ${r.status}">${r.status.toUpperCase()}</span>`;
+      if (r.status === 'pending') {
+        statusBadge = `<span class="badge-status" style="background:rgba(217, 119, 6, 0.2); color:#F59E0B; border:1px solid rgba(217, 119, 6, 0.4);">MENUNGGU</span>`;
+      } else if (r.status === 'processing') {
+        statusBadge = `<span class="badge-status" style="background:rgba(37, 99, 235, 0.2); color:#38BDF8; border:1px solid rgba(37, 99, 235, 0.4);">DIPROSES</span>`;
+      } else if (r.status === 'completed') {
+        statusBadge = `<span class="badge-status approved">SELESAI</span>`;
+      } else if (r.status === 'rejected') {
+        statusBadge = `<span class="badge-status rejected">DITOLAK</span>`;
+      }
+
+      let actionsHtml = '';
+      if (r.status === 'pending') {
+        actionsHtml = `
+          <div class="btn-action-group" style="justify-content: flex-end;">
+            <button class="btn-admin-action approve" onclick="AdminPage.approveRedemption('${r.id}')" title="Setujui dan proses pengiriman">
+              ✓ Proses
+            </button>
+            <button class="btn-admin-action" style="background:#22C55E; color:#0F172A; font-weight:800;" onclick="AdminPage.completeRedemption('${r.id}')" title="Tandai langsung selesai">
+              ✔ Selesai
+            </button>
+            <button class="btn-admin-action reject" onclick="AdminPage.rejectRedemption('${r.id}')" title="Tolak klaim dan refund poin ke user">
+              ✕ Tolak
+            </button>
+          </div>
+        `;
+      } else if (r.status === 'processing') {
+        actionsHtml = `
+          <div class="btn-action-group" style="justify-content: flex-end;">
+            <button class="btn-admin-action" style="background:#22C55E; color:#0F172A; font-weight:800;" onclick="AdminPage.completeRedemption('${r.id}')" title="Tandai hadiah telah terkirim">
+              ✔ Selesai
+            </button>
+            <button class="btn-admin-action reject" onclick="AdminPage.rejectRedemption('${r.id}')" title="Batalkan dan refund poin">
+              ✕ Batal
+            </button>
+          </div>
+        `;
+      } else {
+        actionsHtml = `<span style="color:#64748B; font-size:11px;">${r.adminNote || 'Transaksi Selesai'}</span>`;
+      }
+
+      return `
+        <tr>
+          <td><strong style="font-family: var(--font-mono); color: #38BDF8;">${r.id}</strong></td>
+          <td><span style="font-size:11px; color:#94A3B8;">${new Date(r.createdAt).toLocaleString('id-ID')}</span></td>
+          <td><strong style="color: #FFFFFF;">${r.username}</strong></td>
+          <td>
+            <div style="font-weight: 700; color: #FFFFFF; font-size: 13px;">${r.rewardTitle}</div>
+            ${r.note ? `<div style="font-size: 10.5px; color: #E5A83B; margin-top: 2px;">Catatan: ${r.note}</div>` : ''}
+          </td>
+          <td>
+            <span style="font-family: var(--font-mono); font-weight: 800; color: #E5A83B;">${r.pointsSpent} Poin</span>
+          </td>
+          <td>
+            <div style="font-size: 12px; color: #FFFFFF; font-weight: 600;">${r.targetContact || '-'}</div>
+            ${r.deliveryAddress ? `<div style="font-size: 10.5px; color: #94A3B8; margin-top: 2px; line-height: 1.3;">${r.deliveryAddress}</div>` : ''}
+          </td>
+          <td>${statusBadge}</td>
+          <td>${actionsHtml}</td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  // 12. Rewards Catalog Table
+  renderRewards(db) {
+    const tbody = document.getElementById('rewardsTableBody');
+    if (!tbody) return;
+    const rewards = db.rewards || [];
+
+    if (rewards.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#94A3B8;">Belum ada hadiah di katalog. Klik "➕ Tambah Hadiah Baru" untuk membuat hadiah.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rewards.map(r => {
+      const imgUrl = r.imageUrl || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
+      const statusBadge = r.active
+        ? '<span class="badge-status approved">AKTIF</span>'
+        : '<span class="badge-status rejected">NONAKTIF</span>';
+
+      return `
+        <tr>
+          <td>
+            <img src="${imgUrl}" alt="${r.title}" class="banner-table-thumb" style="width: 54px; height: 54px; border-radius: 8px;" onerror="this.src='https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80'">
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #FFFFFF; font-size: 13px; margin-bottom: 2px;">${r.title}</div>
+            <div style="font-size: 11px; color: #94A3B8; line-height: 1.35; max-width: 320px;">${r.description || '-'}</div>
+          </td>
+          <td>
+            <span style="font-size: 11.5px; font-weight: 700; color: #38BDF8;">${r.category || 'E-Wallet'}</span>
+          </td>
+          <td>
+            ${r.badge ? `<span class="banner-badge-preview" style="background:rgba(200, 147, 56, 0.2); color:#E5A83B; border:1px solid rgba(200, 147, 56, 0.4);">${r.badge}</span>` : '<span style="color:#64748B;">-</span>'}
+          </td>
+          <td>
+            <strong style="font-family: var(--font-mono); font-size: 13px; color: #F59E0B;">${r.pointsCost} Poin</strong>
+          </td>
+          <td>
+            <span style="font-weight: 800; color: ${r.stock > 0 ? '#22C55E' : '#EF4444'}; font-family: var(--font-mono);">${r.stock}</span>
+          </td>
+          <td>${statusBadge}</td>
+          <td>
+            <div class="btn-action-group" style="justify-content: flex-end;">
+              <button class="btn-admin-action ${r.active ? 'reject' : 'approve'}" onclick="AdminPage.toggleRewardStatus('${r.id}')" title="Ubah status tampil">
+                ${r.active ? 'Nonaktif' : 'Aktifkan'}
+              </button>
+              <button class="btn-admin-action edit" onclick="AdminPage.openEditRewardModal('${r.id}')" title="Edit hadiah">
+                ✏ Edit
+              </button>
+              <button class="btn-admin-action delete" onclick="AdminPage.deleteReward('${r.id}')" title="Hapus hadiah">
+                🗑 Hapus
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
     }).join('');
   },
 
@@ -299,8 +440,10 @@ export const AdminPage = {
     dashboard: 'Dashboard Overview',
     deposits: 'Konfirmasi Deposit',
     withdrawals: 'Konfirmasi Penarikan',
+    redemptions: 'Konfirmasi Penukaran Hadiah',
     gateways: 'Gateway & Rekening',
     plans: 'Plan Investasi & Profit',
+    rewards: 'Katalog Hadiah (Reward Point)',
     affiliate: 'Sponsor & Rabat ROI',
     signals: 'Sinyal Prof GPT',
     announcements: 'Teks Berjalan & Notif',
@@ -737,6 +880,158 @@ export const AdminPage = {
     this.renderAll();
   },
 
+  // Redemption Approval & Rejection Actions
+  approveRedemption(id) {
+    const res = Admin.approveRedemption(id);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  completeRedemption(id) {
+    const res = Admin.completeRedemption(id);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  rejectRedemption(id) {
+    const reason = prompt('Masukkan alasan penolakan penukaran hadiah (Poin akan otomatis di-refund ke user):', 'Data kontak / nomor e-wallet tidak valid');
+    if (reason === null) return;
+    const res = Admin.rejectRedemption(id, reason);
+    if (res.success) {
+      this.showToast(res.message, 'info');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  // Modal Rewards (Catalog CRUD with Upload & Preview)
+  openAddRewardModal() {
+    document.getElementById('rewardModalId').value = '';
+    document.getElementById('rewardModalHeaderTitle').textContent = 'Tambah Hadiah Baru';
+    document.getElementById('rewardModalFileInput').value = '';
+    document.getElementById('rewardModalUrlInput').value = '';
+    document.getElementById('rewardModalTitle').value = '';
+    document.getElementById('rewardModalCategory').value = 'E-Wallet';
+    document.getElementById('rewardModalBadge').value = 'POPULER';
+    document.getElementById('rewardModalPointsCost').value = 50;
+    document.getElementById('rewardModalStock').value = 50;
+    document.getElementById('rewardModalDescription').value = '';
+    document.getElementById('rewardModalActive').value = 'true';
+
+    // Clear preview
+    const previewImg = document.getElementById('rewardPreviewImg');
+    const placeholder = document.getElementById('rewardPreviewPlaceholder');
+    if (previewImg && placeholder) {
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+      placeholder.style.display = 'flex';
+    }
+
+    this.openModal('adminRewardModal');
+  },
+
+  openEditRewardModal(id) {
+    const db = DB.get();
+    const reward = (db.rewards || []).find(r => r.id === id);
+    if (!reward) return;
+
+    document.getElementById('rewardModalId').value = reward.id;
+    document.getElementById('rewardModalHeaderTitle').textContent = 'Edit Hadiah Reward';
+    document.getElementById('rewardModalFileInput').value = '';
+    document.getElementById('rewardModalUrlInput').value = reward.imageUrl || '';
+    document.getElementById('rewardModalTitle').value = reward.title || '';
+    document.getElementById('rewardModalCategory').value = reward.category || 'E-Wallet';
+    document.getElementById('rewardModalBadge').value = reward.badge || '';
+    document.getElementById('rewardModalPointsCost').value = reward.pointsCost || 50;
+    document.getElementById('rewardModalStock').value = reward.stock || 0;
+    document.getElementById('rewardModalDescription').value = reward.description || '';
+    document.getElementById('rewardModalActive').value = reward.active ? 'true' : 'false';
+
+    // Set preview
+    const previewImg = document.getElementById('rewardPreviewImg');
+    const placeholder = document.getElementById('rewardPreviewPlaceholder');
+    if (previewImg && placeholder && reward.imageUrl) {
+      previewImg.src = reward.imageUrl;
+      previewImg.style.display = 'block';
+      placeholder.style.display = 'none';
+    }
+
+    this.openModal('adminRewardModal');
+  },
+
+  saveRewardModal() {
+    const id = document.getElementById('rewardModalId').value;
+    const title = document.getElementById('rewardModalTitle').value.trim();
+    const category = document.getElementById('rewardModalCategory').value;
+    const badge = document.getElementById('rewardModalBadge').value.trim();
+    const pointsCost = Number(document.getElementById('rewardModalPointsCost').value);
+    const stock = Number(document.getElementById('rewardModalStock').value);
+    const description = document.getElementById('rewardModalDescription').value.trim();
+    const active = document.getElementById('rewardModalActive').value === 'true';
+
+    // Get image source
+    const previewImg = document.getElementById('rewardPreviewImg');
+    const typedUrl = document.getElementById('rewardModalUrlInput').value.trim();
+    let imageUrl = '';
+
+    if (previewImg && previewImg.src && previewImg.style.display !== 'none' && !previewImg.src.endsWith('/admin.html') && !previewImg.src.endsWith('/admin')) {
+      imageUrl = previewImg.src;
+    } else if (typedUrl) {
+      imageUrl = typedUrl;
+    }
+
+    if (!title) {
+      this.showToast('Harap masukkan nama hadiah!', 'error');
+      return;
+    }
+
+    if (!pointsCost || pointsCost <= 0) {
+      this.showToast('Biaya poin harus lebih besar dari 0!', 'error');
+      return;
+    }
+
+    if (!imageUrl) {
+      imageUrl = 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
+    }
+
+    if (id) {
+      DB.updateReward(id, { title, category, badge, pointsCost, stock, description, imageUrl, active });
+      this.showToast('Data hadiah reward berhasil diperbarui!', 'success');
+    } else {
+      DB.addReward({ title, category, badge, pointsCost, stock, description, imageUrl, active });
+      this.showToast('Hadiah baru berhasil ditambahkan ke katalog!', 'success');
+    }
+
+    this.closeModal('adminRewardModal');
+    this.renderAll();
+  },
+
+  toggleRewardStatus(id) {
+    const db = DB.get();
+    const reward = (db.rewards || []).find(r => r.id === id);
+    if (!reward) return;
+
+    DB.updateReward(id, { active: !reward.active });
+    this.showToast(`Status hadiah berhasil diubah menjadi ${!reward.active ? 'Aktif' : 'Nonaktif'}!`, 'info');
+    this.renderAll();
+  },
+
+  deleteReward(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus hadiah ini dari katalog?')) return;
+    DB.deleteReward(id);
+    this.showToast('Hadiah berhasil dihapus dari katalog.', 'success');
+    this.renderAll();
+  },
+
   // Modals & Toast
   openModal(id) {
     const el = document.getElementById(id);
@@ -882,6 +1177,56 @@ export const AdminPage = {
             placeholder.style.display = 'none';
           } else {
             const fileInput = document.getElementById('bannerModalFileInput');
+            if (!fileInput || !fileInput.files.length) {
+              previewImg.src = '';
+              previewImg.style.display = 'none';
+              placeholder.style.display = 'flex';
+            }
+          }
+        }
+      });
+    }
+
+    // Reward File Input Upload Listener (FileReader base64 converter)
+    const rewardFileInput = document.getElementById('rewardModalFileInput');
+    if (rewardFileInput) {
+      rewardFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          this.showToast('Harap pilih file gambar (JPG, PNG, WEBP, dll)!', 'error');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const previewImg = document.getElementById('rewardPreviewImg');
+          const placeholder = document.getElementById('rewardPreviewPlaceholder');
+          if (previewImg && placeholder) {
+            previewImg.src = event.target.result;
+            previewImg.style.display = 'block';
+            placeholder.style.display = 'none';
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Reward URL input listener for live preview
+    const rewardUrlInput = document.getElementById('rewardModalUrlInput');
+    if (rewardUrlInput) {
+      rewardUrlInput.addEventListener('input', (e) => {
+        const url = e.target.value.trim();
+        const previewImg = document.getElementById('rewardPreviewImg');
+        const placeholder = document.getElementById('rewardPreviewPlaceholder');
+        if (previewImg && placeholder) {
+          if (url) {
+            previewImg.src = url;
+            previewImg.style.display = 'block';
+            placeholder.style.display = 'none';
+          } else {
+            const fileInput = document.getElementById('rewardModalFileInput');
             if (!fileInput || !fileInput.files.length) {
               previewImg.src = '';
               previewImg.style.display = 'none';
