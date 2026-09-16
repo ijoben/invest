@@ -324,16 +324,43 @@
               <div class="profit-meter-wrap">
                 <div class="profit-meter-top">
                   <span>Profit Harian Menunggu Klaim:</span>
-                  <span id="authPendingProfit" style="color: #16A34A;">IDR 0</span>
-                </div>
-                <div class="progress-bar-bg">
-                  <div class="progress-bar-fill" style="width: 75%;"></div>
+                  <span id="authPendingProfit" style="color: #16A34A; font-weight: 800; font-family: var(--font-mono);">IDR 0</span>
                 </div>
               </div>
 
+              <!-- Tombol Klaim Profit Harian -->
               <button class="btn-cta-gold" id="btnClaimProfit" onclick="App.claimProfit()">
                 <span>Klaim Profit Harian</span>
               </button>
+
+              <!-- Hitung Mundur & Bar 100% di Bawah Tombol Klaim -->
+              <div class="profit-countdown-card" id="profitCountdownCard">
+                <div class="countdown-top-info">
+                  <div class="countdown-label-group">
+                    <span class="countdown-icon-pulse">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                      </svg>
+                    </span>
+                    <span class="countdown-title" id="countdownStatusTitle">Hitung Mundur:</span>
+                    <span class="countdown-timer-digits" id="countdownTimerValue">23:59:59</span>
+                  </div>
+                  <div class="countdown-percentage-badge" id="countdownPercentBadge">100%</div>
+                </div>
+
+                <!-- 100% Animated Progress Bar -->
+                <div class="countdown-progress-track">
+                  <div class="countdown-progress-bar" id="countdownProgressBar" style="width: 100%;">
+                    <div class="countdown-shimmer"></div>
+                  </div>
+                </div>
+
+                <div class="countdown-footer-meta">
+                  <span id="countdownFooterHint">Siklus otomatis diperbarui setiap 24 jam</span>
+                  <span id="countdownNextYieldTime">Reset: 00:00 WIB</span>
+                </div>
+              </div>
             </div>
 
           </div>

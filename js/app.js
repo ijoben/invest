@@ -16,6 +16,7 @@ const App = {
   currentTab: 'home',
   marketInterval: null,
   bannerInterval: null,
+  profitCountdownInterval: null,
   currentBannerSlide: 0,
   bannersData: [],
 
@@ -33,6 +34,7 @@ const App = {
     this.renderAll();
     this.bindEvents();
     this.startMarketTicker();
+    this.startProfitCountdownLoop();
 
     // Show quick welcome toast
     setTimeout(() => {
@@ -40,6 +42,14 @@ const App = {
         this.showToast('Selamat datang di FGT Pro. Silakan login untuk mengakses fitur lengkap.', 'info');
       }
     }, 800);
+  },
+
+  // Real-time profit countdown loop (every 1 sec)
+  startProfitCountdownLoop() {
+    if (this.profitCountdownInterval) clearInterval(this.profitCountdownInterval);
+    this.profitCountdownInterval = setInterval(() => {
+      this.updateProfitCountdown();
+    }, 1000);
   },
 
   // Real-time market ticker loop
@@ -239,18 +249,139 @@ const App = {
       document.getElementById('authPendingProfit').textContent = DB.formatIDR(totalPendingProfit);
       document.getElementById('authTotalEarned').textContent = DB.formatIDR(totalEarned);
 
-      const claimBtn = document.getElementById('btnClaimProfit');
-      if (totalPendingProfit > 0) {
-        claimBtn.innerHTML = `<span>Klaim Profit Harian (${DB.formatIDR(totalPendingProfit)})</span>`;
-        claimBtn.style.opacity = '1';
-        claimBtn.removeAttribute('disabled');
-      } else {
-        claimBtn.innerHTML = `<span>Menunggu Siklus Profit 24 Jam</span>`;
-        claimBtn.style.opacity = '0.75';
-      }
+      this.updateProfitCountdown();
     } else {
       guestBox.style.display = 'block';
       authBox.style.display = 'none';
+    }
+  },
+
+  // 5.1 Real-time Profit Countdown & 100% Progress Bar Calculation
+  updateProfitCountdown() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const userInvs = Plans.getUserInvestments(user.id);
+    const totalPendingProfit = userInvs.reduce((sum, i) => sum + (i.pendingProfitClaim || 0), 0);
+
+    const cardEl = document.getElementById('profitCountdownCard');
+    const statusTitleEl = document.getElementById('countdownStatusTitle');
+    const timerValEl = document.getElementById('countdownTimerValue');
+    const percentBadgeEl = document.getElementById('countdownPercentBadge');
+    const progressBarEl = document.getElementById('countdownProgressBar');
+    const footerHintEl = document.getElementById('countdownFooterHint');
+    const nextYieldEl = document.getElementById('countdownNextYieldTime');
+    const claimBtn = document.getElementById('btnClaimProfit');
+
+    if (!cardEl) return;
+
+    if (userInvs.length === 0) {
+      if (statusTitleEl) statusTitleEl.textContent = 'Status Siklus:';
+      if (timerValEl) {
+        timerValEl.textContent = 'Belum Ada Paket';
+        timerValEl.style.color = '#94A3B8';
+      }
+      if (percentBadgeEl) {
+        percentBadgeEl.textContent = '0%';
+        percentBadgeEl.style.background = '#475569';
+        percentBadgeEl.style.boxShadow = 'none';
+      }
+      if (progressBarEl) {
+        progressBarEl.style.width = '0%';
+      }
+      if (footerHintEl) footerHintEl.textContent = 'Aktifkan paket investasi untuk memulai siklus profit';
+      if (nextYieldEl) nextYieldEl.textContent = '-';
+      if (claimBtn) {
+        claimBtn.innerHTML = `<span>Mulai Investasi Paket AI</span>`;
+        claimBtn.style.opacity = '1';
+        claimBtn.onclick = () => {
+          const planSection = document.querySelector('.tier-carousel-container');
+          if (planSection) planSection.scrollIntoView({ behavior: 'smooth' });
+        };
+      }
+      return;
+    }
+
+    // Set default claim onClick handler
+    if (claimBtn) {
+      claimBtn.onclick = () => App.claimProfit();
+    }
+
+    if (totalPendingProfit > 0) {
+      // 100% Ready To Claim State
+      if (statusTitleEl) statusTitleEl.textContent = 'Siap Diklaim:';
+      if (timerValEl) {
+        timerValEl.textContent = '100% SELESAI';
+        timerValEl.style.color = '#22C55E';
+      }
+      if (percentBadgeEl) {
+        percentBadgeEl.textContent = '100%';
+        percentBadgeEl.style.background = 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)';
+        percentBadgeEl.style.boxShadow = '0 0 14px rgba(34, 197, 94, 0.6)';
+      }
+      if (progressBarEl) {
+        progressBarEl.style.width = '100%';
+        progressBarEl.style.background = 'linear-gradient(90deg, #E5A83B 0%, #22C55E 100%)';
+        progressBarEl.style.boxShadow = '0 0 14px rgba(34, 197, 94, 0.7)';
+      }
+      if (footerHintEl) footerHintEl.textContent = `Profit harian ${DB.formatIDR(totalPendingProfit)} siap diklaim ke saldo`;
+      if (nextYieldEl) nextYieldEl.textContent = 'Siap Klaim';
+
+      if (claimBtn) {
+        claimBtn.innerHTML = `<span>Klaim Profit Harian (${DB.formatIDR(totalPendingProfit)})</span>`;
+        claimBtn.style.opacity = '1';
+        claimBtn.removeAttribute('disabled');
+      }
+    } else {
+      // Countdown State in 24-Hour Cycle
+      const cycleDurationMs = 24 * 3600 * 1000;
+      
+      let lastYieldTime = 0;
+      userInvs.forEach(inv => {
+        const time = new Date(inv.lastProfitYieldDate || inv.startDate || Date.now()).getTime();
+        if (time > lastYieldTime) lastYieldTime = time;
+      });
+
+      const now = Date.now();
+      let elapsed = now - lastYieldTime;
+      if (elapsed < 0) elapsed = 0;
+      if (elapsed >= cycleDurationMs) elapsed = cycleDurationMs;
+
+      const remainingMs = Math.max(0, cycleDurationMs - elapsed);
+      const percent = Math.min(100, Math.max(0, (elapsed / cycleDurationMs) * 100));
+
+      const hours = Math.floor(remainingMs / 3600000);
+      const minutes = Math.floor((remainingMs % 3600000) / 60000);
+      const seconds = Math.floor((remainingMs % 60000) / 1000);
+
+      const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      if (statusTitleEl) statusTitleEl.textContent = 'Hitung Mundur:';
+      if (timerValEl) {
+        timerValEl.textContent = timeFormatted;
+        timerValEl.style.color = '#FDE89C';
+      }
+      if (percentBadgeEl) {
+        percentBadgeEl.textContent = `${Math.round(percent)}%`;
+        percentBadgeEl.style.background = 'linear-gradient(135deg, #E5A83B 0%, #C89338 100%)';
+        percentBadgeEl.style.boxShadow = '0 0 10px rgba(229, 168, 59, 0.4)';
+      }
+      if (progressBarEl) {
+        progressBarEl.style.width = `${Math.max(6, Math.round(percent))}%`;
+        progressBarEl.style.background = 'linear-gradient(90deg, #C89338 0%, #E5A83B 60%, #22C55E 100%)';
+        progressBarEl.style.boxShadow = '0 0 10px rgba(229, 168, 59, 0.5)';
+      }
+      if (footerHintEl) footerHintEl.textContent = 'Siklus otomatis diperbarui setiap 24 jam';
+      
+      const nextResetDate = new Date(now + remainingMs);
+      const hourStr = String(nextResetDate.getHours()).padStart(2, '0');
+      const minStr = String(nextResetDate.getMinutes()).padStart(2, '0');
+      if (nextYieldEl) nextYieldEl.textContent = `Reset: ${hourStr}:${minStr} WIB`;
+
+      if (claimBtn) {
+        claimBtn.innerHTML = `<span>Menunggu Siklus Profit (${timeFormatted})</span>`;
+        claimBtn.style.opacity = '0.82';
+      }
     }
   },
 

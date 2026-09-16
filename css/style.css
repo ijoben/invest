@@ -883,6 +883,147 @@ html, body {
 }
 
 /* ==========================================================================
+   PROFIT COUNTDOWN & 100% PROGRESS BAR (Below Claim Button)
+   ========================================================================== */
+.profit-countdown-card {
+  margin-top: 4px;
+  background: #0F172A;
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(200, 147, 56, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.profit-countdown-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #E5A83B 0%, #22C55E 50%, #E5A83B 100%);
+  background-size: 200% auto;
+  animation: shimmerBorder 3s linear infinite;
+}
+
+@keyframes shimmerBorder {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.countdown-top-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.countdown-label-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #F8FAFC;
+  font-size: 11.5px;
+  font-weight: 700;
+  flex-wrap: wrap;
+}
+
+.countdown-icon-pulse {
+  color: #E5A83B;
+  display: flex;
+  align-items: center;
+  animation: pulseClock 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseClock {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.countdown-title {
+  color: #94A3B8;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.countdown-timer-digits {
+  font-family: var(--font-mono, monospace);
+  color: #FDE89C;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  background: rgba(200, 147, 56, 0.15);
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(200, 147, 56, 0.3);
+}
+
+.countdown-percentage-badge {
+  font-family: var(--font-mono, monospace);
+  background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+  letter-spacing: 0.2px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.countdown-progress-track {
+  width: 100%;
+  height: 10px;
+  background: #1E293B;
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.countdown-progress-bar {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #C89338 0%, #E5A83B 50%, #22C55E 100%);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  box-shadow: 0 0 12px rgba(229, 168, 59, 0.6);
+}
+
+.countdown-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: barShimmer 2s infinite linear;
+}
+
+@keyframes barShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.countdown-footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
    7. PROF GPT SIGNAL SECTION (Neon Border & Cards)
    ========================================================================== */
 .signal-section-container {
