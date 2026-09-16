@@ -61,7 +61,6 @@ const defaultDB = {
       id: 'plan-learn',
       name: 'Learn',
       theme: 'theme-learn',
-      priceDisplay: 'US$0.00',
       minDeposit: 100000, // Rp 100,000
       maxDeposit: 1000000, // Rp 1,000,000
       minDailyProfit: 1.2, // 1.2%
@@ -74,7 +73,6 @@ const defaultDB = {
       id: 'plan-rookie',
       name: 'Rookie',
       theme: 'theme-rookie',
-      priceDisplay: 'US$0.00',
       minDeposit: 1000000, // Rp 1,000,000
       maxDeposit: 10000000, // Rp 10,000,000
       minDailyProfit: 2.0, // 2.0%
@@ -87,7 +85,6 @@ const defaultDB = {
       id: 'plan-sophomore',
       name: 'Sophomore',
       theme: 'theme-sophomore',
-      priceDisplay: 'US$0.00',
       minDeposit: 10000000, // Rp 10,000,000
       maxDeposit: 50000000, // Rp 50,000,000
       minDailyProfit: 3.5, // 3.5%
@@ -100,7 +97,6 @@ const defaultDB = {
       id: 'plan-vip',
       name: 'VIP Master',
       theme: 'theme-vip',
-      priceDisplay: 'US$0.00',
       minDeposit: 50000000, // Rp 50,000,000
       maxDeposit: 500000000, // Rp 500,000,000
       minDailyProfit: 5.0, // 5.0%

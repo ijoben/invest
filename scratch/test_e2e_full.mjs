@@ -26,6 +26,9 @@ console.log('====================================================');
 
 // Reset to initial clean state
 DB.reset();
+const dbInit = DB.get();
+dbInit.settings.withdrawSchedule = { enabled: true, startHour: 0, endHour: 24 };
+DB.save(dbInit);
 let db = DB.get();
 
 function assert(condition, name) {

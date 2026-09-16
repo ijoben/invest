@@ -521,10 +521,11 @@ html, body {
 }
 
 .tier-amount {
-  font-size: 18px;
+  font-size: 14.5px;
   font-weight: 800;
-  font-family: var(--font-main);
-  letter-spacing: -0.5px;
+  font-family: var(--font-mono, var(--font-main));
+  letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 
 .tier-card.theme-vip .tier-amount {

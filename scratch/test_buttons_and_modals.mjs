@@ -26,6 +26,9 @@ console.log('🔘 RUNNING COMPREHENSIVE BUTTONS & MODALS AUDIT');
 console.log('====================================================');
 
 DB.reset();
+const dbSettings = DB.get();
+dbSettings.settings.withdrawSchedule = { enabled: true, startHour: 0, endHour: 24 };
+DB.save(dbSettings);
 
 function assert(condition, name) {
   if (!condition) {
@@ -150,6 +153,16 @@ assert(DB.get().settings.sponsorBonusPercent === 12, 'Settings persistence verif
 // Daily Profit Engine Trigger
 const profitYieldRes = Admin.triggerProfitYield();
 assert(profitYieldRes.success, 'Admin.triggerProfitYield executed successfully');
+
+// 7. Test Plan Card Profit Calculation
+const allUserInvs = Plans.getAllUserInvestments(user.id);
+const rookieInvs = allUserInvs.filter(i => i.planId === 'plan-rookie');
+const rookieProfit = rookieInvs.reduce((sum, inv) => sum + (inv.totalProfitEarned || 0) + (inv.pendingProfitClaim || 0), 0);
+assert(rookieProfit > 0, `Plan card Rookie profit correctly calculated: ${DB.formatIDR(rookieProfit)}`);
+
+const learnInvs = allUserInvs.filter(i => i.planId === 'plan-learn');
+const learnProfit = learnInvs.reduce((sum, inv) => sum + (inv.totalProfitEarned || 0) + (inv.pendingProfitClaim || 0), 0);
+assert(learnProfit === 0, `Plan card unpurchased Learn profit correctly calculated: ${DB.formatIDR(learnProfit)}`);
 
 console.log('====================================================');
 console.log('🎉 ALL BUTTONS, HANDLERS, & API METHODS VERIFIED 100%');

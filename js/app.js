@@ -177,10 +177,13 @@ const App = {
     const container = document.getElementById('tierCarouselContainer');
     if (!container) return;
 
-    const userInvestments = user ? Plans.getUserInvestments(user.id) : [];
+    const userInvestments = user ? Plans.getAllUserInvestments(user.id) : [];
 
     container.innerHTML = db.plans.map(plan => {
-      const isUserActiveInPlan = userInvestments.some(inv => inv.planId === plan.id);
+      const planInvs = userInvestments.filter(inv => inv.planId === plan.id);
+      const isUserActiveInPlan = planInvs.some(inv => inv.status === 'active');
+      const totalPlanProfit = planInvs.reduce((sum, inv) => sum + (inv.totalProfitEarned || 0) + (inv.pendingProfitClaim || 0), 0);
+      const profitDisplay = totalPlanProfit > 0 ? `+${DB.formatIDR(totalPlanProfit)}` : DB.formatIDR(0);
       
       return `
         <div class="tier-card ${plan.theme || 'theme-learn'}">
@@ -189,7 +192,7 @@ const App = {
               <span class="tier-title">${plan.name}</span>
               <span class="tier-info-icon" onclick="App.openPlanModal('${plan.id}')" title="Detail Paket">ⓘ</span>
             </div>
-            <span class="tier-amount">${plan.priceDisplay || 'US$0.00'}</span>
+            <span class="tier-amount" title="Profit dari paket yang dibeli">${profitDisplay}</span>
           </div>
           <div class="tier-badge-profit">
             <span>Profit Harian: ${plan.minDailyProfit}% - ${plan.maxDailyProfit}%</span>
