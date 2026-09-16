@@ -833,7 +833,7 @@
             App.closeAllModals();
             if (res.user && res.user.role === 'admin') {
               App.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
-              setTimeout(() => { window.location.href = 'admin'; }, 600);
+              setTimeout(() => { window.location.href = 'admin.html'; }, 600);
             } else {
               App.showToast(res.message, 'success');
               App.renderAll();
@@ -861,7 +861,7 @@
               Auth.quickLogin('admin');
               App.closeAllModals();
               App.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
-              setTimeout(() => { window.location.href = 'admin'; }, 600);
+              setTimeout(() => { window.location.href = 'admin.html'; }, 600);
             ">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               <span>Login Admin</span>

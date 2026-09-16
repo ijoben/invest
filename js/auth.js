@@ -16,6 +16,10 @@ export const Auth = {
     return DB.getCurrentUser();
   },
 
+  getCurrentUser() {
+    return DB.getCurrentUser();
+  },
+
   // Login handler
   login(identifier, password) {
     if (!identifier || !password) {
