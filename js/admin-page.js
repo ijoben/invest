@@ -3,7 +3,7 @@
  * Controls admin.html views, tables, modal actions, and settings.
  */
 
-import { DB } from './db.js';
+import { DB, createReceiptBase64 } from './db.js';
 import { Admin } from './admin.js';
 import { Auth } from './auth.js';
 import { Plans } from './plans.js';
@@ -1207,8 +1207,14 @@ export const AdminPage = {
     }
 
     if (!receiptImage) {
-      // Create a clean SVG receipt template matching the selected bank
-      receiptImage = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" fill="none"><rect width="600" height="420" rx="20" fill="%230F172A"/><rect x="15" y="15" width="570" height="390" rx="16" fill="%23FFFFFF"/><rect x="15" y="15" width="570" height="70" rx="16" fill="%230F172A"/><text x="35" y="55" fill="%23E5A83B" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1">${encodeURIComponent(bank)}</text><rect x="420" y="32" width="145" height="34" rx="17" fill="%2310B981"/><text x="492" y="54" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">✓ BERHASIL</text><circle cx="300" cy="130" r="30" fill="%23ECFDF5"/><path d="M288 130L296 138L312 122" stroke="%23059669" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="180" fill="%230F172A" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle">PENARIKAN DANA BERHASIL</text><text x="300" y="222" fill="%230F172A" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">${encodeURIComponent(DB.formatIDR(amount))}</text><line x1="45" y1="245" x2="555" y2="245" stroke="%23E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/><text x="50" y="275" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Pengirim:</text><text x="550" y="275" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">PT FGT PRO INVESTASI</text><text x="50" y="305" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Penerima:</text><text x="550" y="305" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">${encodeURIComponent(name.toUpperCase())}</text><text x="50" y="335" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Waktu Transaksi:</text><text x="550" y="335" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">${encodeURIComponent(timeAgo)}</text><rect x="45" y="380" width="510" height="15" fill="%23F8FAFC" rx="4"/></svg>`;
+      // Create a crisp Base64 SVG receipt matching the selected bank
+      receiptImage = createReceiptBase64({
+        bank,
+        name: name.toUpperCase(),
+        amount,
+        timeAgo,
+        refNo: 'ADM-' + Math.floor(10000000 + Math.random() * 90000000)
+      });
     }
 
     if (id) {
