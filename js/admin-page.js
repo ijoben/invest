@@ -5,6 +5,7 @@
 
 import { DB } from './db.js';
 import { Admin } from './admin.js';
+import { Auth } from './auth.js';
 import { Plans } from './plans.js';
 import { Affiliate } from './affiliate.js';
 import { Signals } from './signals.js';
@@ -360,6 +361,15 @@ export const AdminPage = {
     this.showToast('Database demo berhasil di-reset ke kondisi awal!', 'success');
     this.renderAll();
     this.closeSidebar();
+  },
+
+  logout() {
+    if (!confirm('Apakah Anda yakin ingin keluar (logout) dari panel Admin FGT Pro?')) return;
+    Auth.logout();
+    this.showToast('Logout admin berhasil. Mengalihkan ke halaman utama...', 'success');
+    setTimeout(() => {
+      window.location.href = './';
+    }, 600);
   },
 
   triggerDailyProfit() {

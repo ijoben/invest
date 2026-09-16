@@ -178,6 +178,35 @@ body.admin-body.sidebar-open {
   color: #38BDF8;
 }
 
+.admin-logout-btn {
+  background: rgba(239, 68, 68, 0.12);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 7px 14px;
+  border-radius: var(--radius-md, 10px);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #EF4444;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.admin-logout-btn:active {
+  transform: scale(0.96);
+}
+
+
 /* ==========================================================================
    2. SLIDING LEFT DRAWER SIDEBAR & BACKDROP
    ========================================================================== */
@@ -421,6 +450,19 @@ body.admin-body.sidebar-open {
   border-color: #EF4444;
   color: #EF4444;
 }
+
+.sidebar-action-btn.logout-btn {
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #F87171;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.sidebar-action-btn.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #FFFFFF;
+}
+
 
 /* ==========================================================================
    3. ADMIN PANELS & CONTENT
