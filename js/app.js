@@ -4,7 +4,7 @@
  * Premium Fintech Edition: Vector SVG Icons & Polished UI.
  */
 
-import { DB } from './db.js';
+import { DB, createReceiptBase64 } from './db.js';
 import { Auth } from './auth.js';
 import { Plans } from './plans.js';
 import { Affiliate } from './affiliate.js';
@@ -18,10 +18,16 @@ const App = {
   marketInterval: null,
   bannerInterval: null,
   profitCountdownInterval: null,
+  aiChartInterval: null,
   currentBannerSlide: 0,
   bannersData: [],
   currentTestimonialFilter: 'all',
   testimonialsData: [],
+  aiChartPoints: [
+    1.1528, 1.1531, 1.1529, 1.1535, 1.1532, 1.1538, 1.1541, 1.1539,
+    1.1544, 1.1542, 1.1546, 1.1543, 1.1549, 1.1547, 1.1552, 1.1550,
+    1.1555, 1.1551, 1.1558, 1.1554, 1.1560, 1.1557, 1.1563, 1.1561, 1.1565
+  ],
 
   init() {
     // Check URL parameters (e.g. ?ref=KODE)
@@ -38,6 +44,7 @@ const App = {
     this.bindEvents();
     this.startMarketTicker();
     this.startProfitCountdownLoop();
+    this.initAiTradingChart();
 
     // Show quick welcome toast
     setTimeout(() => {
@@ -282,7 +289,7 @@ const App = {
     if (!cardEl) return;
 
     if (userInvs.length === 0) {
-      if (statusTitleEl) statusTitleEl.textContent = 'Status Siklus:';
+      if (statusTitleEl) statusTitleEl.textContent = 'Proses Profit:';
       if (timerValEl) {
         timerValEl.textContent = 'Belum Ada Paket';
         timerValEl.style.color = '#94A3B8';
@@ -295,7 +302,7 @@ const App = {
       if (progressBarEl) {
         progressBarEl.style.width = '0%';
       }
-      if (footerHintEl) footerHintEl.textContent = 'Aktifkan paket investasi untuk memulai siklus profit';
+      if (footerHintEl) footerHintEl.textContent = 'Aktifkan paket investasi untuk memulai proses profit berjalan';
       if (nextYieldEl) nextYieldEl.textContent = '-';
       if (claimBtn) {
         claimBtn.innerHTML = `<span>Mulai Investasi Paket AI</span>`;
@@ -315,7 +322,7 @@ const App = {
 
     if (totalPendingProfit > 0) {
       // 100% Ready To Claim State
-      if (statusTitleEl) statusTitleEl.textContent = 'Siap Diklaim:';
+      if (statusTitleEl) statusTitleEl.textContent = 'Profit Siap Diklaim:';
       if (timerValEl) {
         timerValEl.textContent = '100% SELESAI';
         timerValEl.style.color = '#22C55E';
@@ -362,7 +369,7 @@ const App = {
 
       const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-      if (statusTitleEl) statusTitleEl.textContent = 'Hitung Mundur:';
+      if (statusTitleEl) statusTitleEl.textContent = 'Proses Profit Berjalan:';
       if (timerValEl) {
         timerValEl.textContent = timeFormatted;
         timerValEl.style.color = '#FDE89C';
@@ -377,15 +384,15 @@ const App = {
         progressBarEl.style.background = 'linear-gradient(90deg, #C89338 0%, #E5A83B 60%, #22C55E 100%)';
         progressBarEl.style.boxShadow = '0 0 10px rgba(229, 168, 59, 0.5)';
       }
-      if (footerHintEl) footerHintEl.textContent = 'Siklus otomatis diperbarui setiap 24 jam';
+      if (footerHintEl) footerHintEl.textContent = 'Siklus profit berjalan otomatis 24 jam realtime';
       
       const nextResetDate = new Date(now + remainingMs);
       const hourStr = String(nextResetDate.getHours()).padStart(2, '0');
       const minStr = String(nextResetDate.getMinutes()).padStart(2, '0');
-      if (nextYieldEl) nextYieldEl.textContent = `Reset: ${hourStr}:${minStr} WIB`;
+      if (nextYieldEl) nextYieldEl.textContent = `Siklus: ${hourStr}:${minStr} WIB`;
 
       if (claimBtn) {
-        claimBtn.innerHTML = `<span>Menunggu Siklus Profit (${timeFormatted})</span>`;
+        claimBtn.innerHTML = `<span>Proses Profit Berjalan (${timeFormatted})</span>`;
         claimBtn.style.opacity = '0.82';
       }
     }
@@ -537,12 +544,46 @@ const App = {
     }
   },
 
-  // 6. Prof GPT Signals Feed
+  // 6. Prof GPT Signals Feed (Members Only & Max 4 Signals)
   renderSignals() {
     const feed = document.getElementById('signalFeedContainer');
     if (!feed) return;
 
-    const signals = Signals.getSignals();
+    const user = Auth.getUser();
+
+    // Guest Mode: Show exclusive VIP locked teaser
+    if (!user) {
+      feed.innerHTML = `
+        <div class="vip-signal-locked-card">
+          <div class="vip-lock-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h3 class="vip-lock-title">Sinyal VIP AI Eksklusif Member</h3>
+          <p class="vip-lock-desc">Sinyal trading akurasi tinggi Prof GPT hanya dapat diakses oleh member yang sudah login. Masuk atau daftar akun Anda sekarang untuk melihat 4 sinyal aktif.</p>
+          <button class="btn-cta-gold" style="width: auto; padding: 10px 24px; margin: 0 auto;" onclick="App.openModal('authModal')">
+            <span>Masuk / Daftar Akun Member</span>
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    // Member Mode: Limit to maximum 4 latest active signals
+    const allSignals = Signals.getSignals();
+    const signals = allSignals.slice(0, 4);
+
+    if (signals.length === 0) {
+      feed.innerHTML = `
+        <div style="text-align:center; padding:24px 16px; color:#94A3B8; font-size:12px; background:#FFFFFF; border-radius:16px; border:1px solid #E2E8F0;">
+          Belum ada sinyal trading aktif baru saat ini. Silakan cek kembali beberapa saat lagi.
+        </div>
+      `;
+      return;
+    }
+
     feed.innerHTML = signals.map(sig => `
       <div class="signal-card" onclick="App.openSignalDetail('${sig.id}')">
         <div class="signal-card-header">
@@ -956,6 +997,104 @@ const App = {
     document.body.style.overflow = '';
   },
 
+  // Open Member Testimonial Submission Modal
+  openSubmitTestimonialModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      this.showToast('Silakan login terlebih dahulu untuk membagikan bukti penarikan Anda.', 'info');
+      return;
+    }
+
+    // Set default rating to 5 stars
+    this.setMemberTestiRating(5);
+    const amountInput = document.getElementById('memberTestiAmountInput');
+    if (amountInput && !amountInput.value) {
+      amountInput.value = '1500000';
+    }
+
+    // Clear and reset preview
+    const previewWrap = document.getElementById('memberTestiPreviewWrap');
+    const previewImg = document.getElementById('memberTestiPreviewImg');
+    const fileInput = document.getElementById('memberTestiFileInput');
+    if (previewWrap) previewWrap.style.display = 'none';
+    if (previewImg) previewImg.src = '';
+    if (fileInput) fileInput.value = '';
+
+    this.openModal('memberTestiModal');
+  },
+
+  setMemberTestiRating(stars) {
+    const valInput = document.getElementById('memberTestiRatingValue');
+    const labelEl = document.getElementById('memberTestiRatingLabel');
+    if (valInput) valInput.value = stars;
+
+    const labels = {
+      1: '1.0 / 5.0 (Kurang)',
+      2: '2.0 / 5.0 (Cukup)',
+      3: '3.0 / 5.0 (Bagus)',
+      4: '4.0 / 5.0 (Puas)',
+      5: '5.0 / 5.0 (Sangat Puas - Bonus +50 Poin)'
+    };
+    if (labelEl) labelEl.textContent = labels[stars] || `${stars}.0 / 5.0`;
+
+    document.querySelectorAll('#memberTestiRatingSelector .star-rating-btn').forEach(btn => {
+      const r = Number(btn.getAttribute('data-rating') || 0);
+      if (r <= stars) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  },
+
+  submitMemberTestimonial() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      return;
+    }
+
+    const rating = Number(document.getElementById('memberTestiRatingValue')?.value || 5);
+    const bank = document.getElementById('memberTestiBankSelect')?.value || 'BCA Mobile';
+    const amount = Number(document.getElementById('memberTestiAmountInput')?.value || 0);
+    const city = document.getElementById('memberTestiCityInput')?.value.trim() || 'Indonesia';
+    const comment = document.getElementById('memberTestiCommentInput')?.value.trim() || '';
+
+    if (amount <= 0) {
+      this.showToast('Masukkan nominal penarikan yang valid!', 'error');
+      return;
+    }
+
+    if (!comment) {
+      this.showToast('Harap tulis kata-kata ulasan pengalaman penarikan Anda!', 'error');
+      return;
+    }
+
+    const previewImg = document.getElementById('memberTestiPreviewImg');
+    const uploadedImageBase64 = previewImg && previewImg.src && previewImg.src.startsWith('data:image') ? previewImg.src : null;
+
+    const res = DB.submitMemberTestimonial({
+      userId: user.id,
+      name: user.fullName || user.username,
+      city,
+      bank,
+      amount,
+      rating,
+      comment,
+      receiptImage: uploadedImageBase64
+    });
+
+    if (res && res.id) {
+      this.closeModal('memberTestiModal');
+      const bonusHint = rating === 5 ? ' Bonus +50 Poin akan otomatis ditambahkan setelah disetujui Admin!' : '';
+      this.showToast(`Testimoni Anda berhasil dikirim untuk moderasi Admin.${bonusHint}`, 'success');
+      this.renderTestimonials(this.currentTestimonialFilter || 'all');
+    } else {
+      this.showToast('Gagal mengirimkan testimoni', 'error');
+    }
+  },
+
   // Render Wallet View Page
   renderWalletView(user) {
     if (!user) {
@@ -1002,7 +1141,7 @@ const App = {
     }).join('');
   },
 
-  // Render Trade View Page
+  // Render Trade View Page (with 30-day Duration Progress Bar & AI Chart)
   renderTradeView(user) {
     const listEl = document.getElementById('tradeActivePlansList');
     if (!user) {
@@ -1016,6 +1155,7 @@ const App = {
           <button class="btn-cta-gold" onclick="App.openModal('authModal')">Login Sekarang</button>
         </div>
       `;
+      this.renderAiTradingChart();
       return;
     }
 
@@ -1031,17 +1171,35 @@ const App = {
           <button class="btn-cta-gold" onclick="App.openPlanModal('plan-learn')">Pilih Paket Sekarang</button>
         </div>
       `;
+      this.renderAiTradingChart();
       return;
     }
 
     listEl.innerHTML = allInvestments.map(inv => {
       const isActive = inv.status === 'active';
+      const duration = Number(inv.durationDays || 30);
+      const daysElapsed = Number(inv.daysElapsed || 0);
+      const progressPercent = Math.min(100, Math.max(0, Math.round((daysElapsed / duration) * 100)));
+
       return `
         <div style="background:#FFFFFF; border-radius:18px; padding:16px; box-shadow:var(--card-shadow); border:1px solid ${isActive ? '#E2E8F0' : '#E2E8F0'}; display:flex; flex-direction:column; gap:10px; opacity:${isActive ? '1' : '0.85'};">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-weight:800; font-size:15px; color:#0F172A;">Paket ${inv.planName}</span>
-            <span class="badge-status ${isActive ? 'approved' : 'rejected'}">${isActive ? `BERJALAN (${inv.daysElapsed}/${inv.durationDays} Hari)` : `SELESAI (Modal Kembali)`}</span>
+            <span class="badge-status ${isActive ? 'approved' : 'rejected'}">${isActive ? `BERJALAN (${daysElapsed}/${duration} Hari)` : `SELESAI (Modal Kembali)`}</span>
           </div>
+
+          ${isActive ? `
+            <div class="active-plan-progress-wrap">
+              <div class="active-plan-progress-header">
+                <span class="active-plan-progress-label">⏱️ Progress Durasi Paket:</span>
+                <span class="active-plan-progress-val">${progressPercent}% (Hari ke-${daysElapsed} dari ${duration} Hari)</span>
+              </div>
+              <div class="active-plan-progress-track">
+                <div class="active-plan-progress-bar" style="width: ${Math.max(4, progressPercent)}%;"></div>
+              </div>
+            </div>
+          ` : ''}
+
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); background:#F8FAFC; border-radius:12px; padding:10px; text-align:center; gap:6px;">
             <div>
               <div style="font-size:10px; color:#64748B;">Modal Awal</div>
@@ -1073,6 +1231,8 @@ const App = {
         </div>
       `;
     }).join('');
+
+    this.renderAiTradingChart();
   },
 
   // Render Profile & Affiliate View Page
@@ -1152,6 +1312,138 @@ const App = {
       ctx.fillStyle = grad;
       ctx.fill();
     }
+  },
+
+  // Interactive Live AI Trading Chart (EUR/USD)
+  initAiTradingChart() {
+    if (this.aiChartInterval) clearInterval(this.aiChartInterval);
+
+    this.aiChartInterval = setInterval(() => {
+      // Fluctuate price slightly
+      const lastPoint = this.aiChartPoints[this.aiChartPoints.length - 1];
+      const delta = (Math.random() - 0.48) * 0.0003;
+      const nextPoint = Math.max(1.1510, Math.min(1.1590, Number((lastPoint + delta).toFixed(5))));
+
+      this.aiChartPoints.push(nextPoint);
+      if (this.aiChartPoints.length > 30) {
+        this.aiChartPoints.shift();
+      }
+
+      // Update live rate DOM
+      const priceEl = document.getElementById('tradeEurUsdPrice');
+      const profitEl = document.getElementById('tradeEurUsdProfitRate');
+      if (priceEl) priceEl.textContent = nextPoint.toFixed(5);
+      if (profitEl) {
+        const winRate = (3.15 + (nextPoint - 1.1500) * 20 + (Math.random() * 0.15)).toFixed(2);
+        profitEl.textContent = `+${winRate}%`;
+      }
+
+      if (this.currentTab === 'trade') {
+        this.renderAiTradingChart();
+      }
+    }, 2000);
+  },
+
+  renderAiTradingChart() {
+    const canvas = document.getElementById('aiTradeCanvas');
+    if (!canvas || !canvas.getContext) return;
+
+    const parent = canvas.parentElement;
+    if (!parent || parent.clientWidth === 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = parent.clientWidth;
+    const h = 160;
+
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    const pts = this.aiChartPoints;
+    if (pts.length < 2) return;
+
+    const minVal = Math.min(...pts) - 0.0002;
+    const maxVal = Math.max(...pts) + 0.0002;
+    const range = (maxVal - minVal) || 0.001;
+
+    // Draw horizontal grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    for (let i = 1; i <= 3; i++) {
+      const y = (h / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Calculate canvas coordinates
+    const stepX = w / (pts.length - 1);
+    const coords = pts.map((p, idx) => ({
+      x: idx * stepX,
+      y: h - ((p - minVal) / range) * (h - 28) - 14
+    }));
+
+    // Draw Smooth Spline Path
+    ctx.beginPath();
+    ctx.moveTo(coords[0].x, coords[0].y);
+
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[i === 0 ? 0 : i - 1];
+      const p1 = coords[i];
+      const p2 = coords[i + 1];
+      const p3 = coords[i + 2] || p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
+
+    // Stroke line
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 2.8;
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.8)';
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Area Gradient Fill
+    ctx.lineTo(coords[coords.length - 1].x, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+    grad.addColorStop(0.6, 'rgba(56, 189, 248, 0.08)');
+    grad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Draw Pulsing Head Indicator on Latest Point
+    const lastCoord = coords[coords.length - 1];
+
+    ctx.beginPath();
+    ctx.arc(lastCoord.x, lastCoord.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(lastCoord.x, lastCoord.y, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
   },
 
   // Tab Navigation Switching
@@ -1387,12 +1679,51 @@ const App = {
   },
 
   openWithdrawModal() {
-    if (!Auth.isLoggedIn()) {
+    const user = Auth.getUser();
+    if (!user) {
       this.openModal('authModal');
       this.showToast('Silakan login untuk melakukan penarikan.', 'info');
       return;
     }
+
+    // Check withdrawal operational schedule
+    const sched = Payment.isWithdrawOpen();
+    const badgeEl = document.getElementById('wdScheduleStatusBadge');
+    const textEl = document.getElementById('wdScheduleStatusText');
+    const submitBtn = document.getElementById('btnSubmitWithdraw');
+
+    if (badgeEl && textEl) {
+      if (sched.isOpen) {
+        badgeEl.className = 'wd-status-badge open';
+        textEl.textContent = `🟢 Jam Operasional WD Buka (${String(sched.schedule.startHour).padStart(2, '0')}:00 - ${String(sched.schedule.endHour).padStart(2, '0')}:00 WIB)`;
+        if (submitBtn) {
+          submitBtn.removeAttribute('disabled');
+          submitBtn.style.opacity = '1';
+        }
+      } else {
+        badgeEl.className = 'wd-status-badge closed';
+        textEl.textContent = `🔴 ${sched.message}`;
+      }
+    }
+
+    // Update balance preview
+    this.updateWithdrawBalancePreview();
+
     this.openModal('withdrawModal');
+  },
+
+  updateWithdrawBalancePreview() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const breakdown = Payment.getWithdrawableBalance(user.id);
+    const freeBalEl = document.getElementById('wdFreeBalanceVal');
+    const lockedCapEl = document.getElementById('wdLockedCapitalVal');
+    const affBalEl = document.getElementById('wdAffiliateBalanceVal');
+
+    if (freeBalEl) freeBalEl.textContent = DB.formatIDR(breakdown.freeBalance);
+    if (lockedCapEl) lockedCapEl.textContent = DB.formatIDR(breakdown.lockedCapital);
+    if (affBalEl) affBalEl.textContent = DB.formatIDR(breakdown.affiliateBalance);
   },
 
   submitDeposit() {
@@ -1426,6 +1757,12 @@ const App = {
   submitWithdraw() {
     const user = Auth.getUser();
     if (!user) return;
+
+    const sched = Payment.isWithdrawOpen();
+    if (!sched.isOpen) {
+      this.showToast(sched.message, 'error');
+      return;
+    }
 
     const walletType = document.getElementById('wdWalletType').value;
     const method = document.getElementById('wdMethod').value;
@@ -1555,7 +1892,34 @@ const App = {
       depUsdtAmountInput.addEventListener('input', () => {
         const val = Number(depUsdtAmountInput.value) || 0;
         const rate = DB.get().settings.usdIdrRate || 16250;
-        document.getElementById('depUsdtCalculatedIdr').textContent = DB.formatIDR(val * rate);
+        const idrEl = document.getElementById('depUsdtCalculatedIdr');
+        if (idrEl) idrEl.textContent = DB.formatIDR(val * rate);
+      });
+    }
+
+    // Member testimonial file upload reader
+    const testiFileInput = document.getElementById('memberTestiFileInput');
+    if (testiFileInput) {
+      testiFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 3 * 1024 * 1024) {
+          this.showToast('Ukuran gambar maksimal 3 MB!', 'error');
+          testiFileInput.value = '';
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const previewWrap = document.getElementById('memberTestiPreviewWrap');
+          const previewImg = document.getElementById('memberTestiPreviewImg');
+          if (previewImg && previewWrap) {
+            previewImg.src = event.target.result;
+            previewWrap.style.display = 'block';
+          }
+        };
+        reader.readAsDataURL(file);
       });
     }
   },

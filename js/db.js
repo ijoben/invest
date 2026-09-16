@@ -15,6 +15,12 @@ const defaultDB = {
     minDeposit: 50000,
     minWithdraw: 50000,
     withdrawFeePercent: 1.0, // 1% admin fee
+    withdrawSchedule: {
+      enabled: true,
+      startHour: 9, // 09:00 WIB
+      endHour: 21,  // 21:00 WIB
+      offMessage: 'Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.'
+    },
     profitCycleDurationHours: 24, // Real 24-hour cycle
     autoProfitIntervalSeconds: 86400, // 24 hours in seconds
     sponsorBonusPercent: 10, // 10% direct sponsor bonus
@@ -837,11 +843,16 @@ export const DB = {
       if (!parsed.redemptions) {
         parsed.redemptions = defaultDB.redemptions;
       }
+      if (!parsed.settings || !parsed.settings.withdrawSchedule) {
+        parsed.settings = parsed.settings || {};
+        parsed.settings.withdrawSchedule = defaultDB.settings.withdrawSchedule;
+      }
       if (!parsed.testimonials || !Array.isArray(parsed.testimonials) || parsed.testimonials.length === 0) {
         parsed.testimonials = defaultDB.testimonials;
       } else {
         // Auto-heal any unencoded SVGs or broken format from previous sessions
         parsed.testimonials = parsed.testimonials.map(t => {
+          if (!t.status) t.status = 'approved';
           if (!t.receiptImage || t.receiptImage.startsWith('data:image/svg+xml;utf8,<') || t.receiptImage.includes('<svg') || !t.receiptImage.startsWith('data:') && !t.receiptImage.startsWith('http')) {
             const defMatch = defaultDB.testimonials.find(d => d.id === t.id);
             if (defMatch) {
@@ -1152,14 +1163,20 @@ export const DB = {
 
   getActiveTestimonials() {
     const db = this.get();
-    return (db.testimonials || []).filter(t => t.active);
+    return (db.testimonials || []).filter(t => t.active && (t.status === 'approved' || !t.status));
   },
 
-  addTestimonial({ name, city, avatar, bank, amount, rating, comment, receiptImage, timeAgo, active = true }) {
+  getPendingTestimonials() {
+    const db = this.get();
+    return (db.testimonials || []).filter(t => t.status === 'pending');
+  },
+
+  addTestimonial({ name, city, avatar, bank, amount, rating, comment, receiptImage, timeAgo, active = true, status = 'approved', userId = null, pointsRewarded = false }) {
     const db = this.get();
     db.testimonials = db.testimonials || [];
     const newTestimonial = {
       id: 'testi-' + Date.now(),
+      userId: userId || null,
       name: (name || 'Member FGT Pro').trim(),
       city: (city || 'Indonesia').trim(),
       avatar: (avatar || '').trim() || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Member')}&background=C89338&color=fff`,
@@ -1170,11 +1187,31 @@ export const DB = {
       receiptImage: (receiptImage || '').trim(),
       timeAgo: (timeAgo || 'Baru saja').trim(),
       active: Boolean(active),
+      status: status || 'approved',
+      pointsRewarded: Boolean(pointsRewarded),
       createdAt: new Date().toISOString()
     };
     db.testimonials.unshift(newTestimonial);
     this.save(db);
     return newTestimonial;
+  },
+
+  submitMemberTestimonial({ userId, name, city, avatar, bank, amount, rating, comment, receiptImage }) {
+    return this.addTestimonial({
+      userId,
+      name,
+      city,
+      avatar,
+      bank,
+      amount,
+      rating,
+      comment,
+      receiptImage,
+      timeAgo: 'Baru saja',
+      active: true,
+      status: 'pending', // Pending Admin moderation
+      pointsRewarded: false
+    });
   },
 
   updateTestimonial(id, updates) {
@@ -1184,7 +1221,7 @@ export const DB = {
     if (idx !== -1) {
       if (updates.amount !== undefined) updates.amount = Number(updates.amount);
       if (updates.rating !== undefined) updates.rating = Number(updates.rating);
-      db.testimonials[idx] = { ...db.testimonials[idx], ...updates };
+      db.testimonials[idx] = { ...db.testimonials[idx], ...updates, updatedAt: new Date().toISOString() };
       this.save(db);
       return db.testimonials[idx];
     }

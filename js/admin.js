@@ -252,6 +252,75 @@ export const Admin = {
     };
   },
 
+  // Approve Testimonial (with 5-Star Automatic Points Bonus)
+  approveTestimonial(testimonialId) {
+    const db = DB.get();
+    db.testimonials = db.testimonials || [];
+    const testi = db.testimonials.find(t => t.id === testimonialId);
+    if (!testi) return { success: false, message: 'Testimoni tidak ditemukan!' };
+
+    testi.status = 'approved';
+    testi.active = true;
+    testi.updatedAt = new Date().toISOString();
+
+    let bonusMessage = '';
+    // Auto reward +50 loyalty points if 5-star rating and not yet rewarded
+    if (Number(testi.rating) === 5 && !testi.pointsRewarded && testi.userId) {
+      const user = db.users.find(u => u.id === testi.userId);
+      if (user) {
+        user.points = (Number(user.points) || 0) + 50;
+        testi.pointsRewarded = true;
+        bonusMessage = ` & bonus +50 Poin berhasil diberikan kepada ${user.username}!`;
+      }
+    }
+
+    DB.save(db);
+    return {
+      success: true,
+      message: `Testimoni dari ${testi.name} berhasil disetujui${bonusMessage}`
+    };
+  },
+
+  // Reject Testimonial
+  rejectTestimonial(testimonialId, reason = 'Foto bukti atau isi testimoni tidak sesuai ketentuan') {
+    const db = DB.get();
+    db.testimonials = db.testimonials || [];
+    const testi = db.testimonials.find(t => t.id === testimonialId);
+    if (!testi) return { success: false, message: 'Testimoni tidak ditemukan!' };
+
+    testi.status = 'rejected';
+    testi.rejectReason = reason;
+    testi.updatedAt = new Date().toISOString();
+
+    DB.save(db);
+    return { success: true, message: `Testimoni dari ${testi.name} telah ditolak.` };
+  },
+
+  // Delete Testimonial
+  deleteTestimonial(testimonialId) {
+    DB.deleteTestimonial(testimonialId);
+    return { success: true, message: 'Testimoni berhasil dihapus.' };
+  },
+
+  // Save / Update Withdrawal Schedule
+  saveWithdrawSchedule(scheduleConfig) {
+    const db = DB.get();
+    db.settings.withdrawSchedule = {
+      ...db.settings.withdrawSchedule,
+      ...scheduleConfig
+    };
+    DB.save(db);
+    return { success: true, message: 'Jadwal dan status jam operasional WD berhasil disimpan!' };
+  },
+
+  // Delete Signal
+  deleteSignal(signalId) {
+    const db = DB.get();
+    db.signals = (db.signals || []).filter(s => s.id !== signalId);
+    DB.save(db);
+    return { success: true, message: 'Sinyal berhasil dihapus.' };
+  },
+
   // Trigger Daily Profit Yield manually from Admin
   triggerProfitYield() {
     return Plans.yieldDailyProfits();

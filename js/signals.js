@@ -58,5 +58,13 @@ export const Signals = {
     db.signals.unshift(newSignal);
     DB.save(db);
     return newSignal;
+  },
+
+  // Delete signal (Admin feature)
+  deleteSignal(id) {
+    const db = DB.get();
+    db.signals = (db.signals || []).filter(s => s.id !== id);
+    DB.save(db);
+    return true;
   }
 };

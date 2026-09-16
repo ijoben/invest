@@ -60,11 +60,61 @@ export const Payment = {
     };
   },
 
+  // Check if Withdrawal system is currently open according to schedule and master toggle
+  isWithdrawOpen() {
+    const db = DB.get();
+    const sched = db.settings.withdrawSchedule || { enabled: true, startHour: 9, endHour: 21 };
+    
+    // Master switch OFF
+    if (sched.enabled === false) {
+      return {
+        isOpen: false,
+        message: sched.offMessage || 'Layanan penarikan saldo (WD) saat ini sedang dinonaktifkan sementara oleh Admin.'
+      };
+    }
+
+    // Check WIB hour (UTC+7)
+    const now = new Date();
+    const wibHours = (now.getUTCHours() + 7) % 24;
+    const startHour = Number(sched.startHour !== undefined ? sched.startHour : 9);
+    const endHour = Number(sched.endHour !== undefined ? sched.endHour : 21);
+
+    if (wibHours < startHour || wibHours >= endHour) {
+      const formatH = (h) => String(h).padStart(2, '0') + ':00';
+      return {
+        isOpen: false,
+        message: `Layanan penarikan dana (WD) buka setiap hari pukul ${formatH(startHour)} - ${formatH(endHour)} WIB. Saat ini jam operasional sedang tutup.`
+      };
+    }
+
+    return { isOpen: true, message: 'Layanan penarikan dana (WD) sedang buka.' };
+  },
+
+  // Get breakdown of locked invested capital vs free withdrawable balance
+  getWithdrawableBalance(userId) {
+    const user = DB.getUserById(userId);
+    if (!user) return { freeBalance: 0, lockedCapital: 0, affiliateBalance: 0 };
+    const db = DB.get();
+    const activeInvestments = (db.investments || []).filter(i => i.userId === userId && i.status === 'active');
+    const lockedCapital = activeInvestments.reduce((sum, i) => sum + (Number(i.capital || i.amount) || 0), 0);
+    return {
+      freeBalance: user.walletBalance || 0,
+      lockedCapital: lockedCapital,
+      affiliateBalance: user.affiliateBalance || 0
+    };
+  },
+
   // Submit Withdrawal Request
   createWithdrawRequest({ userId, walletType, method, bankName, accountNumber, accountHolder, amount }) {
     const db = DB.get();
     const user = DB.getUserById(userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
+
+    // Check withdrawal schedule / status
+    const wdStatus = this.isWithdrawOpen();
+    if (!wdStatus.isOpen) {
+      return { success: false, message: wdStatus.message };
+    }
 
     const parsedAmount = Number(amount);
     if (isNaN(parsedAmount) || parsedAmount < db.settings.minWithdraw) {

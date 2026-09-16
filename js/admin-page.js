@@ -182,6 +182,16 @@ export const AdminPage = {
     if (cfg.paymentGateways && cfg.paymentGateways.usdt) {
       document.getElementById('gwCfgTrc20').value = cfg.paymentGateways.usdt.trc20Address || '';
     }
+
+    const sched = cfg.withdrawSchedule || { enabled: true, startHour: 9, endHour: 21, offMessage: '' };
+    const enabledEl = document.getElementById('wdCfgEnabled');
+    if (enabledEl) enabledEl.value = String(sched.enabled !== false);
+    const startEl = document.getElementById('wdCfgStartHour');
+    if (startEl) startEl.value = sched.startHour !== undefined ? sched.startHour : 9;
+    const endEl = document.getElementById('wdCfgEndHour');
+    if (endEl) endEl.value = sched.endHour !== undefined ? sched.endHour : 21;
+    const msgEl = document.getElementById('wdCfgOffMessage');
+    if (msgEl) msgEl.value = sched.offMessage || 'Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.';
   },
 
   // 7. Users Table
@@ -207,6 +217,10 @@ export const AdminPage = {
   renderSignals(db) {
     const tbody = document.getElementById('signalsTableBody');
     const signals = db.signals || [];
+    if (signals.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada sinyal aktif.</td></tr>';
+      return;
+    }
     tbody.innerHTML = signals.map(s => `
       <tr>
         <td><strong>${s.pair}</strong></td>
@@ -216,6 +230,9 @@ export const AdminPage = {
         <td><span style="color:#EF4444;">${s.sl}</span></td>
         <td><strong>${s.confidence}%</strong></td>
         <td>${s.timeAgo}</td>
+        <td style="text-align: right;">
+          <button class="btn-admin-action delete" onclick="AdminPage.deleteSignal('${s.id}')" title="Hapus sinyal">🗑️ Hapus</button>
+        </td>
       </tr>
     `).join('');
   },
@@ -604,6 +621,30 @@ export const AdminPage = {
 
     DB.save(db);
     this.showToast('Pengaturan gateway pembayaran & kurs berhasil disimpan!', 'success');
+    this.renderAll();
+  },
+
+  saveWithdrawScheduleSettings() {
+    const enabled = document.getElementById('wdCfgEnabled').value === 'true';
+    const startHour = Number(document.getElementById('wdCfgStartHour').value) || 0;
+    const endHour = Number(document.getElementById('wdCfgEndHour').value) || 24;
+    const offMessage = document.getElementById('wdCfgOffMessage').value.trim();
+
+    Admin.saveWithdrawSchedule({
+      enabled,
+      startHour,
+      endHour,
+      offMessage
+    });
+
+    this.showToast('Jadwal & jam operasional WD berhasil disimpan!', 'success');
+    this.renderAll();
+  },
+
+  deleteSignal(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus sinyal trading ini?')) return;
+    Admin.deleteSignal(id);
+    this.showToast('Sinyal trading berhasil dihapus!', 'success');
     this.renderAll();
   },
 
@@ -1062,6 +1103,41 @@ export const AdminPage = {
       const avatarSrc = t.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=C89338&color=fff`;
       const receiptSrc = t.receiptImage || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
       const isAktif = t.active !== false;
+      const status = t.status || 'approved';
+
+      let statusBadge = '';
+      if (status === 'pending') {
+        statusBadge = `<span class="badge-status" style="background:rgba(217, 119, 6, 0.2); color:#F59E0B; border:1px solid rgba(217, 119, 6, 0.4); font-size:10px;">⏳ MENUNGGU MODERASI</span>`;
+      } else if (status === 'approved') {
+        statusBadge = `<span class="badge-status approved" style="font-size:10px;">✓ DISETUJUI ${t.pointsRewarded ? '(+50 Poin)' : ''}</span>`;
+      } else {
+        statusBadge = `<span class="badge-status rejected" style="font-size:10px;">✕ DITOLAK</span>`;
+      }
+
+      let actionsHtml = '';
+      if (status === 'pending') {
+        actionsHtml = `
+          <div class="btn-action-group" style="justify-content: flex-end;">
+            <button class="btn-admin-action approve" onclick="AdminPage.approveMemberTesti('${t.id}')" title="Setujui testimoni ${Number(t.rating) === 5 ? '(Otomatis beri bonus 50 poin jika bintang 5)' : ''}">
+              ✓ Setujui ${Number(t.rating) === 5 ? '★+50' : ''}
+            </button>
+            <button class="btn-admin-action reject" onclick="AdminPage.rejectMemberTesti('${t.id}')" title="Tolak testimoni">
+              ✕ Tolak
+            </button>
+            <button class="btn-admin-action delete" onclick="AdminPage.deleteTestimonial('${t.id}')">🗑️</button>
+          </div>
+        `;
+      } else {
+        actionsHtml = `
+          <div class="btn-action-group" style="justify-content: flex-end;">
+            <button class="btn-admin-action edit" onclick="AdminPage.openEditTestimonialModal('${t.id}')">✏️ Edit</button>
+            <button class="btn-admin-action ${isAktif ? 'reject' : 'approve'}" onclick="AdminPage.toggleTestimonialStatus('${t.id}')">
+              ${isAktif ? 'Sembunyikan' : 'Aktifkan'}
+            </button>
+            <button class="btn-admin-action delete" onclick="AdminPage.deleteTestimonial('${t.id}')">🗑️ Hapus</button>
+          </div>
+        `;
+      }
 
       return `
         <tr>
@@ -1075,7 +1151,7 @@ export const AdminPage = {
               <img src="${avatarSrc}" alt="${t.name}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid #E5A83B;" onerror="this.src='https://ui-avatars.com/api/?name=Member&background=C89338&color=fff'">
               <div>
                 <strong style="color: #0F172A; font-size: 13px;">${t.name}</strong>
-                <div style="font-size: 10.5px; color: #64748B;">📍 ${t.city || 'Indonesia'}</div>
+                <div style="font-size: 10.5px; color: #64748B;">📍 ${t.city || 'Indonesia'} ${t.userId ? '<span style="color:#0284C7; font-weight:700;">(Member)</span>' : ''}</div>
               </div>
             </div>
           </td>
@@ -1088,27 +1164,40 @@ export const AdminPage = {
             <div style="font-size: 10px; color: #94A3B8;">${t.timeAgo || 'Baru saja'}</div>
           </td>
           <td>
-            <div style="font-size: 11.5px; color: #334155; line-height: 1.4; max-width: 280px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${t.comment || ''}">
+            <div style="font-size: 11.5px; color: #334155; line-height: 1.4; max-width: 260px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${t.comment || ''}">
               "${t.comment || '-'}"
             </div>
           </td>
           <td>
-            <span class="badge-status ${isAktif ? 'approved' : 'rejected'}">
-              ${isAktif ? 'AKTIF' : 'NONAKTIF'}
-            </span>
-          </td>
-          <td>
-            <div class="btn-action-group" style="justify-content: flex-end;">
-              <button class="btn-admin-action edit" onclick="AdminPage.openEditTestimonialModal('${t.id}')">✏️ Edit</button>
-              <button class="btn-admin-action ${isAktif ? 'reject' : 'approve'}" onclick="AdminPage.toggleTestimonialStatus('${t.id}')">
-                ${isAktif ? 'Sembunyikan' : 'Aktifkan'}
-              </button>
-              <button class="btn-admin-action delete" onclick="AdminPage.deleteTestimonial('${t.id}')">🗑️ Hapus</button>
+            <div>${statusBadge}</div>
+            <div style="font-size: 9.5px; color: ${isAktif ? '#10B981' : '#94A3B8'}; margin-top: 3px; font-weight: 600;">
+              ${isAktif ? '● Tayang di Web' : '○ Tersembunyi'}
             </div>
           </td>
+          <td>${actionsHtml}</td>
         </tr>
       `;
     }).join('');
+  },
+
+  approveMemberTesti(id) {
+    const res = Admin.approveTestimonial(id);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  rejectMemberTesti(id) {
+    const reason = prompt('Masukkan alasan penolakan testimoni:', 'Foto bukti tidak valid atau ulasan kurang pantas');
+    if (reason === null) return;
+    const res = Admin.rejectTestimonial(id, reason);
+    if (res.success) {
+      this.showToast(res.message, 'info');
+      this.renderAll();
+    }
   },
 
   openAddTestimonialModal() {
