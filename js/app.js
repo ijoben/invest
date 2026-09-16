@@ -20,6 +20,8 @@ const App = {
   profitCountdownInterval: null,
   currentBannerSlide: 0,
   bannersData: [],
+  currentTestimonialFilter: 'all',
+  testimonialsData: [],
 
   init() {
     // Check URL parameters (e.g. ?ref=KODE)
@@ -795,6 +797,163 @@ const App = {
     }
 
     this.openModal('myRedemptionsModal');
+  },
+
+  // ====================================================================
+  // TESTIMONI PENARIKAN MEMBER (SOCIAL PROOF & M-BANKING SCREENSHOTS)
+  // ====================================================================
+  openTestimonialModal() {
+    this.renderTestimonials(this.currentTestimonialFilter || 'all');
+    this.openModal('testimonialModal');
+  },
+
+  filterTestimonials(bankCategory = 'all') {
+    this.currentTestimonialFilter = bankCategory;
+    
+    // Update active filter button
+    document.querySelectorAll('.testi-filter-btn').forEach(btn => {
+      const b = btn.getAttribute('data-bank');
+      if (b === bankCategory) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    this.renderTestimonials(bankCategory);
+  },
+
+  renderTestimonials(filter = 'all') {
+    const listContainer = document.getElementById('testimonialCardsList');
+    const totalCountBadge = document.getElementById('testiTotalWdCount');
+    if (!listContainer) return;
+
+    const allTestimonials = DB.getActiveTestimonials();
+    this.testimonialsData = allTestimonials;
+
+    if (totalCountBadge) {
+      totalCountBadge.textContent = `${allTestimonials.length + 1420}+`;
+    }
+
+    let filtered = allTestimonials;
+    if (filter && filter !== 'all') {
+      const q = filter.toLowerCase();
+      filtered = allTestimonials.filter(t => {
+        const bankName = (t.bank || '').toLowerCase();
+        return bankName.includes(q);
+      });
+    }
+
+    if (filtered.length === 0) {
+      listContainer.innerHTML = `
+        <div style="text-align: center; padding: 30px 15px; color: #94A3B8;">
+          <div style="font-size: 32px; margin-bottom: 8px;">💳</div>
+          <div style="font-weight: 700; color: #475569; font-size: 14px;">Belum Ada Testimoni Kategori Ini</div>
+          <div style="font-size: 11.5px; margin-top: 4px;">Pilih kategori "Semua Bank" untuk melihat seluruh bukti penarikan member FGT Pro.</div>
+        </div>
+      `;
+      return;
+    }
+
+    listContainer.innerHTML = filtered.map(t => {
+      const avatarSrc = t.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=C89338&color=fff`;
+      const receiptImgSrc = t.receiptImage || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
+      const starsHtml = this.renderStarRating(t.rating || 5);
+
+      return `
+        <div class="testimonial-card" data-id="${t.id}">
+          <!-- Header User Info & Time -->
+          <div class="testi-card-header">
+            <div class="testi-user-info">
+              <img class="testi-avatar" src="${avatarSrc}" alt="${t.name}" onerror="this.src='https://ui-avatars.com/api/?name=Member&background=C89338&color=fff'">
+              <div class="testi-name-wrap">
+                <div class="testi-name">
+                  <span>${t.name}</span>
+                  <svg class="testi-verified-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </div>
+                <div class="testi-city">📍 ${t.city || 'Indonesia'}</div>
+              </div>
+            </div>
+            <div class="testi-time">${t.timeAgo || 'Baru saja'}</div>
+          </div>
+
+          <!-- Bank & Amount Pill -->
+          <div class="testi-amount-pill">
+            <div class="testi-bank-tag">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Penarikan • ${t.bank || 'Transfer Bank'}</span>
+            </div>
+            <div class="testi-amount-val">${DB.formatIDR(t.amount)}</div>
+          </div>
+
+          <!-- Star Rating & Review Quote -->
+          <div class="testi-rating-stars">
+            ${starsHtml}
+            <span style="font-size: 11px; font-weight: 700; color: #64748B; margin-left: 6px;">(${t.rating || 5}.0)</span>
+          </div>
+
+          <div class="testi-comment-box">
+            "${t.comment || 'Penarikan sukses landing cepat tanpa kendala. Terimakasih FGT Pro!'}"
+          </div>
+
+          <!-- M-Banking Screenshot Frame (Clickable for Zoom Preview) -->
+          <div class="mbanking-proof-wrap" onclick="App.previewTestimonialReceipt('${t.id}')" title="Klik untuk memperbesar bukti transfer">
+            <img class="mbanking-proof-img" src="${receiptImgSrc}" alt="Bukti Transfer ${t.bank}" loading="lazy">
+            <div class="mbanking-zoom-hint">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+              <span>Perbesar Bukti M-Banking</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderStarRating(rating = 5) {
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      const isFilled = i <= rating;
+      starsHtml += `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="${isFilled ? '#E5A83B' : 'none'}" stroke="#E5A83B" stroke-width="1.8">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      `;
+    }
+    return starsHtml;
+  },
+
+  previewTestimonialReceipt(testiId) {
+    const testi = (this.testimonialsData || []).find(t => t.id === testiId) || (DB.getTestimonials() || []).find(t => t.id === testiId);
+    if (!testi) return;
+
+    this.openImagePreview(
+      testi.receiptImage,
+      `Bukti WD ${testi.name} (${testi.bank} - ${DB.formatIDR(testi.amount)})`
+    );
+  },
+
+  openImagePreview(src, caption = 'Bukti Transfer M-Banking') {
+    const modal = document.getElementById('imagePreviewModal');
+    const img = document.getElementById('imagePreviewImg');
+    const cap = document.getElementById('imagePreviewCaption');
+
+    if (!modal || !img) return;
+
+    img.src = src;
+    if (cap) cap.textContent = caption;
+
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  },
+
+  closeImagePreview() {
+    const modal = document.getElementById('imagePreviewModal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
   },
 
   // Render Wallet View Page

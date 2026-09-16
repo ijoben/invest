@@ -712,7 +712,25 @@
       </section>
 
       <!-- ====================================================================
-           8. FLOATING BOTTOM NAVIGATION BAR (Identical to 1000836359.jpg)
+           8. FLOATING TESTIMONIAL BUTTON (Bottom Right above Nav)
+           ==================================================================== -->
+      <button class="floating-testimonial-fab" id="floatingTestimonialFab" onclick="App.openTestimonialModal()" aria-label="Buka Testimoni Penarikan Member" title="Lihat Bukti Penarikan Member">
+        <div class="fab-pulse-ring"></div>
+        <div class="fab-icon-box">
+          <!-- Star & Shield Verified Social Proof Vector SVG -->
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+            <path d="M12 2L4 5V11C4 16.55 7.84 21.74 12 23C16.16 21.74 20 16.55 20 11V5L12 2Z" fill="#C89338"/>
+            <polygon points="12 6.5 13.5 10 17 10.5 14.5 13 15 16.5 12 14.8 9 16.5 9.5 13 7 10.5 10.5 10" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <div class="fab-text-box">
+          <span class="fab-label">Testimoni</span>
+          <span class="fab-badge">Bukti WD</span>
+        </div>
+      </button>
+
+      <!-- ====================================================================
+           9. FLOATING BOTTOM NAVIGATION BAR (Identical to 1000836359.jpg)
            ==================================================================== -->
       <div class="bottom-nav-wrap">
         <nav class="bottom-nav">
@@ -1251,6 +1269,87 @@
 
       <div class="redemptions-history-list" id="myRedemptionsList">
         <!-- Rendered dynamically via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 9: TESTIMONI PENARIKAN MEMBER (SOCIAL PROOF & M-BANKING PROOF)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="testimonialModal">
+    <div class="modal-sheet modal-sheet-large">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title flex-center gap-2">
+            <!-- Golden Star Badge Icon -->
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L4 5V11C4 16.55 7.84 21.74 12 23C16.16 21.74 20 16.55 20 11V5L12 2Z" fill="#C89338"/>
+              <polygon points="12 6.5 13.5 10 17 10.5 14.5 13 15 16.5 12 14.8 9 16.5 9.5 13 7 10.5 10.5 10" fill="#FFFFFF"/>
+            </svg>
+            <span>Testimoni Penarikan Member</span>
+          </h3>
+          <p class="modal-subtitle">Bukti nyata transfer m-banking & ulasan kepuasan member FGT Pro</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Trust Bar Metrics -->
+      <div class="testi-trust-bar">
+        <div class="testi-trust-col">
+          <div class="testi-trust-val" id="testiTotalWdCount">1,420+</div>
+          <div class="testi-trust-lbl">Penarikan Sukses</div>
+        </div>
+        <div class="testi-trust-col">
+          <div class="testi-trust-val" style="color: #10B981;">&lt; 3 Menit</div>
+          <div class="testi-trust-lbl">Rata-rata Masuk</div>
+        </div>
+        <div class="testi-trust-col">
+          <div class="testi-trust-val" style="color: #E5A83B;">4.9 / 5.0 ★</div>
+          <div class="testi-trust-lbl">Rating Kepuasan</div>
+        </div>
+      </div>
+
+      <!-- Filter Category Bank Tabs -->
+      <div class="testi-filter-scroll">
+        <button class="testi-filter-btn active" data-bank="all" onclick="App.filterTestimonials('all')">Semua Bank</button>
+        <button class="testi-filter-btn" data-bank="BCA" onclick="App.filterTestimonials('BCA')">BCA</button>
+        <button class="testi-filter-btn" data-bank="Mandiri" onclick="App.filterTestimonials('Mandiri')">Mandiri</button>
+        <button class="testi-filter-btn" data-bank="BRI" onclick="App.filterTestimonials('BRI')">BRI</button>
+        <button class="testi-filter-btn" data-bank="DANA" onclick="App.filterTestimonials('DANA')">DANA</button>
+        <button class="testi-filter-btn" data-bank="BNI" onclick="App.filterTestimonials('BNI')">BNI</button>
+        <button class="testi-filter-btn" data-bank="QRIS" onclick="App.filterTestimonials('QRIS')">QRIS / VIP</button>
+      </div>
+
+      <!-- Testimonial Cards List Container -->
+      <div class="testimonials-feed-list" id="testimonialCardsList">
+        <!-- Rendered dynamically via JS App.renderTestimonials() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 10: IMAGE LIGHTBOX ZOOM PREVIEW (M-BANKING RECEIPT FULLSCREEN)
+       ====================================================================== -->
+  <div class="modal-backdrop image-lightbox-backdrop" id="imagePreviewModal">
+    <div class="image-lightbox-wrapper">
+      <button class="image-lightbox-close-btn" onclick="App.closeImagePreview()">&times;</button>
+      <div class="image-lightbox-card">
+        <div class="image-lightbox-header">
+          <div class="image-lightbox-title-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span id="imagePreviewCaption" style="font-weight: 700; font-size: 13px; color: #FFFFFF;">Bukti Transfer M-Banking</span>
+          </div>
+          <span style="font-size: 11px; color: #94A3B8;">✓ Terverifikasi Otomatis</span>
+        </div>
+        <div class="image-lightbox-img-box">
+          <img id="imagePreviewImg" src="" alt="Bukti Penarikan M-Banking">
+        </div>
+        <div class="image-lightbox-footer">
+          <button class="btn-cta-gold" style="width: 100%; padding: 10px;" onclick="App.closeImagePreview()">
+            <span>Tutup Pratinjau</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

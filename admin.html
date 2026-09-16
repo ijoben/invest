@@ -98,6 +98,11 @@
           <span>Banner Slider Carousel</span>
           <span class="admin-nav-badge" id="badgeBannersCount" style="background: #E5A83B;">0</span>
         </button>
+        <button class="admin-nav-btn" data-tab="testimonials">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <span>Kelola Testimoni User</span>
+          <span class="admin-nav-badge" id="badgeTestimonialsCount" style="background: #D97706;">0</span>
+        </button>
       </nav>
 
       <div class="sidebar-group-title">PENGGUNA & DATA</div>
@@ -508,6 +513,10 @@
             </thead>
             <tbody id="bannersTableBody"></tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
     <!-- ====================================================================
          11. PANEL KONFIRMASI PENUKARAN HADIAH (REDEMPTIONS)
          ==================================================================== -->
@@ -568,6 +577,39 @@
               </tr>
             </thead>
             <tbody id="rewardsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         13. PANEL KELOLA TESTIMONI PENARIKAN USER (M-BANKING PROOFS)
+         ==================================================================== -->
+    <section id="pane-testimonials" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">⭐ Kelola Testimoni Penarikan Member (M-Banking Proof)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Kelola testimoni penarikan member, upload bukti screenshot transfer m-banking, rating bintang, dan ulasan kepuasan.</p>
+          </div>
+          <button class="admin-btn-action-primary" onclick="AdminPage.openAddTestimonialModal()">
+            <span>➕ Tambah Testimoni Baru</span>
+          </button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;">Bukti Transfer</th>
+                <th style="min-width: 170px;">Nama & Kota</th>
+                <th style="width: 140px;">Bank & Nominal</th>
+                <th style="width: 130px;">Rating & Waktu</th>
+                <th style="min-width: 220px;">Ulasan / Kata-Kata</th>
+                <th style="width: 90px;">Status</th>
+                <th style="width: 170px; text-align: right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="testimonialsTableBody"></tbody>
           </table>
         </div>
       </div>
@@ -893,6 +935,105 @@
 
       <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 6px;" onclick="AdminPage.saveRewardModal()">
         <span>💾 Simpan & Publikasikan Hadiah</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Add / Edit Testimonial -->
+  <div class="modal-backdrop" id="adminTestimonialModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title" id="testiModalHeaderTitle">Tambah Testimoni Penarikan</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <input type="hidden" id="testiModalId">
+
+      <!-- Upload File Image & Preview -->
+      <div class="form-group">
+        <label class="form-label">Upload Bukti Screenshot M-Banking (Dari Galeri/HP/PC):</label>
+        <div class="banner-file-input-wrapper">
+          <input type="file" id="testiModalFileInput" accept="image/*" class="form-input" style="padding: 7px 10px;">
+        </div>
+        <div class="form-label" style="margin-top: 6px; font-size: 11px; color: #94A3B8;">Atau Masukkan URL Gambar (Opsional):</div>
+        <input type="url" class="form-input" id="testiModalUrlInput" placeholder="https://... atau data:image/svg+xml..." style="font-size: 12px;">
+      </div>
+
+      <!-- Live Image Preview Box -->
+      <div class="form-group">
+        <label class="form-label">Pratinjau Bukti Screenshot M-Banking:</label>
+        <div class="banner-upload-preview" id="testiUploadPreviewBox" style="max-height: 180px;">
+          <div class="preview-placeholder" id="testiPreviewPlaceholder">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            <span>Pilih file gambar atau masukkan URL untuk melihat pratinjau bukti transfer</span>
+          </div>
+          <img id="testiPreviewImg" src="" style="display: none; max-height: 180px; object-fit: contain;" alt="Testimonial Receipt Preview">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Nama Lengkap Member: <span style="color: #EF4444;">*</span></label>
+          <input type="text" class="form-input" id="testiModalName" placeholder="Contoh: Budi Santoso">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Kota / Lokasi: <span style="color: #EF4444;">*</span></label>
+          <input type="text" class="form-input" id="testiModalCity" placeholder="Contoh: Surabaya, Jawa Timur">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Bank / Metode Penarikan:</label>
+          <select class="form-select" id="testiModalBank">
+            <option value="BCA Mobile">BCA Mobile</option>
+            <option value="Livin Mandiri">Livin' Mandiri</option>
+            <option value="BRImo">BRImo (Bank BRI)</option>
+            <option value="DANA">DANA Dompet Digital</option>
+            <option value="BNI Mobile">BNI Mobile Banking</option>
+            <option value="QRIS & Multi-Bank">QRIS & Multi-Bank Instant</option>
+            <option value="GoPay">GoPay</option>
+            <option value="OVO">OVO</option>
+            <option value="USDT TRC20">USDT TRC20 / BEP20</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Nominal Penarikan (IDR): <span style="color: #EF4444;">*</span></label>
+          <input type="number" class="form-input" id="testiModalAmount" placeholder="Contoh: 15750000" min="10000">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Rating Kepuasan (Bintang):</label>
+          <select class="form-select" id="testiModalRating">
+            <option value="5">★★★★★ (5 Bintang - Sempurna)</option>
+            <option value="4">★★★★☆ (4 Bintang - Sangat Puas)</option>
+            <option value="3">★★★☆☆ (3 Bintang - Cukup)</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Keterangan Waktu:</label>
+          <input type="text" class="form-input" id="testiModalTimeAgo" placeholder="Contoh: 15 menit yang lalu">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Kata-Kata / Ulasan Kepuasan Member: <span style="color: #EF4444;">*</span></label>
+        <textarea class="form-input" id="testiModalComment" rows="3" placeholder="Tuliskan ulasan testimoni kepuasan member mengenai penarikan dana, profit harian, dll..." style="resize: vertical; font-size: 12px;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status Testimoni:</label>
+        <select class="form-select" id="testiModalActive">
+          <option value="true">Aktif (Tampil di Frontend)</option>
+          <option value="false">Nonaktif (Sembunyikan)</option>
+        </select>
+      </div>
+
+      <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 6px;" onclick="AdminPage.saveTestimonialModal()">
+        <span>💾 Simpan & Publikasikan Testimoni</span>
       </button>
     </div>
   </div>

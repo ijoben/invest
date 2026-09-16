@@ -40,6 +40,8 @@ export const AdminPage = {
     if (annBadge) annBadge.textContent = (db.announcements || []).length;
     const banBadge = document.getElementById('badgeBannersCount');
     if (banBadge) banBadge.textContent = (db.banners || []).length;
+    const testiBadge = document.getElementById('badgeTestimonialsCount');
+    if (testiBadge) testiBadge.textContent = (db.testimonials || []).length;
 
     // 2. Deposit Table
     this.renderDeposits(db);
@@ -73,6 +75,9 @@ export const AdminPage = {
 
     // 12. Rewards Catalog Table
     this.renderRewards(db);
+
+    // 13. Testimonials Table
+    this.renderTestimonials(db);
   },
 
   // 2. Deposit Table
@@ -303,6 +308,9 @@ export const AdminPage = {
           </td>
         </tr>
       `;
+    }).join('');
+  },
+
   // 11. Redemptions Table
   renderRedemptions(db) {
     const tbody = document.getElementById('redemptionsTableBody');
@@ -1032,6 +1040,218 @@ export const AdminPage = {
     this.renderAll();
   },
 
+  // ====================================================================
+  // 13. PANEL TESTIMONI PENARIKAN MEMBER (CRUD)
+  // ====================================================================
+  renderTestimonials(db) {
+    const tbody = document.getElementById('testimonialsTableBody');
+    if (!tbody) return;
+
+    const testimonials = db.testimonials || [];
+
+    if (testimonials.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:#94A3B8;">Belum ada testimoni penarikan member. Klik tombol Tambah Testimoni Baru untuk membuat testimoni baru.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = testimonials.map(t => {
+      const avatarSrc = t.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=C89338&color=fff`;
+      const receiptSrc = t.receiptImage || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
+      const isAktif = t.active !== false;
+
+      return `
+        <tr>
+          <td>
+            <div style="width: 75px; height: 50px; border-radius: 8px; overflow: hidden; border: 1px solid #E2E8F0; background: #0B0F19; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="AdminPage.previewImageLightbox('${t.id}')" title="Klik untuk lihat gambar bukti">
+              <img src="${receiptSrc}" alt="Receipt" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <img src="${avatarSrc}" alt="${t.name}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid #E5A83B;" onerror="this.src='https://ui-avatars.com/api/?name=Member&background=C89338&color=fff'">
+              <div>
+                <strong style="color: #0F172A; font-size: 13px;">${t.name}</strong>
+                <div style="font-size: 10.5px; color: #64748B;">📍 ${t.city || 'Indonesia'}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div style="font-weight: 700; font-size: 11.5px; color: #0284C7;">${t.bank}</div>
+            <strong style="color: #10B981; font-family: var(--font-mono); font-size: 13px;">${DB.formatIDR(t.amount)}</strong>
+          </td>
+          <td>
+            <div style="color: #E5A83B; font-size: 12px; font-weight: 700;">★ ${t.rating || 5}.0</div>
+            <div style="font-size: 10px; color: #94A3B8;">${t.timeAgo || 'Baru saja'}</div>
+          </td>
+          <td>
+            <div style="font-size: 11.5px; color: #334155; line-height: 1.4; max-width: 280px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${t.comment || ''}">
+              "${t.comment || '-'}"
+            </div>
+          </td>
+          <td>
+            <span class="badge-status ${isAktif ? 'approved' : 'rejected'}">
+              ${isAktif ? 'AKTIF' : 'NONAKTIF'}
+            </span>
+          </td>
+          <td>
+            <div class="btn-action-group" style="justify-content: flex-end;">
+              <button class="btn-admin-action edit" onclick="AdminPage.openEditTestimonialModal('${t.id}')">✏️ Edit</button>
+              <button class="btn-admin-action ${isAktif ? 'reject' : 'approve'}" onclick="AdminPage.toggleTestimonialStatus('${t.id}')">
+                ${isAktif ? 'Sembunyikan' : 'Aktifkan'}
+              </button>
+              <button class="btn-admin-action delete" onclick="AdminPage.deleteTestimonial('${t.id}')">🗑️ Hapus</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  openAddTestimonialModal() {
+    document.getElementById('testiModalHeaderTitle').textContent = 'Tambah Testimoni Penarikan Baru';
+    document.getElementById('testiModalId').value = '';
+    document.getElementById('testiModalName').value = '';
+    document.getElementById('testiModalCity').value = '';
+    document.getElementById('testiModalBank').value = 'BCA Mobile';
+    document.getElementById('testiModalAmount').value = '';
+    document.getElementById('testiModalRating').value = '5';
+    document.getElementById('testiModalTimeAgo').value = 'Baru saja';
+    document.getElementById('testiModalComment').value = '';
+    document.getElementById('testiModalActive').value = 'true';
+    document.getElementById('testiModalFileInput').value = '';
+    document.getElementById('testiModalUrlInput').value = '';
+
+    const previewImg = document.getElementById('testiPreviewImg');
+    const placeholder = document.getElementById('testiPreviewPlaceholder');
+    if (previewImg && placeholder) {
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+      placeholder.style.display = 'flex';
+    }
+
+    this.openModal('adminTestimonialModal');
+  },
+
+  openEditTestimonialModal(id) {
+    const db = DB.get();
+    const testi = (db.testimonials || []).find(t => t.id === id);
+    if (!testi) return;
+
+    document.getElementById('testiModalHeaderTitle').textContent = `Edit Testimoni: ${testi.name}`;
+    document.getElementById('testiModalId').value = testi.id;
+    document.getElementById('testiModalName').value = testi.name || '';
+    document.getElementById('testiModalCity').value = testi.city || '';
+    document.getElementById('testiModalBank').value = testi.bank || 'BCA Mobile';
+    document.getElementById('testiModalAmount').value = testi.amount || '';
+    document.getElementById('testiModalRating').value = String(testi.rating || 5);
+    document.getElementById('testiModalTimeAgo').value = testi.timeAgo || '';
+    document.getElementById('testiModalComment').value = testi.comment || '';
+    document.getElementById('testiModalActive').value = testi.active !== false ? 'true' : 'false';
+    document.getElementById('testiModalFileInput').value = '';
+    document.getElementById('testiModalUrlInput').value = (testi.receiptImage && !testi.receiptImage.startsWith('data:')) ? testi.receiptImage : '';
+
+    const previewImg = document.getElementById('testiPreviewImg');
+    const placeholder = document.getElementById('testiPreviewPlaceholder');
+    if (previewImg && placeholder) {
+      if (testi.receiptImage) {
+        previewImg.src = testi.receiptImage;
+        previewImg.style.display = 'block';
+        placeholder.style.display = 'none';
+      } else {
+        previewImg.src = '';
+        previewImg.style.display = 'none';
+        placeholder.style.display = 'flex';
+      }
+    }
+
+    this.openModal('adminTestimonialModal');
+  },
+
+  saveTestimonialModal() {
+    const id = document.getElementById('testiModalId').value;
+    const name = document.getElementById('testiModalName').value.trim();
+    const city = document.getElementById('testiModalCity').value.trim();
+    const bank = document.getElementById('testiModalBank').value;
+    const amount = Number(document.getElementById('testiModalAmount').value) || 0;
+    const rating = Number(document.getElementById('testiModalRating').value) || 5;
+    const timeAgo = document.getElementById('testiModalTimeAgo').value.trim() || 'Baru saja';
+    const comment = document.getElementById('testiModalComment').value.trim();
+    const active = document.getElementById('testiModalActive').value === 'true';
+
+    if (!name) {
+      this.showToast('Nama member wajib diisi!', 'error');
+      return;
+    }
+    if (!city) {
+      this.showToast('Kota / Lokasi member wajib diisi!', 'error');
+      return;
+    }
+    if (!amount || amount <= 0) {
+      this.showToast('Nominal penarikan harus lebih dari 0!', 'error');
+      return;
+    }
+    if (!comment) {
+      this.showToast('Ulasan kata-kata testimoni wajib diisi!', 'error');
+      return;
+    }
+
+    // Determine image source
+    let receiptImage = '';
+    const previewImg = document.getElementById('testiPreviewImg');
+    const urlInput = document.getElementById('testiModalUrlInput');
+
+    if (previewImg && previewImg.src && previewImg.style.display !== 'none' && !previewImg.src.endsWith('admin.html')) {
+      receiptImage = previewImg.src;
+    } else if (urlInput && urlInput.value.trim()) {
+      receiptImage = urlInput.value.trim();
+    }
+
+    if (!receiptImage) {
+      // Create a clean SVG receipt template matching the selected bank
+      receiptImage = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" fill="none"><rect width="600" height="420" rx="20" fill="%230F172A"/><rect x="15" y="15" width="570" height="390" rx="16" fill="%23FFFFFF"/><rect x="15" y="15" width="570" height="70" rx="16" fill="%230F172A"/><text x="35" y="55" fill="%23E5A83B" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1">${encodeURIComponent(bank)}</text><rect x="420" y="32" width="145" height="34" rx="17" fill="%2310B981"/><text x="492" y="54" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">✓ BERHASIL</text><circle cx="300" cy="130" r="30" fill="%23ECFDF5"/><path d="M288 130L296 138L312 122" stroke="%23059669" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="180" fill="%230F172A" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle">PENARIKAN DANA BERHASIL</text><text x="300" y="222" fill="%230F172A" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">${encodeURIComponent(DB.formatIDR(amount))}</text><line x1="45" y1="245" x2="555" y2="245" stroke="%23E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/><text x="50" y="275" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Pengirim:</text><text x="550" y="275" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">PT FGT PRO INVESTASI</text><text x="50" y="305" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Penerima:</text><text x="550" y="305" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">${encodeURIComponent(name.toUpperCase())}</text><text x="50" y="335" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Waktu Transaksi:</text><text x="550" y="335" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">${encodeURIComponent(timeAgo)}</text><rect x="45" y="380" width="510" height="15" fill="%23F8FAFC" rx="4"/></svg>`;
+    }
+
+    if (id) {
+      DB.updateTestimonial(id, { name, city, bank, amount, rating, timeAgo, comment, receiptImage, active });
+      this.showToast('Testimoni penarikan berhasil diperbarui!', 'success');
+    } else {
+      DB.addTestimonial({ name, city, bank, amount, rating, timeAgo, comment, receiptImage, active });
+      this.showToast('Testimoni penarikan baru berhasil dipublikasikan!', 'success');
+    }
+
+    this.closeModal('adminTestimonialModal');
+    this.renderAll();
+  },
+
+  previewImageLightbox(testiId) {
+    const db = DB.get();
+    const testi = (db.testimonials || []).find(t => t.id === testiId);
+    if (!testi) return;
+    if (testi.receiptImage) {
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.write(`<title>Bukti Transfer - ${testi.name}</title><body style="margin:0;background:#0B0F19;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${testi.receiptImage}" style="max-width:90%;max-height:90vh;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.5);"></body>`);
+      }
+    }
+  },
+
+  toggleTestimonialStatus(id) {
+    const db = DB.get();
+    const testi = (db.testimonials || []).find(t => t.id === id);
+    if (!testi) return;
+
+    DB.updateTestimonial(id, { active: !testi.active });
+    this.showToast(`Status testimoni berhasil diubah menjadi ${!testi.active ? 'Aktif' : 'Nonaktif'}!`, 'info');
+    this.renderAll();
+  },
+
+  deleteTestimonial(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus testimoni ini?')) return;
+    DB.deleteTestimonial(id);
+    this.showToast('Testimoni berhasil dihapus.', 'success');
+    this.renderAll();
+  },
+
   // Modals & Toast
   openModal(id) {
     const el = document.getElementById(id);
@@ -1227,6 +1447,56 @@ export const AdminPage = {
             placeholder.style.display = 'none';
           } else {
             const fileInput = document.getElementById('rewardModalFileInput');
+            if (!fileInput || !fileInput.files.length) {
+              previewImg.src = '';
+              previewImg.style.display = 'none';
+              placeholder.style.display = 'flex';
+            }
+          }
+        }
+      });
+    }
+
+    // Testimonial File Input Upload Listener (FileReader base64 converter)
+    const testiFileInput = document.getElementById('testiModalFileInput');
+    if (testiFileInput) {
+      testiFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          this.showToast('Harap pilih file gambar bukti transfer (JPG, PNG, WEBP, dll)!', 'error');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const previewImg = document.getElementById('testiPreviewImg');
+          const placeholder = document.getElementById('testiPreviewPlaceholder');
+          if (previewImg && placeholder) {
+            previewImg.src = event.target.result;
+            previewImg.style.display = 'block';
+            placeholder.style.display = 'none';
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Testimonial URL input listener for live preview
+    const testiUrlInput = document.getElementById('testiModalUrlInput');
+    if (testiUrlInput) {
+      testiUrlInput.addEventListener('input', (e) => {
+        const url = e.target.value.trim();
+        const previewImg = document.getElementById('testiPreviewImg');
+        const placeholder = document.getElementById('testiPreviewPlaceholder');
+        if (previewImg && placeholder) {
+          if (url) {
+            previewImg.src = url;
+            previewImg.style.display = 'block';
+            placeholder.style.display = 'none';
+          } else {
+            const fileInput = document.getElementById('testiModalFileInput');
             if (!fileInput || !fileInput.files.length) {
               previewImg.src = '';
               previewImg.style.display = 'none';

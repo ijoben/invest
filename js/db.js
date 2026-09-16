@@ -494,6 +494,94 @@ const defaultDB = {
     }
   ],
 
+  // User Withdrawal Testimonials (Bukti Penarikan Dana Member & M-Banking)
+  testimonials: [
+    {
+      id: 'testi-1',
+      name: 'Budi Santoso',
+      city: 'Surabaya, Jawa Timur',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      bank: 'BCA Mobile',
+      amount: 15750000,
+      rating: 5,
+      comment: 'Awalnya ragu coba deposit 2jt, sekarang udah wd 15.750.000 dalam 2 minggu! Masuk rekening BCA cuma 3 menit tanpa potongan aneh-aneh. Mantap banget min, auto langganan!',
+      receiptImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" fill="none"><rect width="600" height="420" rx="20" fill="%23003B7A"/><rect x="15" y="15" width="570" height="390" rx="16" fill="%23FFFFFF"/><rect x="15" y="15" width="570" height="70" rx="16" fill="%23003B7A"/><text x="35" y="55" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1">BCA mobile</text><rect x="420" y="32" width="145" height="34" rx="17" fill="%2310B981"/><text x="492" y="54" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">✓ BERHASIL</text><circle cx="300" cy="130" r="30" fill="%23ECFDF5"/><path d="M288 130L296 138L312 122" stroke="%23059669" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="180" fill="%230F172A" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle">TRANSFER KE REKENING BCA BERHASIL</text><text x="300" y="222" fill="%23003B7A" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">Rp 15.750.000</text><line x1="45" y1="245" x2="555" y2="245" stroke="%23E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/><text x="50" y="275" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Pengirim:</text><text x="550" y="275" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">PT FGT PRO INVESTASI</text><text x="50" y="305" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Penerima:</text><text x="550" y="305" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">BUDI SANTOSO (8291****02)</text><text x="50" y="335" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Waktu Transaksi:</text><text x="550" y="335" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">16 Sep 2026, 08:12:45 WIB</text><text x="50" y="365" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">No. Referensi:</text><text x="550" y="365" fill="%23003B7A" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="end">BCA20260916-88291039</text><rect x="45" y="380" width="510" height="15" fill="%23F8FAFC" rx="4"/></svg>',
+      timeAgo: '12 menit yang lalu',
+      active: true,
+      createdAt: '2026-09-16T08:12:45.000Z'
+    },
+    {
+      id: 'testi-2',
+      name: 'Siti Rahmawati',
+      city: 'Jakarta Selatan, DKI',
+      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+      bank: 'Livin Mandiri',
+      amount: 28500000,
+      rating: 5,
+      comment: 'Sinyal VIP Prof GPT gila sih akurasinya! WD 28.5jt langsung landing ke Livin Mandiri hitungan menit tanpa drama. Platform AI trading paling jos tahun 2026!',
+      receiptImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" fill="none"><rect width="600" height="420" rx="20" fill="%2300264D"/><rect x="15" y="15" width="570" height="390" rx="16" fill="%23FFFFFF"/><rect x="15" y="15" width="570" height="70" rx="16" fill="%2300264D"/><text x="35" y="55" fill="%23FFB800" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1">Livin%27 by Mandiri</text><rect x="420" y="32" width="145" height="34" rx="17" fill="%2310B981"/><text x="492" y="54" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">✓ BERHASIL</text><circle cx="300" cy="130" r="30" fill="%23FEF3C7"/><path d="M288 130L296 138L312 122" stroke="%23D97706" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="180" fill="%230F172A" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle">TRANSFER DANA BERHASIL</text><text x="300" y="222" fill="%2300264D" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">Rp 28.500.000</text><line x1="45" y1="245" x2="555" y2="245" stroke="%23E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/><text x="50" y="275" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Dari Rekening:</text><text x="550" y="275" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">FGT PRO OFFICIAL TRADING</text><text x="50" y="305" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Ke Rekening Mandiri:</text><text x="550" y="305" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">SITI RAHMAWATI (13700****9281)</text><text x="50" y="335" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Tanggal & Waktu:</text><text x="550" y="335" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">16 Sep 2026, 07:45:10 WIB</text><text x="50" y="365" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Nomor Transaksi:</text><text x="550" y="365" fill="%2300264D" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="end">MDR-20260916-99218274</text><rect x="45" y="380" width="510" height="15" fill="%23F8FAFC" rx="4"/></svg>',
+      timeAgo: '35 menit yang lalu',
+      active: true,
+      createdAt: '2026-09-16T07:45:10.000Z'
+    },
+    {
+      id: 'testi-3',
+      name: 'Rian Hidayat',
+      city: 'Medan, Sumatera Utara',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      bank: 'BRImo',
+      amount: 7300000,
+      rating: 5,
+      comment: 'Profit harian konsisten tiap hari tinggal klik klaim profit. WD 7.3jt ke rekening BRI masuk cepet banget. Bukti m-banking nyata no rekayasa! Sukses selalu FGT Pro.',
+      receiptImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" fill="none"><rect width="600" height="420" rx="20" fill="%23024E9B"/><rect x="15" y="15" width="570" height="390" rx="16" fill="%23FFFFFF"/><rect x="15" y="15" width="570" height="70" rx="16" fill="%23024E9B"/><text x="35" y="55" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1">BRImo (Bank BRI)</text><rect x="420" y="32" width="145" height="34" rx="17" fill="%2310B981"/><text x="492" y="54" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">✓ SUKSES</text><circle cx="300" cy="130" r="30" fill="%23EFF6FF"/><path d="M288 130L296 138L312 122" stroke="%232563EB" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="180" fill="%230F172A" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle">TRANSAKSI TRANSFER BERHASIL</text><text x="300" y="222" fill="%23024E9B" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">Rp 7.300.000</text><line x1="45" y1="245" x2="555" y2="245" stroke="%23E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/><text x="50" y="275" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Sumber Dana:</text><text x="550" y="275" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">PT FGT PRO INVESTASI</text><text x="50" y="305" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Rekening Tujuan:</text><text x="550" y="305" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">RIAN HIDAYAT (03410****8531)</text><text x="50" y="335" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Tanggal:</text><text x="550" y="335" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">16 Sep 2026, 06:30:22 WIB</text><text x="50" y="365" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">No. Jurnal / Ref:</text><text x="550" y="365" fill="%23024E9B" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="end">BRI-20260916-00492817</text><rect x="45" y="380" width="510" height="15" fill="%23F8FAFC" rx="4"/></svg>',
+      timeAgo: '1 jam yang lalu',
+      active: true,
+      createdAt: '2026-09-16T06:30:22.000Z'
+    },
+    {
+      id: 'testi-4',
+      name: 'Agus Setiawan',
+      city: 'Bandung, Jawa Barat',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+      bank: 'DANA',
+      amount: 5200000,
+      rating: 5,
+      comment: 'Modal 1jt udah balik modal plus profit 5.2jt dalam seminggu. Penarikan via DANA cepet banget hitungan detik langsung notif saldo masuk. Recomended pol!',
+      receiptImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" fill="none"><rect width="600" height="420" rx="20" fill="%23108EE9"/><rect x="15" y="15" width="570" height="390" rx="16" fill="%23FFFFFF"/><rect x="15" y="15" width="570" height="70" rx="16" fill="%23108EE9"/><text x="35" y="55" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1">DANA Indonesia</text><rect x="420" y="32" width="145" height="34" rx="17" fill="%2310B981"/><text x="492" y="54" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">✓ BERHASIL</text><circle cx="300" cy="130" r="30" fill="%23E0F2FE"/><path d="M288 130L296 138L312 122" stroke="%230284C7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="180" fill="%230F172A" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle">PENERIMAAN SALDO DANA SUKSES</text><text x="300" y="222" fill="%23108EE9" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">Rp 5.200.000</text><line x1="45" y1="245" x2="555" y2="245" stroke="%23E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/><text x="50" y="275" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Pengirim:</text><text x="550" y="275" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">FGT PRO CORPORATE PAY</text><text x="50" y="305" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Nomor Akun DANA:</text><text x="550" y="305" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">AGUS SETIAWAN (0812****8901)</text><text x="50" y="335" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Waktu:</text><text x="550" y="335" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">16 Sep 2026, 05:15:40 WIB</text><text x="50" y="365" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">ID Transaksi:</text><text x="550" y="365" fill="%23108EE9" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="end">DANA-20260916-77391024</text><rect x="45" y="380" width="510" height="15" fill="%23F8FAFC" rx="4"/></svg>',
+      timeAgo: '3 jam yang lalu',
+      active: true,
+      createdAt: '2026-09-16T05:15:40.000Z'
+    },
+    {
+      id: 'testi-5',
+      name: 'Dewi Lestari',
+      city: 'Denpasar, Bali',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+      bank: 'BNI Mobile',
+      amount: 12000000,
+      rating: 5,
+      comment: 'Bonus rabat referral tim cair terus tiap hari. Sekarang WD 12jt ke BNI langsung masuk. Temen-temen yang saya ajak juga udah pada cuan semua. Terimakasih FGT Pro!',
+      receiptImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" fill="none"><rect width="600" height="420" rx="20" fill="%23005E6A"/><rect x="15" y="15" width="570" height="390" rx="16" fill="%23FFFFFF"/><rect x="15" y="15" width="570" height="70" rx="16" fill="%23005E6A"/><text x="35" y="55" fill="%23F15A24" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1">BNI Mobile Banking</text><rect x="420" y="32" width="145" height="34" rx="17" fill="%2310B981"/><text x="492" y="54" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">✓ BERHASIL</text><circle cx="300" cy="130" r="30" fill="%23CCFBF1"/><path d="M288 130L296 138L312 122" stroke="%230D9488" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="180" fill="%230F172A" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle">TRANSFER ONLINE ANTAR BANK SUKSES</text><text x="300" y="222" fill="%23005E6A" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">Rp 12.000.000</text><line x1="45" y1="245" x2="555" y2="245" stroke="%23E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/><text x="50" y="275" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Pengirim:</text><text x="550" y="275" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">PT FGT PRO INVESTASI</text><text x="50" y="305" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Tujuan Rekening BNI:</text><text x="550" y="305" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">DEWI LESTARI (09827****102)</text><text x="50" y="335" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Tanggal & Jam:</text><text x="550" y="335" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">15 Sep 2026, 21:10:05 WIB</text><text x="50" y="365" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">No. Referensi:</text><text x="550" y="365" fill="%23005E6A" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="end">BNI-20260915-44918230</text><rect x="45" y="380" width="510" height="15" fill="%23F8FAFC" rx="4"/></svg>',
+      timeAgo: 'Kemarin, 21:10 WIB',
+      active: true,
+      createdAt: '2026-09-15T21:10:05.000Z'
+    },
+    {
+      id: 'testi-6',
+      name: 'Hendra Wijaya',
+      city: 'Surabaya, Jawa Timur',
+      avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+      bank: 'QRIS & Multi-Bank',
+      amount: 50000000,
+      rating: 5,
+      comment: 'Paket VIP Master beneran sultan hasilnya. Sekali tarik 50jt langsung di-approve admin dalam hitungan menit. CS ramah dan fast respons 24 jam!',
+      receiptImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" fill="none"><rect width="600" height="420" rx="20" fill="%230F172A"/><rect x="15" y="15" width="570" height="390" rx="16" fill="%23FFFFFF"/><rect x="15" y="15" width="570" height="70" rx="16" fill="%230F172A"/><text x="35" y="55" fill="%23E5A83B" font-family="Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="1">VIP INSTANT CLEARING</text><rect x="420" y="32" width="145" height="34" rx="17" fill="%2310B981"/><text x="492" y="54" fill="%23FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">✓ VIP SETTLED</text><circle cx="300" cy="130" r="30" fill="%23FEF3C7"/><path d="M288 130L296 138L312 122" stroke="%23B45309" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="300" y="180" fill="%230F172A" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle">PENARIKAN VIP INSTANT SELESAI</text><text x="300" y="222" fill="%23C89338" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">Rp 50.000.000</text><line x1="45" y1="245" x2="555" y2="245" stroke="%23E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/><text x="50" y="275" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Pengirim:</text><text x="550" y="275" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">FGT PRO VIP TREASURY</text><text x="50" y="305" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Penerima VIP:</text><text x="550" y="305" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">HENDRA WIJAYA (VIP-MEMBER)</text><text x="50" y="335" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">Waktu:</text><text x="550" y="335" fill="%230F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">15 Sep 2026, 17:00:00 WIB</text><text x="50" y="365" fill="%2364748B" font-family="Arial, sans-serif" font-size="13">No. Batch Settlement:</text><text x="550" y="365" fill="%23C89338" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="end">VIP-20260915-00928192</text><rect x="45" y="380" width="510" height="15" fill="%23F8FAFC" rx="4"/></svg>',
+      timeAgo: 'Kemarin, 17:00 WIB',
+      active: true,
+      createdAt: '2026-09-15T17:00:00.000Z'
+    }
+  ],
+
   // Active Session
   currentSession: null // null indicates Guest mode
 };
@@ -519,6 +607,9 @@ export const DB = {
       }
       if (!parsed.redemptions) {
         parsed.redemptions = defaultDB.redemptions;
+      }
+      if (!parsed.testimonials) {
+        parsed.testimonials = defaultDB.testimonials;
       }
       this.save(parsed);
       return parsed;
@@ -805,9 +896,64 @@ export const DB = {
     return null;
   },
 
+  // Testimonials (Bukti Penarikan Member) CRUD
+  getTestimonials() {
+    const db = this.get();
+    return db.testimonials || [];
+  },
+
+  getActiveTestimonials() {
+    const db = this.get();
+    return (db.testimonials || []).filter(t => t.active);
+  },
+
+  addTestimonial({ name, city, avatar, bank, amount, rating, comment, receiptImage, timeAgo, active = true }) {
+    const db = this.get();
+    db.testimonials = db.testimonials || [];
+    const newTestimonial = {
+      id: 'testi-' + Date.now(),
+      name: (name || 'Member FGT Pro').trim(),
+      city: (city || 'Indonesia').trim(),
+      avatar: (avatar || '').trim() || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Member')}&background=C89338&color=fff`,
+      bank: (bank || 'BCA Mobile').trim(),
+      amount: Number(amount) || 0,
+      rating: Math.max(1, Math.min(5, Number(rating) || 5)),
+      comment: (comment || '').trim(),
+      receiptImage: (receiptImage || '').trim(),
+      timeAgo: (timeAgo || 'Baru saja').trim(),
+      active: Boolean(active),
+      createdAt: new Date().toISOString()
+    };
+    db.testimonials.unshift(newTestimonial);
+    this.save(db);
+    return newTestimonial;
+  },
+
+  updateTestimonial(id, updates) {
+    const db = this.get();
+    db.testimonials = db.testimonials || [];
+    const idx = db.testimonials.findIndex(t => t.id === id);
+    if (idx !== -1) {
+      if (updates.amount !== undefined) updates.amount = Number(updates.amount);
+      if (updates.rating !== undefined) updates.rating = Number(updates.rating);
+      db.testimonials[idx] = { ...db.testimonials[idx], ...updates };
+      this.save(db);
+      return db.testimonials[idx];
+    }
+    return null;
+  },
+
+  deleteTestimonial(id) {
+    const db = this.get();
+    db.testimonials = (db.testimonials || []).filter(t => t.id !== id);
+    this.save(db);
+    return true;
+  },
+
   // Reset database to default seed state
   reset() {
     localStorage.removeItem(DB_KEY);
     return this.get();
   }
 };
+
