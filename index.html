@@ -340,6 +340,28 @@
           </div>
         </section>
 
+        <!-- 6.5. BANNER SLIDES CAROUSEL (Under Login Button) -->
+        <section class="banner-carousel-container" id="bannerCarouselSection">
+          <div class="banner-carousel-wrapper" id="bannerCarouselWrapper">
+            <div class="banner-slides-track" id="bannerSlidesTrack">
+              <!-- Dynamically populated by App.renderBannerCarousel() -->
+            </div>
+            <!-- Arrow Navigation -->
+            <button class="banner-arrow-btn banner-prev-btn" id="bannerPrevBtn" onclick="App.prevBannerSlide()" aria-label="Previous Banner">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button class="banner-arrow-btn banner-next-btn" id="bannerNextBtn" onclick="App.nextBannerSlide()" aria-label="Next Banner">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+            <!-- Dots Indicator -->
+            <div class="banner-dots-wrap" id="bannerDotsWrap"></div>
+          </div>
+        </section>
+
         <!-- 7. PROF GPT SIGNAL SECTION (Neon Border & Cards) -->
         <section class="signal-section-container" id="signalSection">
           <div class="signal-section-title-wrap">

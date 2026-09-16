@@ -342,6 +342,8 @@ const defaultDB = {
     { id: 'APPLE.US', name: 'APPLE.US', price: 331.52, change: -0.44, isUp: false, time: '02:54 WIB', code1: 'AP', code2: 'US' },
     { id: 'BTCUSDT', name: 'BTCUSDT', price: 68420.00, change: 3.42, isUp: true, time: '19:15 WIB', code1: 'BTC', code2: 'USD' },
     { id: 'NVDA.US', name: 'NVDA.US', price: 128.90, change: 2.15, isUp: true, time: '02:54 WIB', code1: 'NV', code2: 'US' }
+  ],
+
   // Running Text / Announcements Ticker
   announcements: [
     {
@@ -364,6 +366,40 @@ const defaultDB = {
     }
   ],
 
+  // Image Slides Carousel (Banners)
+  banners: [
+    {
+      id: 'ban-1',
+      title: 'AI Trading Algoritma FGT Pro v4.2',
+      subtitle: 'Otomasi profit harian dengan akurasi eksekusi 94.8% dan proteksi modal terintegrasi.',
+      badge: 'PROMO UNGGULAN',
+      imageUrl: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80',
+      actionUrl: 'plans',
+      active: true,
+      createdAt: '2026-09-15T00:00:00.000Z'
+    },
+    {
+      id: 'ban-2',
+      title: 'Bonus Kemitraan & Rabat Multi-Level',
+      subtitle: 'Dapatkan komisi sponsor instan 10% + passive income matching ROI hingga 5 kedalaman.',
+      badge: 'KOMISI TINGGI',
+      imageUrl: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=900&auto=format&fit=crop&q=80',
+      actionUrl: 'profile',
+      active: true,
+      createdAt: '2026-09-15T01:00:00.000Z'
+    },
+    {
+      id: 'ban-3',
+      title: 'Deposit Instant 24/7 QRIS & USDT',
+      subtitle: 'Proses deposit cepat otomatis melalui QRIS dinamis dan jaringan blockchain USDT TRC20/BEP20.',
+      badge: 'GATEWAY TERCEPAT',
+      imageUrl: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=900&auto=format&fit=crop&q=80',
+      actionUrl: 'deposit',
+      active: true,
+      createdAt: '2026-09-15T02:00:00.000Z'
+    }
+  ],
+
   // Active Session
   currentSession: null // null indicates Guest mode
 };
@@ -380,8 +416,11 @@ export const DB = {
       const parsed = JSON.parse(data);
       if (!parsed.announcements) {
         parsed.announcements = defaultDB.announcements;
-        this.save(parsed);
       }
+      if (!parsed.banners) {
+        parsed.banners = defaultDB.banners;
+      }
+      this.save(parsed);
       return parsed;
     } catch (e) {
       console.error('Error loading DB from localStorage:', e);
@@ -521,6 +560,54 @@ export const DB = {
   deleteAnnouncement(id) {
     const db = this.get();
     db.announcements = (db.announcements || []).filter(a => a.id !== id);
+    this.save(db);
+    return true;
+  },
+
+  // Banner Slides Carousel CRUD
+  getBanners() {
+    const db = this.get();
+    return db.banners || [];
+  },
+
+  getActiveBanners() {
+    const db = this.get();
+    return (db.banners || []).filter(b => b.active);
+  },
+
+  addBanner({ title, subtitle, badge, imageUrl, actionUrl, active = true }) {
+    const db = this.get();
+    db.banners = db.banners || [];
+    const newBanner = {
+      id: 'ban-' + Date.now(),
+      title: (title || '').trim(),
+      subtitle: (subtitle || '').trim(),
+      badge: (badge || 'PROMO').trim(),
+      imageUrl: (imageUrl || '').trim(),
+      actionUrl: actionUrl || 'plans',
+      active: Boolean(active),
+      createdAt: new Date().toISOString()
+    };
+    db.banners.unshift(newBanner);
+    this.save(db);
+    return newBanner;
+  },
+
+  updateBanner(id, updates) {
+    const db = this.get();
+    db.banners = db.banners || [];
+    const idx = db.banners.findIndex(b => b.id === id);
+    if (idx !== -1) {
+      db.banners[idx] = { ...db.banners[idx], ...updates };
+      this.save(db);
+      return db.banners[idx];
+    }
+    return null;
+  },
+
+  deleteBanner(id) {
+    const db = this.get();
+    db.banners = (db.banners || []).filter(b => b.id !== id);
     this.save(db);
     return true;
   },

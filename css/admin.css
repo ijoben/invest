@@ -704,3 +704,65 @@ body.admin-body.sidebar-open {
 .admin-btn-action-primary:active {
   transform: scale(0.97);
 }
+
+/* ==========================================================================
+   BANNER SLIDER CRUD & UPLOAD STYLES
+   ========================================================================== */
+.banner-table-thumb {
+  width: 90px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #1E293B;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: block;
+}
+
+.banner-upload-preview {
+  width: 100%;
+  height: 140px;
+  border-radius: 12px;
+  background: #0B0F19;
+  border: 2px dashed rgba(200, 147, 56, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.banner-upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.banner-upload-preview .preview-placeholder {
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.banner-file-input-wrapper {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.banner-badge-preview {
+  display: inline-block;
+  background: linear-gradient(135deg, #E5A83B 0%, #C89338 100%);
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+

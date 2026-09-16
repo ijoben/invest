@@ -83,6 +83,11 @@
           <span>Teks Berjalan (Speaker)</span>
           <span class="admin-nav-badge" id="badgeAnnouncementsCount" style="background: #3B82F6;">0</span>
         </button>
+        <button class="admin-nav-btn" data-tab="banners">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          <span>Banner Slider Carousel</span>
+          <span class="admin-nav-badge" id="badgeBannersCount" style="background: #E5A83B;">0</span>
+        </button>
       </nav>
 
       <div class="sidebar-group-title">PENGGUNA & DATA</div>
@@ -427,6 +432,10 @@
             </thead>
             <tbody id="signalsTableBody"></tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
     <!-- ====================================================================
          9. PANEL RUNNING TEXT / ANNOUNCEMENTS CRUD
          ==================================================================== -->
@@ -453,6 +462,38 @@
               </tr>
             </thead>
             <tbody id="announcementsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         10. PANEL BANNER SLIDER CAROUSEL CRUD
+         ==================================================================== -->
+    <section id="pane-banners" class="admin-view-panel">
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🖼️ Kelola Banner Slide Carousel (Upload Gambar)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Upload banner promo dan gambar slide yang tampil di bawah tombol login frontend.</p>
+          </div>
+          <button class="admin-btn-action-primary" onclick="AdminPage.openAddBannerModal()">
+            <span>➕ Upload / Tambah Banner Baru</span>
+          </button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width: 110px;">Gambar</th>
+                <th style="min-width: 220px;">Judul & Deskripsi</th>
+                <th style="width: 130px;">Badge</th>
+                <th style="width: 130px;">Link Aksi</th>
+                <th style="width: 100px;">Status</th>
+                <th style="width: 180px; text-align: right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="bannersTableBody"></tbody>
           </table>
         </div>
       </div>
@@ -618,6 +659,80 @@
 
       <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="AdminPage.saveAnnouncementModal()">
         <span>💾 Simpan Teks Berjalan</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Add / Edit Banner Slide Carousel -->
+  <div class="modal-backdrop" id="adminBannerModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title" id="bannerModalHeaderTitle">Upload / Tambah Banner Baru</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <input type="hidden" id="bannerModalId">
+
+      <!-- Upload File Image & Preview -->
+      <div class="form-group">
+        <label class="form-label">Upload Gambar Banner (Dari Komputer / HP):</label>
+        <div class="banner-file-input-wrapper">
+          <input type="file" id="bannerModalFileInput" accept="image/*" class="form-input" style="padding: 7px 10px;">
+        </div>
+        <div class="form-label" style="margin-top: 6px; font-size: 11px; color: #94A3B8;">Atau Masukkan URL Gambar (Opsional):</div>
+        <input type="url" class="form-input" id="bannerModalUrlInput" placeholder="https://images.unsplash.com/..." style="font-size: 12px;">
+      </div>
+
+      <!-- Live Image Preview Box -->
+      <div class="form-group">
+        <label class="form-label">Pratinjau Gambar:</label>
+        <div class="banner-upload-preview" id="bannerUploadPreviewBox">
+          <div class="preview-placeholder" id="bannerPreviewPlaceholder">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            <span>Pilih file gambar atau masukkan URL untuk melihat pratinjau</span>
+          </div>
+          <img id="bannerPreviewImg" src="" style="display: none;" alt="Preview">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Judul Banner:</label>
+        <input type="text" class="form-input" id="bannerModalTitle" placeholder="Contoh: AI Trading Algoritma FGT Pro v4.2">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Subjudul / Deskripsi Singkat:</label>
+        <textarea class="form-input" id="bannerModalSubtitle" rows="2" placeholder="Deskripsi ringkas yang tampil di atas gambar banner..." style="resize: vertical; font-size: 12px;"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Label Badge:</label>
+          <input type="text" class="form-input" id="bannerModalBadge" placeholder="PROMO UNGGULAN">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Tujuan Link (Aksi Klik):</label>
+          <select class="form-select" id="bannerModalActionUrl">
+            <option value="plans">Paket Investasi (Plans)</option>
+            <option value="deposit">Form Deposit Saldo</option>
+            <option value="profile">Menu Profil & Tambah Teman</option>
+            <option value="trade">Trading & Investasi AI</option>
+            <option value="markets">Pasar Global (Markets)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status Banner:</label>
+        <select class="form-select" id="bannerModalActive">
+          <option value="true">Aktif (Tampil di Carousel Frontend)</option>
+          <option value="false">Nonaktif (Sembunyikan)</option>
+        </select>
+      </div>
+
+      <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 6px;" onclick="AdminPage.saveBannerModal()">
+        <span>💾 Simpan & Terbitkan Banner</span>
       </button>
     </div>
   </div>

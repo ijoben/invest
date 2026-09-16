@@ -15,6 +15,9 @@ import { Signals } from './signals.js';
 const App = {
   currentTab: 'home',
   marketInterval: null,
+  bannerInterval: null,
+  currentBannerSlide: 0,
+  bannersData: [],
 
   init() {
     // Check URL parameters (e.g. ?ref=KODE)
@@ -70,6 +73,9 @@ const App = {
 
     // 5. Render Trading / CTA Banner
     this.renderTradingBanner(user);
+
+    // 5.5 Render Banner Slides Carousel (Below Login Button)
+    this.renderBannerCarousel();
 
     // 6. Render Prof GPT Signals
     this.renderSignals();
@@ -243,6 +249,152 @@ const App = {
     } else {
       guestBox.style.display = 'block';
       authBox.style.display = 'none';
+    }
+  },
+
+  // 5.5 Banner Slides Carousel (Below Login Button)
+  renderBannerCarousel() {
+    const track = document.getElementById('bannerSlidesTrack');
+    const dotsWrap = document.getElementById('bannerDotsWrap');
+    const container = document.getElementById('bannerCarouselSection');
+    const wrapper = document.getElementById('bannerCarouselWrapper');
+    if (!track || !container) return;
+
+    this.bannersData = DB.getActiveBanners();
+
+    if (!this.bannersData || this.bannersData.length === 0) {
+      container.style.display = 'none';
+      if (this.bannerInterval) clearInterval(this.bannerInterval);
+      return;
+    }
+
+    container.style.display = 'block';
+
+    // Normalize slide index
+    if (this.currentBannerSlide >= this.bannersData.length) {
+      this.currentBannerSlide = 0;
+    }
+
+    // Render slides
+    track.innerHTML = this.bannersData.map((b, idx) => {
+      const imgSource = b.imageUrl || 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80';
+      return `
+        <div class="banner-slide" onclick="App.onBannerClick('${b.actionUrl || ''}')" data-index="${idx}">
+          <img class="banner-img" src="${imgSource}" alt="${b.title || 'FGT Pro Banner'}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80'">
+          <div class="banner-overlay">
+            ${b.badge ? `<span class="banner-badge">${b.badge}</span>` : ''}
+            <h3 class="banner-title">${b.title || ''}</h3>
+            ${b.subtitle ? `<p class="banner-subtitle">${b.subtitle}</p>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Render pagination dots
+    if (dotsWrap) {
+      dotsWrap.innerHTML = this.bannersData.map((_, idx) => `
+        <div class="banner-dot ${idx === this.currentBannerSlide ? 'active' : ''}" onclick="App.goToBannerSlide(${idx})"></div>
+      `).join('');
+    }
+
+    // Apply track transform
+    this.updateBannerTrack();
+
+    // Start auto-slide timer
+    this.startBannerAutoSlide();
+
+    // Attach hover pause listeners if not already bound
+    if (wrapper && !wrapper.dataset.hoverBound) {
+      wrapper.dataset.hoverBound = 'true';
+      wrapper.addEventListener('mouseenter', () => {
+        if (this.bannerInterval) clearInterval(this.bannerInterval);
+      });
+      wrapper.addEventListener('mouseleave', () => {
+        this.startBannerAutoSlide();
+      });
+      // Touch swipe support for mobile
+      let touchStartX = 0;
+      let touchEndX = 0;
+      wrapper.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        if (this.bannerInterval) clearInterval(this.bannerInterval);
+      }, { passive: true });
+      wrapper.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        if (touchStartX - touchEndX > 45) {
+          this.nextBannerSlide();
+        } else if (touchEndX - touchStartX > 45) {
+          this.prevBannerSlide();
+        }
+        this.startBannerAutoSlide();
+      }, { passive: true });
+    }
+  },
+
+  startBannerAutoSlide() {
+    if (this.bannerInterval) clearInterval(this.bannerInterval);
+    if (!this.bannersData || this.bannersData.length <= 1) return;
+
+    this.bannerInterval = setInterval(() => {
+      this.nextBannerSlide();
+    }, 4500);
+  },
+
+  updateBannerTrack() {
+    const track = document.getElementById('bannerSlidesTrack');
+    const dotsWrap = document.getElementById('bannerDotsWrap');
+    if (track) {
+      track.style.transform = `translateX(-${this.currentBannerSlide * 100}%)`;
+    }
+    if (dotsWrap) {
+      const dots = dotsWrap.querySelectorAll('.banner-dot');
+      dots.forEach((dot, idx) => {
+        if (idx === this.currentBannerSlide) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+    }
+  },
+
+  nextBannerSlide() {
+    if (!this.bannersData || this.bannersData.length === 0) return;
+    this.currentBannerSlide = (this.currentBannerSlide + 1) % this.bannersData.length;
+    this.updateBannerTrack();
+  },
+
+  prevBannerSlide() {
+    if (!this.bannersData || this.bannersData.length === 0) return;
+    this.currentBannerSlide = (this.currentBannerSlide - 1 + this.bannersData.length) % this.bannersData.length;
+    this.updateBannerTrack();
+  },
+
+  goToBannerSlide(idx) {
+    if (idx >= 0 && idx < this.bannersData.length) {
+      this.currentBannerSlide = idx;
+      this.updateBannerTrack();
+      this.startBannerAutoSlide();
+    }
+  },
+
+  onBannerClick(actionUrl) {
+    if (!actionUrl) return;
+    if (actionUrl === 'plans' || actionUrl === 'vip') {
+      const planSection = document.querySelector('.tier-carousel-container');
+      if (planSection) planSection.scrollIntoView({ behavior: 'smooth' });
+    } else if (actionUrl === 'deposit') {
+      this.openDepositModal();
+    } else if (actionUrl === 'profile') {
+      this.switchTab('profile');
+    } else if (actionUrl === 'trade') {
+      this.switchTab('trade');
+    } else if (actionUrl === 'markets') {
+      this.switchTab('markets');
+    } else if (actionUrl.startsWith('http://') || actionUrl.startsWith('https://')) {
+      window.open(actionUrl, '_blank');
+    } else {
+      this.switchTab(actionUrl);
     }
   },
 

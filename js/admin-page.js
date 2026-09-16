@@ -32,6 +32,8 @@ export const AdminPage = {
     document.getElementById('badgePendingWd').textContent = stats.pendingWithdrawalsCount;
     const annBadge = document.getElementById('badgeAnnouncementsCount');
     if (annBadge) annBadge.textContent = (db.announcements || []).length;
+    const banBadge = document.getElementById('badgeBannersCount');
+    if (banBadge) banBadge.textContent = (db.banners || []).length;
 
     // 2. Deposit Table
     this.renderDeposits(db);
@@ -56,6 +58,9 @@ export const AdminPage = {
 
     // 9. Announcements Running Text Table
     this.renderAnnouncements(db);
+
+    // 10. Banner Slider Carousel Table
+    this.renderBanners(db);
   },
 
   // 2. Deposit Table
@@ -238,6 +243,57 @@ export const AdminPage = {
     `).join('');
   },
 
+  // 10. Banner Slider Carousel Table
+  renderBanners(db) {
+    const tbody = document.getElementById('bannersTableBody');
+    if (!tbody) return;
+    const banners = db.banners || [];
+
+    if (banners.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#94A3B8;">Belum ada banner slide. Silakan klik tombol "Upload / Tambah Banner Baru" di atas.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = banners.map(b => {
+      const imgUrl = b.imageUrl || 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80';
+      const statusBadge = b.active
+        ? '<span class="badge-status approved">AKTIF</span>'
+        : '<span class="badge-status rejected">NONAKTIF</span>';
+
+      return `
+        <tr>
+          <td>
+            <img src="${imgUrl}" alt="${b.title || 'Banner'}" class="banner-table-thumb" onerror="this.src='https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80'">
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #FFFFFF; font-size: 13px; margin-bottom: 3px;">${b.title || '-'}</div>
+            <div style="font-size: 11px; color: #94A3B8; line-height: 1.35; max-width: 320px;">${b.subtitle || '-'}</div>
+          </td>
+          <td>
+            ${b.badge ? `<span class="banner-badge-preview">${b.badge}</span>` : '<span style="color:#64748B;">-</span>'}
+          </td>
+          <td>
+            <span style="font-family: var(--font-mono); font-size: 11px; color: #38BDF8;">${b.actionUrl || 'plans'}</span>
+          </td>
+          <td>${statusBadge}</td>
+          <td>
+            <div class="btn-action-group" style="justify-content: flex-end;">
+              <button class="btn-admin-action ${b.active ? 'reject' : 'approve'}" onclick="AdminPage.toggleBannerStatus('${b.id}')" title="Ubah status tampil">
+                ${b.active ? 'Sembunyikan' : 'Aktifkan'}
+              </button>
+              <button class="btn-admin-action edit" onclick="AdminPage.openEditBannerModal('${b.id}')" title="Edit banner">
+                ✏ Edit
+              </button>
+              <button class="btn-admin-action delete" onclick="AdminPage.deleteBanner('${b.id}')" title="Hapus banner">
+                🗑 Hapus
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
   tabTitles: {
     dashboard: 'Dashboard Overview',
     deposits: 'Konfirmasi Deposit',
@@ -247,6 +303,7 @@ export const AdminPage = {
     affiliate: 'Sponsor & Rabat ROI',
     signals: 'Sinyal Prof GPT',
     announcements: 'Teks Berjalan & Notif',
+    banners: 'Banner Slider Carousel',
     users: 'Kelola Pengguna'
   },
 
@@ -561,6 +618,115 @@ export const AdminPage = {
     this.renderAll();
   },
 
+  // Modal Banners (Slider Carousel CRUD with Upload & Preview)
+  openAddBannerModal() {
+    document.getElementById('bannerModalId').value = '';
+    document.getElementById('bannerModalHeaderTitle').textContent = 'Upload / Tambah Banner Baru';
+    document.getElementById('bannerModalFileInput').value = '';
+    document.getElementById('bannerModalUrlInput').value = '';
+    document.getElementById('bannerModalTitle').value = '';
+    document.getElementById('bannerModalSubtitle').value = '';
+    document.getElementById('bannerModalBadge').value = 'PROMO UNGGULAN';
+    document.getElementById('bannerModalActionUrl').value = 'plans';
+    document.getElementById('bannerModalActive').value = 'true';
+
+    // Clear preview
+    const previewImg = document.getElementById('bannerPreviewImg');
+    const placeholder = document.getElementById('bannerPreviewPlaceholder');
+    if (previewImg && placeholder) {
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+      placeholder.style.display = 'flex';
+    }
+
+    this.openModal('adminBannerModal');
+  },
+
+  openEditBannerModal(id) {
+    const db = DB.get();
+    const banner = (db.banners || []).find(b => b.id === id);
+    if (!banner) return;
+
+    document.getElementById('bannerModalId').value = banner.id;
+    document.getElementById('bannerModalHeaderTitle').textContent = 'Edit Banner Slide';
+    document.getElementById('bannerModalFileInput').value = '';
+    document.getElementById('bannerModalUrlInput').value = banner.imageUrl || '';
+    document.getElementById('bannerModalTitle').value = banner.title || '';
+    document.getElementById('bannerModalSubtitle').value = banner.subtitle || '';
+    document.getElementById('bannerModalBadge').value = banner.badge || '';
+    document.getElementById('bannerModalActionUrl').value = banner.actionUrl || 'plans';
+    document.getElementById('bannerModalActive').value = banner.active ? 'true' : 'false';
+
+    // Set preview
+    const previewImg = document.getElementById('bannerPreviewImg');
+    const placeholder = document.getElementById('bannerPreviewPlaceholder');
+    if (previewImg && placeholder && banner.imageUrl) {
+      previewImg.src = banner.imageUrl;
+      previewImg.style.display = 'block';
+      placeholder.style.display = 'none';
+    }
+
+    this.openModal('adminBannerModal');
+  },
+
+  saveBannerModal() {
+    const id = document.getElementById('bannerModalId').value;
+    const title = document.getElementById('bannerModalTitle').value.trim();
+    const subtitle = document.getElementById('bannerModalSubtitle').value.trim();
+    const badge = document.getElementById('bannerModalBadge').value.trim();
+    const actionUrl = document.getElementById('bannerModalActionUrl').value;
+    const active = document.getElementById('bannerModalActive').value === 'true';
+    
+    // Get image source (preview image src or typed url input)
+    const previewImg = document.getElementById('bannerPreviewImg');
+    const typedUrl = document.getElementById('bannerModalUrlInput').value.trim();
+    let imageUrl = '';
+    
+    if (previewImg && previewImg.src && previewImg.style.display !== 'none' && !previewImg.src.endsWith('/admin.html') && !previewImg.src.endsWith('/admin')) {
+      imageUrl = previewImg.src;
+    } else if (typedUrl) {
+      imageUrl = typedUrl;
+    }
+
+    if (!imageUrl) {
+      this.showToast('Harap upload file gambar atau masukkan URL gambar banner!', 'error');
+      return;
+    }
+
+    if (!title) {
+      this.showToast('Harap masukkan judul banner!', 'error');
+      return;
+    }
+
+    if (id) {
+      DB.updateBanner(id, { title, subtitle, badge, imageUrl, actionUrl, active });
+      this.showToast('Banner slide carousel berhasil diperbarui!', 'success');
+    } else {
+      DB.addBanner({ title, subtitle, badge, imageUrl, actionUrl, active });
+      this.showToast('Banner slide baru berhasil ditambahkan!', 'success');
+    }
+
+    this.closeModal('adminBannerModal');
+    this.renderAll();
+  },
+
+  toggleBannerStatus(id) {
+    const db = DB.get();
+    const banner = (db.banners || []).find(b => b.id === id);
+    if (!banner) return;
+
+    DB.updateBanner(id, { active: !banner.active });
+    this.showToast(`Status banner berhasil diubah menjadi ${!banner.active ? 'Aktif' : 'Nonaktif'}!`, 'info');
+    this.renderAll();
+  },
+
+  deleteBanner(id) {
+    if (!confirm('Apakah Anda yakin ingin menghapus banner slide ini?')) return;
+    DB.deleteBanner(id);
+    this.showToast('Banner berhasil dihapus.', 'success');
+    this.renderAll();
+  },
+
   // Modals & Toast
   openModal(id) {
     const el = document.getElementById(id);
@@ -665,6 +831,56 @@ export const AdminPage = {
         if (e.target === modalBackdrop) this.closeAllModals();
       });
     });
+
+    // Banner File Input Upload Listener (FileReader base64 converter)
+    const bannerFileInput = document.getElementById('bannerModalFileInput');
+    if (bannerFileInput) {
+      bannerFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          this.showToast('Harap pilih file gambar (JPG, PNG, WEBP, dll)!', 'error');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const previewImg = document.getElementById('bannerPreviewImg');
+          const placeholder = document.getElementById('bannerPreviewPlaceholder');
+          if (previewImg && placeholder) {
+            previewImg.src = event.target.result;
+            previewImg.style.display = 'block';
+            placeholder.style.display = 'none';
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Banner URL input listener for live preview
+    const bannerUrlInput = document.getElementById('bannerModalUrlInput');
+    if (bannerUrlInput) {
+      bannerUrlInput.addEventListener('input', (e) => {
+        const url = e.target.value.trim();
+        const previewImg = document.getElementById('bannerPreviewImg');
+        const placeholder = document.getElementById('bannerPreviewPlaceholder');
+        if (previewImg && placeholder) {
+          if (url) {
+            previewImg.src = url;
+            previewImg.style.display = 'block';
+            placeholder.style.display = 'none';
+          } else {
+            const fileInput = document.getElementById('bannerModalFileInput');
+            if (!fileInput || !fileInput.files.length) {
+              previewImg.src = '';
+              previewImg.style.display = 'none';
+              placeholder.style.display = 'flex';
+            }
+          }
+        }
+      });
+    }
   }
 };
 
