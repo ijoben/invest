@@ -563,12 +563,7 @@
             
             <div class="form-group">
               <label class="form-label">Nominal Investasi (IDR):</label>
-              <input type="number" class="form-input" id="calcNominal" value="10000000" oninput="
-                const val = Number(this.value) || 0;
-                document.getElementById('calcResMin').textContent = DB.formatIDR(val * 0.02);
-                document.getElementById('calcResMax').textContent = DB.formatIDR(val * 0.035);
-                document.getElementById('calcRes30d').textContent = DB.formatIDR(val * 0.0275 * 30);
-              ">
+              <input type="number" class="form-input" id="calcNominal" value="10000000" oninput="App.calculateProfitEstimate(this.value)">
             </div>
 
             <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: center; border: 1px solid #E2E8F0;">
@@ -825,44 +820,18 @@
           <label class="form-label">Password</label>
           <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password" value="user123">
         </div>
-        <button class="btn-cta-gold" onclick="
-          const id = document.getElementById('loginIdentifier').value;
-          const pw = document.getElementById('loginPassword').value;
-          const res = Auth.login(id, pw);
-          if (res.success) {
-            App.closeAllModals();
-            if (res.user && res.user.role === 'admin') {
-              App.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
-              setTimeout(() => { window.location.href = 'admin.html'; }, 600);
-            } else {
-              App.showToast(res.message, 'success');
-              App.renderAll();
-            }
-          } else {
-            App.showToast(res.message, 'error');
-          }
-        ">
+        <button class="btn-cta-gold" onclick="App.submitLogin()">
           <span>Masuk Sekarang</span>
         </button>
 
         <!-- Quick Login Selection (User & Admin) -->
         <div class="quick-demo-login">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <button type="button" class="btn-demo-pill" onclick="
-              Auth.quickLogin('user');
-              App.closeAllModals();
-              App.showToast('Login sebagai Investor (Alex) berhasil!', 'success');
-              App.renderAll();
-            ">
+            <button type="button" class="btn-demo-pill" onclick="App.quickLogin('user')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               <span>Login User</span>
             </button>
-            <button type="button" class="btn-demo-pill admin-pill" onclick="
-              Auth.quickLogin('admin');
-              App.closeAllModals();
-              App.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
-              setTimeout(() => { window.location.href = 'admin.html'; }, 600);
-            ">
+            <button type="button" class="btn-demo-pill admin-pill" onclick="App.quickLogin('admin')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               <span>Login Admin</span>
             </button>
@@ -896,23 +865,7 @@
           <label class="form-label">Kode Referral (Opsional)</label>
           <input type="text" class="form-input" id="regReferral" placeholder="KODE SPONSOR" style="text-transform: uppercase;">
         </div>
-        <button class="btn-cta-gold" onclick="
-          const res = Auth.register({
-            username: document.getElementById('regUsername').value,
-            fullName: document.getElementById('regFullName').value,
-            email: document.getElementById('regEmail').value,
-            phone: document.getElementById('regPhone').value,
-            password: document.getElementById('regPassword').value,
-            referralCode: document.getElementById('regReferral').value
-          });
-          if (res.success) {
-            App.closeAllModals();
-            App.showToast(res.message, 'success');
-            App.renderAll();
-          } else {
-            App.showToast(res.message, 'error');
-          }
-        ">
+        <button class="btn-cta-gold" onclick="App.submitRegister()">
           <span>Buat Akun & Mulai</span>
         </button>
       </div>

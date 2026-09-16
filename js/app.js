@@ -1314,6 +1314,68 @@ const App = {
     }
   },
 
+  // Auth Submit Handlers
+  submitLogin() {
+    const idInput = document.getElementById('loginIdentifier');
+    const pwInput = document.getElementById('loginPassword');
+    const id = idInput ? idInput.value.trim() : '';
+    const pw = pwInput ? pwInput.value.trim() : '';
+
+    const res = Auth.login(id, pw);
+    if (res.success) {
+      this.closeAllModals();
+      if (res.user && res.user.role === 'admin') {
+        this.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
+        setTimeout(() => { window.location.href = 'admin.html'; }, 600);
+      } else {
+        this.showToast(res.message, 'success');
+        this.renderAll();
+      }
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  submitRegister() {
+    const username = document.getElementById('regUsername') ? document.getElementById('regUsername').value.trim() : '';
+    const fullName = document.getElementById('regFullName') ? document.getElementById('regFullName').value.trim() : '';
+    const email = document.getElementById('regEmail') ? document.getElementById('regEmail').value.trim() : '';
+    const phone = document.getElementById('regPhone') ? document.getElementById('regPhone').value.trim() : '';
+    const password = document.getElementById('regPassword') ? document.getElementById('regPassword').value : '';
+    const referralCode = document.getElementById('regReferral') ? document.getElementById('regReferral').value.trim() : '';
+
+    const res = Auth.register({ username, fullName, email, phone, password, referralCode });
+    if (res.success) {
+      this.closeAllModals();
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  quickLogin(role = 'user') {
+    const res = Auth.quickLogin(role);
+    this.closeAllModals();
+    if (role === 'admin') {
+      this.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
+      setTimeout(() => { window.location.href = 'admin.html'; }, 600);
+    } else {
+      this.showToast('Login sebagai Investor (Alex) berhasil!', 'success');
+      this.renderAll();
+    }
+  },
+
+  calculateProfitEstimate(value) {
+    const val = Number(value) || 0;
+    const minEl = document.getElementById('calcResMin');
+    const maxEl = document.getElementById('calcResMax');
+    const d30El = document.getElementById('calcRes30d');
+    if (minEl) minEl.textContent = DB.formatIDR(val * 0.02);
+    if (maxEl) maxEl.textContent = DB.formatIDR(val * 0.035);
+    if (d30El) d30El.textContent = DB.formatIDR(val * 0.0275 * 30);
+  },
+
   // Payment Handlers
   openDepositModal() {
     if (!Auth.isLoggedIn()) {
