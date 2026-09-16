@@ -106,6 +106,8 @@ const App = {
         </svg>
       `;
     }
+  },
+
   // 1.5 Announcement Ticker / Running Text
   renderRunningText() {
     const el = document.getElementById('frontendRunningText');
