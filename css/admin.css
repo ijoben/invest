@@ -808,3 +808,279 @@ body.admin-body.sidebar-open {
   letter-spacing: 0.5px;
 }
 
+/* ==========================================================================
+   4. QRIS GRID & PREVIEW BOX
+   ========================================================================== */
+.admin-qris-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ==========================================================================
+   5. ULTRA-RESPONSIVE MOBILE ENGINE (ANTI-OFFSIDE & MOBILE EXCELLENCE)
+   ========================================================================== */
+
+/* Medium Screens & Tablets (max-width: 992px) */
+@media (max-width: 992px) {
+  .admin-qris-settings-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .admin-qris-preview-card {
+    max-width: 320px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+/* Tablets & Large Phones (max-width: 768px) */
+@media (max-width: 768px) {
+  .admin-standalone-container {
+    padding: 14px 12px 60px 12px;
+  }
+
+  .admin-card {
+    padding: 16px 14px;
+    border-radius: 12px;
+  }
+
+  .admin-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .admin-card-header > div {
+    width: 100%;
+  }
+
+  .admin-card-header .admin-btn-action-primary,
+  .admin-card-header .btn-admin-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-card-header .badge-status {
+    align-self: flex-start;
+  }
+
+  /* Form Setting Rows - Full Stack Layout on Mobile (Eliminates Offside Horizontal Overflow) */
+  .setting-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    padding: 12px 0 !important;
+  }
+
+  .setting-info {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .setting-title {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+
+  .setting-desc {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    color: #94A3B8 !important;
+  }
+
+  .setting-input-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .setting-input-wrap .admin-input,
+  .setting-input-wrap input,
+  .setting-input-wrap select,
+  .setting-input-wrap textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 13px !important;
+    padding: 10px 12px !important;
+  }
+
+  .admin-btn-action-primary,
+  .admin-btn-primary {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Small Phones & Mobile Devices (max-width: 640px) */
+@media (max-width: 640px) {
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .admin-stat-card {
+    padding: 12px 10px;
+    border-radius: 10px;
+  }
+
+  .admin-stat-label {
+    font-size: 9.5px;
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+
+  .admin-stat-value {
+    font-size: 14px;
+    letter-spacing: -0.3px;
+    word-break: break-word;
+  }
+
+  .admin-stat-change {
+    font-size: 9px;
+    margin-top: 4px;
+  }
+
+  /* Table Container Mobile Scrolling */
+  .admin-table-container {
+    border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .admin-table-container::-webkit-scrollbar {
+    height: 5px;
+  }
+  .admin-table-container::-webkit-scrollbar-track {
+    background: #0B0F19;
+  }
+  .admin-table-container::-webkit-scrollbar-thumb {
+    background: rgba(200, 147, 56, 0.4);
+    border-radius: 4px;
+  }
+
+  .admin-table th {
+    padding: 10px 10px;
+    font-size: 11px;
+  }
+
+  .admin-table td {
+    padding: 10px 10px;
+    font-size: 11px;
+  }
+
+  .btn-action-group {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .btn-admin-action {
+    width: 100%;
+    text-align: center;
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  /* Modals on Mobile */
+  .modal-sheet {
+    padding: 16px 12px 28px 12px;
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+  }
+
+  .form-row {
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  .form-label {
+    font-size: 11.5px;
+    margin-bottom: 4px;
+  }
+
+  .form-input, .form-select {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
+/* Extra Small Phones (max-width: 480px) */
+@media (max-width: 480px) {
+  .admin-topbar {
+    padding: 8px 10px;
+  }
+
+  .admin-topbar-left {
+    gap: 8px;
+  }
+
+  .admin-hamburger-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .admin-brand-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .admin-brand-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .admin-topbar-title {
+    font-size: 13px;
+  }
+
+  .admin-topbar-subtitle {
+    font-size: 10px;
+  }
+
+  .admin-logout-btn {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  .admin-logout-btn span {
+    display: none;
+  }
+
+  .admin-sidebar {
+    width: 275px;
+    max-width: 84vw;
+  }
+
+  .sidebar-group-title {
+    padding: 10px 10px 4px 10px;
+  }
+
+  .admin-nav-btn {
+    padding: 9px 10px;
+    font-size: 12px;
+    gap: 8px;
+  }
+}
+
+/* Micro Screens (max-width: 360px) */
+@media (max-width: 360px) {
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-topbar-title {
+    font-size: 12px;
+  }
+}
+
