@@ -23,6 +23,11 @@ const defaultDB = {
     },
     profitCycleDurationHours: 24, // Real 24-hour cycle
     autoProfitIntervalSeconds: 86400, // 24 hours in seconds
+    weekendProfit: {
+      enabled: true, // Default: Aktif 7 hari (bisa disetel libur di admin)
+      offMessage: 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.'
+    },
+    weekendProfitEnabled: true,
     sponsorBonusPercent: 10, // 10% direct sponsor bonus
     rabatLevels: [
       { level: 1, percent: 5.0 },
@@ -862,6 +867,15 @@ export const DB = {
         }
         if (!parsed.settings.withdrawSchedule) {
           parsed.settings.withdrawSchedule = defaultDB.settings.withdrawSchedule;
+        }
+        if (!parsed.settings.weekendProfit) {
+          parsed.settings.weekendProfit = defaultDB.settings.weekendProfit || {
+            enabled: true,
+            offMessage: 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.'
+          };
+        }
+        if (parsed.settings.weekendProfitEnabled === undefined) {
+          parsed.settings.weekendProfitEnabled = parsed.settings.weekendProfit.enabled !== undefined ? parsed.settings.weekendProfit.enabled : true;
         }
       }
       if (!parsed.testimonials || !Array.isArray(parsed.testimonials) || parsed.testimonials.length === 0) {

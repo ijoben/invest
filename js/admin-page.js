@@ -49,8 +49,9 @@ export const AdminPage = {
     // 3. Withdraw Table
     this.renderWithdrawals(db);
 
-    // 4. Plans Table
+    // 4. Plans Table & Weekend Profit Settings
     this.renderPlans(db);
+    this.renderWeekendProfitSettings(db);
 
     // 5. Affiliate Config Values
     this.renderAffiliateSettings(db);
@@ -158,6 +159,91 @@ export const AdminPage = {
         </td>
       </tr>
     `).join('');
+  },
+
+  // 4.1 Weekend Profit Settings (Sabtu & Minggu)
+  renderWeekendProfitSettings(db) {
+    const cfg = (db && db.settings && db.settings.weekendProfit) || {
+      enabled: (db && db.settings && db.settings.weekendProfitEnabled !== undefined) ? db.settings.weekendProfitEnabled : true,
+      offMessage: 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.'
+    };
+
+    const isEnabled = cfg.enabled !== false;
+    const selectEl = document.getElementById('weekendProfitCfgSelect');
+    const msgEl = document.getElementById('weekendProfitOffMessage');
+    const badgeEl = document.getElementById('weekendProfitStatusBadge');
+
+    if (selectEl) selectEl.value = String(isEnabled);
+    if (msgEl) msgEl.value = cfg.offMessage || 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.';
+
+    if (badgeEl) {
+      if (isEnabled) {
+        badgeEl.textContent = '🟢 7 Hari Penuh Aktif';
+        badgeEl.className = 'badge-status approved';
+        badgeEl.style.background = 'rgba(34, 197, 94, 0.15)';
+        badgeEl.style.color = '#22C55E';
+        badgeEl.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+      } else {
+        badgeEl.textContent = '🔴 Libur Sabtu & Minggu';
+        badgeEl.className = 'badge-status rejected';
+        badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+        badgeEl.style.color = '#EF4444';
+        badgeEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      }
+    }
+  },
+
+  previewWeekendProfitSettings() {
+    const selectEl = document.getElementById('weekendProfitCfgSelect');
+    const badgeEl = document.getElementById('weekendProfitStatusBadge');
+    if (!selectEl || !badgeEl) return;
+
+    const isEnabled = selectEl.value === 'true';
+    if (isEnabled) {
+      badgeEl.textContent = '🟢 7 Hari Penuh Aktif';
+      badgeEl.className = 'badge-status approved';
+      badgeEl.style.background = 'rgba(34, 197, 94, 0.15)';
+      badgeEl.style.color = '#22C55E';
+      badgeEl.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+    } else {
+      badgeEl.textContent = '🔴 Libur Sabtu & Minggu';
+      badgeEl.className = 'badge-status rejected';
+      badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+      badgeEl.style.color = '#EF4444';
+      badgeEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+    }
+  },
+
+  saveWeekendProfitSettings() {
+    const selectEl = document.getElementById('weekendProfitCfgSelect');
+    const msgEl = document.getElementById('weekendProfitOffMessage');
+    if (!selectEl) return;
+
+    const enabled = selectEl.value === 'true';
+    const offMessage = msgEl ? msgEl.value : '';
+
+    const res = Admin.saveWeekendProfitSettings({ enabled, offMessage });
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderWeekendProfitSettings(DB.get());
+    } else {
+      this.showToast(res.message || 'Gagal menyimpan pengaturan', 'error');
+    }
+  },
+
+  testWeekendProfitDistribution() {
+    const status = Plans.isWeekendMarketClosed();
+    const d = new Date();
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const currentDayName = days[d.getDay()];
+
+    if (status.closed) {
+      alert(`ℹ️ Status Hari Ini (${currentDayName}):\nPASAR LIBUR AKHIR PEKAN\nPengaturan Profit Sabtu & Minggu saat ini NONAKTIF (LIBUR).\n\nPesan untuk member:\n"${status.message}"`);
+    } else if (status.isWeekend && status.weekendEnabled) {
+      alert(`ℹ️ Status Hari Ini (${currentDayName}):\nPROFIT AKHIR PEKAN AKTIF\nHari ini akhir pekan tetapi profit disetel AKTIF (7 Hari Penuh).\nDividen trading tetap dibagikan secara normal.`);
+    } else {
+      alert(`ℹ️ Status Hari Ini (${currentDayName}):\nHARI KERJA AKTIF\nPasar beroperasi normal. Dividen profit dibagikan seperti biasa.`);
+    }
   },
 
   // 5. Affiliate Config
@@ -624,9 +710,19 @@ export const AdminPage = {
   },
 
   triggerDailyProfit() {
-    const res = Admin.triggerProfitYield();
+    const marketStatus = Plans.isWeekendMarketClosed();
+    let force = false;
+    if (marketStatus.closed) {
+      const confirmForce = confirm(`⚠️ PERINGATAN LIBUR AKHIR PEKAN:\nHari ini adalah akhir pekan (${marketStatus.dayName}) dan Pengaturan Profit Akhir Pekan sedang berstatus LIBUR (Nonaktif).\n\nApakah Anda tetap ingin MEMAKSA (Force Trigger) pembagian dividen profit hari ini?`);
+      if (!confirmForce) return;
+      force = true;
+    }
+
+    const res = Admin.triggerProfitYield(force);
     if (res.updatedCount > 0) {
       this.showToast(`Sukses mendistribusikan dividen profit ke ${res.updatedCount} paket investasi aktif (Total: ${DB.formatIDR(res.totalYielded)})!`, 'success');
+    } else if (res.isWeekendClosed) {
+      this.showToast(res.message || 'Pasar libur akhir pekan (Sabtu & Minggu).', 'info');
     } else {
       this.showToast('Tidak ada paket aktif yang siap menerima dividen baru saat ini (semua paket sudah menerima dividen hari ini atau telah selesai).', 'info');
     }

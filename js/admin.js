@@ -388,6 +388,35 @@ export const Admin = {
     return { success: true, message: 'Jadwal dan status jam operasional WD berhasil disimpan!' };
   },
 
+  // Get Weekend Profit Settings
+  getWeekendProfitSettings() {
+    const db = DB.get();
+    return db.settings.weekendProfit || {
+      enabled: db.settings.weekendProfitEnabled !== undefined ? db.settings.weekendProfitEnabled : true,
+      offMessage: 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.'
+    };
+  },
+
+  // Save Weekend Profit Settings (Sabtu & Minggu)
+  saveWeekendProfitSettings({ enabled, offMessage }) {
+    const db = DB.get();
+    const isEnabled = enabled === true || enabled === 'true' || enabled === 1;
+    const message = offMessage ? offMessage.trim() : 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.';
+
+    db.settings.weekendProfit = {
+      enabled: isEnabled,
+      offMessage: message
+    };
+    db.settings.weekendProfitEnabled = isEnabled;
+
+    DB.save(db);
+    return {
+      success: true,
+      enabled: isEnabled,
+      message: `Pengaturan profit Sabtu & Minggu berhasil disimpan! Status: ${isEnabled ? 'AKTIF (7 Hari Penuh)' : 'LIBUR (Senin-Jumat Saja)'}.`
+    };
+  },
+
   // Delete Signal
   deleteSignal(signalId) {
     const db = DB.get();
@@ -397,7 +426,7 @@ export const Admin = {
   },
 
   // Trigger Daily Profit Yield manually from Admin
-  triggerProfitYield() {
-    return Plans.yieldDailyProfits();
+  triggerProfitYield(force = false) {
+    return Plans.yieldDailyProfits(force);
   }
 };

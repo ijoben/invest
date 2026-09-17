@@ -349,6 +349,34 @@ const App = {
         claimBtn.removeAttribute('disabled');
       }
     } else {
+      const marketStatus = Plans.isWeekendMarketClosed();
+      if (marketStatus.closed) {
+        if (statusTitleEl) statusTitleEl.textContent = 'Status Pasar:';
+        if (timerValEl) {
+          timerValEl.textContent = `PASAR LIBUR (${marketStatus.dayName.toUpperCase()})`;
+          timerValEl.style.color = '#EF4444';
+        }
+        if (percentBadgeEl) {
+          percentBadgeEl.textContent = 'LIBUR';
+          percentBadgeEl.style.background = '#EF4444';
+          percentBadgeEl.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.4)';
+        }
+        if (progressBarEl) {
+          progressBarEl.style.width = '100%';
+          progressBarEl.style.background = '#334155';
+          progressBarEl.style.boxShadow = 'none';
+        }
+        if (footerHintEl) footerHintEl.textContent = marketStatus.message || 'Pasar libur akhir pekan (Sabtu & Minggu). Dividen profit aktif kembali hari Senin.';
+        if (nextYieldEl) nextYieldEl.textContent = 'Buka Senin';
+
+        if (claimBtn) {
+          claimBtn.innerHTML = `<span>Pasar Libur Akhir Pekan (Sabtu & Minggu)</span>`;
+          claimBtn.style.opacity = '0.7';
+          claimBtn.setAttribute('disabled', 'true');
+        }
+        return;
+      }
+
       // Countdown State in 24-Hour Cycle
       const cycleDurationMs = 24 * 3600 * 1000;
       

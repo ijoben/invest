@@ -266,6 +266,50 @@
          4. PANEL PLANS CONFIGURATION
          ==================================================================== -->
     <section id="pane-plans" class="admin-view-panel">
+      <!-- Card 1: Pengaturan Profit Dividen Akhir Pekan (Sabtu & Minggu) -->
+      <div class="admin-card" style="margin-bottom: 24px; border-left: 4px solid #C89338;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📅 Pengaturan Profit Dividen Akhir Pekan (Sabtu & Minggu)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Tentukan apakah pembagian profit dividen harian otomatis berjalan 7 hari penuh (termasuk Sabtu & Minggu) atau libur di akhir pekan (Senin s/d Jumat).</p>
+          </div>
+          <span class="badge-status approved" id="weekendProfitStatusBadge" style="font-size: 12px; padding: 6px 14px;">🟢 7 Hari Penuh Aktif</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Profit Hari Sabtu & Minggu (Weekend Profit Toggle)</div>
+            <div class="setting-desc">Pilih <strong>AKTIF</strong> untuk sistem 7 hari non-stop, atau <strong>LIBUR</strong> jika ingin profit berhenti berputar pada hari Sabtu & Minggu (seperti pasar forex/saham reguler).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <select class="admin-input" id="weekendProfitCfgSelect" onchange="AdminPage.previewWeekendProfitSettings()">
+              <option value="true">🟢 AKTIF (7 Hari Penuh Termasuk Sabtu & Minggu)</option>
+              <option value="false">🔴 LIBUR (Pasar Tutup Sabtu & Minggu - Profit Libur)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Pesan Notifikasi Libur Akhir Pekan (Tampil di Pengguna)</div>
+            <div class="setting-desc">Pesan informasi yang akan ditampilkan pada dashboard & countdown profit pengguna saat pasar libur di hari Sabtu & Minggu.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 100%; max-width: 520px;">
+            <input type="text" class="admin-input" id="weekendProfitOffMessage" value="Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.">
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.saveWeekendProfitSettings()">
+            <span>💾 Simpan Pengaturan Profit Sabtu & Minggu</span>
+          </button>
+          <button class="btn-admin-action" style="padding: 10px 16px; border: 1px solid #334155; background: #1E293B; color: #F1F5F9; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="AdminPage.testWeekendProfitDistribution()">
+            <span>⚡ Uji Coba Cek Status Hari Ini</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 2: Daftar Paket Investasi & Rentang Profit Acak -->
       <div class="admin-card">
         <div class="admin-card-header">
           <h3 class="admin-card-title">Daftar Paket Investasi & Rentang Profit Acak</h3>

@@ -20,6 +20,43 @@ export const Plans = {
     return db.plans.find(p => p.id === planId) || null;
   },
 
+  // Check if a given date (or today) is weekend (Saturday = 6, Sunday = 0)
+  isWeekend(date) {
+    const d = date ? new Date(date) : new Date();
+    const day = d.getDay();
+    return day === 0 || day === 6;
+  },
+
+  // Check if market/profit is currently closed due to weekend settings
+  isWeekendMarketClosed(date) {
+    const db = DB.get();
+    const d = date ? new Date(date) : new Date();
+    const day = d.getDay();
+    const isWknd = (day === 0 || day === 6);
+
+    let weekendEnabled = true;
+    if (db.settings) {
+      if (db.settings.weekendProfit && typeof db.settings.weekendProfit.enabled === 'boolean') {
+        weekendEnabled = db.settings.weekendProfit.enabled;
+      } else if (typeof db.settings.weekendProfitEnabled === 'boolean') {
+        weekendEnabled = db.settings.weekendProfitEnabled;
+      }
+    }
+
+    const closed = isWknd && !weekendEnabled;
+    const dayName = day === 0 ? 'Minggu' : (day === 6 ? 'Sabtu' : 'Hari Kerja');
+    const message = (db.settings && db.settings.weekendProfit && db.settings.weekendProfit.offMessage)
+      || 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.';
+
+    return {
+      closed,
+      isWeekend: isWknd,
+      weekendEnabled,
+      dayName,
+      message
+    };
+  },
+
   // Synchronize user investments with real timestamps (auto-settles completed cycles)
   syncUserInvestments(userId) {
     if (!userId) return [];
@@ -33,6 +70,7 @@ export const Plans = {
 
     db.investments = db.investments || [];
     const userInvs = db.investments.filter(inv => inv.userId === userId && inv.status === 'active');
+    const marketStatus = this.isWeekendMarketClosed();
 
     userInvs.forEach(inv => {
       // 1. Check if investment duration has expired
@@ -58,7 +96,12 @@ export const Plans = {
         return;
       }
 
-      // 2. Check if a real 24-hour cycle has passed and no profit is pending claim
+      // 2. If market is closed on weekend, skip generating new profit claim
+      if (marketStatus.closed) {
+        return;
+      }
+
+      // 3. Check if a real 24-hour cycle has passed and no profit is pending claim
       const lastYieldTime = new Date(inv.lastProfitYieldDate || inv.startDate || now).getTime();
       const elapsedMs = now - lastYieldTime;
 
@@ -109,6 +152,7 @@ export const Plans = {
     const userInvs = this.getUserInvestments(userId);
     if (!userInvs || userInvs.length === 0) return 0;
 
+    const marketStatus = this.isWeekendMarketClosed();
     let totalCapital = 0;
     let totalWeightedRate = 0;
     const todayStr = new Date().toLocaleDateString('id-ID');
@@ -120,6 +164,8 @@ export const Plans = {
       let rate = 0;
       if (todayHistory) {
         rate = todayHistory.rate;
+      } else if (marketStatus.closed) {
+        rate = 0; // Market is closed today
       } else {
         // Average active range or base daily rate
         rate = (inv.minRate + inv.maxRate) / 2;
@@ -217,8 +263,20 @@ export const Plans = {
   },
 
   // Trigger Daily Profit Yield (Manual / Scheduled admin maintenance cycle)
-  yieldDailyProfits() {
+  yieldDailyProfits(force = false) {
     const db = DB.get();
+    const marketStatus = this.isWeekendMarketClosed();
+
+    if (!force && marketStatus.closed) {
+      return {
+        success: false,
+        isWeekendClosed: true,
+        updatedCount: 0,
+        totalYielded: 0,
+        message: `Distribusi profit dilewati: Hari ini akhir pekan (${marketStatus.dayName}) dan pengaturan Profit Akhir Pekan sedang LIBUR (Nonaktif).`
+      };
+    }
+
     let totalYielded = 0;
     let updatedCount = 0;
 

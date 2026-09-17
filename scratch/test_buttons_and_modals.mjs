@@ -228,6 +228,45 @@ const depQrisTest = Payment.createDepositRequest({
 });
 assert(depQrisTest.success && depQrisTest.transaction.paymentMethod.includes('QRIS Instant'), 'Deposit with QRIS created successfully');
 
+// 9. Test Weekend Profit Settings Toggle & Market Status Engine
+const initialWeekendSetting = Admin.getWeekendProfitSettings();
+assert(typeof initialWeekendSetting.enabled === 'boolean', 'Admin.getWeekendProfitSettings returns valid config');
+
+// Test Saturday (2026-09-19) and Sunday (2026-09-20) and Monday (2026-09-21)
+const saturdayDate = new Date('2026-09-19T10:00:00.000Z');
+const sundayDate = new Date('2026-09-20T10:00:00.000Z');
+const mondayDate = new Date('2026-09-21T10:00:00.000Z');
+
+assert(Plans.isWeekend(saturdayDate) === true, 'Plans.isWeekend identifies Saturday correctly');
+assert(Plans.isWeekend(sundayDate) === true, 'Plans.isWeekend identifies Sunday correctly');
+assert(Plans.isWeekend(mondayDate) === false, 'Plans.isWeekend identifies Monday correctly');
+
+// Set Weekend Profit to DISABLED (LIBUR SABTU-MINGGU)
+const saveWeekendOffRes = Admin.saveWeekendProfitSettings({
+  enabled: false,
+  offMessage: 'Pasar libur akhir pekan.'
+});
+assert(saveWeekendOffRes.success && saveWeekendOffRes.enabled === false, 'Admin.saveWeekendProfitSettings disabled weekend profit');
+assert(DB.get().settings.weekendProfit.enabled === false, 'Weekend profit disabled state persisted');
+
+// When disabled, Saturday/Sunday market is closed
+const satStatus = Plans.isWeekendMarketClosed(saturdayDate);
+assert(satStatus.closed === true && satStatus.dayName === 'Sabtu', 'Saturday market is closed when weekend profit is disabled');
+
+const monStatus = Plans.isWeekendMarketClosed(mondayDate);
+assert(monStatus.closed === false, 'Monday market is open even when weekend profit is disabled');
+
+// Set Weekend Profit to ENABLED (AKTIF 7 HARI)
+const saveWeekendOnRes = Admin.saveWeekendProfitSettings({
+  enabled: true,
+  offMessage: 'Pasar libur akhir pekan.'
+});
+assert(saveWeekendOnRes.success && saveWeekendOnRes.enabled === true, 'Admin.saveWeekendProfitSettings enabled weekend profit');
+assert(DB.get().settings.weekendProfit.enabled === true, 'Weekend profit enabled state persisted');
+
+const satStatusWhenEnabled = Plans.isWeekendMarketClosed(saturdayDate);
+assert(satStatusWhenEnabled.closed === false, 'Saturday market is open when weekend profit is enabled');
+
 console.log('====================================================');
 console.log('🎉 ALL BUTTONS, HANDLERS, & API METHODS VERIFIED 100%');
 console.log('====================================================');
