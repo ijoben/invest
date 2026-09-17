@@ -353,9 +353,116 @@
          6. PANEL PAYMENT GATEWAYS & RATES
          ==================================================================== -->
     <section id="pane-gateways" class="admin-view-panel">
+      
+      <!-- Card 1: Daftar Rekening Bank Lokal untuk Deposit -->
       <div class="admin-card">
         <div class="admin-card-header">
-          <h3 class="admin-card-title">Pengaturan Rekening Bank, QRIS & USDT</h3>
+          <div>
+            <h3 class="admin-card-title">🏦 Daftar Rekening Bank Deposit (Transfer Bank Lokal)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Kelola rekening bank tujuan transfer deposit member. Rekening aktif akan langsung tampil di formulir deposit frontend.</p>
+          </div>
+          <button class="admin-btn-action-primary" onclick="AdminPage.openAddBankModal()">
+            <span>+ Tambah Rekening Bank</span>
+          </button>
+        </div>
+
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nama Bank</th>
+                <th>Nomor Rekening</th>
+                <th>Atas Nama (Pemilik)</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminBanksTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Card 2: Pengaturan QRIS Instant (Semua Bank & E-Wallet) -->
+      <div class="admin-card" style="margin-top: 24px;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📱 Pengaturan QRIS Deposit Instant</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Atur barcode QRIS dinamis/statis yang mendukung scan pembayaran otomatis dari semua Bank & E-Wallet.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 240px; gap: 24px; align-items: start;">
+          <div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-title">Status Saluran QRIS</div>
+                <div class="setting-desc">Aktifkan atau nonaktifkan saluran pembayaran QRIS di formulir deposit member</div>
+              </div>
+              <div class="setting-input-wrap" style="width: 200px;">
+                <select class="admin-input" id="qrisCfgActive" onchange="AdminPage.previewQrisSettings()">
+                  <option value="true">🟢 AKTIF (Tampil di Frontend)</option>
+                  <option value="false">🔴 NONAKTIF (Sembunyikan)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-title">Nama Merchant QRIS</div>
+                <div class="setting-desc">Nama bisnis/merchant yang tertera saat member melakukan scan QRIS</div>
+              </div>
+              <div class="setting-input-wrap" style="width: 260px;">
+                <input type="text" class="admin-input" id="qrisCfgMerchant" value="FGT PRO OFFICIAL QRIS" oninput="AdminPage.previewQrisSettings()">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-title">Nomor NMID QRIS</div>
+                <div class="setting-desc">Nomor identifikasi National Merchant ID resmi dari ASPI / Bank Indonesia</div>
+              </div>
+              <div class="setting-input-wrap" style="width: 260px;">
+                <input type="text" class="admin-input" id="qrisCfgNmid" value="ID1029384756201" oninput="AdminPage.previewQrisSettings()">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-title">Upload Barcode QRIS / URL Gambar</div>
+                <div class="setting-desc">Pilih file gambar barcode dari galeri/PC atau tempelkan URL gambar QR</div>
+              </div>
+              <div class="setting-input-wrap" style="width: 260px;">
+                <input type="file" id="qrisCfgFileInput" accept="image/*" class="admin-input" style="padding: 5px; font-size: 11px; margin-bottom: 6px;">
+                <input type="url" class="admin-input" id="qrisCfgImageUrl" placeholder="https://..." oninput="AdminPage.previewQrisSettings()">
+              </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+              <button class="admin-btn-action-primary" onclick="AdminPage.saveQrisSettings()">
+                <span>💾 Simpan Pengaturan QRIS</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- QRIS Live Preview Box -->
+          <div style="background: #0B0F19; border: 1px solid #1E293B; border-radius: 14px; padding: 16px; text-align: center;">
+            <div style="font-size: 11px; font-weight: 700; color: #C89338; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Pratinjau QRIS Member</div>
+            <div style="background: #FFFFFF; border-radius: 10px; padding: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 8px;">
+              <img id="qrisAdminPreviewImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=FGT_PRO_OFFICIAL_QRIS_DEPOSIT" alt="QRIS Preview" style="width: 150px; height: 150px; object-fit: contain; display: block;">
+            </div>
+            <div id="qrisAdminPreviewMerchant" style="font-size: 12px; font-weight: 800; color: #F8FAFC;">FGT PRO OFFICIAL QRIS</div>
+            <div id="qrisAdminPreviewNmid" style="font-size: 10.5px; color: #94A3B8; font-family: var(--font-mono, monospace); margin-top: 2px;">NMID: ID1029384756201</div>
+            <div style="font-size: 9.5px; color: #64748B; margin-top: 6px;">BCA, Mandiri, BRI, DANA, OVO, GoPay, ShopeePay</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Pengaturan Crypto USDT TRC20 & Kurs -->
+      <div class="admin-card" style="margin-top: 24px;">
+        <div class="admin-card-header">
+          <h3 class="admin-card-title">💎 Pengaturan Crypto USDT TRC20 & Kurs</h3>
         </div>
 
         <div class="setting-row">
@@ -390,7 +497,7 @@
 
         <div style="margin-top: 16px;">
           <button class="admin-btn-action-primary" onclick="AdminPage.saveGatewaySettings()">
-            <span>💾 Simpan Pengaturan Gateway</span>
+            <span>💾 Simpan Pengaturan Kurs & USDT</span>
           </button>
         </div>
       </div>
@@ -1094,6 +1201,46 @@
 
       <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 6px;" onclick="AdminPage.saveTestimonialModal()">
         <span>💾 Simpan & Publikasikan Testimoni</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Add / Edit Rekening Bank Lokal -->
+  <div class="modal-backdrop" id="adminBankModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title" id="adminBankModalTitle">Tambah Rekening Bank</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <input type="hidden" id="bankModalId">
+
+      <div class="form-group">
+        <label class="form-label">Nama Bank: <span style="color: #EF4444;">*</span></label>
+        <input type="text" class="form-input" id="bankModalName" placeholder="Contoh: Bank Central Asia (BCA) / Bank Mandiri / Bank BRI">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor Rekening: <span style="color: #EF4444;">*</span></label>
+        <input type="text" class="form-input" id="bankModalAccountNo" placeholder="Contoh: 8271928374" style="font-family: var(--font-mono, monospace);">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Atas Nama (Pemilik Rekening): <span style="color: #EF4444;">*</span></label>
+        <input type="text" class="form-input" id="bankModalAccountName" placeholder="Contoh: PT FGT PRO INVESTASI">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status Rekening:</label>
+        <select class="form-select" id="bankModalActive">
+          <option value="true">🟢 Aktif (Tampil di Opsi Deposit Member)</option>
+          <option value="false">🔴 Nonaktif (Sembunyikan Sementara)</option>
+        </select>
+      </div>
+
+      <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 6px;" onclick="AdminPage.saveBankModal()">
+        <span>💾 Simpan Rekening Bank</span>
       </button>
     </div>
   </div>

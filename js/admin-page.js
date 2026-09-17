@@ -174,8 +174,91 @@ export const AdminPage = {
     if (r3) document.getElementById('affCfgL3').value = r3.percent;
   },
 
-  // 6. Gateway Config
+  // 6. Gateway, Bank & QRIS Config
+  renderBanks(db) {
+    const tbody = document.getElementById('adminBanksTableBody');
+    if (!tbody) return;
+
+    const banks = (db.settings.paymentGateways && db.settings.paymentGateways.banks) || [];
+    if (banks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#94A3B8;">Belum ada rekening bank yang terdaftar. Klik "+ Tambah Rekening Bank" untuk menambahkan.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = banks.map(b => {
+      const isActive = b.active !== false;
+      return `
+        <tr>
+          <td><strong style="color: #F8FAFC;">${b.name}</strong></td>
+          <td><span style="font-family: var(--font-mono, monospace); font-weight: 700; color: #38BDF8;">${b.accountNo}</span></td>
+          <td>${b.accountName}</td>
+          <td>
+            <span class="badge-status ${isActive ? 'approved' : 'rejected'}" style="cursor: pointer;" onclick="AdminPage.toggleBankStatus('${b.id}')" title="Klik untuk ubah status">
+              ${isActive ? '🟢 Aktif' : '🔴 Nonaktif'}
+            </span>
+          </td>
+          <td>
+            <div class="btn-action-group">
+              <button class="btn-admin-action edit" onclick="AdminPage.openEditBankModal('${b.id}')" title="Edit Data Bank">Edit</button>
+              <button class="btn-admin-action ${isActive ? 'reject' : 'approve'}" onclick="AdminPage.toggleBankStatus('${b.id}')" title="Ubah Status Aktif/Nonaktif">
+                ${isActive ? 'Nonaktifkan' : 'Aktifkan'}
+              </button>
+              <button class="btn-admin-action delete" onclick="AdminPage.deleteBankAccount('${b.id}')" title="Hapus Rekening Bank">Hapus</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  renderQrisSettings(db) {
+    const qris = (db.settings.paymentGateways && db.settings.paymentGateways.qris) || {
+      active: true,
+      merchantName: 'FGT PRO OFFICIAL QRIS',
+      nmid: 'ID1029384756201',
+      imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=FGT_PRO_OFFICIAL_QRIS_DEPOSIT'
+    };
+
+    const activeEl = document.getElementById('qrisCfgActive');
+    const merchantEl = document.getElementById('qrisCfgMerchant');
+    const nmidEl = document.getElementById('qrisCfgNmid');
+    const imgUrlEl = document.getElementById('qrisCfgImageUrl');
+
+    if (activeEl) activeEl.value = String(qris.active !== false);
+    if (merchantEl) merchantEl.value = qris.merchantName || 'FGT PRO OFFICIAL QRIS';
+    if (nmidEl) nmidEl.value = qris.nmid || '';
+    if (imgUrlEl) imgUrlEl.value = qris.imageUrl || '';
+
+    this.previewQrisSettings();
+  },
+
+  previewQrisSettings() {
+    const activeEl = document.getElementById('qrisCfgActive');
+    const merchantEl = document.getElementById('qrisCfgMerchant');
+    const nmidEl = document.getElementById('qrisCfgNmid');
+    const imgUrlEl = document.getElementById('qrisCfgImageUrl');
+
+    const previewImg = document.getElementById('qrisAdminPreviewImg');
+    const previewMerchant = document.getElementById('qrisAdminPreviewMerchant');
+    const previewNmid = document.getElementById('qrisAdminPreviewNmid');
+
+    const merchantVal = merchantEl ? merchantEl.value.trim() : 'FGT PRO OFFICIAL QRIS';
+    const nmidVal = nmidEl ? nmidEl.value.trim() : 'ID1029384756201';
+    let imgVal = imgUrlEl ? imgUrlEl.value.trim() : '';
+
+    if (!imgVal) {
+      imgVal = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(merchantVal || 'QRIS')}`;
+    }
+
+    if (previewImg) previewImg.src = imgVal;
+    if (previewMerchant) previewMerchant.textContent = merchantVal || 'FGT PRO OFFICIAL QRIS';
+    if (previewNmid) previewNmid.textContent = nmidVal ? `NMID: ${nmidVal}` : 'NMID: -';
+  },
+
   renderGatewaySettings(db) {
+    this.renderBanks(db);
+    this.renderQrisSettings(db);
+
     const cfg = db.settings;
     document.getElementById('gwCfgUsdRate').value = cfg.usdIdrRate || 16250;
     document.getElementById('gwCfgWdFee').value = cfg.withdrawFeePercent || 1.0;
@@ -622,6 +705,115 @@ export const AdminPage = {
     DB.save(db);
     this.showToast('Pengaturan gateway pembayaran & kurs berhasil disimpan!', 'success');
     this.renderAll();
+  },
+
+  // Bank Management Handlers
+  openAddBankModal() {
+    document.getElementById('adminBankModalTitle').textContent = 'Tambah Rekening Bank Baru';
+    document.getElementById('bankModalId').value = '';
+    document.getElementById('bankModalName').value = '';
+    document.getElementById('bankModalAccountNo').value = '';
+    document.getElementById('bankModalAccountName').value = '';
+    document.getElementById('bankModalActive').value = 'true';
+    this.openModal('adminBankModal');
+  },
+
+  openEditBankModal(bankId) {
+    const banks = Admin.getBanks();
+    const bank = banks.find(b => b.id === bankId);
+    if (!bank) return;
+
+    document.getElementById('adminBankModalTitle').textContent = `Edit Rekening ${bank.name}`;
+    document.getElementById('bankModalId').value = bank.id;
+    document.getElementById('bankModalName').value = bank.name;
+    document.getElementById('bankModalAccountNo').value = bank.accountNo;
+    document.getElementById('bankModalAccountName').value = bank.accountName;
+    document.getElementById('bankModalActive').value = String(bank.active !== false);
+    this.openModal('adminBankModal');
+  },
+
+  saveBankModal() {
+    const id = document.getElementById('bankModalId').value.trim();
+    const name = document.getElementById('bankModalName').value.trim();
+    const accountNo = document.getElementById('bankModalAccountNo').value.trim();
+    const accountName = document.getElementById('bankModalAccountName').value.trim();
+    const active = document.getElementById('bankModalActive').value === 'true';
+
+    if (!name) {
+      this.showToast('Nama Bank wajib diisi!', 'error');
+      return;
+    }
+    if (!accountNo) {
+      this.showToast('Nomor Rekening wajib diisi!', 'error');
+      return;
+    }
+    if (!accountName) {
+      this.showToast('Atas Nama (Pemilik Rekening) wajib diisi!', 'error');
+      return;
+    }
+
+    const res = Admin.saveBank({
+      id: id || undefined,
+      name,
+      accountNo,
+      accountName,
+      active
+    });
+
+    if (res.success) {
+      this.closeModal('adminBankModal');
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  deleteBankAccount(bankId) {
+    const banks = Admin.getBanks();
+    const bank = banks.find(b => b.id === bankId);
+    const bankName = bank ? bank.name : 'rekening ini';
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus rekening ${bankName}?`)) return;
+
+    const res = Admin.deleteBank(bankId);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  toggleBankStatus(bankId) {
+    const res = Admin.toggleBankStatus(bankId);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  saveQrisSettings() {
+    const active = document.getElementById('qrisCfgActive').value === 'true';
+    const merchantName = document.getElementById('qrisCfgMerchant').value.trim();
+    const nmid = document.getElementById('qrisCfgNmid').value.trim();
+    const imageUrl = document.getElementById('qrisCfgImageUrl').value.trim();
+
+    const res = Admin.saveQrisSettings({
+      active,
+      merchantName,
+      nmid,
+      imageUrl
+    });
+
+    if (res.success) {
+      this.showToast('Pengaturan QRIS berhasil disimpan!', 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
   },
 
   saveWithdrawScheduleSettings() {
@@ -1604,6 +1796,28 @@ export const AdminPage = {
             }
           }
         }
+      });
+    }
+
+    // QRIS File Input Upload Listener (FileReader base64 converter)
+    const qrisFileInput = document.getElementById('qrisCfgFileInput');
+    if (qrisFileInput) {
+      qrisFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          this.showToast('Harap pilih file gambar barcode QRIS (JPG, PNG, WEBP, dll)!', 'error');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const imgUrlEl = document.getElementById('qrisCfgImageUrl');
+          if (imgUrlEl) imgUrlEl.value = event.target.result;
+          this.previewQrisSettings();
+        };
+        reader.readAsDataURL(file);
       });
     }
   }

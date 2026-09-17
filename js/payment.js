@@ -34,13 +34,22 @@ export const Payment = {
       }
     }
 
+    let bankDisplay = '';
+    if (method === 'bank' && bankId && db.settings.paymentGateways && db.settings.paymentGateways.banks) {
+      const bankObj = db.settings.paymentGateways.banks.find(b => b.id === bankId);
+      bankDisplay = bankObj ? ` (${bankObj.name})` : ` (${bankId.toUpperCase()})`;
+    } else if (method === 'qris') {
+      const qrisObj = db.settings.paymentGateways && db.settings.paymentGateways.qris;
+      bankDisplay = qrisObj && qrisObj.merchantName ? ` (${qrisObj.merchantName})` : '';
+    }
+
     const transactionId = 'TRX-DEP-' + Math.floor(100000 + Math.random() * 900000);
     const newTrx = {
       id: transactionId,
       userId: user.id,
       username: user.username,
       type: 'deposit',
-      paymentMethod: method.toUpperCase() + (bankId ? ` (${bankId.toUpperCase()})` : ''),
+      paymentMethod: (method === 'qris' ? 'QRIS Instant' : (method === 'usdt' ? 'USDT TRC20' : 'Bank Transfer')) + bankDisplay,
       amount: finalAmount,
       amountUsdt: amountUsdt ? Number(amountUsdt) : null,
       uniqueCode: uniqueCode,

@@ -164,6 +164,70 @@ const learnInvs = allUserInvs.filter(i => i.planId === 'plan-learn');
 const learnProfit = learnInvs.reduce((sum, inv) => sum + (inv.totalProfitEarned || 0) + (inv.pendingProfitClaim || 0), 0);
 assert(learnProfit === 0, `Plan card unpurchased Learn profit correctly calculated: ${DB.formatIDR(learnProfit)}`);
 
+// 8. Test Local Bank & QRIS Admin Management
+const initialBanks = Admin.getBanks();
+assert(initialBanks.length >= 3, 'Admin.getBanks returns initial default bank accounts');
+
+// Add new bank account (e.g. Bank BNI)
+const addBankRes = Admin.saveBank({
+  name: 'Bank BNI (Bank Negara Indonesia)',
+  accountNo: '0987654321',
+  accountName: 'PT FGT PRO INVESTASI',
+  active: true
+});
+assert(addBankRes.success, 'Admin.saveBank successfully added new BNI bank account');
+
+const banksAfterAdd = Admin.getBanks();
+const addedBni = banksAfterAdd.find(b => b.accountNo === '0987654321');
+assert(addedBni && addedBni.name.includes('BNI'), 'Added BNI bank verified in database');
+
+// Edit bank account
+const editBankRes = Admin.saveBank({
+  id: addedBni.id,
+  name: 'Bank BNI Syariah Platinum',
+  accountNo: '0987654321',
+  accountName: 'PT FGT PRO INVESTASI VIP',
+  active: true
+});
+assert(editBankRes.success, 'Admin.saveBank successfully updated BNI bank');
+
+// Toggle Bank Status
+const toggleRes = Admin.toggleBankStatus(addedBni.id);
+assert(toggleRes.success && toggleRes.active === false, 'Admin.toggleBankStatus successfully deactivated bank');
+
+// Delete Bank Account
+const deleteBankRes = Admin.deleteBank(addedBni.id);
+assert(deleteBankRes.success, 'Admin.deleteBank successfully removed test bank');
+assert(!Admin.getBanks().some(b => b.id === addedBni.id), 'Deleted bank is no longer in database');
+
+// Test QRIS Settings Update
+const saveQrisRes = Admin.saveQrisSettings({
+  active: true,
+  merchantName: 'FGT PRO OFFICIAL ASPI QRIS',
+  nmid: 'ID9988776655443',
+  imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=FGT_PRO_CUSTOM_QRIS'
+});
+assert(saveQrisRes.success, 'Admin.saveQrisSettings updated QRIS configuration');
+const savedQris = DB.get().settings.paymentGateways.qris;
+assert(savedQris.merchantName === 'FGT PRO OFFICIAL ASPI QRIS', 'QRIS Merchant Name persistence verified');
+assert(savedQris.nmid === 'ID9988776655443', 'QRIS NMID persistence verified');
+
+// Test Deposit Request with newly edited bank and QRIS
+const depBankTest = Payment.createDepositRequest({
+  userId: user.id,
+  method: 'bank',
+  bankId: 'bca',
+  amount: 250000
+});
+assert(depBankTest.success && depBankTest.transaction.paymentMethod.includes('Bank Transfer'), 'Deposit with local bank created successfully');
+
+const depQrisTest = Payment.createDepositRequest({
+  userId: user.id,
+  method: 'qris',
+  amount: 150000
+});
+assert(depQrisTest.success && depQrisTest.transaction.paymentMethod.includes('QRIS Instant'), 'Deposit with QRIS created successfully');
+
 console.log('====================================================');
 console.log('🎉 ALL BUTTONS, HANDLERS, & API METHODS VERIFIED 100%');
 console.log('====================================================');

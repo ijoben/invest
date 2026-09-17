@@ -940,29 +940,44 @@
       <div class="form-group">
         <label class="form-label">Pilih Saluran Pembayaran:</label>
         <select class="form-select" id="depMethodSelect">
-          <option value="bank">Transfer Bank Lokal (BCA, Mandiri, BRI)</option>
-          <option value="qris">QRIS Instant (Semua Bank & E-Wallet)</option>
-          <option value="usdt">Crypto USDT (TRC20 / BEP20)</option>
+          <option value="bank" id="depOptBank">Transfer Bank Lokal (BCA, Mandiri, BRI, dll)</option>
+          <option value="qris" id="depOptQris">QRIS Instant (Semua Bank & E-Wallet)</option>
+          <option value="usdt" id="depOptUsdt">Crypto USDT (TRC20 / BEP20)</option>
         </select>
       </div>
 
       <!-- Bank Transfer Fields -->
       <div id="depBankFields">
         <div class="form-group">
-          <label class="form-label">Pilih Bank Tujuan:</label>
+          <label class="form-label">Pilih Bank Tujuan Transfer:</label>
           <select class="form-select" id="depBankSelect">
-            <option value="bca">BCA - 8271928374 (PT FGT PRO INVESTASI)</option>
-            <option value="mandiri">MANDIRI - 1370029384721 (PT FGT PRO INVESTASI)</option>
-            <option value="bri">BRI - 034101002938531 (PT FGT PRO INVESTASI)</option>
+            <!-- Dynamically populated from active admin banks -->
           </select>
+        </div>
+
+        <!-- Bank Account Info Card with Copy Button -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;" id="depBankInfoCard">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+            <div>
+              <div style="font-size: 11px; color: #64748B; font-weight: 600;" id="depBankSelectedName">Bank Central Asia (BCA)</div>
+              <div style="font-size: 16px; font-weight: 800; color: #0F172A; font-family: var(--font-mono, monospace); margin: 3px 0;" id="depBankAccountNo">8271928374</div>
+              <div style="font-size: 11.5px; color: #334155; font-weight: 700;">a/n <span id="depBankAccountName">PT FGT PRO INVESTASI</span></div>
+            </div>
+            <button class="tier-btn btn-topup" style="padding: 5px 10px; font-size: 10.5px; flex-shrink: 0;" id="btnCopyBankAcc">
+              Salin No. Rek
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- QRIS Fields -->
-      <div id="depQrisFields" style="display: none; text-align: center; padding: 10px 0;">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=FGT_PRO_OFFICIAL_QRIS_DEPOSIT" alt="QRIS FGT Pro" style="border-radius: 12px; border: 1px solid #E2E8F0; margin-bottom: 8px;">
-        <div style="font-size: 11px; font-weight: 700; color: #1E293B;">NMID: ID1029384756201 (FGT PRO OFFICIAL)</div>
-        <p style="font-size: 10px; color: #64748B;">Scan menggunakan BCA, Mandiri Livin, BRImo, DANA, OVO, GoPay, ShopeePay</p>
+      <div id="depQrisFields" style="display: none; text-align: center; padding: 6px 0 12px 0;">
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 12px; display: inline-block; box-shadow: 0 4px 14px rgba(0,0,0,0.06); margin-bottom: 8px;">
+          <img id="depQrisImage" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=FGT_PRO_OFFICIAL_QRIS_DEPOSIT" alt="QRIS FGT Pro" style="width: 170px; height: 170px; object-fit: contain; display: block; border-radius: 8px;">
+        </div>
+        <div style="font-size: 12px; font-weight: 800; color: #0F172A;" id="depQrisMerchantTitle">FGT PRO OFFICIAL QRIS</div>
+        <div style="font-size: 11px; font-weight: 700; color: #64748B; font-family: var(--font-mono, monospace); margin-top: 2px;" id="depQrisNmidText">NMID: ID1029384756201</div>
+        <p style="font-size: 10px; color: #94A3B8; margin-top: 4px;">Scan QRIS menggunakan BCA, Livin Mandiri, BRImo, BNI, DANA, OVO, GoPay, ShopeePay, LinkAja</p>
       </div>
 
       <!-- USDT Fields -->
@@ -970,14 +985,14 @@
         <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; margin-bottom: 12px; border: 1px solid #E2E8F0;">
           <div style="font-size: 11px; color: #64748B;">Alamat USDT TRC20 Resmi:</div>
           <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; word-break: break-all; margin: 4px 0;" id="depUsdtAddress">TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1</div>
-          <button class="tier-btn btn-topup" style="padding: 4px 8px; font-size: 10px;" onclick="App.copyText('TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1', 'Alamat USDT')">Salin Alamat</button>
+          <button class="tier-btn btn-topup" style="padding: 4px 8px; font-size: 10px;" id="btnCopyUsdtAddr" onclick="App.copyText(document.getElementById('depUsdtAddress').textContent, 'Alamat USDT')">Salin Alamat</button>
         </div>
 
         <div class="form-group">
           <label class="form-label">Jumlah USDT:</label>
           <input type="number" class="form-input" id="depUsdtAmountInput" placeholder="Contoh: 100 USDT" value="100">
           <div style="font-size: 11px; color: #C89338; margin-top: 4px; font-weight: 700;">
-            Estimasi Rupiah (Kurs 1 USDT = Rp 16.250): <span id="depUsdtCalculatedIdr">IDR 1.625.000</span>
+            Estimasi Rupiah (Kurs 1 USDT = Rp <span id="depUsdtRateText">16.250</span>): <span id="depUsdtCalculatedIdr">IDR 1.625.000</span>
           </div>
         </div>
 

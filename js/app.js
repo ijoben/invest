@@ -1678,7 +1678,112 @@ const App = {
       this.showToast('Silakan login untuk melakukan deposit.', 'info');
       return;
     }
+    this.renderDepositModal();
     this.openModal('depositModal');
+  },
+
+  renderDepositModal() {
+    const db = DB.get();
+    const cfg = db.settings || {};
+    const gateways = cfg.paymentGateways || {};
+    const banks = (gateways.banks || []).filter(b => b.active !== false);
+    const qris = gateways.qris || {};
+    const usdt = gateways.usdt || {};
+
+    // 1. Populate Bank Dropdown
+    const bankSelect = document.getElementById('depBankSelect');
+    const optBank = document.getElementById('depOptBank');
+
+    if (bankSelect) {
+      if (banks.length > 0) {
+        bankSelect.innerHTML = banks.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+        if (optBank) optBank.style.display = '';
+        this.updateDepositBankInfo();
+      } else {
+        bankSelect.innerHTML = '<option value="">Tidak ada bank aktif</option>';
+      }
+    }
+
+    // 2. Setup QRIS Info & Visibility
+    const optQris = document.getElementById('depOptQris');
+    const qrisImg = document.getElementById('depQrisImage');
+    const qrisMerchant = document.getElementById('depQrisMerchantTitle');
+    const qrisNmid = document.getElementById('depQrisNmidText');
+
+    if (qris.active !== false) {
+      if (optQris) {
+        optQris.style.display = '';
+        optQris.textContent = `QRIS Instant (${qris.merchantName || 'Semua Bank & E-Wallet'})`;
+      }
+      if (qrisImg) {
+        qrisImg.src = qris.imageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qris.merchantName || 'QRIS')}`;
+      }
+      if (qrisMerchant) qrisMerchant.textContent = qris.merchantName || 'FGT PRO OFFICIAL QRIS';
+      if (qrisNmid) qrisNmid.textContent = qris.nmid ? `NMID: ${qris.nmid}` : '';
+    } else {
+      if (optQris) optQris.style.display = 'none';
+      const methodSelect = document.getElementById('depMethodSelect');
+      if (methodSelect && methodSelect.value === 'qris') {
+        methodSelect.value = 'bank';
+      }
+    }
+
+    // 3. Setup USDT Info
+    const usdtAddrEl = document.getElementById('depUsdtAddress');
+    const rateText = document.getElementById('depUsdtRateText');
+    const rate = cfg.usdIdrRate || 16250;
+    if (usdtAddrEl) usdtAddrEl.textContent = usdt.trc20Address || 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1';
+    if (rateText) rateText.textContent = Number(rate).toLocaleString('id-ID');
+
+    // Trigger amount calculation
+    const depUsdtAmountInput = document.getElementById('depUsdtAmountInput');
+    if (depUsdtAmountInput) {
+      const val = Number(depUsdtAmountInput.value) || 0;
+      const idrEl = document.getElementById('depUsdtCalculatedIdr');
+      if (idrEl) idrEl.textContent = DB.formatIDR(val * rate);
+    }
+
+    // Update Method Visibility
+    this.updateDepositMethodVisibility();
+  },
+
+  updateDepositBankInfo() {
+    const db = DB.get();
+    const banks = (db.settings.paymentGateways && db.settings.paymentGateways.banks) || [];
+    const bankSelect = document.getElementById('depBankSelect');
+    if (!bankSelect) return;
+
+    const selectedId = bankSelect.value;
+    const bank = banks.find(b => b.id === selectedId) || banks.find(b => b.active !== false) || banks[0];
+
+    const nameEl = document.getElementById('depBankSelectedName');
+    const accNoEl = document.getElementById('depBankAccountNo');
+    const accNameEl = document.getElementById('depBankAccountName');
+    const copyBtn = document.getElementById('btnCopyBankAcc');
+
+    if (bank) {
+      if (nameEl) nameEl.textContent = bank.name;
+      if (accNoEl) accNoEl.textContent = bank.accountNo;
+      if (accNameEl) accNameEl.textContent = bank.accountName;
+      if (copyBtn) {
+        copyBtn.onclick = () => App.copyText(bank.accountNo, `Nomor Rekening ${bank.name}`);
+      }
+    }
+  },
+
+  updateDepositMethodVisibility() {
+    const methodSelect = document.getElementById('depMethodSelect');
+    if (!methodSelect) return;
+    const val = methodSelect.value;
+    const bankFields = document.getElementById('depBankFields');
+    const qrisFields = document.getElementById('depQrisFields');
+    const usdtFields = document.getElementById('depUsdtFields');
+    const nominalWrap = document.getElementById('depNominalWrap');
+
+    if (bankFields) bankFields.style.display = val === 'bank' ? 'block' : 'none';
+    if (qrisFields) qrisFields.style.display = val === 'qris' ? 'block' : 'none';
+    if (usdtFields) usdtFields.style.display = val === 'usdt' ? 'block' : 'none';
+    if (nominalWrap) nominalWrap.style.display = val === 'usdt' ? 'none' : 'block';
   },
 
   openWithdrawModal() {
@@ -1882,10 +1987,15 @@ const App = {
     const depMethodSelect = document.getElementById('depMethodSelect');
     if (depMethodSelect) {
       depMethodSelect.addEventListener('change', () => {
-        const val = depMethodSelect.value;
-        document.getElementById('depBankFields').style.display = val === 'bank' ? 'block' : 'none';
-        document.getElementById('depQrisFields').style.display = val === 'qris' ? 'block' : 'none';
-        document.getElementById('depUsdtFields').style.display = val === 'usdt' ? 'block' : 'none';
+        this.updateDepositMethodVisibility();
+      });
+    }
+
+    // Deposit bank selector changer
+    const depBankSelect = document.getElementById('depBankSelect');
+    if (depBankSelect) {
+      depBankSelect.addEventListener('change', () => {
+        this.updateDepositBankInfo();
       });
     }
 

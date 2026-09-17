@@ -39,11 +39,12 @@ const defaultDB = {
     ],
     paymentGateways: {
       banks: [
-        { id: 'bca', name: 'Bank Central Asia (BCA)', accountNo: '8271928374', accountName: 'PT FGT PRO INVESTASI' },
-        { id: 'mandiri', name: 'Bank Mandiri', accountNo: '1370029384721', accountName: 'PT FGT PRO INVESTASI' },
-        { id: 'bri', name: 'Bank BRI', accountNo: '034101002938531', accountName: 'PT FGT PRO INVESTASI' }
+        { id: 'bca', name: 'Bank Central Asia (BCA)', accountNo: '8271928374', accountName: 'PT FGT PRO INVESTASI', active: true },
+        { id: 'mandiri', name: 'Bank Mandiri', accountNo: '1370029384721', accountName: 'PT FGT PRO INVESTASI', active: true },
+        { id: 'bri', name: 'Bank BRI', accountNo: '034101002938531', accountName: 'PT FGT PRO INVESTASI', active: true }
       ],
       qris: {
+        active: true,
         merchantName: 'FGT PRO OFFICIAL QRIS',
         nmid: 'ID1029384756201',
         imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5916FGT_PRO_OFFICIAL6007JAKARTA61051234062070703A016304E8A2'
@@ -836,12 +837,32 @@ export const DB = {
       if (!parsed.rewards) {
         parsed.rewards = defaultDB.rewards;
       }
-      if (!parsed.redemptions) {
-        parsed.redemptions = defaultDB.redemptions;
-      }
-      if (!parsed.settings || !parsed.settings.withdrawSchedule) {
-        parsed.settings = parsed.settings || {};
-        parsed.settings.withdrawSchedule = defaultDB.settings.withdrawSchedule;
+      if (!parsed.settings) {
+        parsed.settings = defaultDB.settings;
+      } else {
+        if (!parsed.settings.paymentGateways) {
+          parsed.settings.paymentGateways = defaultDB.settings.paymentGateways;
+        } else {
+          if (!parsed.settings.paymentGateways.banks || !Array.isArray(parsed.settings.paymentGateways.banks) || parsed.settings.paymentGateways.banks.length === 0) {
+            parsed.settings.paymentGateways.banks = defaultDB.settings.paymentGateways.banks;
+          } else {
+            parsed.settings.paymentGateways.banks = parsed.settings.paymentGateways.banks.map(b => {
+              if (b.active === undefined) b.active = true;
+              return b;
+            });
+          }
+          if (!parsed.settings.paymentGateways.qris) {
+            parsed.settings.paymentGateways.qris = defaultDB.settings.paymentGateways.qris;
+          } else if (parsed.settings.paymentGateways.qris.active === undefined) {
+            parsed.settings.paymentGateways.qris.active = true;
+          }
+          if (!parsed.settings.paymentGateways.usdt) {
+            parsed.settings.paymentGateways.usdt = defaultDB.settings.paymentGateways.usdt;
+          }
+        }
+        if (!parsed.settings.withdrawSchedule) {
+          parsed.settings.withdrawSchedule = defaultDB.settings.withdrawSchedule;
+        }
       }
       if (!parsed.testimonials || !Array.isArray(parsed.testimonials) || parsed.testimonials.length === 0) {
         parsed.testimonials = defaultDB.testimonials;

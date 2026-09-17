@@ -177,6 +177,81 @@ export const Admin = {
     return { success: true, message: 'Pengaturan sistem berhasil diperbarui!' };
   },
 
+  // Bank Accounts Management
+  getBanks() {
+    const db = DB.get();
+    return (db.settings.paymentGateways && db.settings.paymentGateways.banks) || [];
+  },
+
+  saveBank(bankData) {
+    const db = DB.get();
+    db.settings.paymentGateways = db.settings.paymentGateways || {};
+    db.settings.paymentGateways.banks = db.settings.paymentGateways.banks || [];
+    const banks = db.settings.paymentGateways.banks;
+
+    const existingIdx = bankData.id ? banks.findIndex(b => b.id === bankData.id) : -1;
+    if (existingIdx !== -1) {
+      banks[existingIdx] = {
+        ...banks[existingIdx],
+        name: bankData.name.trim(),
+        accountNo: String(bankData.accountNo).trim(),
+        accountName: bankData.accountName.trim(),
+        active: bankData.active !== undefined ? Boolean(bankData.active) : true
+      };
+    } else {
+      const newBank = {
+        id: 'bank-' + Date.now(),
+        name: bankData.name.trim(),
+        accountNo: String(bankData.accountNo).trim(),
+        accountName: bankData.accountName.trim(),
+        active: bankData.active !== undefined ? Boolean(bankData.active) : true
+      };
+      banks.push(newBank);
+    }
+
+    DB.save(db);
+    return { success: true, message: 'Rekening bank berhasil disimpan!' };
+  },
+
+  deleteBank(bankId) {
+    const db = DB.get();
+    if (!db.settings.paymentGateways || !db.settings.paymentGateways.banks) {
+      return { success: false, message: 'Data bank tidak ditemukan!' };
+    }
+    db.settings.paymentGateways.banks = db.settings.paymentGateways.banks.filter(b => b.id !== bankId);
+    DB.save(db);
+    return { success: true, message: 'Rekening bank berhasil dihapus.' };
+  },
+
+  toggleBankStatus(bankId) {
+    const db = DB.get();
+    const banks = (db.settings.paymentGateways && db.settings.paymentGateways.banks) || [];
+    const bank = banks.find(b => b.id === bankId);
+    if (!bank) return { success: false, message: 'Rekening bank tidak ditemukan!' };
+
+    bank.active = !bank.active;
+    DB.save(db);
+    return {
+      success: true,
+      active: bank.active,
+      message: `Status rekening ${bank.name} diubah menjadi ${bank.active ? 'Aktif' : 'Nonaktif'}.`
+    };
+  },
+
+  // QRIS Management
+  saveQrisSettings({ active, merchantName, nmid, imageUrl }) {
+    const db = DB.get();
+    db.settings.paymentGateways = db.settings.paymentGateways || {};
+    db.settings.paymentGateways.qris = {
+      active: active !== undefined ? Boolean(active) : true,
+      merchantName: merchantName ? merchantName.trim() : 'FGT PRO OFFICIAL QRIS',
+      nmid: nmid ? nmid.trim() : '',
+      imageUrl: imageUrl ? imageUrl.trim() : ''
+    };
+    DB.save(db);
+    return { success: true, message: 'Pengaturan QRIS berhasil disimpan!' };
+  },
+
   // Adjust User Balance directly
   adjustUserBalance(userId, { walletBalance, affiliateBalance, points }) {
     const db = DB.get();
