@@ -1320,6 +1320,22 @@ const App = {
     document.getElementById('profileEmail').textContent = user.email || user.phone || 'Member';
     document.getElementById('profileRefCode').textContent = user.referralCode || '-';
     
+    // Personal Info & Saved Bank Preview
+    const phoneValEl = document.getElementById('profilePhoneVal');
+    if (phoneValEl) phoneValEl.textContent = user.phone || '-';
+
+    const cityValEl = document.getElementById('profileCityVal');
+    if (cityValEl) cityValEl.textContent = user.city || '-';
+
+    const bankValEl = document.getElementById('profileBankVal');
+    if (bankValEl) {
+      if (user.bankAccount && user.bankAccount.accountNumber) {
+        bankValEl.textContent = `${user.bankAccount.bankName || 'Bank'} - ${user.bankAccount.accountNumber} (a.n ${user.bankAccount.accountHolder || '-'})`;
+      } else {
+        bankValEl.textContent = 'Belum diatur (Klik Rekening WD di bawah)';
+      }
+    }
+
     // Member Active status badge
     const activePlans = Plans.getUserInvestments(user.id);
     const isMemberActive = activePlans.length > 0;
@@ -1377,6 +1393,208 @@ const App = {
           <span class="badge-status active">Aktif</span>
         </div>
       `).join('');
+    }
+  },
+
+  // Member Profile & Personal Data Controller
+  openEditProfileModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      this.showToast('Silakan login terlebih dahulu.', 'info');
+      return;
+    }
+
+    const usernameInput = document.getElementById('editProfileUsername');
+    const fullNameInput = document.getElementById('editProfileFullName');
+    const phoneInput = document.getElementById('editProfilePhone');
+    const emailInput = document.getElementById('editProfileEmail');
+    const cityInput = document.getElementById('editProfileCity');
+
+    if (usernameInput) usernameInput.value = user.username || '';
+    if (fullNameInput) fullNameInput.value = user.fullName || '';
+    if (phoneInput) phoneInput.value = user.phone || '';
+    if (emailInput) emailInput.value = user.email || '';
+    if (cityInput) cityInput.value = user.city || '';
+
+    this.openModal('editProfileModal');
+  },
+
+  saveUserProfile() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const fullNameInput = document.getElementById('editProfileFullName');
+    const phoneInput = document.getElementById('editProfilePhone');
+    const emailInput = document.getElementById('editProfileEmail');
+    const cityInput = document.getElementById('editProfileCity');
+
+    const fullName = fullNameInput ? fullNameInput.value.trim() : '';
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim() : '';
+    const city = cityInput ? cityInput.value.trim() : '';
+
+    if (!fullName) {
+      this.showToast('Nama lengkap wajib diisi!', 'error');
+      return;
+    }
+
+    const res = DB.updateUserProfile(user.id, { fullName, phone, email, city });
+    if (res.success) {
+      this.closeModal('editProfileModal');
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  // Member Withdrawal Bank & E-Wallet Settings Controller
+  openUserBankModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      this.showToast('Silakan login terlebih dahulu.', 'info');
+      return;
+    }
+
+    const selectEl = document.getElementById('userBankSelect');
+    const customWrap = document.getElementById('userBankCustomWrap');
+    const customNameInput = document.getElementById('userBankCustomName');
+    const accNumInput = document.getElementById('userBankAccountNumber');
+    const accHolderInput = document.getElementById('userBankAccountHolder');
+
+    const standardBanks = ['BCA', 'Mandiri', 'BRI', 'BNI', 'BSI', 'CIMB Niaga', 'Permata', 'DANA', 'OVO', 'GoPay', 'ShopeePay', 'USDT TRC20'];
+
+    if (user.bankAccount && user.bankAccount.bankName) {
+      const bName = user.bankAccount.bankName;
+      if (standardBanks.includes(bName)) {
+        if (selectEl) selectEl.value = bName;
+        if (customWrap) customWrap.style.display = 'none';
+        if (customNameInput) customNameInput.value = '';
+      } else {
+        if (selectEl) selectEl.value = 'Lainnya';
+        if (customWrap) customWrap.style.display = 'block';
+        if (customNameInput) customNameInput.value = bName;
+      }
+      if (accNumInput) accNumInput.value = user.bankAccount.accountNumber || '';
+      if (accHolderInput) accHolderInput.value = user.bankAccount.accountHolder || '';
+    } else {
+      if (selectEl) selectEl.value = 'BCA';
+      if (customWrap) customWrap.style.display = 'none';
+      if (customNameInput) customNameInput.value = '';
+      if (accNumInput) accNumInput.value = '';
+      if (accHolderInput) accHolderInput.value = user.fullName || '';
+    }
+
+    this.openModal('userBankModal');
+  },
+
+  onUserBankSelectChange() {
+    const selectEl = document.getElementById('userBankSelect');
+    const customWrap = document.getElementById('userBankCustomWrap');
+    if (!selectEl || !customWrap) return;
+    customWrap.style.display = selectEl.value === 'Lainnya' ? 'block' : 'none';
+  },
+
+  saveUserBank() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const selectEl = document.getElementById('userBankSelect');
+    const customNameInput = document.getElementById('userBankCustomName');
+    const accNumInput = document.getElementById('userBankAccountNumber');
+    const accHolderInput = document.getElementById('userBankAccountHolder');
+
+    let bankName = selectEl ? selectEl.value : 'BCA';
+    if (bankName === 'Lainnya') {
+      bankName = customNameInput ? customNameInput.value.trim() : '';
+    }
+
+    const accountNumber = accNumInput ? accNumInput.value.trim() : '';
+    const accountHolder = accHolderInput ? accHolderInput.value.trim() : '';
+
+    if (!bankName) {
+      this.showToast('Nama bank atau e-wallet wajib diisi!', 'error');
+      return;
+    }
+    if (!accountNumber) {
+      this.showToast('Nomor rekening atau nomor e-wallet wajib diisi!', 'error');
+      return;
+    }
+    if (!accountHolder) {
+      this.showToast('Nama pemilik rekening (atas nama) wajib diisi!', 'error');
+      return;
+    }
+
+    const res = DB.updateUserBank(user.id, { bankName, accountNumber, accountHolder });
+    if (res.success) {
+      this.closeModal('userBankModal');
+      this.showToast(res.message, 'success');
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  // Change Password Security Controller
+  openChangePasswordModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      this.showToast('Silakan login terlebih dahulu.', 'info');
+      return;
+    }
+
+    const oldPassInput = document.getElementById('changePassOld');
+    const newPassInput = document.getElementById('changePassNew');
+    const confirmPassInput = document.getElementById('changePassConfirm');
+
+    if (oldPassInput) oldPassInput.value = '';
+    if (newPassInput) newPassInput.value = '';
+    if (confirmPassInput) confirmPassInput.value = '';
+
+    this.openModal('changePasswordModal');
+  },
+
+  saveChangePassword() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const oldPassInput = document.getElementById('changePassOld');
+    const newPassInput = document.getElementById('changePassNew');
+    const confirmPassInput = document.getElementById('changePassConfirm');
+
+    const oldPass = oldPassInput ? oldPassInput.value : '';
+    const newPass = newPassInput ? newPassInput.value : '';
+    const confirmPass = confirmPassInput ? confirmPassInput.value : '';
+
+    if (!oldPass) {
+      this.showToast('Password lama saat ini wajib diisi!', 'error');
+      return;
+    }
+    if (!newPass) {
+      this.showToast('Password baru wajib diisi!', 'error');
+      return;
+    }
+    if (newPass.length < 6) {
+      this.showToast('Password baru minimal harus 6 karakter!', 'error');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      this.showToast('Konfirmasi password baru tidak cocok!', 'error');
+      return;
+    }
+
+    const res = Auth.changePassword(user.id, oldPass, newPass);
+    if (res.success) {
+      this.closeModal('changePasswordModal');
+      this.showToast(res.message, 'success');
+      if (oldPassInput) oldPassInput.value = '';
+      if (newPassInput) newPassInput.value = '';
+      if (confirmPassInput) confirmPassInput.value = '';
+    } else {
+      this.showToast(res.message, 'error');
     }
   },
 
@@ -2331,6 +2549,23 @@ const App = {
       this.openModal('authModal');
       this.showToast('Silakan login untuk melakukan penarikan.', 'info');
       return;
+    }
+
+    // Auto-populate saved withdrawal bank if configured
+    const savedNotice = document.getElementById('wdSavedBankNotice');
+    const bankNameInput = document.getElementById('wdBankName');
+    const accNumInput = document.getElementById('wdAccountNumber');
+    const accHolderInput = document.getElementById('wdAccountHolder');
+
+    if (user.bankAccount && user.bankAccount.accountNumber) {
+      if (bankNameInput) bankNameInput.value = user.bankAccount.bankName || '';
+      if (accNumInput) accNumInput.value = user.bankAccount.accountNumber || '';
+      if (accHolderInput) accHolderInput.value = user.bankAccount.accountHolder || '';
+      if (savedNotice) savedNotice.style.display = 'flex';
+    } else {
+      if (bankNameInput && !bankNameInput.value) bankNameInput.value = 'BCA';
+      if (accHolderInput && !accHolderInput.value) accHolderInput.value = user.fullName || '';
+      if (savedNotice) savedNotice.style.display = 'none';
     }
 
     // Check withdrawal operational schedule

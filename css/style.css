@@ -3464,3 +3464,141 @@ html, body {
   background: linear-gradient(135deg, #0088CC 0%, #005580 100%);
   box-shadow: 0 4px 14px rgba(0, 136, 204, 0.3);
 }
+
+/* ==========================================================================
+   MEMBER PROFILE & ACCOUNT SETTINGS (STANDARD WEB)
+   ========================================================================== */
+.account-settings-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 16px 14px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-card-title {
+  font-weight: 800;
+  font-size: 14px;
+  color: #0F172A;
+}
+
+.profile-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background: #F8FAFC;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #F1F5F9;
+}
+
+.profile-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-info-item.full {
+  grid-column: 1 / -1;
+}
+
+.profile-info-lbl {
+  font-size: 10.5px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.profile-info-val {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.saved-bank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #92400E;
+  font-size: 11.5px;
+  font-weight: 700;
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+.profile-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.profile-action-btn {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.profile-action-btn:hover {
+  border-color: #C89338;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(200, 147, 56, 0.15);
+}
+
+.profile-action-btn:active {
+  transform: scale(0.97);
+}
+
+.action-btn-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-btn-text strong {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.2;
+}
+
+.action-btn-text span {
+  display: block;
+  font-size: 9.5px;
+  color: #64748B;
+  margin-top: 2px;
+  line-height: 1.15;
+}
+
+.wd-saved-bank-notice {
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #065F46;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+

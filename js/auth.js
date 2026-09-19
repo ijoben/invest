@@ -107,6 +107,11 @@ export const Auth = {
     return { success: true, message: 'Password berhasil direset! Silakan login kembali.' };
   },
 
+  // Change Password handler for logged-in user
+  changePassword(userId, oldPassword, newPassword) {
+    return DB.changeUserPassword(userId, oldPassword, newPassword);
+  },
+
   // Logout handler
   logout() {
     DB.clearSession();

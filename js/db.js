@@ -142,6 +142,12 @@ const defaultDB = {
       walletBalance: 684000, // Real balance: 2.5jt dep - 2jt inv + 184rb claimed profit
       affiliateBalance: 102600, // Real commission: 100rb sponsor + 2.6rb rabat
       points: 20,
+      city: 'Jakarta Selatan',
+      bankAccount: {
+        bankName: 'BCA',
+        accountNumber: '8271928374',
+        accountHolder: 'ALEX SUTANTO'
+      },
       referralCode: 'ALEX88',
       referredBy: 'ADMINVIP',
       kycStatus: 'verified',
@@ -989,6 +995,86 @@ export const DB = {
       return db.users[idx];
     }
     return null;
+  },
+
+  // Update member personal details
+  updateUserProfile(userId, { fullName, phone, email, city }) {
+    const db = this.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User tidak ditemukan!' };
+
+    if (!fullName || !fullName.trim()) {
+      return { success: false, message: 'Nama lengkap wajib diisi!' };
+    }
+
+    if (email && email.trim()) {
+      const emailLower = email.trim().toLowerCase();
+      const existing = db.users.find(u => u.id !== userId && u.email && u.email.toLowerCase() === emailLower);
+      if (existing) {
+        return { success: false, message: 'Email sudah digunakan oleh akun lain!' };
+      }
+      user.email = emailLower;
+    }
+
+    user.fullName = fullName.trim();
+    if (phone !== undefined) user.phone = phone.trim();
+    if (city !== undefined) user.city = city.trim();
+    user.updatedAt = new Date().toISOString();
+
+    this.save(db);
+    return { success: true, user, message: 'Profil dan data diri berhasil diperbarui!' };
+  },
+
+  // Update member withdrawal bank/e-wallet account
+  updateUserBank(userId, { bankName, accountNumber, accountHolder }) {
+    const db = this.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User tidak ditemukan!' };
+
+    if (!bankName || !bankName.trim()) {
+      return { success: false, message: 'Nama Bank / E-Wallet wajib dipilih!' };
+    }
+    if (!accountNumber || !accountNumber.trim()) {
+      return { success: false, message: 'Nomor Rekening / No. E-Wallet wajib diisi!' };
+    }
+    if (!accountHolder || !accountHolder.trim()) {
+      return { success: false, message: 'Nama Pemilik Rekening wajib diisi!' };
+    }
+
+    user.bankAccount = {
+      bankName: bankName.trim(),
+      accountNumber: accountNumber.trim(),
+      accountHolder: accountHolder.trim().toUpperCase()
+    };
+    user.updatedAt = new Date().toISOString();
+
+    this.save(db);
+    return { success: true, user, bankAccount: user.bankAccount, message: 'Rekening penarikan (WD) berhasil disimpan!' };
+  },
+
+  // Change user password
+  changeUserPassword(userId, oldPassword, newPassword) {
+    const db = this.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User tidak ditemukan!' };
+
+    if (!oldPassword || !newPassword) {
+      return { success: false, message: 'Password lama dan password baru wajib diisi!' };
+    }
+
+    if (user.password !== oldPassword) {
+      return { success: false, message: 'Password lama tidak sesuai!' };
+    }
+
+    if (newPassword.length < 6) {
+      return { success: false, message: 'Password baru minimal harus 6 karakter!' };
+    }
+
+    user.password = newPassword;
+    user.passwordUpdatedAt = new Date().toISOString();
+
+    this.save(db);
+    return { success: true, message: 'Password berhasil diubah! Gunakan password baru untuk login berikutnya.' };
   },
 
   // Format IDR currency

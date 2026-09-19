@@ -741,6 +741,66 @@
             </div>
           </div>
 
+          <!-- Account Details & Settings Action Hub -->
+          <div class="account-settings-card">
+            <div class="flex-between mb-2">
+              <span class="settings-card-title">Data Diri & Pengaturan Akun</span>
+              <span class="badge-status approved" style="font-size: 10px; padding: 2px 8px;">TERVERIFIKASI</span>
+            </div>
+
+            <!-- Profile Info Grid -->
+            <div class="profile-info-grid">
+              <div class="profile-info-item">
+                <span class="profile-info-lbl">Nomor WhatsApp / HP:</span>
+                <strong class="profile-info-val" id="profilePhoneVal">081234567890</strong>
+              </div>
+              <div class="profile-info-item">
+                <span class="profile-info-lbl">Kota / Domisili:</span>
+                <strong class="profile-info-val" id="profileCityVal">Jakarta Selatan</strong>
+              </div>
+              <div class="profile-info-item full">
+                <span class="profile-info-lbl">Rekening Utama Penarikan (WD):</span>
+                <div class="saved-bank-badge" id="profileBankBadge">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  <strong id="profileBankVal">BCA - 8271928374 (a.n ALEX SUTANTO)</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons Grid (Standard Web Profile Actions) -->
+            <div class="profile-action-grid">
+              <button class="profile-action-btn" onclick="App.openEditProfileModal()">
+                <div class="action-btn-icon" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </div>
+                <div class="action-btn-text">
+                  <strong>Edit Profil</strong>
+                  <span>Nama, HP & Kota</span>
+                </div>
+              </button>
+
+              <button class="profile-action-btn" onclick="App.openUserBankModal()">
+                <div class="action-btn-icon" style="background: rgba(34, 197, 94, 0.15); color: #10B981;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                </div>
+                <div class="action-btn-text">
+                  <strong>Rekening WD</strong>
+                  <span>Rekening Penarikan</span>
+                </div>
+              </button>
+
+              <button class="profile-action-btn" onclick="App.openChangePasswordModal()">
+                <div class="action-btn-icon" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="action-btn-text">
+                  <strong>Ganti Password</strong>
+                  <span>Keamanan Akun</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <!-- Referral Link Box -->
           <div style="background: #FFFFFF; border-radius: 18px; padding: 14px 12px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
             <div class="flex-between mb-2">
@@ -1099,19 +1159,25 @@
         </select>
       </div>
 
+      <!-- Auto-fill Saved Bank Account Notice -->
+      <div id="wdSavedBankNotice" class="wd-saved-bank-notice" style="display: none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Data rekening otomatis terisi dari Profil Anda. <a href="javascript:void(0)" onclick="App.closeModal('withdrawModal'); App.openUserBankModal();" style="color: #C89338; font-weight: 700; text-decoration: underline;">Ubah Rekening</a></span>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Nama Bank / E-Wallet / Jaringan:</label>
-        <input type="text" class="form-input" id="wdBankName" placeholder="Contoh: BCA / DANA / TRC20" value="BCA">
+        <input type="text" class="form-input" id="wdBankName" placeholder="Contoh: BCA / DANA / Mandiri / TRC20">
       </div>
 
       <div class="form-group">
         <label class="form-label">Nomor Rekening / No. HP / Alamat USDT:</label>
-        <input type="text" class="form-input" id="wdAccountNumber" placeholder="Nomor rekening / No. E-Wallet" value="8271029384">
+        <input type="text" class="form-input" id="wdAccountNumber" placeholder="Nomor rekening / No. E-Wallet">
       </div>
 
       <div class="form-group">
         <label class="form-label">Nama Pemilik Rekening / Akun:</label>
-        <input type="text" class="form-input" id="wdAccountHolder" placeholder="Nama lengkap sesuai rekening bank" value="Alex Sutanto">
+        <input type="text" class="form-input" id="wdAccountHolder" placeholder="Nama lengkap sesuai rekening bank">
       </div>
 
       <div class="form-group">
@@ -1785,6 +1851,155 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </a>
       </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: EDIT PROFIL & DATA DIRI
+       ====================================================================== -->
+  <div class="modal-backdrop" id="editProfileModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">✏️ Edit Profil & Data Diri</h3>
+          <p class="modal-subtitle">Perbarui data profil pribadi akun Anda</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Username (ID Akun):</label>
+        <input type="text" class="form-input" id="editProfileUsername" readonly style="background: #F1F5F9; color: #64748B; cursor: not-allowed;">
+        <span style="font-size: 10.5px; color: #94A3B8;">Username bersifat permanen dan tidak dapat diubah.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Lengkap:</label>
+        <input type="text" class="form-input" id="editProfileFullName" placeholder="Nama lengkap sesuai KTP / Rekening Bank">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor WhatsApp / HP:</label>
+        <input type="text" class="form-input" id="editProfilePhone" placeholder="Contoh: 081234567890">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Alamat Email:</label>
+        <input type="email" class="form-input" id="editProfileEmail" placeholder="nama@email.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Kota / Domisili:</label>
+        <input type="text" class="form-input" id="editProfileCity" placeholder="Contoh: Jakarta Selatan, Surabaya, Medan">
+      </div>
+
+      <button class="btn-cta-gold" style="width: 100%; margin-top: 6px;" onclick="App.saveUserProfile()">
+        <span>💾 Simpan Perubahan Profil</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: PENGATURAN REKENING BANK PENARIKAN (WD)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="userBankModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🏦 Rekening Bank Penarikan (WD)</h3>
+          <p class="modal-subtitle">Atur rekening bank atau e-wallet tujuan pencairan dana</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; display: flex; gap: 8px; align-items: flex-start;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.2" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div style="font-size: 11px; color: #475569; line-height: 1.45;">
+          Rekening yang tersimpan di sini akan <strong>otomatis terisi</strong> saat Anda membuka formulir penarikan dana (WD), sehingga proses penarikan menjadi lebih cepat dan akurat.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Pilihan Bank / E-Wallet:</label>
+        <select class="form-select" id="userBankSelect" onchange="App.onUserBankSelectChange()">
+          <option value="BCA">Bank Central Asia (BCA)</option>
+          <option value="Mandiri">Bank Mandiri</option>
+          <option value="BRI">Bank Rakyat Indonesia (BRI)</option>
+          <option value="BNI">Bank Negara Indonesia (BNI)</option>
+          <option value="BSI">Bank Syariah Indonesia (BSI)</option>
+          <option value="CIMB Niaga">Bank CIMB Niaga</option>
+          <option value="Permata">Bank Permata</option>
+          <option value="DANA">DANA (Dompet Digital)</option>
+          <option value="OVO">OVO (Dompet Digital)</option>
+          <option value="GoPay">GoPay (Dompet Digital)</option>
+          <option value="ShopeePay">ShopeePay</option>
+          <option value="USDT TRC20">USDT (Jaringan TRC20)</option>
+          <option value="Lainnya">Bank / Saluran Lainnya</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="userBankCustomWrap" style="display: none;">
+        <label class="form-label">Nama Bank / Saluran Lainnya:</label>
+        <input type="text" class="form-input" id="userBankCustomName" placeholder="Masukkan nama bank atau e-wallet Anda">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor Rekening / No. HP E-Wallet / Alamat USDT:</label>
+        <input type="text" class="form-input" id="userBankAccountNumber" placeholder="Contoh: 8271928374 / 081234567890">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Pemilik Rekening / Akun (Atas Nama):</label>
+        <input type="text" class="form-input" id="userBankAccountHolder" placeholder="Contoh: ALEX SUTANTO">
+        <span style="font-size: 10.5px; color: #94A3B8;">Pastikan nama pemilik rekening sama dengan nama akun Anda untuk kelancaran verifikasi WD.</span>
+      </div>
+
+      <button class="btn-cta-gold" style="width: 100%; margin-top: 6px;" onclick="App.saveUserBank()">
+        <span>💾 Simpan Rekening Penarikan</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: KEAMANAN & GANTI PASSWORD
+       ====================================================================== -->
+  <div class="modal-backdrop" id="changePasswordModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🔐 Ganti Password Akun</h3>
+          <p class="modal-subtitle">Perbarui kata sandi untuk meningkatkan keamanan akun Anda</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password Lama Saat Ini:</label>
+        <input type="password" class="form-input" id="changePassOld" placeholder="Masukkan password lama Anda">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password Baru:</label>
+        <input type="password" class="form-input" id="changePassNew" placeholder="Minimal 6 karakter kombinasi">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Konfirmasi Password Baru:</label>
+        <input type="password" class="form-input" id="changePassConfirm" placeholder="Ketik ulang password baru Anda">
+      </div>
+
+      <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;">
+        <span style="font-size: 11px; color: #92400E; line-height: 1.4; display: block;">
+          🔒 <strong>Tips Keamanan:</strong> Jangan berikan password Anda kepada siapa pun, termasuk pihak yang mengaku sebagai admin FGT Pro.
+        </span>
+      </div>
+
+      <button class="btn-cta-gold" style="width: 100%;" onclick="App.saveChangePassword()">
+        <span>🔒 Perbarui Password Sekarang</span>
+      </button>
     </div>
   </div>
 
