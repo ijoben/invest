@@ -262,6 +262,13 @@ const defaultDB = {
       amountUsdt: 300,
       amount: 4875000, // 300 * 16250
       txid: '9f8e7d6c5b4a3210fedcba9876543210abcdef1234567890',
+      proofImage: createReceiptBase64({
+        bank: 'USDT Binance Pay',
+        name: 'budi_crypto',
+        amount: 4875000,
+        timeAgo: 'Hari ini',
+        refNo: 'TXID-9F8E7D6C'
+      }),
       status: 'pending',
       createdAt: '2026-09-16T07:30:00.000Z'
     },
@@ -905,6 +912,16 @@ export const DB = {
             }
           }
           return t;
+        });
+      }
+      if (parsed.transactions && Array.isArray(parsed.transactions)) {
+        parsed.transactions.forEach(t => {
+          if (!t.proofImage && t.type === 'deposit') {
+            const defTrx = defaultDB.transactions.find(d => d.id === t.id);
+            if (defTrx && defTrx.proofImage) {
+              t.proofImage = defTrx.proofImage;
+            }
+          }
         });
       }
       this.save(parsed);

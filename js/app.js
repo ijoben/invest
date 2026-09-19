@@ -23,6 +23,7 @@ const App = {
   bannersData: [],
   currentTestimonialFilter: 'all',
   testimonialsData: [],
+  uploadedDepositProofBase64: null,
   aiChartPoints: [
     1.1528, 1.1531, 1.1529, 1.1535, 1.1532, 1.1538, 1.1541, 1.1539,
     1.1544, 1.1542, 1.1546, 1.1543, 1.1549, 1.1547, 1.1552, 1.1550,
@@ -1207,6 +1208,13 @@ const App = {
           <div style="text-align:right;">
             <div style="font-weight:800; font-size:13px; color:${amountColor}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</div>
             ${t.uniqueCode ? `<div style="font-size:9px; color:#64748B;">Kode: ${t.uniqueCode}</div>` : ''}
+            ${t.proofImage ? `
+              <div style="margin-top: 4px;">
+                <button class="deposit-proof-badge has-proof" onclick="App.viewProofImage('${t.id}')">
+                  <span>📄 Bukti TF</span>
+                </button>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -2435,6 +2443,7 @@ const App = {
       this.showToast('Silakan login untuk melakukan deposit.', 'info');
       return;
     }
+    this.removeDepositProof();
     this.renderDepositModal();
     this.openModal('depositModal');
   },
@@ -2608,6 +2617,76 @@ const App = {
     if (affBalEl) affBalEl.textContent = DB.formatIDR(breakdown.affiliateBalance);
   },
 
+  // Deposit Proof of Transfer Upload Handlers
+  handleDepositProofSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.showToast('Harap pilih file gambar (JPG, PNG, atau WEBP)!', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.showToast('Ukuran gambar maksimal 5MB!', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.uploadedDepositProofBase64 = e.target.result;
+      const previewImg = document.getElementById('depProofPreviewImg');
+      const previewWrap = document.getElementById('depProofPreviewWrap');
+      const placeholder = document.getElementById('depProofPlaceholder');
+
+      if (previewImg) previewImg.src = e.target.result;
+      if (previewWrap) previewWrap.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+      this.showToast('Foto bukti transfer berhasil dimuat.', 'success');
+    };
+    reader.readAsDataURL(file);
+  },
+
+  removeDepositProof() {
+    this.uploadedDepositProofBase64 = null;
+    const fileInput = document.getElementById('depProofFileInput');
+    const previewImg = document.getElementById('depProofPreviewImg');
+    const previewWrap = document.getElementById('depProofPreviewWrap');
+    const placeholder = document.getElementById('depProofPlaceholder');
+
+    if (fileInput) fileInput.value = '';
+    if (previewImg) previewImg.src = '';
+    if (previewWrap) previewWrap.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'flex';
+  },
+
+  useSampleDepositProof() {
+    const user = Auth.getUser();
+    const method = document.getElementById('depMethodSelect').value;
+    const amount = Number(document.getElementById('depAmountInput').value) || 500000;
+    let bankName = 'BCA Mobile';
+    if (method === 'qris') bankName = 'QRIS Instant';
+    else if (method === 'usdt') bankName = 'Binance USDT Pay';
+
+    const sampleReceipt = createReceiptBase64({
+      bank: bankName,
+      name: user ? (user.fullName || user.username) : 'Member FGT Pro',
+      amount: amount,
+      timeAgo: 'Baru saja',
+      refNo: 'TRX-' + Math.floor(100000 + Math.random() * 900000)
+    });
+
+    this.uploadedDepositProofBase64 = sampleReceipt;
+    const previewImg = document.getElementById('depProofPreviewImg');
+    const previewWrap = document.getElementById('depProofPreviewWrap');
+    const placeholder = document.getElementById('depProofPlaceholder');
+
+    if (previewImg) previewImg.src = sampleReceipt;
+    if (previewWrap) previewWrap.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+    this.showToast('Contoh struk resmi transfer berhasil dibuat.', 'info');
+  },
+
   submitDeposit() {
     const user = Auth.getUser();
     if (!user) return;
@@ -2618,22 +2697,49 @@ const App = {
     const txid = document.getElementById('depTxidInput').value;
     const bankId = document.getElementById('depBankSelect').value;
 
+    const proofImage = this.uploadedDepositProofBase64;
+    if (!proofImage) {
+      this.showToast('Harap upload foto bukti transfer / struk pembayaran terlebih dahulu!', 'error');
+      return;
+    }
+
     const res = Payment.createDepositRequest({
       userId: user.id,
       method,
       bankId,
       amount,
       amountUsdt: usdtAmt,
-      txid
+      txid,
+      proofImage
     });
 
     if (res.success) {
+      this.removeDepositProof();
       this.closeModal('depositModal');
       this.showToast(res.message, 'success');
       this.renderAll();
     } else {
       this.showToast(res.message, 'error');
     }
+  },
+
+  viewProofImage(trxId) {
+    const db = DB.get();
+    const trx = db.transactions.find(t => t.id === trxId);
+    if (!trx || !trx.proofImage) {
+      this.showToast('Bukti transfer tidak tersedia untuk transaksi ini.', 'info');
+      return;
+    }
+
+    const titleEl = document.getElementById('viewProofModalTitle');
+    const subtitleEl = document.getElementById('viewProofModalSubtitle');
+    const imgEl = document.getElementById('viewProofModalImg');
+
+    if (titleEl) titleEl.textContent = `📄 Bukti Transfer (${DB.formatIDR(trx.amount)})`;
+    if (subtitleEl) subtitleEl.textContent = `${trx.paymentMethod || 'Deposit'} · ID: ${trx.id}`;
+    if (imgEl) imgEl.src = trx.proofImage;
+
+    this.openModal('viewProofModal');
   },
 
   submitWithdraw() {

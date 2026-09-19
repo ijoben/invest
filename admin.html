@@ -224,6 +224,7 @@
                 <th>Metode Pembayaran</th>
                 <th>Nominal</th>
                 <th>Kode / TxID</th>
+                <th>Bukti Transfer</th>
                 <th>Status</th>
                 <th>Aksi</th>
               </tr>
@@ -1325,6 +1326,63 @@
 
       <button class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 6px;" onclick="AdminPage.saveBankModal()">
         <span>💾 Simpan Rekening Bank</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: INSPEKSI BUKTI TRANSFER DEPOSIT (ADMIN APPROVAL)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="adminDepositProofModal">
+    <div class="modal-sheet" style="max-width: 550px;">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🔍 Verifikasi Bukti Transfer Deposit</h3>
+          <p class="modal-subtitle">Periksa keabsahan foto struk transfer sebelum menyetujui saldo</p>
+        </div>
+        <button class="modal-close-btn" onclick="AdminPage.closeModal('adminDepositProofModal')">&times;</button>
+      </div>
+
+      <input type="hidden" id="adminProofTrxId">
+
+      <!-- Summary Details -->
+      <div style="background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11.5px;">
+        <div>
+          <span style="color: #94A3B8;">ID Transaksi:</span>
+          <strong id="adminProofModalId" style="display: block; color: #38BDF8; font-family: var(--font-mono);">-</strong>
+        </div>
+        <div>
+          <span style="color: #94A3B8;">Member:</span>
+          <strong id="adminProofModalUser" style="display: block; color: #FFFFFF;">-</strong>
+        </div>
+        <div>
+          <span style="color: #94A3B8;">Nominal Transfer:</span>
+          <strong id="adminProofModalAmount" style="display: block; color: #22C55E; font-size: 13px;">-</strong>
+        </div>
+        <div>
+          <span style="color: #94A3B8;">Metode Pembayaran:</span>
+          <strong id="adminProofModalMethod" style="display: block; color: #E2E8F0;">-</strong>
+        </div>
+      </div>
+
+      <!-- Proof Image Container -->
+      <div style="background: #0B0F19; border: 1px solid #334155; border-radius: 12px; padding: 10px; display: flex; justify-content: center; align-items: center; margin-bottom: 16px; min-height: 220px; max-height: 400px; overflow: hidden;">
+        <img id="adminProofModalImg" src="" alt="Bukti Transfer Member" style="max-width: 100%; max-height: 380px; object-fit: contain; border-radius: 8px;">
+      </div>
+
+      <!-- Admin Decision Actions -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;" id="adminProofModalActionGroup">
+        <button class="btn-admin-action approve" style="padding: 10px; font-size: 12px; font-weight: 700; border-radius: 8px; justify-content: center;" onclick="AdminPage.approveDepositFromProofModal()">
+          <span>✓ Setujui Deposit</span>
+        </button>
+        <button class="btn-admin-action reject" style="padding: 10px; font-size: 12px; font-weight: 700; border-radius: 8px; justify-content: center;" onclick="AdminPage.rejectDepositFromProofModal()">
+          <span>✕ Tolak Deposit</span>
+        </button>
+      </div>
+
+      <button class="admin-btn-action-secondary" style="width: 100%; justify-content: center; padding: 10px;" onclick="AdminPage.closeModal('adminDepositProofModal')">
+        <span>Tutup Jendela</span>
       </button>
     </div>
   </div>

@@ -88,7 +88,7 @@ export const AdminPage = {
     const deposits = db.transactions.filter(t => t.type === 'deposit');
 
     if (deposits.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data deposit.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data deposit.</td></tr>';
       return;
     }
 
@@ -100,6 +100,13 @@ export const AdminPage = {
         <td>${t.paymentMethod}</td>
         <td><strong style="color:#22C55E;">${DB.formatIDR(t.amount)}</strong></td>
         <td>${t.txid ? `<span style="font-family:var(--font-mono); font-size:10px;">${t.txid.substring(0, 16)}...</span>` : (t.uniqueCode || '-')}</td>
+        <td>
+          ${t.proofImage ? `
+            <button class="btn-admin-action" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AdminPage.viewDepositProof('${t.id}')">
+              <span>🖼️ Cek Bukti</span>
+            </button>
+          ` : `<span style="font-size: 10px; color: #94A3B8;">-</span>`}
+        </td>
         <td><span class="badge-status ${t.status}">${t.status.toUpperCase()}</span></td>
         <td>
           ${t.status === 'pending' ? `
@@ -813,6 +820,57 @@ export const AdminPage = {
       this.showToast(res.message, 'info');
       this.renderAll();
     }
+  },
+
+  // View and verify deposit proof of transfer
+  viewDepositProof(id) {
+    const db = DB.get();
+    const trx = db.transactions.find(t => t.id === id);
+    if (!trx) return;
+
+    const hiddenInput = document.getElementById('adminProofTrxId');
+    const idEl = document.getElementById('adminProofModalId');
+    const userEl = document.getElementById('adminProofModalUser');
+    const amountEl = document.getElementById('adminProofModalAmount');
+    const methodEl = document.getElementById('adminProofModalMethod');
+    const imgEl = document.getElementById('adminProofModalImg');
+    const actionGroup = document.getElementById('adminProofModalActionGroup');
+
+    if (hiddenInput) hiddenInput.value = trx.id;
+    if (idEl) idEl.textContent = trx.id;
+    if (userEl) userEl.textContent = trx.username;
+    if (amountEl) amountEl.textContent = DB.formatIDR(trx.amount);
+    if (methodEl) methodEl.textContent = trx.paymentMethod || 'Deposit';
+    
+    if (imgEl) {
+      if (trx.proofImage) {
+        imgEl.src = trx.proofImage;
+        imgEl.style.display = 'block';
+      } else {
+        imgEl.src = '';
+        imgEl.style.display = 'none';
+      }
+    }
+
+    if (actionGroup) {
+      actionGroup.style.display = trx.status === 'pending' ? 'grid' : 'none';
+    }
+
+    this.openModal('adminDepositProofModal');
+  },
+
+  approveDepositFromProofModal() {
+    const id = document.getElementById('adminProofTrxId').value;
+    if (!id) return;
+    this.closeModal('adminDepositProofModal');
+    this.approveDeposit(id);
+  },
+
+  rejectDepositFromProofModal() {
+    const id = document.getElementById('adminProofTrxId').value;
+    if (!id) return;
+    this.closeModal('adminDepositProofModal');
+    this.rejectDeposit(id);
   },
 
   approveWithdraw(id) {

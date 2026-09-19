@@ -316,7 +316,7 @@ html, body {
   font-size: 11.5px;
   font-weight: 600;
   color: #334155;
-  animation: marqueeTicker 28s linear infinite;
+  animation: marqueeTicker 48s linear infinite;
   padding-left: 100%;
 }
 
@@ -3191,7 +3191,7 @@ html, body {
   display: flex;
   white-space: nowrap;
   gap: 20px;
-  animation: fgtMarqueeScroll 28s linear infinite;
+  animation: fgtMarqueeScroll 75s linear infinite;
   padding-left: 20px;
 }
 
@@ -3553,8 +3553,9 @@ html, body {
 }
 
 .profile-action-btn:hover {
-  border-color: #C89338;
-  transform: translateY(-2px);
+  border-color: #CBD5E1;
+  background: #F1F5F9;
+  transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(200, 147, 56, 0.15);
 }
 
@@ -3601,4 +3602,92 @@ html, body {
   margin-bottom: 12px;
   line-height: 1.4;
 }
+
+/* ==========================================================================
+   DEPOSIT PROOF OF TRANSFER (BUKTI TF) UPLOAD & PREVIEW STYLES
+   ========================================================================== */
+.proof-upload-box {
+  background: #F8FAFC;
+  border: 2px dashed #CBD5E1;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.proof-upload-box:hover {
+  border-color: #C89338;
+  background: #FFFDF8;
+}
+
+.btn-remove-proof {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.95);
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  transition: transform 0.15s, background 0.15s;
+  z-index: 5;
+}
+
+.btn-remove-proof:hover {
+  transform: scale(1.1);
+  background: #DC2626;
+}
+
+.btn-sample-proof {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #2563EB;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 6px;
+}
+
+.btn-sample-proof:hover {
+  background: #DBEAFE;
+}
+
+.deposit-proof-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.deposit-proof-badge.has-proof {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #16A34A;
+}
+
+.deposit-proof-badge.has-proof:hover {
+  background: #DCFCE7;
+  border-color: #86EFAC;
+}
+
 
