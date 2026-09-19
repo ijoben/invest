@@ -104,8 +104,12 @@ export const Payment = {
     const user = DB.getUserById(userId);
     if (!user) return { freeBalance: 0, lockedCapital: 0, affiliateBalance: 0 };
     const db = DB.get();
-    const activeInvestments = (db.investments || []).filter(i => i.userId === userId && i.status === 'active');
-    const lockedCapital = activeInvestments.reduce((sum, i) => sum + (Number(i.capital || i.amount) || 0), 0);
+    
+    // Active investments + completed investments awaiting manual refund
+    const lockedInvestments = (db.investments || []).filter(i => {
+      return i.userId === userId && (i.status === 'active' || (i.status === 'completed' && i.capitalReturned !== true));
+    });
+    const lockedCapital = lockedInvestments.reduce((sum, i) => sum + (Number(i.capital || i.amount) || 0), 0);
     return {
       freeBalance: user.walletBalance || 0,
       lockedCapital: lockedCapital,
@@ -191,5 +195,63 @@ export const Payment = {
       list = list.filter(t => t.type === filterType);
     }
     return list;
+  },
+
+  // Get live member deposits for running text ticker
+  getLiveMemberDeposits() {
+    const db = DB.get();
+    const realDeposits = (db.transactions || [])
+      .filter(t => t.type === 'deposit')
+      .map(t => ({
+        username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
+        amount: t.amount,
+        method: t.paymentMethod || 'Bank Transfer',
+        status: t.status === 'approved' ? 'Sukses' : 'Diproses',
+        timeAgo: 'Baru saja'
+      }));
+
+    const simulatedDeposits = [
+      { username: 'Bud***', amount: 2500000, method: 'BCA Mobile', status: 'Sukses', timeAgo: '1 menit lalu' },
+      { username: 'Sit***', amount: 5000000, method: 'QRIS Instant', status: 'Sukses', timeAgo: '3 menit lalu' },
+      { username: 'Hen***', amount: 25000000, method: 'VIP USDT TRC20', status: 'Sukses', timeAgo: '5 menit lalu' },
+      { username: 'Kev***', amount: 1000000, method: 'Livin Mandiri', status: 'Sukses', timeAgo: '7 menit lalu' },
+      { username: 'Ria***', amount: 10000000, method: 'BRImo', status: 'Sukses', timeAgo: '11 menit lalu' },
+      { username: 'Dew***', amount: 7500000, method: 'QRIS Instant', status: 'Sukses', timeAgo: '14 menit lalu' },
+      { username: 'Agu***', amount: 15000000, method: 'BNI Mobile', status: 'Sukses', timeAgo: '18 menit lalu' },
+      { username: 'May***', amount: 3000000, method: 'DANA E-Wallet', status: 'Sukses', timeAgo: '22 menit lalu' },
+      { username: 'Den***', amount: 50000000, method: 'VIP USDT BEP20', status: 'Sukses', timeAgo: '27 menit lalu' },
+      { username: 'Rez***', amount: 2000000, method: 'BCA Mobile', status: 'Sukses', timeAgo: '31 menit lalu' }
+    ];
+
+    return [...realDeposits, ...simulatedDeposits];
+  },
+
+  // Get live member withdrawals for running text ticker
+  getLiveMemberWithdrawals() {
+    const db = DB.get();
+    const realWds = (db.transactions || [])
+      .filter(t => t.type === 'withdraw')
+      .map(t => ({
+        username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
+        amount: t.amount,
+        method: t.paymentMethod || 'Bank Transfer',
+        status: t.status === 'approved' ? 'Sukses Masuk' : 'Diproses Bank',
+        timeAgo: 'Baru saja'
+      }));
+
+    const simulatedWds = [
+      { username: 'Ale***', amount: 1500000, method: 'BCA', status: 'Sukses Masuk', timeAgo: '2 menit lalu' },
+      { username: 'Dew***', amount: 3750000, method: 'DANA', status: 'Sukses Masuk', timeAgo: '4 menit lalu' },
+      { username: 'Rud***', amount: 12000000, method: 'Mandiri', status: 'Sukses Masuk', timeAgo: '8 menit lalu' },
+      { username: 'May***', amount: 850000, method: 'BRI', status: 'Sukses Masuk', timeAgo: '12 menit lalu' },
+      { username: 'Fir***', amount: 6400000, method: 'USDT TRC20', status: 'Sukses Masuk', timeAgo: '15 menit lalu' },
+      { username: 'Sit***', amount: 2100000, method: 'BCA', status: 'Sukses Masuk', timeAgo: '19 menit lalu' },
+      { username: 'Wah***', amount: 18500000, method: 'BNI', status: 'Sukses Masuk', timeAgo: '24 menit lalu' },
+      { username: 'Ind***', amount: 4200000, method: 'GoPay', status: 'Sukses Masuk', timeAgo: '29 menit lalu' },
+      { username: 'Cit***', amount: 9500000, method: 'Mandiri', status: 'Sukses Masuk', timeAgo: '35 menit lalu' },
+      { username: 'Tau***', amount: 5000000, method: 'BCA', status: 'Sukses Masuk', timeAgo: '41 menit lalu' }
+    ];
+
+    return [...realWds, ...simulatedWds];
   }
 };

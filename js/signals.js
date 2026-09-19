@@ -4,6 +4,7 @@
  */
 
 import { DB } from './db.js';
+import { Plans } from './plans.js';
 
 export const Signals = {
   // Get all active AI Signals
@@ -18,10 +19,16 @@ export const Signals = {
     return db.marketTickers || [];
   },
 
-  // Fluctuate market prices dynamically
+  // Fluctuate market prices dynamically (only when market is ON)
   tickMarkets() {
     const db = DB.get();
     if (!db.marketTickers) return [];
+
+    const marketStatus = Plans.isMarketOpen();
+    if (!marketStatus.isOpen) {
+      // Market is OFF: keep prices static
+      return db.marketTickers;
+    }
 
     db.marketTickers.forEach(item => {
       // 50% chance to fluctuate each second

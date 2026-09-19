@@ -266,6 +266,46 @@
          4. PANEL PLANS CONFIGURATION
          ==================================================================== -->
     <section id="pane-plans" class="admin-view-panel">
+      <!-- Card 0: Master Operasional Pasar Global (ON / OFF) -->
+      <div class="admin-card" style="margin-bottom: 24px; border-left: 4px solid #38BDF8;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🌐 Master Status Operasional Pasar Global (ON / OFF)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Saklar kendali master untuk status buka/tutup seluruh pasar finansial. Saat pasar OFF, semua tampilan harga live (EUR/USD dll), AI Bot Trading, sinyal, dan dividen profit otomatis berstatus OFF.</p>
+          </div>
+          <span class="badge-status approved" id="marketMasterStatusBadge" style="font-size: 12px; padding: 6px 14px;">🟢 PASAR ON (BUKA)</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Pasar Global & AI Bot</div>
+            <div class="setting-desc">Pilih <strong>BUKA (ON)</strong> saat hari bursa aktif, atau <strong>TUTUP (OFF)</strong> untuk menutup pasar sewaktu-waktu secara instan di frontend user.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <select class="admin-input" id="marketMasterCfgSelect" onchange="AdminPage.previewMarketMasterSettings()">
+              <option value="true">🟢 BUKA (ON) - Pasar & AI Bot Aktif</option>
+              <option value="false">🔴 TUTUP (OFF) - Pasar Libur / OFF</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Pesan Notifikasi Pasar Tutup (Tampil di Frontend)</div>
+            <div class="setting-desc">Keterangan resmi yang muncul pada ticker pasar, grafik live, AI bot, dan sinyal ketika pasar sedang dalam kondisi OFF.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 100%; max-width: 520px;">
+            <input type="text" class="admin-input" id="marketMasterOffMessage" value="Pasar Keuangan Global & AI Trading sedang LIBUR (OFF). Semua instrumen, AI Bot, dan sinyal ditangguhkan.">
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.saveMarketMasterSettings()">
+            <span>💾 Simpan Status Operasional Pasar</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Card 1: Pengaturan Profit Dividen Akhir Pekan (Sabtu & Minggu) -->
       <div class="admin-card" style="margin-bottom: 24px; border-left: 4px solid #C89338;">
         <div class="admin-card-header">

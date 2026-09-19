@@ -146,10 +146,18 @@ const budiBalBeforeExpiry = DB.getUserById(budi.id).walletBalance;
 Plans.syncUserInvestments(budi.id);
 
 const budiAfterExpiry = DB.getUserById(budi.id);
-assert(budiAfterExpiry.walletBalance === budiBalBeforeExpiry + 1000000, 'Budi capital (IDR 1,000,000) 100% returned upon package completion');
+// Under revision 6: Capital remains locked until member processes refund
+assert(budiAfterExpiry.walletBalance === budiBalBeforeExpiry, 'Budi capital remains in locked status upon package completion (not auto-refunded)');
 
 const expiredInv = DB.get().investments.find(i => i.id === invId);
 assert(expiredInv.status === 'completed', 'Investment status updated to completed');
+assert(expiredInv.capitalReturned === false, 'Investment capitalReturned is false until refund action');
+
+// Member executes "proses refundkan ke saldo saya"
+const refundActionRes = Plans.processContractRefund(invId, budi.id);
+assert(refundActionRes.success, 'Member processed refund of completed contract to wallet balance');
+const budiAfterRefund = DB.getUserById(budi.id);
+assert(budiAfterRefund.walletBalance === budiBalBeforeExpiry + 1000000, 'Budi wallet balance credited with refunded capital (IDR 1,000,000)');
 
 // 8. Reward Redemption Flow
 const gopayReward = Rewards.getRewardById('rew-1');

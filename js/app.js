@@ -116,7 +116,21 @@ const App = {
     const avatarEl = document.getElementById('userAvatarBadge');
     
     if (user) {
-      greetingEl.innerHTML = `Hi <span class="user-name">${user.fullName || user.username}</span>,`;
+      const activePlans = Plans.getUserInvestments(user.id);
+      const isMemberActive = activePlans.length > 0;
+      const sponsorName = user.referredBy ? user.referredBy : 'Optional';
+      const statusBadge = isMemberActive
+        ? `<span class="badge-member-active" style="padding: 1px 6px; font-size: 9px;">🟢 Member Aktif</span>`
+        : `<span class="badge-member-inactive" style="padding: 1px 6px; font-size: 9px;">⚪ Belum Aktif</span>`;
+
+      greetingEl.innerHTML = `
+        <div style="font-size: 13.5px; font-weight: 800; line-height: 1.2;">Hi <span class="user-name">${user.fullName || user.username}</span></div>
+        <div style="font-size: 9.5px; color: #64748B; margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+          ${statusBadge}
+          <span style="color: #94A3B8;">·</span>
+          <span style="color: #475569;">Sponsor: <strong>${sponsorName}</strong></span>
+        </div>
+      `;
       avatarEl.classList.add('logged-in');
       avatarEl.innerHTML = `<span>${(user.username || 'U')[0].toUpperCase()}</span><span class="online-dot"></span>`;
     } else {
@@ -152,6 +166,7 @@ const App = {
     const affBalEl = document.getElementById('valAffiliateBalance');
     const pointEl = document.getElementById('valPoint');
     const profitEl = document.getElementById('valTodayProfit');
+    const marketStatus = Plans.isMarketOpen();
 
     if (user) {
       mainBalEl.textContent = DB.formatIDR(user.walletBalance);
@@ -160,14 +175,23 @@ const App = {
       
       const rate = Plans.getUserTodayProfitRate(user.id);
       if (profitEl) {
-        profitEl.textContent = rate > 0 ? `+${rate.toFixed(2)}%` : '+0.00%';
+        if (!marketStatus.isOpen) {
+          profitEl.textContent = '0.00% (OFF)';
+          profitEl.style.color = '#EF4444';
+          profitEl.title = 'Pasar sedang libur / OFF. Dividen profit akan berjalan aktif saat pasar ON.';
+        } else {
+          profitEl.textContent = rate > 0 ? `+${rate.toFixed(2)}%` : '+0.00%';
+          profitEl.style.color = '#0F172A';
+          profitEl.title = 'Profit dividen harian AI berjalan realtime';
+        }
       }
     } else {
       mainBalEl.textContent = 'IDR 0';
       affBalEl.textContent = 'IDR 0';
       pointEl.textContent = '0';
       if (profitEl) {
-        profitEl.textContent = '+0.00%';
+        profitEl.textContent = !marketStatus.isOpen ? '0.00% (OFF)' : '+0.00%';
+        profitEl.style.color = !marketStatus.isOpen ? '#EF4444' : '#0F172A';
       }
     }
   },
@@ -181,7 +205,9 @@ const App = {
 
     container.innerHTML = db.plans.map(plan => {
       const planInvs = userInvestments.filter(inv => inv.planId === plan.id);
-      const isUserActiveInPlan = planInvs.some(inv => inv.status === 'active');
+      const activeInvs = planInvs.filter(inv => inv.status === 'active');
+      const activeCount = activeInvs.length;
+      const isUserActiveInPlan = activeCount > 0;
       const totalPlanProfit = planInvs.reduce((sum, inv) => sum + (inv.totalProfitEarned || 0) + (inv.pendingProfitClaim || 0), 0);
       const profitDisplay = totalPlanProfit > 0 ? `+${DB.formatIDR(totalPlanProfit)}` : DB.formatIDR(0);
       
@@ -205,8 +231,8 @@ const App = {
               <span>Refund</span>
             </button>
             ${isUserActiveInPlan ? `
-              <button class="tier-btn btn-active">
-                <span>Active</span>
+              <button class="tier-btn btn-active" onclick="App.switchTab('trade')" title="${activeCount} Paket Sedang Aktif">
+                <span>${activeCount} Paket Active</span>
               </button>
             ` : `
               <button class="tier-btn ${plan.theme === 'theme-rookie' ? 'btn-change' : 'btn-active'}" onclick="App.handlePlanAction('${plan.id}')">
@@ -224,12 +250,14 @@ const App = {
     const container = document.getElementById('marketTickerContainer');
     if (!container) return;
 
+    const marketStatus = Plans.isMarketOpen();
     const tickers = Signals.getMarketTickers();
+    
     container.innerHTML = tickers.map(t => {
       const changeClass = t.change >= 0 ? 'up' : 'down';
       const changeSign = t.change >= 0 ? '+' : '';
       return `
-        <div class="ticker-card" onclick="App.switchTab('markets')">
+        <div class="ticker-card" onclick="App.openRiwayatModal()">
           <div class="ticker-top">
             <div class="ticker-flag-pair">
               <span class="flag-icon first" style="background:#E2E8F0; color:#1E293B;">${t.code1 || t.name.substring(0,2)}</span>
@@ -239,8 +267,13 @@ const App = {
           </div>
           <div class="ticker-price">${t.price.toLocaleString('en-US', { minimumFractionDigits: t.price < 10 ? 4 : 2 })}</div>
           <div class="ticker-footer">
-            <span class="ticker-change ${changeClass}">${changeSign}${t.change}%</span>
-            <span class="ticker-time">${t.time}</span>
+            ${!marketStatus.isOpen ? `
+              <span class="market-off-badge">🔴 PASAR OFF</span>
+              <span class="ticker-time" style="color: #94A3B8;">Libur</span>
+            ` : `
+              <span class="ticker-change ${changeClass}">${changeSign}${t.change}%</span>
+              <span class="ticker-time">${t.time}</span>
+            `}
           </div>
         </div>
       `;
@@ -603,11 +636,19 @@ const App = {
     }
 
     // Member Mode: Limit to maximum 4 latest active signals
+    const marketStatus = Plans.isMarketOpen();
     const allSignals = Signals.getSignals();
     const signals = allSignals.slice(0, 4);
 
+    const offBanner = !marketStatus.isOpen ? `
+      <div class="market-off-overlay" style="margin-bottom: 12px; background: rgba(239, 68, 68, 0.1); border-color: #EF4444; color: #B91C1C;">
+        <span class="ai-pulse-dot" style="background:#EF4444; animation:none;"></span>
+        <span>Pasar Global Sedang LIBUR (OFF). Sinyal trading ditangguhkan hingga sesi pasar ON.</span>
+      </div>
+    ` : '';
+
     if (signals.length === 0) {
-      feed.innerHTML = `
+      feed.innerHTML = offBanner + `
         <div style="text-align:center; padding:24px 16px; color:#94A3B8; font-size:12px; background:#FFFFFF; border-radius:16px; border:1px solid #E2E8F0;">
           Belum ada sinyal trading aktif baru saat ini. Silakan cek kembali beberapa saat lagi.
         </div>
@@ -615,7 +656,7 @@ const App = {
       return;
     }
 
-    feed.innerHTML = signals.map(sig => `
+    feed.innerHTML = offBanner + signals.map(sig => `
       <div class="signal-card" onclick="App.openSignalDetail('${sig.id}')">
         <div class="signal-card-header">
           <div class="signal-pair-wrap">
@@ -628,7 +669,7 @@ const App = {
               <span class="signal-time-ago"> · ${sig.timeAgo}</span>
             </div>
           </div>
-          <span class="badge-signal-action ${sig.action.toLowerCase()}">${sig.action}</span>
+          <span class="badge-signal-action ${!marketStatus.isOpen ? 'off' : sig.action.toLowerCase()}" style="${!marketStatus.isOpen ? 'background:#64748B; color:#FFFFFF;' : ''}">${!marketStatus.isOpen ? 'OFF' : sig.action}</span>
         </div>
         <div class="signal-matrix-box">
           <div class="matrix-item">
@@ -1255,8 +1296,9 @@ const App = {
             </div>
           ` : ''}
           ${!isActive ? `
-            <div style="font-size:11px; color:#059669; font-weight:700; background:#ECFDF5; padding:8px 12px; border-radius:10px; text-align:center;">
-              ✓ Periode ${inv.durationDays} hari telah selesai. Modal ${DB.formatIDR(inv.capital)} telah dikembalikan ke Saldo Utama.
+            <div style="font-size:11px; color:#059669; font-weight:700; background:#ECFDF5; padding:10px 12px; border-radius:10px; text-align:center; display:flex; justify-content:space-between; align-items:center;">
+              <span>✓ Durasi ${inv.durationDays} hari selesai.${!inv.capitalReturned ? ` Modal Rp ${DB.formatIDR(inv.capital)} tersimpan di Saldo Terlock.` : ` Modal Rp ${DB.formatIDR(inv.capital)} telah direfund.`}</span>
+              ${!inv.capitalReturned ? `<button class="tier-btn btn-topup" style="padding:4px 8px; font-size:10px;" onclick="App.openRefundModal()">Klaim Refund</button>` : ''}
             </div>
           ` : ''}
         </div>
@@ -1278,6 +1320,35 @@ const App = {
     document.getElementById('profileEmail').textContent = user.email || user.phone || 'Member';
     document.getElementById('profileRefCode').textContent = user.referralCode || '-';
     
+    // Member Active status badge
+    const activePlans = Plans.getUserInvestments(user.id);
+    const isMemberActive = activePlans.length > 0;
+    const statusBadgeEl = document.getElementById('profileMemberStatusBadge');
+    if (statusBadgeEl) {
+      if (isMemberActive) {
+        statusBadgeEl.className = 'badge-member-active';
+        statusBadgeEl.textContent = '🟢 Member Aktif';
+      } else {
+        statusBadgeEl.className = 'badge-member-inactive';
+        statusBadgeEl.textContent = '⚪ Belum Aktif';
+      }
+    }
+
+    // Sponsor Info
+    const sponsorEl = document.getElementById('profileSponsorText');
+    if (sponsorEl) {
+      const sponsorText = user.referredBy ? `Sponsor: ${user.referredBy}` : 'Sponsor: Tidak ada sponsor (Opsional)';
+      sponsorEl.textContent = sponsorText;
+    }
+
+    // Joined Date Info
+    const joinedEl = document.getElementById('profileJoinedText');
+    if (joinedEl) {
+      const joinDate = user.createdAt ? new Date(user.createdAt) : new Date();
+      const joinFormatted = joinDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      joinedEl.textContent = `Bergabung sejak: ${joinFormatted}`;
+    }
+
     const refLink = `${window.location.origin}${window.location.pathname}?ref=${user.referralCode}`;
     document.getElementById('profileRefLinkInput').value = refLink;
 
@@ -1309,8 +1380,10 @@ const App = {
     }
   },
 
-  // Render Markets View Page with Interactive Chart
+  // Render Markets / Riwayat View Page with Interactive Chart & Live Running Text
   renderMarketsView() {
+    this.renderRiwayatTickers();
+
     const chartCanvas = document.getElementById('marketChartCanvas');
     if (chartCanvas && chartCanvas.getContext) {
       const ctx = chartCanvas.getContext('2d');
@@ -1345,11 +1418,38 @@ const App = {
     }
   },
 
-  // Interactive Live AI Trading Chart (EUR/USD)
+  // Interactive Live AI Trading Chart (EUR/USD) with Market Status Check
   initAiTradingChart() {
     if (this.aiChartInterval) clearInterval(this.aiChartInterval);
 
     this.aiChartInterval = setInterval(() => {
+      const marketStatus = Plans.isMarketOpen();
+      const priceEl = document.getElementById('tradeEurUsdPrice');
+      const profitEl = document.getElementById('tradeEurUsdProfitRate');
+      const botStatusEl = document.querySelector('.ai-robot-status');
+
+      if (!marketStatus.isOpen) {
+        if (priceEl) priceEl.textContent = 'PAUSED (OFF)';
+        if (profitEl) {
+          profitEl.textContent = '0.00% (OFF)';
+          profitEl.style.color = '#EF4444';
+        }
+        if (botStatusEl) {
+          botStatusEl.innerHTML = `<span class="ai-pulse-dot" style="background:#94A3B8; animation:none;"></span><span style="color:#94A3B8;">AI Bot OFF (Pasar Libur)</span>`;
+        }
+        if (this.currentTab === 'trade') {
+          this.renderAiTradingChart();
+        }
+        return;
+      }
+
+      if (botStatusEl) {
+        botStatusEl.innerHTML = `<span class="ai-pulse-dot"></span><span>AI Bot Active</span>`;
+      }
+      if (profitEl) {
+        profitEl.style.color = '';
+      }
+
       // Fluctuate price slightly
       const lastPoint = this.aiChartPoints[this.aiChartPoints.length - 1];
       const delta = (Math.random() - 0.48) * 0.0003;
@@ -1361,8 +1461,6 @@ const App = {
       }
 
       // Update live rate DOM
-      const priceEl = document.getElementById('tradeEurUsdPrice');
-      const profitEl = document.getElementById('tradeEurUsdProfitRate');
       if (priceEl) priceEl.textContent = nextPoint.toFixed(5);
       if (profitEl) {
         const winRate = (3.15 + (nextPoint - 1.1500) * 20 + (Math.random() * 0.15)).toFixed(2);
@@ -1574,7 +1672,420 @@ const App = {
   },
 
   handlePlanRefund(planId) {
-    this.showToast('Fitur refund proteksi modal berlaku setelah periode paket berakhir atau melalui permohonan CS.', 'info');
+    this.openRefundModal(planId);
+  },
+
+  // 1. My Statistic Modal Controller (Requirement 1)
+  openMyStatisticModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      this.showToast('Silakan login untuk melihat statistik dan portofolio akun Anda.', 'info');
+      return;
+    }
+
+    const allInvs = Plans.getAllUserInvestments(user.id);
+    const activeInvs = allInvs.filter(i => i.status === 'active');
+    const isMemberActive = activeInvs.length > 0;
+    const todayRate = Plans.getUserTodayProfitRate(user.id);
+    const totalProfitEarned = allInvs.reduce((sum, i) => sum + (i.totalProfitEarned || 0) + (i.pendingProfitClaim || 0), 0);
+    const totalActiveCap = activeInvs.reduce((sum, i) => sum + (i.capital || 0), 0);
+    const todayNominal = Math.floor((totalActiveCap * todayRate) / 100);
+
+    const nameEl = document.getElementById('statMemberName');
+    const emailEl = document.getElementById('statMemberEmail');
+    const badgeEl = document.getElementById('statMemberStatusBadge');
+    const sponsorEl = document.getElementById('statMemberSponsor');
+    const joinedEl = document.getElementById('statMemberJoined');
+    const todayRateEl = document.getElementById('statTodayProfit');
+    const todayNomEl = document.getElementById('statTodayProfitNominal');
+    const totalEarnedEl = document.getElementById('statTotalProfitEarned');
+    const countBadgeEl = document.getElementById('statActivePackagesCountBadge');
+    const listContainer = document.getElementById('statActivePlansContainer');
+
+    if (nameEl) nameEl.textContent = user.fullName || user.username;
+    if (emailEl) emailEl.textContent = user.email || user.phone || 'Member FGT Pro';
+    if (badgeEl) {
+      badgeEl.className = isMemberActive ? 'badge-member-active' : 'badge-member-inactive';
+      badgeEl.textContent = isMemberActive ? '🟢 Member Aktif' : '⚪ Belum Aktif';
+    }
+    if (sponsorEl) {
+      sponsorEl.textContent = user.referredBy ? user.referredBy : 'Tidak ada sponsor (Opsional)';
+    }
+    if (joinedEl) {
+      const joinDate = user.createdAt ? new Date(user.createdAt) : new Date();
+      joinedEl.textContent = joinDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    const marketStatus = Plans.isMarketOpen();
+    if (todayRateEl) {
+      todayRateEl.textContent = !marketStatus.isOpen ? '0.00% (OFF)' : (todayRate > 0 ? `+${todayRate.toFixed(2)}%` : '+0.00%');
+      todayRateEl.style.color = !marketStatus.isOpen ? '#EF4444' : '#15803D';
+    }
+    if (todayNomEl) {
+      todayNomEl.textContent = !marketStatus.isOpen ? '+IDR 0 (Pasar Libur)' : `+${DB.formatIDR(todayNominal)}`;
+    }
+    if (totalEarnedEl) {
+      totalEarnedEl.textContent = DB.formatIDR(totalProfitEarned);
+    }
+    if (countBadgeEl) {
+      countBadgeEl.textContent = `${activeInvs.length} Paket Aktif`;
+    }
+
+    if (listContainer) {
+      if (activeInvs.length === 0) {
+        listContainer.innerHTML = `
+          <div style="text-align: center; padding: 18px 12px; background: #F8FAFC; border-radius: 12px; border: 1px solid #E2E8F0;">
+            <p style="font-size: 11.5px; color: #64748B; margin: 0 0 10px 0;">Belum ada paket investasi aktif saat ini.</p>
+            <button class="tier-btn btn-topup" style="display: inline-block; padding: 6px 14px; font-size: 11px;" onclick="App.closeModal('myStatisticModal'); App.switchTab('home');">
+              + Pilih & Aktifkan Paket
+            </button>
+          </div>
+        `;
+      } else {
+        listContainer.innerHTML = activeInvs.map(inv => {
+          const progressPct = Math.min(100, Math.round(((inv.daysElapsed || 0) / inv.durationDays) * 100));
+          return `
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 12px;">
+              <div class="flex-between mb-1">
+                <span style="font-weight: 800; font-size: 13px; color: #0F172A;">${inv.planName}</span>
+                <span style="font-weight: 800; color: #166534; font-family: var(--font-mono); font-size: 12.5px;">${DB.formatIDR(inv.capital)}</span>
+              </div>
+              <div style="font-size: 10.5px; color: #64748B; margin-bottom: 6px;">
+                Durasi: Hari ke-${inv.daysElapsed || 0}/${inv.durationDays} (${progressPct}%) · Profit: +${DB.formatIDR(inv.totalProfitEarned || 0)}
+              </div>
+              <div style="width: 100%; height: 5px; background: #E2E8F0; border-radius: 3px; overflow: hidden;">
+                <div style="width: ${progressPct}%; height: 100%; background: #22C55E; border-radius: 3px;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    this.openModal('myStatisticModal');
+  },
+
+  // 2. Riwayat Modal & Running Text Controller (Requirement 2)
+  openRiwayatModal() {
+    this.renderRiwayatTickers();
+    this.filterRiwayat('all');
+    this.openModal('riwayatModal');
+  },
+
+  renderRiwayatTickers() {
+    const deposits = Payment.getLiveMemberDeposits();
+    const wds = Payment.getLiveMemberWithdrawals();
+
+    const renderDepHtml = deposits.map(d => `
+      <span class="fgt-marquee-item">
+        <span class="badge-tag badge-dep">DEPOSIT</span>
+        <span>${d.username}</span>
+        <span class="amount-val">+${DB.formatIDR(d.amount)}</span>
+        <span style="color:#94A3B8; font-size:10px;">(${d.method})</span>
+        <span style="color:#4ADE80; font-size:10px;">· ${d.timeAgo}</span>
+      </span>
+    `).join('');
+
+    const renderWdHtml = wds.map(w => `
+      <span class="fgt-marquee-item">
+        <span class="badge-tag badge-wd">WITHDRAW</span>
+        <span>${w.username}</span>
+        <span class="amount-val">-${DB.formatIDR(w.amount)}</span>
+        <span style="color:#94A3B8; font-size:10px;">(${w.method})</span>
+        <span style="color:#FACC15; font-size:10px;">· ${w.status}</span>
+      </span>
+    `).join('');
+
+    // Update modal tracks
+    const modalDepTrack = document.getElementById('modalDepositMarqueeTrack');
+    const modalWdTrack = document.getElementById('modalWdMarqueeTrack');
+    if (modalDepTrack) modalDepTrack.innerHTML = renderDepHtml + renderDepHtml;
+    if (modalWdTrack) modalWdTrack.innerHTML = renderWdHtml + renderWdHtml;
+
+    // Update tab-markets tracks if present
+    const tabDepTrack = document.getElementById('tabDepositMarqueeTrack');
+    const tabWdTrack = document.getElementById('tabWdMarqueeTrack');
+    if (tabDepTrack) tabDepTrack.innerHTML = renderDepHtml + renderDepHtml;
+    if (tabWdTrack) tabWdTrack.innerHTML = renderWdHtml + renderWdHtml;
+  },
+
+  filterRiwayat(type) {
+    const allBtn = document.getElementById('riwayatFilterAll');
+    const depBtn = document.getElementById('riwayatFilterDep');
+    const wdBtn = document.getElementById('riwayatFilterWd');
+    const listEl = document.getElementById('riwayatFullFeedList');
+    if (!listEl) return;
+
+    if (allBtn) allBtn.classList.toggle('active', type === 'all');
+    if (depBtn) depBtn.classList.toggle('active', type === 'deposit');
+    if (wdBtn) wdBtn.classList.toggle('active', type === 'withdraw');
+
+    const deposits = Payment.getLiveMemberDeposits().map(d => ({ ...d, trxType: 'deposit' }));
+    const wds = Payment.getLiveMemberWithdrawals().map(w => ({ ...w, trxType: 'withdraw' }));
+
+    let combined = [];
+    if (type === 'deposit') combined = deposits;
+    else if (type === 'withdraw') combined = wds;
+    else {
+      // Interleave deposits and withdrawals
+      const maxLen = Math.max(deposits.length, wds.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (deposits[i]) combined.push(deposits[i]);
+        if (wds[i]) combined.push(wds[i]);
+      }
+    }
+
+    listEl.innerHTML = combined.map(item => {
+      const isDep = item.trxType === 'deposit';
+      const color = isDep ? '#15803D' : '#B45309';
+      const bg = isDep ? '#F0FDF4' : '#FFFBEB';
+      const sign = isDep ? '+' : '-';
+      const tagText = isDep ? 'DEPOSIT' : 'PENARIKAN (WD)';
+      const tagClass = isDep ? 'badge-dep' : 'badge-wd';
+
+      return `
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: ${bg}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: ${color};">
+              ${isDep ? '↓' : '↑'}
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
+                ${item.username} <span class="badge-tag ${tagClass}" style="font-size: 8.5px; margin-left: 4px;">${tagText}</span>
+              </div>
+              <div style="font-size: 10.5px; color: #64748B;">${item.method} · ${item.timeAgo}</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13.5px; color: ${color};">${sign}${DB.formatIDR(item.amount)}</div>
+            <div style="font-size: 10px; color: #10B981; font-weight: 700;">✓ ${item.status}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  // 3. Leaderboard Modal Controller (Requirement 5)
+  openLeaderboardModal() {
+    const sponsors = Plans.getTopSponsors(12);
+    const profits = Plans.getTopProfits(12);
+
+    // Build Running Text Track
+    const trackEl = document.getElementById('leadMarqueeTrack');
+    if (trackEl) {
+      const topSponsorItems = sponsors.slice(0, 5).map((s, idx) => `
+        <span class="fgt-marquee-item">
+          <span class="badge-tag badge-lead">TOP ${idx + 1} SPONSOR</span>
+          <span style="font-weight:700;">${s.username}</span>
+          <span class="amount-val">${DB.formatIDR(s.commission)} Komisi</span>
+          <span style="color:#C084FC;">(${s.directCount} Member)</span>
+        </span>
+      `).join('');
+
+      const topProfitItems = profits.slice(0, 5).map((p, idx) => `
+        <span class="fgt-marquee-item">
+          <span class="badge-tag badge-dep">TOP ${idx + 1} PROFIT</span>
+          <span style="font-weight:700;">${p.username}</span>
+          <span class="amount-val">+${DB.formatIDR(p.totalProfit)}</span>
+          <span style="color:#4ADE80;">(Win: ${p.winRate}%)</span>
+        </span>
+      `).join('');
+
+      const combinedText = topSponsorItems + topProfitItems;
+      trackEl.innerHTML = combinedText + combinedText;
+    }
+
+    this.switchLeaderboardTab('sponsor');
+    this.openModal('leaderboardModal');
+  },
+
+  switchLeaderboardTab(tab) {
+    const sponsorBtn = document.getElementById('leadTabSponsorBtn');
+    const profitBtn = document.getElementById('leadTabProfitBtn');
+    const container = document.getElementById('leaderboardListContainer');
+    if (!container) return;
+
+    if (sponsorBtn) sponsorBtn.classList.toggle('active', tab === 'sponsor');
+    if (profitBtn) profitBtn.classList.toggle('active', tab === 'profit');
+
+    if (tab === 'sponsor') {
+      const sponsors = Plans.getTopSponsors(12);
+      container.innerHTML = sponsors.map((s, idx) => {
+        const rank = idx + 1;
+        const rankClass = rank === 1 ? 'lead-rank-1' : (rank === 2 ? 'lead-rank-2' : (rank === 3 ? 'lead-rank-3' : 'lead-rank-other'));
+        const medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : `#${rank}`));
+
+        return `
+          <div class="lead-member-row">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="lead-rank-badge ${rankClass}">${medal}</div>
+              <div>
+                <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
+                  ${s.username} <span style="font-size: 10px; color: #C89338; font-weight: 700;">[${s.badge}]</span>
+                </div>
+                <div style="font-size: 10.5px; color: #64748B;">
+                  ${s.directCount} Sponsor Langsung · Total Tim: ${s.totalTeam}
+                </div>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13.5px; color: #B45309;">
+                ${DB.formatIDR(s.commission)}
+              </div>
+              <div style="font-size: 9.5px; color: #94A3B8;">Bonus Sponsor</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      const profits = Plans.getTopProfits(12);
+      container.innerHTML = profits.map((p, idx) => {
+        const rank = idx + 1;
+        const rankClass = rank === 1 ? 'lead-rank-1' : (rank === 2 ? 'lead-rank-2' : (rank === 3 ? 'lead-rank-3' : 'lead-rank-other'));
+        const medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : `#${rank}`));
+
+        return `
+          <div class="lead-member-row">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="lead-rank-badge ${rankClass}">${medal}</div>
+              <div>
+                <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
+                  ${p.username} <span style="font-size: 10px; color: #22C55E; font-weight: 700;">[${p.activePlan || 'VIP Pro'}]</span>
+                </div>
+                <div style="font-size: 10.5px; color: #64748B;">
+                  Modal: ${DB.formatIDR(p.totalCapital)} · Win Rate: ${p.winRate}%
+                </div>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13.5px; color: #15803D;">
+                +${DB.formatIDR(p.totalProfit)}
+              </div>
+              <div style="font-size: 9.5px; color: #10B981;">Total Profit</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  },
+
+  // 4. Refund Modal & Contract Completion Handler (Requirement 6)
+  openRefundModal(planId = null) {
+    const user = Auth.getUser();
+    if (!user) {
+      this.openModal('authModal');
+      this.showToast('Silakan login untuk mengakses menu refund modal paket.', 'info');
+      return;
+    }
+
+    const refundableInvs = Plans.getRefundableInvestments(user.id);
+    const lockedRefundCap = Plans.getLockedRefundCapital(user.id);
+    const runningInvs = Plans.getUserInvestments(user.id);
+
+    const totalEl = document.getElementById('refundLockedTotalVal');
+    const btnAll = document.getElementById('btnProcessRefundAll');
+    const compList = document.getElementById('refundCompletedList');
+    const runList = document.getElementById('refundRunningList');
+
+    if (totalEl) totalEl.textContent = DB.formatIDR(lockedRefundCap);
+
+    if (btnAll) {
+      if (lockedRefundCap > 0) {
+        btnAll.removeAttribute('disabled');
+        btnAll.style.opacity = '1';
+        btnAll.style.pointerEvents = 'auto';
+      } else {
+        btnAll.setAttribute('disabled', 'true');
+        btnAll.style.opacity = '0.5';
+        btnAll.style.pointerEvents = 'none';
+      }
+    }
+
+    if (compList) {
+      if (refundableInvs.length === 0) {
+        compList.innerHTML = `
+          <div style="text-align: center; padding: 14px; background: #F8FAFC; border-radius: 12px; border: 1px solid #E2E8F0; font-size: 11.5px; color: #94A3B8;">
+            Tidak ada kontrak paket selesai yang tertahan saat ini. Semua modal pokok yang selesai telah direfund.
+          </div>
+        `;
+      } else {
+        compList.innerHTML = refundableInvs.map(inv => `
+          <div style="background: #FFFFFF; border: 1px solid #BBF7D0; border-radius: 12px; padding: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <div class="flex-between mb-1">
+              <span style="font-weight: 800; font-size: 13.5px; color: #0F172A;">${inv.planName}</span>
+              <span style="font-weight: 800; font-family: var(--font-mono); color: #15803D; font-size: 13.5px;">${DB.formatIDR(inv.capital)}</span>
+            </div>
+            <div style="font-size: 11px; color: #166534; margin-bottom: 8px;">
+              ✓ Kontrak ${inv.durationDays} hari telah tuntas. Modal terlock aman & siap dicairkan.
+            </div>
+            <button class="btn-process-refund" style="padding: 8px 12px; font-size: 11.5px;" onclick="App.processContractRefund('${inv.id}')">
+              <span>proses refundkan ke saldo saya</span>
+            </button>
+          </div>
+        `).join('');
+      }
+    }
+
+    if (runList) {
+      if (runningInvs.length === 0) {
+        runList.innerHTML = `
+          <div style="text-align: center; padding: 10px; font-size: 11px; color: #94A3B8;">
+            Tidak ada paket yang sedang aktif berjalan.
+          </div>
+        `;
+      } else {
+        runList.innerHTML = runningInvs.map(inv => {
+          const pct = Math.min(100, Math.round(((inv.daysElapsed || 0) / inv.durationDays) * 100));
+          return `
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px 12px; font-size: 11px;">
+              <div class="flex-between mb-1">
+                <span style="font-weight: 700; color: #334155;">${inv.planName} (${DB.formatIDR(inv.capital)})</span>
+                <span style="color: #64748B;">Hari ke-${inv.daysElapsed || 0}/${inv.durationDays}</span>
+              </div>
+              <div style="width: 100%; height: 4px; background: #E2E8F0; border-radius: 2px; overflow: hidden;">
+                <div style="width: ${pct}%; height: 100%; background: #3B82F6;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    this.openModal('refundModal');
+  },
+
+  processContractRefund(investmentId) {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const res = Plans.processContractRefund(investmentId, user.id);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderAll();
+      this.openRefundModal();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  processContractRefundAll() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const res = Plans.processAllContractRefunds(user.id);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderAll();
+      this.openRefundModal();
+    } else {
+      this.showToast(res.message, 'info');
+    }
+  },
+
+  // 5. Kelas Trading Modal Controller (Requirement 8)
+  openKelasTradingModal() {
+    this.openModal('kelasTradingModal');
   },
 
   handlePlanAction(planId) {

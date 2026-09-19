@@ -3151,5 +3151,316 @@ html, body {
   line-height: 1.35;
 }
 
+/* ==========================================================================
+   ADVANCED RUNNING TEXT (MARQUEE) FOR RIWAYAT & LEADERBOARD
+   ========================================================================== */
+.fgt-marquee-wrap {
+  position: relative;
+  overflow: hidden;
+  background: #0F172A;
+  border-radius: 12px;
+  padding: 8px 0;
+  border: 1px solid #1E293B;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
 
+.fgt-marquee-wrap::before,
+.fgt-marquee-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 2;
+  pointer-events: none;
+}
 
+.fgt-marquee-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, #0F172A 0%, transparent 100%);
+}
+
+.fgt-marquee-wrap::after {
+  right: 0;
+  background: linear-gradient(-90deg, #0F172A 0%, transparent 100%);
+}
+
+.fgt-marquee-track {
+  display: flex;
+  white-space: nowrap;
+  gap: 20px;
+  animation: fgtMarqueeScroll 28s linear infinite;
+  padding-left: 20px;
+}
+
+.fgt-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes fgtMarqueeScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.fgt-marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: #E2E8F0;
+}
+
+.fgt-marquee-item .badge-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.fgt-marquee-item .badge-dep {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ADE80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.fgt-marquee-item .badge-wd {
+  background: rgba(234, 179, 8, 0.2);
+  color: #FACC15;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.fgt-marquee-item .badge-lead {
+  background: rgba(192, 132, 252, 0.2);
+  color: #E879F9;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+}
+
+.fgt-marquee-item .amount-val {
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  color: #F8FAFC;
+}
+
+/* ==========================================================================
+   USER PROFILE METADATA & BADGES (Sponsor, Active Status, Joined Date)
+   ========================================================================== */
+.user-profile-meta-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.badge-member-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  align-self: flex-start;
+}
+
+.badge-member-inactive {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #CBD5E1;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
+.user-sponsor-info {
+  font-size: 11px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-joined-info {
+  font-size: 10px;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ==========================================================================
+   MARKET OFF STATE STYLING
+   ========================================================================== */
+.market-off-overlay {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid #EF4444;
+  color: #FECACA;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.market-off-badge {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FCA5A5;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.ai-bot-off {
+  background: #334155 !important;
+  color: #94A3B8 !important;
+  border-color: #475569 !important;
+}
+
+/* ==========================================================================
+   REFUND MODAL & CONTRACT COMPLETION CARD
+   ========================================================================== */
+.refund-card-box {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 12px;
+}
+
+.refund-summary-hero {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+  border-radius: 16px;
+  padding: 16px;
+  color: #FFFFFF;
+  margin-bottom: 14px;
+  border: 1px solid #334155;
+}
+
+.btn-process-refund {
+  background: linear-gradient(135deg, #C89338 0%, #E5A83B 50%, #B8822A 100%);
+  color: #0F172A;
+  font-weight: 800;
+  font-size: 13px;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(200, 147, 56, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-process-refund:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(200, 147, 56, 0.45);
+}
+
+/* ==========================================================================
+   LEADERBOARD STYLES
+   ========================================================================== */
+.lead-tab-bar {
+  display: flex;
+  background: #F1F5F9;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.lead-tab-btn {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lead-tab-btn.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.lead-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #FFFFFF;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.lead-rank-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.lead-rank-1 { background: #FEF08A; color: #854D0E; border: 1.5px solid #FACC15; }
+.lead-rank-2 { background: #E2E8F0; color: #334155; border: 1.5px solid #CBD5E1; }
+.lead-rank-3 { background: #FFEDD5; color: #9A3412; border: 1.5px solid #FB923C; }
+.lead-rank-other { background: #F8FAFC; color: #64748B; }
+
+/* ==========================================================================
+   KELAS TRADING SOCIAL CHANNELS
+   ========================================================================== */
+.kelas-channel-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  color: #FFFFFF;
+  cursor: pointer;
+  text-decoration: none;
+  margin-bottom: 10px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kelas-channel-card:hover {
+  transform: translateY(-2px);
+}
+
+.kelas-wa {
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.3);
+}
+
+.kelas-tg {
+  background: linear-gradient(135deg, #0088CC 0%, #005580 100%);
+  box-shadow: 0 4px 14px rgba(0, 136, 204, 0.3);
+}

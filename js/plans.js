@@ -27,6 +27,41 @@ export const Plans = {
     return day === 0 || day === 6;
   },
 
+  // Check universal market status (Master switch + Weekend schedule)
+  isMarketOpen(date) {
+    const db = DB.get();
+    const masterClosed = db.settings && (db.settings.marketStatus === 'closed' || db.settings.marketOpen === false);
+    const weekendStatus = this.isWeekendMarketClosed(date);
+
+    if (masterClosed) {
+      return {
+        isOpen: false,
+        closed: true,
+        isWeekend: weekendStatus.isWeekend,
+        reason: 'master_off',
+        message: (db.settings && db.settings.marketOffMessage) || 'Pasar Keuangan Global & AI Trading sedang LIBUR (OFF). Semua instrumen, AI Bot, dan sinyal ditangguhkan.'
+      };
+    }
+
+    if (weekendStatus.closed) {
+      return {
+        isOpen: false,
+        closed: true,
+        isWeekend: true,
+        reason: 'weekend_closed',
+        message: weekendStatus.message
+      };
+    }
+
+    return {
+      isOpen: true,
+      closed: false,
+      isWeekend: weekendStatus.isWeekend,
+      reason: 'open',
+      message: 'Pasar Keuangan Global & AI Trading Aktif (ON).'
+    };
+  },
+
   // Check if market/profit is currently closed due to weekend settings
   isWeekendMarketClosed(date) {
     const db = DB.get();
@@ -57,7 +92,7 @@ export const Plans = {
     };
   },
 
-  // Synchronize user investments with real timestamps (auto-settles completed cycles)
+  // Synchronize user investments with real timestamps (handles completed cycles)
   syncUserInvestments(userId) {
     if (!userId) return [];
     const db = DB.get();
@@ -70,34 +105,24 @@ export const Plans = {
 
     db.investments = db.investments || [];
     const userInvs = db.investments.filter(inv => inv.userId === userId && inv.status === 'active');
-    const marketStatus = this.isWeekendMarketClosed();
+    const marketStatus = this.isMarketOpen();
 
     userInvs.forEach(inv => {
       // 1. Check if investment duration has expired
+      // Contract is completed, but capital remains locked until member clicks 'Proses refundkan ke saldo saya'
       if (inv.daysElapsed >= inv.durationDays) {
         inv.status = 'completed';
-        inv.completedAt = new Date().toISOString();
-        if (!inv.capitalReturned) {
-          user.walletBalance = (user.walletBalance || 0) + inv.capital;
-          inv.capitalReturned = true;
-          db.transactions.unshift({
-            id: 'TRX-CAP-' + Math.floor(100000 + Math.random() * 900000),
-            userId: user.id,
-            username: user.username,
-            type: 'capital_return',
-            planName: inv.planName,
-            amount: inv.capital,
-            note: `Pengembalian modal investasi paket ${inv.planName} (${inv.durationDays} hari selesai)`,
-            status: 'approved',
-            createdAt: new Date().toISOString()
-          });
+        inv.completedAt = inv.completedAt || new Date().toISOString();
+        inv.refundReady = true;
+        if (inv.capitalReturned === undefined) {
+          inv.capitalReturned = false;
         }
         modified = true;
         return;
       }
 
-      // 2. If market is closed on weekend, skip generating new profit claim
-      if (marketStatus.closed) {
+      // 2. If market is closed (either weekend or admin toggle), skip generating new profit claim
+      if (!marketStatus.isOpen) {
         return;
       }
 
@@ -337,23 +362,12 @@ export const Plans = {
         // Check if plan duration reached upon this claim
         if (inv.daysElapsed >= inv.durationDays) {
           inv.status = 'completed';
-          inv.completedAt = new Date().toISOString();
-          if (!inv.capitalReturned) {
-            user.walletBalance = (user.walletBalance || 0) + inv.capital;
-            inv.capitalReturned = true;
-            completedPlans.push(inv);
-            db.transactions.unshift({
-              id: 'TRX-CAP-' + Math.floor(100000 + Math.random() * 900000),
-              userId: user.id,
-              username: user.username,
-              type: 'capital_return',
-              planName: inv.planName,
-              amount: inv.capital,
-              note: `Pengembalian modal paket ${inv.planName} (${inv.durationDays} hari selesai)`,
-              status: 'approved',
-              createdAt: new Date().toISOString()
-            });
+          inv.completedAt = inv.completedAt || new Date().toISOString();
+          inv.refundReady = true;
+          if (inv.capitalReturned === undefined) {
+            inv.capitalReturned = false;
           }
+          completedPlans.push(inv);
         }
       }
     });
@@ -387,8 +401,8 @@ export const Plans = {
 
     let msg = `Berhasil klaim profit harian sebesar ${DB.formatIDR(totalClaimable)} ke Saldo Utama!`;
     if (completedPlans.length > 0) {
-      const capReturned = completedPlans.reduce((sum, p) => sum + p.capital, 0);
-      msg += ` Paket investasi telah selesai (${completedPlans[0].durationDays}/${completedPlans[0].durationDays} hari) dan modal ${DB.formatIDR(capReturned)} telah dikembalikan ke Saldo Utama.`;
+      const lockedCap = completedPlans.reduce((sum, p) => sum + p.capital, 0);
+      msg += ` Kontrak paket investasi telah selesai (${completedPlans[0].durationDays}/${completedPlans[0].durationDays} hari). Modal sebesar ${DB.formatIDR(lockedCap)} tersimpan di Saldo Terlock. Silakan buka menu Refund dan klik "Proses refundkan ke saldo saya" untuk menarik (WD) atau mengaktifkan paket kembali.`;
     }
 
     return {
@@ -396,5 +410,211 @@ export const Plans = {
       amount: totalClaimable,
       message: msg
     };
+  },
+
+  // Get completed investments that are pending capital refund
+  getRefundableInvestments(userId) {
+    if (!userId) return [];
+    this.syncUserInvestments(userId);
+    const db = DB.get();
+    return (db.investments || []).filter(inv => {
+      return inv.userId === userId && inv.status === 'completed' && inv.capitalReturned !== true;
+    });
+  },
+
+  // Get total locked completed capital awaiting refund
+  getLockedRefundCapital(userId) {
+    const list = this.getRefundableInvestments(userId);
+    return list.reduce((sum, inv) => sum + (Number(inv.capital) || 0), 0);
+  },
+
+  // Process manual refund of completed investment capital to user's wallet balance
+  processContractRefund(investmentId, userId) {
+    const db = DB.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User tidak ditemukan!' };
+
+    db.investments = db.investments || [];
+    const inv = db.investments.find(i => i.id === investmentId && i.userId === userId);
+    if (!inv) {
+      return { success: false, message: 'Paket investasi tidak ditemukan!' };
+    }
+
+    if (inv.status !== 'completed' && (inv.daysElapsed || 0) < inv.durationDays) {
+      return {
+        success: false,
+        message: `Masa kontrak paket masih berjalan (${inv.daysElapsed || 0}/${inv.durationDays} hari). Refund modal pokok hanya dapat diproses setelah masa kontrak selesai.`
+      };
+    }
+
+    if (inv.capitalReturned) {
+      return {
+        success: false,
+        message: 'Modal paket investasi ini sudah pernah direfundkan ke saldo Anda sebelumnya.'
+      };
+    }
+
+    const refundAmount = Number(inv.capital) || 0;
+    user.walletBalance = (user.walletBalance || 0) + refundAmount;
+    inv.capitalReturned = true;
+    inv.refundedAt = new Date().toISOString();
+    inv.refundReady = false;
+
+    // Record capital refund transaction
+    db.transactions = db.transactions || [];
+    const trxId = 'TRX-REF-' + Math.floor(100000 + Math.random() * 900000);
+    db.transactions.unshift({
+      id: trxId,
+      userId: user.id,
+      username: user.username,
+      type: 'capital_refund',
+      planName: inv.planName,
+      amount: refundAmount,
+      note: `Refund pengembalian modal paket ${inv.planName} (${inv.durationDays} hari selesai) ke Saldo Utama`,
+      status: 'approved',
+      createdAt: new Date().toISOString()
+    });
+
+    DB.save(db);
+
+    return {
+      success: true,
+      amount: refundAmount,
+      amountRefunded: refundAmount,
+      message: `Proses refund berhasil! Modal sebesar ${DB.formatIDR(refundAmount)} telah dikembalikan ke Saldo Utama Anda. Saldo sekarang dapat ditarik (WD) atau digunakan untuk mengaktifkan paket kembali.`
+    };
+  },
+
+  // Process all pending refundable contracts for user
+  processAllContractRefunds(userId) {
+    const refundables = this.getRefundableInvestments(userId);
+    if (refundables.length === 0) {
+      return { success: false, message: 'Tidak ada saldo modal kontrak selesai yang perlu direfund saat ini.' };
+    }
+
+    let totalRefunded = 0;
+    refundables.forEach(inv => {
+      const res = this.processContractRefund(inv.id, userId);
+      if (res.success) {
+        totalRefunded += res.amount;
+      }
+    });
+
+    return {
+      success: true,
+      amount: totalRefunded,
+      message: `Total modal sebesar ${DB.formatIDR(totalRefunded)} berhasil diproses dan masuk ke Saldo Utama Anda! Saldo sekarang dapat di-WD atau diaktifkan kembali.`
+    };
+  },
+
+  // Leaderboard: Top Sponsors (Min 10 Members)
+  getTopSponsors(limit = 10) {
+    const db = DB.get();
+    const users = db.users || [];
+    
+    // Aggregate data from real users or fallback curated list
+    const sponsorStats = users.map(u => {
+      const downlines = Affiliate.getDownlines(u.referralCode || '');
+      const directCount = downlines.level1.length;
+      const totalTeam = downlines.totalMembers;
+      const turnover = downlines.totalTeamTurnover;
+      const commission = (u.affiliateBalance || 0) + Math.floor(turnover * 0.10);
+      return {
+        id: u.id,
+        username: u.username,
+        fullName: u.fullName || u.username,
+        directCount,
+        sponsorCount: directCount,
+        totalTeam,
+        turnover,
+        commission,
+        badge: 'VIP Leader'
+      };
+    });
+
+    // Default simulated top leaders if database has few affiliates
+    const fallbackLeaders = [
+      { username: 'Hendra_Sultan', fullName: 'Hendra Wijaya', directCount: 48, sponsorCount: 48, totalTeam: 184, turnover: 850000000, commission: 85000000, badge: 'Crown Diamond' },
+      { username: 'Master_Cuan88', fullName: 'Budi Santoso', directCount: 39, sponsorCount: 39, totalTeam: 142, turnover: 620000000, commission: 62000000, badge: 'Super Leader' },
+      { username: 'Rian_FXTrader', fullName: 'Rian Pratama', directCount: 33, sponsorCount: 33, totalTeam: 118, turnover: 490000000, commission: 49000000, badge: 'Gold Master' },
+      { username: 'Dewi_Investor', fullName: 'Dewi Lestari', directCount: 29, sponsorCount: 29, totalTeam: 96, turnover: 380000000, commission: 38000000, badge: 'Gold Master' },
+      { username: 'Kevin_Surabaya', fullName: 'Kevin Ardiansyah', directCount: 26, sponsorCount: 26, totalTeam: 84, turnover: 310000000, commission: 31000000, badge: 'Silver Pro' },
+      { username: 'Siti_Capital', fullName: 'Siti Nurhaliza', directCount: 22, sponsorCount: 22, totalTeam: 72, turnover: 260000000, commission: 26000000, badge: 'Silver Pro' },
+      { username: 'Agus_TraderPro', fullName: 'Agus Gunawan', directCount: 19, sponsorCount: 19, totalTeam: 61, turnover: 215000000, commission: 21500000, badge: 'Silver Pro' },
+      { username: 'Bambang_Cuan', fullName: 'Bambang Sudibyo', directCount: 17, sponsorCount: 17, totalTeam: 54, turnover: 180000000, commission: 18000000, badge: 'Bronze Star' },
+      { username: 'Maya_Invest88', fullName: 'Maya Kusuma', directCount: 15, sponsorCount: 15, totalTeam: 46, turnover: 145000000, commission: 14500000, badge: 'Bronze Star' },
+      { username: 'Fajar_VipTrader', fullName: 'Fajar Nugraha', directCount: 13, sponsorCount: 13, totalTeam: 39, turnover: 120000000, commission: 12000000, badge: 'Bronze Star' },
+      { username: 'Denny_Crypto', fullName: 'Denny Setiawan', directCount: 11, sponsorCount: 11, totalTeam: 32, turnover: 98000000, commission: 9800000, badge: 'Rising Star' },
+      { username: 'Reza_Bandung', fullName: 'Reza Fauzi', directCount: 9, sponsorCount: 9, totalTeam: 27, turnover: 75000000, commission: 7500000, badge: 'Rising Star' }
+    ];
+
+    // Merge and sort descending
+    const combined = [...sponsorStats, ...fallbackLeaders];
+    combined.sort((a, b) => (b.turnover || b.commission) - (a.turnover || a.commission));
+
+    // Ensure unique by username and slice limit
+    const unique = [];
+    const seen = new Set();
+    for (const item of combined) {
+      if (!seen.has(item.username)) {
+        seen.add(item.username);
+        unique.push(item);
+      }
+      if (unique.length >= limit) break;
+    }
+
+    return unique;
+  },
+
+  // Leaderboard: Top Profit (Min 10 Members)
+  getTopProfits(limit = 10) {
+    const db = DB.get();
+    const users = db.users || [];
+    const investments = db.investments || [];
+
+    const userProfits = users.map(u => {
+      const userInvs = investments.filter(i => i.userId === u.id);
+      const totalProfit = userInvs.reduce((sum, i) => sum + (i.totalProfitEarned || 0), 0);
+      const totalCap = userInvs.reduce((sum, i) => sum + (i.capital || 0), 0);
+      return {
+        id: u.id,
+        username: u.username,
+        fullName: u.fullName || u.username,
+        totalProfit,
+        totalCapital: totalCap,
+        activePlansCount: userInvs.filter(i => i.status === 'active').length,
+        winRate: 98.4
+      };
+    });
+
+    const fallbackProfits = [
+      { username: 'Sultan_Crypto', fullName: 'Alexander Pratama', totalProfit: 142850000, totalCapital: 250000000, winRate: 99.2, activePlan: 'VIP Master Pro' },
+      { username: 'Alex_Investor', fullName: 'Alex Sutanto', totalProfit: 98400000, totalCapital: 150000000, winRate: 98.8, activePlan: 'Elite Capital' },
+      { username: 'Wahyu_CuanMax', fullName: 'Wahyu Hidayat', totalProfit: 76500000, totalCapital: 100000000, winRate: 97.9, activePlan: 'Elite Capital' },
+      { username: 'Citra_Trading', fullName: 'Citra Kirana', totalProfit: 63200000, totalCapital: 80000000, winRate: 98.1, activePlan: 'Pro Trader' },
+      { username: 'Doni_Capital', fullName: 'Doni Firmansyah', totalProfit: 54100000, totalCapital: 60000000, winRate: 97.5, activePlan: 'Pro Trader' },
+      { username: 'Indra_Forex', fullName: 'Indra Gunawan', totalProfit: 46800000, totalCapital: 50000000, winRate: 96.9, activePlan: 'Rookie Star' },
+      { username: 'Lestari_AI', fullName: 'Lestari Utami', totalProfit: 39500000, totalCapital: 40000000, winRate: 98.0, activePlan: 'Rookie Star' },
+      { username: 'Taufik_Surabaya', fullName: 'Taufik Rahman', totalProfit: 32400000, totalCapital: 35000000, winRate: 97.2, activePlan: 'Rookie Star' },
+      { username: 'Nadia_Invest', fullName: 'Nadia Saphira', totalProfit: 27900000, totalCapital: 25000000, winRate: 96.5, activePlan: 'Invest Learn' },
+      { username: 'Eko_Jakarta', fullName: 'Eko Prasetyo', totalProfit: 22100000, totalCapital: 20000000, winRate: 97.4, activePlan: 'Invest Learn' },
+      { username: 'Rizki_Medan', fullName: 'Rizki Ananda', totalProfit: 18600000, totalCapital: 15000000, winRate: 96.8, activePlan: 'Invest Learn' },
+      { username: 'Anisa_Trader', fullName: 'Anisa Rahma', totalProfit: 15400000, totalCapital: 10000000, winRate: 97.0, activePlan: 'Invest Learn' }
+    ];
+
+    const combined = [...userProfits, ...fallbackProfits];
+    combined.sort((a, b) => (b.totalProfit || 0) - (a.totalProfit || 0));
+
+    const unique = [];
+    const seen = new Set();
+    for (const item of combined) {
+      if (!seen.has(item.username)) {
+        seen.add(item.username);
+        unique.push(item);
+      }
+      if (unique.length >= limit) break;
+    }
+
+    return unique;
   }
 };

@@ -188,17 +188,17 @@
                 <span class="quick-label">Deposit</span>
               </div>
 
-              <!-- 2. Markets -->
-              <div class="quick-item" onclick="App.switchTab('markets')">
+              <!-- 2. Riwayat (Previously Markets) -->
+              <div class="quick-item" onclick="App.openRiwayatModal()">
                 <div class="quick-icon-wrap" style="background: #FEE2E2;">
                   <svg viewBox="0 0 32 32" fill="none">
-                    <circle cx="16" cy="16" r="11" fill="#EF4444"/>
-                    <path d="M10 16A6 6 0 0 1 22 16" fill="#3B82F6"/>
-                    <text x="16" y="13.5" font-size="6" font-weight="900" fill="#FFFFFF" text-anchor="middle">BUY</text>
-                    <text x="16" y="21" font-size="6" font-weight="900" fill="#FFFFFF" text-anchor="middle">SELL</text>
+                    <rect x="7" y="6" width="18" height="20" rx="3" fill="#EF4444"/>
+                    <path d="M12 11H20M12 16H20M12 21H17" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="21" cy="21" r="4" fill="#FBBF24"/>
+                    <path d="M21 19.5V21L22 22" stroke="#78350F" stroke-width="1.2" stroke-linecap="round"/>
                   </svg>
                 </div>
-                <span class="quick-label">Markets</span>
+                <span class="quick-label">Riwayat</span>
               </div>
 
               <!-- 3. Trade -->
@@ -230,7 +230,7 @@
               </div>
 
               <!-- 5. My Statistic -->
-              <div class="quick-item" onclick="App.switchTab('trade')">
+              <div class="quick-item" onclick="App.openMyStatisticModal()">
                 <div class="quick-icon-wrap" style="background: #FEF3C7;">
                   <svg viewBox="0 0 32 32" fill="none">
                     <path d="M16 6A10 10 0 0 1 26 16H16V6Z" fill="#F59E0B"/>
@@ -241,21 +241,22 @@
                 <span class="quick-label">My Statistic</span>
               </div>
 
-              <!-- 6. Trading Idea -->
-              <div class="quick-item" onclick="App.openModal('supportModal')">
+              <!-- 6. Kelas Trading (Previously Trading Idea) -->
+              <div class="quick-item" onclick="App.openKelasTradingModal()">
                 <div class="quick-icon-wrap" style="background: #FCE7F3;">
                   <svg viewBox="0 0 32 32" fill="none">
-                    <!-- Lightbulb Idea -->
-                    <path d="M16 6C11.58 6 8 9.58 8 14C8 17.28 10 19.5 11.5 21.5V23.5C11.5 24.33 12.17 25 13 25H19C19.83 25 20.5 24.33 20.5 23.5V21.5C22 19.5 24 17.28 24 14C24 9.58 20.42 6 16 6Z" fill="#FBBF24"/>
-                    <rect x="12.5" y="25.5" width="7" height="1.5" rx="0.75" fill="#78716C"/>
-                    <path d="M13 14H19M16 11V17" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+                    <!-- Graduation Cap / Trading Academy Vector -->
+                    <path d="M16 7L4 13L16 19L28 13L16 7Z" fill="#EC4899"/>
+                    <path d="M8 15.5V21.5C8 24.5 11.58 26 16 26C20.42 26 24 24.5 24 21.5V15.5" stroke="#BE185D" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M25 15V22" stroke="#F472B6" stroke-width="1.8" stroke-linecap="round"/>
+                    <circle cx="25" cy="23" r="1.5" fill="#BE185D"/>
                   </svg>
                 </div>
-                <span class="quick-label">Trading Idea</span>
+                <span class="quick-label">Kelas Trading</span>
               </div>
 
               <!-- 7. Leaderboard -->
-              <div class="quick-item" onclick="App.showToast('Peringkat Leaderboard Profit Mingguan diperbarui setiap hari Senin pukul 00:00 WIB.', 'info')">
+              <div class="quick-item" onclick="App.openLeaderboardModal()">
                 <div class="quick-icon-wrap" style="background: #FEF9C3;">
                   <svg viewBox="0 0 32 32" fill="none">
                     <!-- Golden Trophy -->
@@ -466,13 +467,34 @@
       <section id="tab-markets" class="tab-content">
         <div class="section-page-header">
           <div>
-            <h1 class="section-page-title">Pasar Global</h1>
-            <p class="section-page-subtitle">Harga Real-time Forex, Komoditas, Crypto & Saham</p>
+            <h1 class="section-page-title">Riwayat Transaksi Member</h1>
+            <p class="section-page-subtitle">Aktivitas Realtime Deposit & Penarikan Dana (WD) Member FGT Pro</p>
           </div>
-          <button class="tier-btn btn-topup" onclick="App.openDepositModal()">Deposit</button>
+          <button class="tier-btn btn-topup" onclick="App.openDepositModal()">+ Deposit</button>
         </div>
 
         <div class="page-content-wrap">
+          <!-- Live Running Text Ticker: Member Deposit -->
+          <div style="font-size: 11px; font-weight: 800; color: #15803D; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span class="ai-pulse-dot" style="background:#22C55E;"></span>
+            <span>LIVE DEPOSIT MEMBER (TEXT BERJALAN):</span>
+          </div>
+          <div class="fgt-marquee-wrap" style="background:#0F291E; border-color:#166534; margin-bottom: 8px;">
+            <div class="fgt-marquee-track" id="tabDepositMarqueeTrack">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Live Running Text Ticker: Member WD -->
+          <div style="font-size: 11px; font-weight: 800; color: #B45309; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span class="ai-pulse-dot" style="background:#F59E0B;"></span>
+            <span>LIVE PENARIKAN (WD) MEMBER (TEXT BERJALAN):</span>
+          </div>
+          <div class="fgt-marquee-wrap" style="background:#2D1B08; border-color:#854D0E; margin-bottom: 14px;">
+            <div class="fgt-marquee-track" id="tabWdMarqueeTrack">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
           <!-- Interactive Chart Simulator -->
           <div style="background: #FFFFFF; border-radius: 18px; padding: 16px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
             <div class="flex-between mb-3">
@@ -695,14 +717,27 @@
 
         <div class="page-content-wrap">
           <!-- Profile Card -->
-          <div style="background: #FFFFFF; border-radius: 20px; padding: 14px 12px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0; display: flex; align-items: center; gap: 14px;">
-            <div class="user-avatar-badge logged-in" style="width: 52px; height: 52px; font-size: 22px;">
+          <div style="background: #FFFFFF; border-radius: 20px; padding: 14px 12px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0; display: flex; align-items: flex-start; gap: 14px;">
+            <div class="user-avatar-badge logged-in" style="width: 52px; height: 52px; font-size: 22px; flex-shrink: 0; margin-top: 2px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
             <div style="flex: 1;">
-              <div style="font-weight: 800; font-size: 16px; color: #0F172A;" id="profileUsername">Alex Investor</div>
+              <div class="flex-between">
+                <div style="font-weight: 800; font-size: 16px; color: #0F172A;" id="profileUsername">Alex Investor</div>
+                <span id="profileMemberStatusBadge" class="badge-member-active">🟢 Member Aktif</span>
+              </div>
               <div style="font-size: 11px; color: #64748B;" id="profileEmail">alex@gmail.com</div>
-              <span class="badge-status approved" style="margin-top: 4px;">Akun Terverifikasi</span>
+
+              <div class="user-profile-meta-box">
+                <div class="user-sponsor-info">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span id="profileSponsorText">Sponsor: Tidak ada sponsor (Opsional)</span>
+                </div>
+                <div class="user-joined-info">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span id="profileJoinedText">Bergabung sejak: 19 September 2026</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -793,17 +828,17 @@
             <span class="nav-label">Home</span>
           </a>
 
-          <!-- 2. Markets -->
-          <a class="nav-item" data-tab="markets" href="#">
+          <!-- 2. Riwayat (Previously Markets) -->
+          <a class="nav-item" data-tab="markets" href="#" onclick="App.openRiwayatModal(); return false;">
             <div class="nav-icon-box">
               <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="8" y1="3" x2="8" y2="21"/>
-                <line x1="16" y1="3" x2="16" y2="21"/>
-                <rect x="6" y="7" width="4" height="6" rx="1.5" fill="currentColor"/>
-                <rect x="14" y="11" width="4" height="6" rx="1.5" fill="currentColor"/>
+                <rect x="4" y="4" width="16" height="16" rx="2"/>
+                <line x1="8" y1="8" x2="16" y2="8"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
+                <line x1="8" y1="16" x2="13" y2="16"/>
               </svg>
             </div>
-            <span class="nav-label">Markets</span>
+            <span class="nav-label">Riwayat</span>
           </a>
 
           <!-- 3. Trade -->
@@ -1501,6 +1536,254 @@
             <span>Tutup Pratinjau</span>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: MY STATISTIC (Requirement 1)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="myStatisticModal">
+    <div class="modal-sheet modal-sheet-large">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">📊 Statistik Saya & Portofolio</h3>
+          <p class="modal-subtitle">Data keanggotaan, rekapan profit & paket aktif</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Member Data Hero Box -->
+      <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); color: #FFFFFF; border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; border: 1px solid #334155;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+          <div>
+            <div style="font-size: 11px; color: #94A3B8;">Data Pengguna:</div>
+            <div style="font-size: 17px; font-weight: 800; color: #FDE89C;" id="statMemberName">Alex Investor</div>
+            <div style="font-size: 11px; color: #CBD5E1;" id="statMemberEmail">alex@gmail.com</div>
+          </div>
+          <span id="statMemberStatusBadge" class="badge-member-active">🟢 Member Aktif</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <div>
+            <span style="color: #94A3B8;">Sponsor:</span>
+            <strong style="color: #F8FAFC; display: block; margin-top: 2px;" id="statMemberSponsor">Tidak ada sponsor (Opsional)</strong>
+          </div>
+          <div>
+            <span style="color: #94A3B8;">Bergabung:</span>
+            <strong style="color: #F8FAFC; display: block; margin-top: 2px;" id="statMemberJoined">19 September 2026</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rekapan Profit Berjalan Grid -->
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 12px; font-weight: 800; color: #0F172A; margin-bottom: 8px;">📈 Rekapan Profit Berjalan</div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+          <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 12px;">
+            <div style="font-size: 10.5px; color: #166534; font-weight: 600;">Profit Berjalan Hari Ini</div>
+            <div style="font-size: 16px; font-weight: 800; color: #15803D; font-family: var(--font-mono); margin-top: 4px;" id="statTodayProfit">+0.00%</div>
+            <div style="font-size: 10px; color: #15803D;" id="statTodayProfitNominal">+IDR 0</div>
+          </div>
+          <div style="background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 12px; padding: 12px;">
+            <div style="font-size: 10.5px; color: #92400E; font-weight: 600;">Total Akumulasi Profit</div>
+            <div style="font-size: 16px; font-weight: 800; color: #B45309; font-family: var(--font-mono); margin-top: 4px;" id="statTotalProfitEarned">IDR 0</div>
+            <div style="font-size: 10px; color: #78350F;">Dividen AI Terklaim</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Packages Header & List -->
+      <div style="margin-bottom: 14px;">
+        <div class="flex-between" style="margin-bottom: 8px;">
+          <span style="font-size: 12px; font-weight: 800; color: #0F172A;">📦 Paket Investasi Aktif:</span>
+          <span id="statActivePackagesCountBadge" style="background: #DBEAFE; color: #1D4ED8; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px;">0 Paket Aktif</span>
+        </div>
+        <div id="statActivePlansContainer" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <button class="btn-cta-gold" onclick="App.closeModal('myStatisticModal'); App.switchTab('trade');">
+        <span>Buka Portofolio AI Trade Lengkap</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: RIWAYAT MEMBER (TEXT BERJALAN) (Requirement 2)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="riwayatModal">
+    <div class="modal-sheet modal-sheet-large">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">📑 Riwayat Transaksi Member</h3>
+          <p class="modal-subtitle">Text berjalan data WD & Deposit member realtime</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Running Text Ticker 1: Live Deposit Member -->
+      <div style="font-size: 11px; font-weight: 800; color: #15803D; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        <span class="ai-pulse-dot" style="background:#22C55E;"></span>
+        <span>LIVE DEPOSIT MEMBER (TEXT BERJALAN):</span>
+      </div>
+      <div class="fgt-marquee-wrap" style="background:#0F291E; border-color:#166534; margin-bottom: 8px;">
+        <div class="fgt-marquee-track" id="modalDepositMarqueeTrack">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Running Text Ticker 2: Live Withdrawal Member -->
+      <div style="font-size: 11px; font-weight: 800; color: #B45309; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        <span class="ai-pulse-dot" style="background:#F59E0B;"></span>
+        <span>LIVE PENARIKAN (WD) MEMBER (TEXT BERJALAN):</span>
+      </div>
+      <div class="fgt-marquee-wrap" style="background:#2D1B08; border-color:#854D0E; margin-bottom: 14px;">
+        <div class="fgt-marquee-track" id="modalWdMarqueeTrack">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Filter Buttons -->
+      <div class="testi-filter-scroll" style="margin-bottom: 10px;">
+        <button class="testi-filter-btn active" id="riwayatFilterAll" onclick="App.filterRiwayat('all')">Semua Transaksi</button>
+        <button class="testi-filter-btn" id="riwayatFilterDep" onclick="App.filterRiwayat('deposit')">Deposit Member</button>
+        <button class="testi-filter-btn" id="riwayatFilterWd" onclick="App.filterRiwayat('withdraw')">Penarikan (WD) Member</button>
+      </div>
+
+      <!-- Feed List -->
+      <div id="riwayatFullFeedList" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: LEADERBOARD MEMBER (Requirement 5)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="leaderboardModal">
+    <div class="modal-sheet modal-sheet-large">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🏆 Leaderboard Top Member</h3>
+          <p class="modal-subtitle">Peringkat sponsor teratas & profit tertinggi FGT Pro</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Running Text Marquee Leaderboard -->
+      <div style="font-size: 11px; font-weight: 800; color: #A855F7; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        <span class="ai-pulse-dot" style="background:#D946EF;"></span>
+        <span>TOP PERFORMER (TEXT BERJALAN):</span>
+      </div>
+      <div class="fgt-marquee-wrap" style="background:#200F29; border-color:#7E22CE; margin-bottom: 14px;">
+        <div class="fgt-marquee-track" id="leadMarqueeTrack">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="lead-tab-bar">
+        <button class="lead-tab-btn active" id="leadTabSponsorBtn" onclick="App.switchLeaderboardTab('sponsor')">👑 10 Sponsor Teratas</button>
+        <button class="lead-tab-btn" id="leadTabProfitBtn" onclick="App.switchLeaderboardTab('profit')">🚀 10 Profit Tertinggi</button>
+      </div>
+
+      <!-- Container List -->
+      <div id="leaderboardListContainer" style="max-height: 300px; overflow-y: auto;">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: REFUND SALDO TERLOCK MASA KONTRAK SELESAI (Requirement 6)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="refundModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🛡️ Menu Refund Saldo Selesai Kontrak</h3>
+          <p class="modal-subtitle">Pengembalian modal pokok paket yang selesai masa kontrak</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Saldo Terlock Selesai Masa Kontrak Hero Card -->
+      <div class="refund-summary-hero">
+        <div style="font-size: 11px; color: #94A3B8; font-weight: 600;">Saldo Terlock Selesai Masa Kontrak:</div>
+        <div style="font-size: 24px; font-weight: 800; color: #FDE89C; font-family: var(--font-mono); margin: 4px 0 8px 0;" id="refundLockedTotalVal">IDR 0</div>
+        <p style="font-size: 11.5px; color: #CBD5E1; line-height: 1.45; margin: 0;">
+          Modal paket yang telah menyelesaikan masa kontrak tersimpan di Saldo Terlock. Klik tombol di bawah ini untuk mencairkan kembali ke Saldo Utama agar bisa di-WD atau diaktifkan kembali.
+        </p>
+      </div>
+
+      <!-- Action Button -->
+      <button class="btn-process-refund" id="btnProcessRefundAll" onclick="App.processContractRefundAll()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        <span>proses refundkan ke saldo saya</span>
+      </button>
+
+      <!-- Completed Contracts Waiting For Refund -->
+      <div style="margin-top: 16px;">
+        <div style="font-size: 12px; font-weight: 800; color: #0F172A; margin-bottom: 8px;">Daftar Kontrak Siap Di-refund:</div>
+        <div id="refundCompletedList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Active Running Contracts -->
+      <div style="margin-top: 14px;">
+        <div style="font-size: 12px; font-weight: 800; color: #64748B; margin-bottom: 8px;">Paket Sedang Berjalan (Belum Selesai Kontrak):</div>
+        <div id="refundRunningList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: KELAS TRADING WHATSAPP & TELEGRAM (Requirement 8)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="kelasTradingModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🎓 Kelas Trading & Edukasi FGT Pro</h3>
+          <p class="modal-subtitle">Komunitas resmi edukasi trading AI, webinar & sinyal</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="text-align: center; padding: 6px 0 14px 0;">
+        <p style="font-size: 12px; color: #475569; line-height: 1.5; margin-bottom: 16px;">
+          Tingkatkan profit dan keahlian trading Anda. Pilih saluran resmi komunitas FGT Pro untuk terhubung ke WhatsApp atau Telegram langsung bersama master trader:
+        </p>
+
+        <!-- WhatsApp Button -->
+        <a href="https://wa.me/6281234567890?text=Halo%20Mentor%20FGT%20Pro,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi" target="_blank" class="kelas-channel-card kelas-wa" onclick="App.showToast('Membuka grup resmi Kelas Trading WhatsApp FGT Pro...', 'info')">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg>
+          <div style="text-align: left; flex: 1;">
+            <div style="font-weight: 800; font-size: 14px;">Gabung Grup WhatsApp Resmi</div>
+            <div style="font-size: 11px; opacity: 0.9;">Diskusi harian, webinar & sinyal trading VIP</div>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+
+        <!-- Telegram Button -->
+        <a href="https://t.me/fgtpro_official_channel" target="_blank" class="kelas-channel-card kelas-tg" onclick="App.showToast('Membuka channel resmi Kelas Trading Telegram FGT Pro...', 'info')">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+          <div style="text-align: left; flex: 1;">
+            <div style="font-weight: 800; font-size: 14px;">Gabung Channel Telegram Resmi</div>
+            <div style="font-size: 11px; opacity: 0.9;">Analisa teknikal, market alert & berita trading</div>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
       </div>
     </div>
   </div>

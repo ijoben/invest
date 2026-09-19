@@ -49,8 +49,9 @@ export const AdminPage = {
     // 3. Withdraw Table
     this.renderWithdrawals(db);
 
-    // 4. Plans Table & Weekend Profit Settings
+    // 4. Plans Table, Master Market & Weekend Profit Settings
     this.renderPlans(db);
+    this.renderMarketMasterSettings(db);
     this.renderWeekendProfitSettings(db);
 
     // 5. Affiliate Config Values
@@ -159,6 +160,71 @@ export const AdminPage = {
         </td>
       </tr>
     `).join('');
+  },
+
+  // 4.0 Master Market Status Settings (ON / OFF)
+  renderMarketMasterSettings(db) {
+    const market = Admin.getMarketMasterSettings();
+    const selectEl = document.getElementById('marketMasterCfgSelect');
+    const msgEl = document.getElementById('marketMasterOffMessage');
+    const badgeEl = document.getElementById('marketMasterStatusBadge');
+
+    if (selectEl) selectEl.value = String(market.isOpen);
+    if (msgEl) msgEl.value = market.offMessage || 'Pasar Keuangan Global & AI Trading sedang LIBUR (OFF). Semua instrumen, AI Bot, dan sinyal ditangguhkan.';
+
+    if (badgeEl) {
+      if (market.isOpen) {
+        badgeEl.textContent = '🟢 PASAR ON (BUKA)';
+        badgeEl.className = 'badge-status approved';
+        badgeEl.style.background = 'rgba(34, 197, 94, 0.15)';
+        badgeEl.style.color = '#22C55E';
+        badgeEl.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+      } else {
+        badgeEl.textContent = '🔴 PASAR OFF (TUTUP)';
+        badgeEl.className = 'badge-status rejected';
+        badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+        badgeEl.style.color = '#EF4444';
+        badgeEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      }
+    }
+  },
+
+  previewMarketMasterSettings() {
+    const selectEl = document.getElementById('marketMasterCfgSelect');
+    const badgeEl = document.getElementById('marketMasterStatusBadge');
+    if (!selectEl || !badgeEl) return;
+
+    const isOpen = selectEl.value === 'true';
+    if (isOpen) {
+      badgeEl.textContent = '🟢 PASAR ON (BUKA)';
+      badgeEl.className = 'badge-status approved';
+      badgeEl.style.background = 'rgba(34, 197, 94, 0.15)';
+      badgeEl.style.color = '#22C55E';
+      badgeEl.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+    } else {
+      badgeEl.textContent = '🔴 PASAR OFF (TUTUP)';
+      badgeEl.className = 'badge-status rejected';
+      badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+      badgeEl.style.color = '#EF4444';
+      badgeEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+    }
+  },
+
+  saveMarketMasterSettings() {
+    const selectEl = document.getElementById('marketMasterCfgSelect');
+    const msgEl = document.getElementById('marketMasterOffMessage');
+    if (!selectEl) return;
+
+    const isOpen = selectEl.value === 'true';
+    const message = msgEl ? msgEl.value.trim() : '';
+
+    const res = Admin.saveMarketMasterSettings({ isOpen, message });
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderMarketMasterSettings(DB.get());
+    } else {
+      this.showToast(res.message || 'Gagal menyimpan status pasar', 'error');
+    }
   },
 
   // 4.1 Weekend Profit Settings (Sabtu & Minggu)

@@ -425,6 +425,34 @@ export const Admin = {
     return { success: true, message: 'Sinyal berhasil dihapus.' };
   },
 
+  // Get Market Master Settings
+  getMarketMasterSettings() {
+    const db = DB.get();
+    const isOpen = db.settings.marketStatus !== 'closed' && db.settings.marketOpen !== false;
+    return {
+      isOpen,
+      status: isOpen ? 'open' : 'closed',
+      offMessage: db.settings.marketOffMessage || 'Pasar Keuangan Global & AI Trading sedang LIBUR (OFF). Semua instrumen, AI Bot, dan sinyal ditangguhkan.'
+    };
+  },
+
+  // Save Market Master Settings
+  saveMarketMasterSettings({ isOpen, message }) {
+    const db = DB.get();
+    const openVal = isOpen === true || isOpen === 'true' || isOpen === 'open';
+    db.settings.marketStatus = openVal ? 'open' : 'closed';
+    db.settings.marketOpen = openVal;
+    if (message) {
+      db.settings.marketOffMessage = message.trim();
+    }
+    DB.save(db);
+    return {
+      success: true,
+      isOpen: openVal,
+      message: `Status Operasional Pasar Global berhasil diubah menjadi: ${openVal ? '🟢 BUKA (ON)' : '🔴 TUTUP (OFF)'}.`
+    };
+  },
+
   // Trigger Daily Profit Yield manually from Admin
   triggerProfitYield(force = false) {
     return Plans.yieldDailyProfits(force);
