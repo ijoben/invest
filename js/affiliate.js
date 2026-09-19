@@ -13,7 +13,8 @@ export const Affiliate = {
 
     const db = DB.get();
     const upline = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === buyerUser.referredBy.toUpperCase());
-    if (!upline) return;
+    // Security: Prevent self-bonus exploit
+    if (!upline || upline.id === buyerUser.id) return;
 
     const percent = db.settings.sponsorBonusPercent || 10;
     const bonusAmount = Math.floor((amount * percent) / 100);
@@ -54,10 +55,12 @@ export const Affiliate = {
 
     let currentRefCode = downlineUser.referredBy;
     let currentLevel = 1;
+    const seenUplines = new Set([downlineUser.id]); // Security: Prevent circular loop exploit
 
     while (currentRefCode && currentLevel <= rabatLevels.length) {
       const upline = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === currentRefCode.toUpperCase());
-      if (!upline) break;
+      if (!upline || seenUplines.has(upline.id)) break;
+      seenUplines.add(upline.id);
 
       const levelConfig = rabatLevels.find(l => l.level === currentLevel);
       if (levelConfig && levelConfig.percent > 0) {

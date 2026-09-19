@@ -1266,10 +1266,23 @@ export const DB = {
     return true;
   },
 
+  // XSS Defense: HTML Sanitization
+  escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
   // Reset database to default seed state
   reset() {
     localStorage.removeItem(DB_KEY);
     return this.get();
   }
 };
+
+export const escapeHtml = (str) => DB.escapeHtml(str);
 
