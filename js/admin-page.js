@@ -434,6 +434,24 @@ export const AdminPage = {
     if (endEl) endEl.value = sched.endHour !== undefined ? sched.endHour : 21;
     const msgEl = document.getElementById('wdCfgOffMessage');
     if (msgEl) msgEl.value = sched.offMessage || 'Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.';
+
+    // Withdraw Terms
+    const termsEl = document.getElementById('wdCfgTerms');
+    if (termsEl) {
+      const terms = cfg.withdrawTerms || [];
+      termsEl.value = Array.isArray(terms) ? terms.join('\n') : String(terms);
+    }
+
+    // APK Download Settings
+    const apk = cfg.apkDownload || {};
+    const apkEnabledEl = document.getElementById('apkCfgEnabled');
+    if (apkEnabledEl) apkEnabledEl.value = String(apk.enabled !== false);
+    const apkUrlEl = document.getElementById('apkCfgUrl');
+    if (apkUrlEl) apkUrlEl.value = apk.url || '';
+    const apkVerEl = document.getElementById('apkCfgVersion');
+    if (apkVerEl) apkVerEl.value = apk.version || '';
+    const apkSizeEl = document.getElementById('apkCfgSize');
+    if (apkSizeEl) apkSizeEl.value = apk.size || '';
   },
 
   // 7. Users Table
@@ -1049,7 +1067,29 @@ export const AdminPage = {
       offMessage
     });
 
-    this.showToast('Jadwal & jam operasional WD berhasil disimpan!', 'success');
+    const termsInput = document.getElementById('wdCfgTerms');
+    if (termsInput) {
+      Admin.saveWithdrawTerms(termsInput.value);
+    }
+
+    this.showToast('Jadwal operasional & ketentuan WD berhasil disimpan!', 'success');
+    this.renderAll();
+  },
+
+  saveApkDownloadSettings() {
+    const enabled = document.getElementById('apkCfgEnabled').value === 'true';
+    const url = document.getElementById('apkCfgUrl') ? document.getElementById('apkCfgUrl').value.trim() : '';
+    const version = document.getElementById('apkCfgVersion') ? document.getElementById('apkCfgVersion').value.trim() : '';
+    const size = document.getElementById('apkCfgSize') ? document.getElementById('apkCfgSize').value.trim() : '';
+
+    Admin.saveApkSettings({
+      enabled,
+      url,
+      version,
+      size
+    });
+
+    this.showToast('Pengaturan unduhan APK Android berhasil disimpan!', 'success');
     this.renderAll();
   },
 

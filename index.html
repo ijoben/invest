@@ -30,7 +30,7 @@
            1. TOP HEADER (Identical to 1000836359.jpg)
            ==================================================================== -->
       <header class="top-header">
-        <div class="header-user" onclick="App.isLoggedIn() ? App.switchTab('profile') : App.openModal('authModal')">
+        <div class="header-user" onclick="App.isLoggedIn() ? App.switchTab('profile') : (App.showToast('Silahkan login atau daftar dulu', 'info'), App.openModal('authModal'))">
           <div class="user-avatar-badge" id="userAvatarBadge">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -798,6 +798,20 @@
                   <span>Keamanan Akun</span>
                 </div>
               </button>
+
+              <button class="profile-action-btn" onclick="App.openDownloadApkModal()">
+                <div class="action-btn-icon" style="background: rgba(168, 85, 247, 0.15); color: #A855F7;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </div>
+                <div class="action-btn-text">
+                  <strong>Download APK</strong>
+                  <span>Aplikasi Android</span>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -1013,6 +1027,15 @@
           <label class="form-label">Kode Referral (Opsional)</label>
           <input type="text" class="form-input" id="regReferral" placeholder="KODE SPONSOR" style="text-transform: uppercase;">
         </div>
+
+        <!-- Checkbox Persetujuan Resiko Investasi -->
+        <div class="register-risk-box">
+          <label class="register-risk-label" for="regRiskAgreement">
+            <input type="checkbox" id="regRiskAgreement" class="register-risk-checkbox">
+            <span class="register-risk-text">saya sadar dan mengerti investasi mengandung resiko kerugian, saya tidak akan meminta ganti rugi apabila terjadi kerugian diakibatkan pasar forex di aplikasi ini</span>
+          </label>
+        </div>
+
         <button class="btn-cta-gold" onclick="App.submitRegister()">
           <span>Buat Akun & Mulai</span>
         </button>
@@ -1226,7 +1249,7 @@
           </svg>
           <span>Ketentuan & Jadwal Penarikan Dana (WD):</span>
         </div>
-        <ul class="wd-terms-list">
+        <ul class="wd-terms-list" id="withdrawTermsList">
           <li><strong>Minimal Penarikan:</strong> Rp 50.000 per transaksi.</li>
           <li><strong>Biaya Admin:</strong> 1.0% dari nominal penarikan dana.</li>
           <li><strong>Jam Operasional WD:</strong> Buka setiap hari pukul <strong>09:00 - 21:00 WIB</strong>. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.</li>
@@ -1289,6 +1312,7 @@
         <span id="sigModalAction" class="badge-signal-action sell" style="font-size: 16px; padding: 6px 20px;">SELL</span>
         <h2 style="font-size: 24px; font-weight: 800; margin-top: 8px;" id="sigModalPair">GBPNZD</h2>
         <p style="font-size: 12px; color: #64748B;">Sinyal dieksekusi otomatis oleh algoritma Machine Learning FGT Pro.</p>
+        <div id="sigModalNotice"></div>
       </div>
 
       <div style="background: #F8FAFC; border-radius: 14px; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; text-align: center; border: 1px solid #E2E8F0; margin-bottom: 16px;">
@@ -1310,7 +1334,7 @@
         </div>
       </div>
 
-      <button class="btn-cta-gold" onclick="
+      <button class="btn-cta-gold" id="sigModalCtaBtn" onclick="
         App.closeModal('signalModal');
         App.showToast('Sinyal telah disalin ke trading desk Anda!', 'success');
       ">
@@ -2054,6 +2078,74 @@
       <button class="btn-cta-gold" style="width: 100%;" onclick="App.closeModal('viewProofModal')">
         <span>Tutup Tampilan</span>
       </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: DOWNLOAD APLIKASI ANDROID (APK)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="apkDownloadModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">📲 Unduh Aplikasi FGT Pro</h3>
+          <p class="modal-subtitle">Aplikasi Android Resmi untuk Trading & Investasi</p>
+        </div>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="apk-download-hero">
+        <div class="apk-app-icon-wrap">
+          <!-- Official Android Robot Vector SVG -->
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="#FFFFFF">
+            <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9996.4482.9996.9993.0001.5511-.4485.9997-.9996.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4116 13.8533 8.1 12 8.1s-3.5902.3116-5.1367.8497L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9974 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3435-4.1021-2.6892-7.5743-6.1185-9.4396"/>
+          </svg>
+        </div>
+        <div class="apk-app-title">FGT Pro Mobile App</div>
+        <div class="apk-app-sub">AI Trading Engine & Fast Withdrawal Experience</div>
+
+        <div class="apk-spec-grid">
+          <div class="apk-spec-item">
+            <span class="apk-spec-lbl">Versi</span>
+            <span class="apk-spec-val" id="apkModalVersion">v2.4.0</span>
+          </div>
+          <div class="apk-spec-item">
+            <span class="apk-spec-lbl">Ukuran</span>
+            <span class="apk-spec-val" id="apkModalSize">18.5 MB</span>
+          </div>
+          <div class="apk-spec-item">
+            <span class="apk-spec-lbl">Sistem OS</span>
+            <span class="apk-spec-val">Android 8.0+</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="apk-guide-card">
+        <div class="apk-guide-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Panduan Cepat Pasang APK di Android:</span>
+        </div>
+        <ol class="apk-guide-list">
+          <li>Klik tombol <strong>Download File APK</strong> di bawah ini.</li>
+          <li>Buka berkas unduhan di menu notifikasi atau folder <em>Download</em> HP Anda.</li>
+          <li>Jika muncul konfirmasi keamanan, pilih <strong>Tetap Download</strong> atau aktifkan <strong>Izinkan Penginstalan dari Sumber Ini</strong>.</li>
+          <li>Pilih <strong>Pasang / Install</strong>, tunggu beberapa detik dan aplikasi siap digunakan!</li>
+        </ol>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn-cta-gold" id="btnApkDownload" onclick="App.downloadApk()">
+          <span>📲 Unduh File APK Langsung</span>
+        </button>
+        <button class="tier-btn" style="width: 100%; padding: 10px; background: #F1F5F9; color: #475569;" onclick="App.closeModal('apkDownloadModal')">
+          <span>Tutup</span>
+        </button>
+      </div>
     </div>
   </div>
 

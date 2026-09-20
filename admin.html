@@ -639,9 +639,78 @@
           </div>
         </div>
 
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Poin Ketentuan & Syarat Penarikan (WD)</div>
+            <div class="setting-desc">Teks aturan penarikan yang tampil di modal WD member (satu baris per poin ketentuan)</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 340px;">
+            <textarea class="admin-input" id="wdCfgTerms" rows="6" style="width: 100%; font-size: 11px; line-height: 1.5; padding: 8px; resize: vertical;" placeholder="Tuliskan poin ketentuan penarikan per baris..."></textarea>
+          </div>
+        </div>
+
         <div style="margin-top: 16px;">
           <button class="admin-btn-action-primary" onclick="AdminPage.saveWithdrawScheduleSettings()">
-            <span>💾 Simpan Jadwal & Jam Operasional WD</span>
+            <span>💾 Simpan Jadwal & Ketentuan WD</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card Pengaturan Unduhan APK Android -->
+      <div class="admin-card" style="margin-top: 24px;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📲 Pengaturan Unduhan APK Android Member</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Konfigurasi file unduhan APK Android yang ditampilkan pada menu profil member.</p>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Menu Download APK</div>
+            <div class="setting-desc">Aktifkan atau nonaktifkan akses unduh APK bagi member</div>
+          </div>
+          <div class="setting-input-wrap">
+            <select class="admin-input" id="apkCfgEnabled">
+              <option value="true">🟢 AKTIF (Tersedia untuk Diunduh)</option>
+              <option value="false">🔴 NONAKTIF (Segera Hadir / Maintenance)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Link / URL Unduhan File APK</div>
+            <div class="setting-desc">URL langsung file .apk (contoh: direct download link atau server CDN)</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 340px;">
+            <input type="text" class="admin-input" id="apkCfgUrl" value="https://fgtpro-investasi.com/downloads/fgt-pro-v2.4.apk">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Versi Aplikasi APK</div>
+            <div class="setting-desc">Label nomor versi aplikasi (misal: v2.4.0 Official Release)</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 340px;">
+            <input type="text" class="admin-input" id="apkCfgVersion" value="v2.4.0 (Official Release)">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Ukuran Berkas (File Size)</div>
+            <div class="setting-desc">Keterangan ukuran file APK (misal: 18.5 MB)</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 340px;">
+            <input type="text" class="admin-input" id="apkCfgSize" value="18.5 MB">
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.saveApkDownloadSettings()">
+            <span>💾 Simpan Pengaturan APK Android</span>
           </button>
         </div>
       </div>

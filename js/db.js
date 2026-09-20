@@ -21,6 +21,20 @@ const defaultDB = {
       endHour: 21,  // 21:00 WIB
       offMessage: 'Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.'
     },
+    withdrawTerms: [
+      "Minimal Penarikan: Rp 50.000 per transaksi.",
+      "Biaya Admin: 1.0% dari nominal penarikan dana.",
+      "Jam Operasional WD: Buka setiap hari pukul 09:00 - 21:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
+      "Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).",
+      "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
+    ],
+    apkDownload: {
+      url: 'https://fgtpro-investasi.com/downloads/fgt-pro-v2.4.apk',
+      version: 'v2.4.0 (Official Release)',
+      size: '18.5 MB',
+      updatedAt: '2026-09-18',
+      enabled: true
+    },
     profitCycleDurationHours: 24, // Real 24-hour cycle
     autoProfitIntervalSeconds: 86400, // 24 hours in seconds
     weekendProfit: {
@@ -880,6 +894,12 @@ export const DB = {
         }
         if (!parsed.settings.withdrawSchedule) {
           parsed.settings.withdrawSchedule = defaultDB.settings.withdrawSchedule;
+        }
+        if (!parsed.settings.withdrawTerms || !Array.isArray(parsed.settings.withdrawTerms) || parsed.settings.withdrawTerms.length === 0) {
+          parsed.settings.withdrawTerms = defaultDB.settings.withdrawTerms;
+        }
+        if (!parsed.settings.apkDownload) {
+          parsed.settings.apkDownload = defaultDB.settings.apkDownload;
         }
         if (!parsed.settings.weekendProfit) {
           parsed.settings.weekendProfit = defaultDB.settings.weekendProfit || {

@@ -77,6 +77,17 @@ const App = {
     const user = Auth.getUser();
     const db = DB.get();
 
+    // Guest Protection: Pastikan user belum login tidak berada di tab member
+    if (!user && this.currentTab && this.currentTab !== 'home') {
+      this.currentTab = 'home';
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.toggle('active', item.getAttribute('data-tab') === 'home');
+      });
+      document.querySelectorAll('.tab-content').forEach(pane => {
+        pane.classList.toggle('active', pane.id === 'tab-home');
+      });
+    }
+
     // 1. Render Top Header
     this.renderHeader(user);
 
@@ -782,8 +793,8 @@ const App = {
   openRedeemModal(rewardId) {
     const user = Auth.getUser();
     if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login terlebih dahulu untuk menukarkan poin reward Anda.', 'info');
       return;
     }
 
@@ -1171,8 +1182,8 @@ const App = {
   // Render Wallet View Page
   renderWalletView(user) {
     if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login terlebih dahulu untuk mengakses menu Wallet.', 'info');
       this.switchTab('home');
       return;
     }
@@ -1223,21 +1234,14 @@ const App = {
 
   // Render Trade View Page (with 30-day Duration Progress Bar & AI Chart)
   renderTradeView(user) {
-    const listEl = document.getElementById('tradeActivePlansList');
     if (!user) {
-      listEl.innerHTML = `
-        <div style="text-align:center; padding:30px 20px; background:#FFFFFF; border-radius:18px; box-shadow:var(--card-shadow);">
-          <div style="width:48px; height:48px; border-radius:50%; background:#EFF6FF; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-3 3"/></svg>
-          </div>
-          <h3 style="font-size:16px; font-weight:800; margin-bottom:6px;">Trading & Investasi AI</h3>
-          <p style="font-size:12px; color:#64748B; margin-bottom:16px;">Login sekarang untuk melihat portofolio investasi dan klaim profit harian.</p>
-          <button class="btn-cta-gold" onclick="App.openModal('authModal')">Login Sekarang</button>
-        </div>
-      `;
-      this.renderAiTradingChart();
+      this.showToast('Silahkan login atau daftar dulu', 'info');
+      this.openModal('authModal');
+      this.switchTab('home');
       return;
     }
+
+    const listEl = document.getElementById('tradeActivePlansList');
 
     const allInvestments = Plans.getAllUserInvestments(user.id);
     if (allInvestments.length === 0) {
@@ -1319,6 +1323,7 @@ const App = {
   // Render Profile & Affiliate View Page
   renderProfileView(user) {
     if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
       this.switchTab('home');
       return;
@@ -1408,8 +1413,8 @@ const App = {
   openEditProfileModal() {
     const user = Auth.getUser();
     if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login terlebih dahulu.', 'info');
       return;
     }
 
@@ -1461,8 +1466,8 @@ const App = {
   openUserBankModal() {
     const user = Auth.getUser();
     if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login terlebih dahulu.', 'info');
       return;
     }
 
@@ -1549,8 +1554,8 @@ const App = {
   openChangePasswordModal() {
     const user = Auth.getUser();
     if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login terlebih dahulu.', 'info');
       return;
     }
 
@@ -1603,6 +1608,63 @@ const App = {
       if (confirmPassInput) confirmPassInput.value = '';
     } else {
       this.showToast(res.message, 'error');
+    }
+  },
+
+  // Download APK Controller (Requirement 1)
+  openDownloadApkModal() {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
+      this.openModal('authModal');
+      return;
+    }
+
+    const db = DB.get();
+    const apk = (db.settings && db.settings.apkDownload) || {};
+
+    const verEl = document.getElementById('apkModalVersion');
+    if (verEl) verEl.textContent = apk.version || 'v2.4.0';
+
+    const sizeEl = document.getElementById('apkModalSize');
+    if (sizeEl) sizeEl.textContent = apk.size || '18.5 MB';
+
+    const btn = document.getElementById('btnApkDownload');
+    if (btn) {
+      if (apk.enabled === false) {
+        btn.innerHTML = '<span>⚠️ Unduhan APK Sedang Maintenance</span>';
+        btn.style.background = '#64748B';
+        btn.disabled = true;
+      } else {
+        btn.innerHTML = '<span>📲 Unduh File APK Langsung</span>';
+        btn.style.background = '';
+        btn.disabled = false;
+      }
+    }
+
+    this.openModal('apkDownloadModal');
+  },
+
+  downloadApk() {
+    const db = DB.get();
+    const apk = (db.settings && db.settings.apkDownload) || {};
+    if (apk.enabled === false) {
+      this.showToast('Layanan unduhan APK sedang dalam pemeliharaan.', 'info');
+      return;
+    }
+
+    const downloadUrl = apk.url || 'https://fgtpro-investasi.com/downloads/fgt-pro-v2.4.apk';
+    this.showToast(`Memulai pengunduhan APK FGT Pro (${apk.version || 'v2.4.0'})...`, 'success');
+
+    try {
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `FGT_Pro_${(apk.version || 'v2.4.0').replace(/[^a-zA-Z0-9.]/g, '_')}.apk`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      window.open(downloadUrl, '_blank');
     }
   },
 
@@ -1803,6 +1865,12 @@ const App = {
 
   // Tab Navigation Switching
   switchTab(tabId) {
+    if (tabId !== 'home' && !this.isLoggedIn()) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
+      this.openModal('authModal');
+      return;
+    }
+
     this.currentTab = tabId;
     
     // Update bottom navigation bar active class
@@ -1890,8 +1958,8 @@ const App = {
   // User Actions
   handlePlanTopUp(planId) {
     if (!Auth.isLoggedIn()) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login untuk melakukan top up investasi.', 'info');
       return;
     }
     this.openPlanModal(planId);
@@ -1905,8 +1973,8 @@ const App = {
   openMyStatisticModal() {
     const user = Auth.getUser();
     if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login untuk melihat statistik dan portofolio akun Anda.', 'info');
       return;
     }
 
@@ -1930,58 +1998,47 @@ const App = {
     const listContainer = document.getElementById('statActivePlansContainer');
 
     if (nameEl) nameEl.textContent = user.fullName || user.username;
-    if (emailEl) emailEl.textContent = user.email || user.phone || 'Member FGT Pro';
+    if (emailEl) emailEl.textContent = user.email || user.phone || 'Member Terverifikasi';
     if (badgeEl) {
       badgeEl.className = isMemberActive ? 'badge-member-active' : 'badge-member-inactive';
       badgeEl.textContent = isMemberActive ? '🟢 Member Aktif' : '⚪ Belum Aktif';
     }
-    if (sponsorEl) {
-      sponsorEl.textContent = user.referredBy ? user.referredBy : 'Tidak ada sponsor (Opsional)';
-    }
+    if (sponsorEl) sponsorEl.textContent = user.referredBy ? `Sponsor: ${user.referredBy}` : 'Sponsor: Tidak Ada (Opsional)';
     if (joinedEl) {
-      const joinDate = user.createdAt ? new Date(user.createdAt) : new Date();
-      joinedEl.textContent = joinDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      const jDate = user.createdAt ? new Date(user.createdAt) : new Date();
+      joinedEl.textContent = `Bergabung: ${jDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
     }
-
-    const marketStatus = Plans.isMarketOpen();
-    if (todayRateEl) {
-      todayRateEl.textContent = !marketStatus.isOpen ? '0.00% (OFF)' : (todayRate > 0 ? `+${todayRate.toFixed(2)}%` : '+0.00%');
-      todayRateEl.style.color = !marketStatus.isOpen ? '#EF4444' : '#15803D';
-    }
-    if (todayNomEl) {
-      todayNomEl.textContent = !marketStatus.isOpen ? '+IDR 0 (Pasar Libur)' : `+${DB.formatIDR(todayNominal)}`;
-    }
-    if (totalEarnedEl) {
-      totalEarnedEl.textContent = DB.formatIDR(totalProfitEarned);
-    }
-    if (countBadgeEl) {
-      countBadgeEl.textContent = `${activeInvs.length} Paket Aktif`;
-    }
+    if (todayRateEl) todayRateEl.textContent = `+${todayRate.toFixed(2)}%`;
+    if (todayNomEl) todayNomEl.textContent = `+${DB.formatIDR(todayNominal)}`;
+    if (totalEarnedEl) totalEarnedEl.textContent = DB.formatIDR(totalProfitEarned);
+    if (countBadgeEl) countBadgeEl.textContent = `${activeInvs.length} Paket Aktif`;
 
     if (listContainer) {
       if (activeInvs.length === 0) {
         listContainer.innerHTML = `
-          <div style="text-align: center; padding: 18px 12px; background: #F8FAFC; border-radius: 12px; border: 1px solid #E2E8F0;">
-            <p style="font-size: 11.5px; color: #64748B; margin: 0 0 10px 0;">Belum ada paket investasi aktif saat ini.</p>
-            <button class="tier-btn btn-topup" style="display: inline-block; padding: 6px 14px; font-size: 11px;" onclick="App.closeModal('myStatisticModal'); App.switchTab('home');">
-              + Pilih & Aktifkan Paket
-            </button>
+          <div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px; background: #FFFFFF; border-radius: 12px; border: 1px dashed #CBD5E1;">
+            Anda belum memiliki paket investasi yang sedang berjalan.
+            <div style="margin-top: 8px;">
+              <button class="tier-btn btn-topup" style="display: inline-block; padding: 6px 14px; font-size: 11px;" onclick="App.closeModal('myStatisticModal'); App.switchTab('home');">Pilih Paket Sekarang</button>
+            </div>
           </div>
         `;
       } else {
         listContainer.innerHTML = activeInvs.map(inv => {
-          const progressPct = Math.min(100, Math.round(((inv.daysElapsed || 0) / inv.durationDays) * 100));
+          const daysLeft = Math.max(0, inv.durationDays - inv.daysElapsed);
+          const percent = Math.min(100, Math.round((inv.daysElapsed / inv.durationDays) * 100));
           return `
-            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 12px;">
+            <div style="background: #FFFFFF; border-radius: 12px; padding: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
               <div class="flex-between mb-1">
-                <span style="font-weight: 800; font-size: 13px; color: #0F172A;">${inv.planName}</span>
-                <span style="font-weight: 800; color: #166534; font-family: var(--font-mono); font-size: 12.5px;">${DB.formatIDR(inv.capital)}</span>
+                <strong style="font-size: 13px; color: #0F172A;">${inv.planName}</strong>
+                <span style="font-size: 12px; font-weight: 800; color: #22C55E;">${DB.formatIDR(inv.capital)}</span>
               </div>
-              <div style="font-size: 10.5px; color: #64748B; margin-bottom: 6px;">
-                Durasi: Hari ke-${inv.daysElapsed || 0}/${inv.durationDays} (${progressPct}%) · Profit: +${DB.formatIDR(inv.totalProfitEarned || 0)}
+              <div class="flex-between mb-2" style="font-size: 11px; color: #64748B;">
+                <span>Total Profit: <strong style="color: #10B981;">+${DB.formatIDR(inv.totalProfitEarned || 0)}</strong></span>
+                <span>Sisa Durasi: <strong>${daysLeft} Hari</strong></span>
               </div>
-              <div style="width: 100%; height: 5px; background: #E2E8F0; border-radius: 3px; overflow: hidden;">
-                <div style="width: ${progressPct}%; height: 100%; background: #22C55E; border-radius: 3px;"></div>
+              <div style="height: 6px; background: #F1F5F9; border-radius: 4px; overflow: hidden;">
+                <div style="width: ${percent}%; height: 100%; background: var(--primary-gold-gradient);"></div>
               </div>
             </div>
           `;
@@ -1994,6 +2051,11 @@ const App = {
 
   // 2. Riwayat Modal & Running Text Controller (Requirement 2)
   openRiwayatModal() {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
+      this.openModal('authModal');
+      return;
+    }
     this.renderRiwayatTickers();
     this.filterRiwayat('all');
     this.openModal('riwayatModal');
@@ -2311,6 +2373,11 @@ const App = {
 
   // 5. Kelas Trading Modal Controller (Requirement 8)
   openKelasTradingModal() {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
+      this.openModal('authModal');
+      return;
+    }
     this.openModal('kelasTradingModal');
   },
 
@@ -2319,6 +2386,12 @@ const App = {
   },
 
   openPlanModal(planId) {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
+      this.openModal('authModal');
+      return;
+    }
+
     const plan = Plans.getPlanById(planId);
     if (!plan) return;
 
@@ -2397,6 +2470,13 @@ const App = {
   },
 
   submitRegister() {
+    const riskCheckbox = document.getElementById('regRiskAgreement');
+    if (!riskCheckbox || !riskCheckbox.checked) {
+      this.showToast('Silakan centang persetujuan resiko investasi sebelum mendaftar!', 'error');
+      if (riskCheckbox) riskCheckbox.focus();
+      return;
+    }
+
     const username = document.getElementById('regUsername') ? document.getElementById('regUsername').value.trim() : '';
     const fullName = document.getElementById('regFullName') ? document.getElementById('regFullName').value.trim() : '';
     const email = document.getElementById('regEmail') ? document.getElementById('regEmail').value.trim() : '';
@@ -2407,6 +2487,7 @@ const App = {
     const res = Auth.register({ username, fullName, email, phone, password, referralCode });
     if (res.success) {
       this.closeAllModals();
+      if (riskCheckbox) riskCheckbox.checked = false;
       this.showToast(res.message, 'success');
       this.renderAll();
     } else {
@@ -2439,8 +2520,8 @@ const App = {
   // Payment Handlers
   openDepositModal() {
     if (!Auth.isLoggedIn()) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login untuk melakukan deposit.', 'info');
       return;
     }
     this.removeDepositProof();
@@ -2555,8 +2636,8 @@ const App = {
   openWithdrawModal() {
     const user = Auth.getUser();
     if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
-      this.showToast('Silakan login untuk melakukan penarikan.', 'info');
       return;
     }
 
@@ -2595,6 +2676,26 @@ const App = {
         badgeEl.className = 'wd-status-badge closed';
         textEl.textContent = `🔴 ${sched.message}`;
       }
+    }
+
+    // Render Dynamic Withdrawal Terms (Requirement 3)
+    const termsListEl = document.getElementById('withdrawTermsList');
+    if (termsListEl) {
+      const db = DB.get();
+      const terms = (db.settings && db.settings.withdrawTerms) || [
+        "Minimal Penarikan: Rp 50.000 per transaksi.",
+        "Biaya Admin: 1.0% dari nominal penarikan dana.",
+        "Jam Operasional WD: Buka setiap hari pukul 09:00 - 21:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
+        "Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).",
+        "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
+      ];
+      termsListEl.innerHTML = terms.map(term => {
+        if (term.includes(':')) {
+          const parts = term.split(':');
+          return `<li><strong>${parts[0].replace(/^[-•*]\s*/, '')}:</strong>${parts.slice(1).join(':')}</li>`;
+        }
+        return `<li>${term.replace(/^[-•*]\s*/, '')}</li>`;
+      }).join('');
     }
 
     // Update balance preview
@@ -2799,13 +2900,61 @@ const App = {
     const sig = signals.find(s => s.id === signalId);
     if (!sig) return;
 
+    const marketStatus = Plans.isMarketOpen();
+    const isOff = !marketStatus.isOpen;
+
+    const actionBadge = document.getElementById('sigModalAction');
+    const noticeEl = document.getElementById('sigModalNotice');
+    const ctaBtn = document.getElementById('sigModalCtaBtn');
+
+    if (isOff) {
+      if (actionBadge) {
+        actionBadge.textContent = 'PASAR OFF';
+        actionBadge.className = 'badge-signal-action off';
+      }
+      if (noticeEl) {
+        noticeEl.innerHTML = `
+          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; border-radius: 10px; padding: 8px 12px; margin-top: 10px; color: #B91C1C; font-size: 11px; font-weight: 600;">
+            ⚠️ Sesi pasar finansial global sedang LIBUR (OFF). Sinyal trading dan eksekusi order ditangguhkan sementara hingga pasar buka kembali.
+          </div>
+        `;
+      }
+      document.getElementById('sigModalEntry').textContent = 'PASAR LIBUR';
+      document.getElementById('sigModalTp').textContent = 'PASAR LIBUR';
+      document.getElementById('sigModalSl').textContent = 'PASAR LIBUR';
+      document.getElementById('sigModalConf').textContent = 'OFF';
+
+      if (ctaBtn) {
+        ctaBtn.innerHTML = '<span>Pasar Sedang Libur (OFF)</span>';
+        ctaBtn.style.background = '#64748B';
+        ctaBtn.onclick = () => {
+          this.showToast('Pasar sedang OFF. Sinyal tidak dapat dieksekusi saat pasar libur!', 'error');
+        };
+      }
+    } else {
+      if (actionBadge) {
+        actionBadge.textContent = sig.action;
+        actionBadge.className = `badge-signal-action ${sig.action.toLowerCase()}`;
+      }
+      if (noticeEl) {
+        noticeEl.innerHTML = '';
+      }
+      document.getElementById('sigModalEntry').textContent = sig.entry;
+      document.getElementById('sigModalTp').textContent = sig.tp;
+      document.getElementById('sigModalSl').textContent = sig.sl;
+      document.getElementById('sigModalConf').textContent = `${sig.confidence}%`;
+
+      if (ctaBtn) {
+        ctaBtn.innerHTML = '<span>Terapkan ke Akun Trading</span>';
+        ctaBtn.style.background = '';
+        ctaBtn.onclick = () => {
+          this.closeModal('signalModal');
+          this.showToast('Sinyal telah disalin ke trading desk Anda!', 'success');
+        };
+      }
+    }
+
     document.getElementById('sigModalPair').textContent = sig.pair;
-    document.getElementById('sigModalAction').textContent = sig.action;
-    document.getElementById('sigModalAction').className = `badge-signal-action ${sig.action.toLowerCase()}`;
-    document.getElementById('sigModalEntry').textContent = sig.entry;
-    document.getElementById('sigModalTp').textContent = sig.tp;
-    document.getElementById('sigModalSl').textContent = sig.sl;
-    document.getElementById('sigModalConf').textContent = `${sig.confidence}%`;
 
     this.openModal('signalModal');
   },

@@ -1131,6 +1131,11 @@ html, body {
   background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
 }
 
+.badge-signal-action.off {
+  background: linear-gradient(135deg, #64748B 0%, #475569 100%);
+  color: #FFFFFF;
+}
+
 .signal-matrix-box {
   background: #F8FAFC;
   border-radius: var(--radius-md);
@@ -3534,8 +3539,8 @@ html, body {
 
 .profile-action-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
 .profile-action-btn {
@@ -3689,5 +3694,144 @@ html, body {
   background: #DCFCE7;
   border-color: #86EFAC;
 }
+
+/* APK Download Modal & Card Styling */
+.apk-download-hero {
+  background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%);
+  border-radius: 20px;
+  padding: 22px 18px;
+  text-align: center;
+  color: #FFFFFF;
+  margin-bottom: 16px;
+  border: 1px solid rgba(200, 147, 56, 0.25);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.apk-app-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  margin: 0 auto 12px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+  position: relative;
+}
+
+.apk-app-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #F8FAFC;
+  margin-bottom: 4px;
+}
+
+.apk-app-sub {
+  font-size: 12px;
+  color: #94A3B8;
+  margin-bottom: 14px;
+}
+
+.apk-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 10px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.apk-spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.apk-spec-lbl {
+  font-size: 9.5px;
+  color: #94A3B8;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.apk-spec-val {
+  font-size: 12px;
+  font-weight: 800;
+  color: #FDE89C;
+  font-family: var(--font-mono);
+}
+
+.apk-guide-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.apk-guide-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.apk-guide-list {
+  padding-left: 18px;
+  margin: 0;
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.apk-guide-list li {
+  margin-bottom: 6px;
+}
+
+/* Register Risk Agreement Checkbox */
+.register-risk-box {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 14px 0 16px 0;
+  transition: all 0.2s ease;
+}
+
+.register-risk-box:hover {
+  border-color: #F59E0B;
+  background: #FEF3C7;
+}
+
+.register-risk-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.register-risk-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #C89338;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.register-risk-text {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #92400E;
+  font-weight: 500;
+}
+
 
 

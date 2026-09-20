@@ -456,5 +456,31 @@ export const Admin = {
   // Trigger Daily Profit Yield manually from Admin
   triggerProfitYield(force = false) {
     return Plans.yieldDailyProfits(force);
+  },
+
+  // Save Withdrawal Terms
+  saveWithdrawTerms(terms) {
+    const db = DB.get();
+    let termsList = [];
+    if (Array.isArray(terms)) {
+      termsList = terms.map(t => String(t).trim()).filter(Boolean);
+    } else if (typeof terms === 'string') {
+      termsList = terms.split('\n').map(t => t.trim()).filter(Boolean);
+    }
+    db.settings.withdrawTerms = termsList;
+    DB.save(db);
+    return { success: true, message: 'Ketentuan dan syarat penarikan dana (WD) berhasil disimpan!' };
+  },
+
+  // Save APK Download Settings
+  saveApkSettings(apkConfig) {
+    const db = DB.get();
+    db.settings.apkDownload = {
+      ...(db.settings.apkDownload || {}),
+      ...apkConfig
+    };
+    DB.save(db);
+    return { success: true, message: 'Pengaturan link unduhan APK Android berhasil disimpan!' };
   }
 };
+
