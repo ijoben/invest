@@ -621,6 +621,7 @@ body.admin-body.sidebar-open {
 .badge-status.approved { background: #064E3B; color: #6EE7B7; }
 .badge-status.rejected { background: #7F1D1D; color: #FCA5A5; }
 .badge-status.active { background: #1E3A8A; color: #93C5FD; }
+.badge-status.blocked { background: #7F1D1D; color: #FCA5A5; border: 1px solid rgba(239, 68, 68, 0.5); }
 
 /* Signal Action Badge */
 .badge-signal-action {

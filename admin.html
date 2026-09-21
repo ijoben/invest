@@ -721,8 +721,21 @@
          ==================================================================== -->
     <section id="pane-users" class="admin-view-panel">
       <div class="admin-card">
-        <div class="admin-card-header">
-          <h3 class="admin-card-title">Manajemen Data & Saldo Pengguna</h3>
+        <div class="admin-card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 class="admin-card-title">Manajemen Data & Status Pengguna</h3>
+            <p style="font-size: 11.5px; color: #64748B; margin-top: 2px;">Kelola akun member, pantau saldo, lakukan bantuan password, atau blokir akses akun bermasalah.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <!-- Filter Status User -->
+            <div class="admin-detail-tabs" style="margin: 0; padding: 3px; background: #F1F5F9; border-radius: 8px;">
+              <button class="admin-detail-tab-btn active" id="userFilterAll" onclick="AdminPage.setUserFilter('all')" style="padding: 5px 12px; font-size: 11px;">Semua (<span id="userCountAll">0</span>)</button>
+              <button class="admin-detail-tab-btn" id="userFilterActive" onclick="AdminPage.setUserFilter('active')" style="padding: 5px 12px; font-size: 11px;">🟢 Aktif (<span id="userCountActive">0</span>)</button>
+              <button class="admin-detail-tab-btn" id="userFilterBlocked" onclick="AdminPage.setUserFilter('blocked')" style="padding: 5px 12px; font-size: 11px;">🔴 Diblokir (<span id="userCountBlocked">0</span>)</button>
+            </div>
+            <!-- Search bar -->
+            <input type="text" id="userSearchInput" class="admin-input" placeholder="🔍 Cari username / nama / email..." oninput="AdminPage.onUserSearchInput()" style="width: 220px; padding: 6px 10px; font-size: 12px;">
+          </div>
         </div>
         <div class="admin-table-container">
           <table class="admin-table">
@@ -730,6 +743,7 @@
               <tr>
                 <th>Username</th>
                 <th>Nama Lengkap</th>
+                <th>Status Akun</th>
                 <th>Email / Kontak</th>
                 <th>Wallet Balance</th>
                 <th>Wallet Tambah Teman</th>
@@ -1059,6 +1073,10 @@
               <div style="font-weight: 700; color: #0F172A;" id="admMemDetailFullName">-</div>
             </div>
             <div>
+              <span style="color: #64748B;">Status Akun:</span>
+              <div id="admMemDetailStatusBadge" style="margin-top: 2px;">-</div>
+            </div>
+            <div>
               <span style="color: #64748B;">Email Terdaftar:</span>
               <div style="font-weight: 700; color: #0F172A;" id="admMemDetailEmail">-</div>
             </div>
@@ -1105,7 +1123,7 @@
         </div>
 
         <!-- BANTUAN RESET PASSWORD (ADMIN SUPPORT) -->
-        <div class="admin-reset-pw-box">
+        <div class="admin-reset-pw-box" style="margin-bottom: 14px;">
           <div class="flex-between mb-2">
             <h4 style="font-size: 13px; font-weight: 800; color: #92400E; display: flex; align-items: center; gap: 6px;">
               🔑 Bantuan Reset Password Member
@@ -1128,6 +1146,36 @@
             <button class="admin-btn-action-primary" style="flex: 1; justify-content: center; padding: 10px;" onclick="AdminPage.adminSaveNewPassword()">
               <span>💾 Simpan & Perbarui Password Member</span>
             </button>
+          </div>
+        </div>
+
+        <!-- KONTROL BLOKIR & AKSES MEMBER (ADMIN BLOCK MANAGEMENT) -->
+        <div class="admin-block-control-box" style="background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 14px; padding: 14px;">
+          <div class="flex-between mb-2">
+            <h4 style="font-size: 13px; font-weight: 800; color: #9F1239; display: flex; align-items: center; gap: 6px;">
+              🚫 Kontrol & Status Pemblokiran Akun Member
+            </h4>
+            <span id="admMemBlockStatusTag" style="font-size: 11px; font-weight: 800;">-</span>
+          </div>
+          <p style="font-size: 11px; color: #881337; margin-bottom: 10px;">
+            Gunakan fitur ini untuk menonaktifkan/memblokir akses member jika terindikasi melanggar aturan sistem atau kecurangan. Member yang diblokir tidak dapat login dan sesinya akan langsung diputus.
+          </p>
+
+          <div id="admMemBlockInfoBox" style="display: none; background: #FFE4E6; border: 1px solid #FDA4AF; border-radius: 10px; padding: 10px; margin-bottom: 10px; font-size: 11.5px; color: #9F1239;">
+            <div><strong>Waktu Diblokir:</strong> <span id="admMemBlockedAtText">-</span></div>
+            <div style="margin-top: 3px;"><strong>Alasan Pemblokiran:</strong> <span id="admMemBlockedReasonText">-</span></div>
+          </div>
+
+          <div id="admMemBlockActionSection">
+            <div id="admMemBlockInputWrap" style="margin-bottom: 10px;">
+              <label style="font-size: 11px; font-weight: 700; color: #9F1239; display: block; margin-bottom: 4px;">Alasan Pemblokiran (Opsional / Ditampilkan ke Member):</label>
+              <input type="text" class="admin-input" id="admMemBlockReasonInput" placeholder="Contoh: Terindikasi akun ganda / kecurangan transaksi" style="width: 100%;">
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="admMemBtnToggleBlock" class="btn-admin-action delete" style="flex: 1; justify-content: center; padding: 10px; font-weight: 800; font-size: 12px;" onclick="AdminPage.modalToggleBlockUser()">
+                🚫 Blokir Akun Member Ini
+              </button>
+            </div>
           </div>
         </div>
       </div>

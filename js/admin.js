@@ -505,6 +505,11 @@ export const Admin = {
       downlines,
       passwordResetRequest: user.passwordResetRequest || null
     };
+  },
+
+  // Admin Toggle Block / Unblock User
+  toggleBlockUser(userId, reason = '') {
+    return DB.toggleBlockUser(userId, reason);
   }
 };
 

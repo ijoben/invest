@@ -12,6 +12,7 @@ export const Payment = {
     const db = DB.get();
     const user = DB.getUserById(userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
+    if (user.isBlocked) return { success: false, message: 'Akun Anda sedang diblokir oleh Administrator. Transaksi deposit ditolak.' };
 
     let finalAmount = Number(amount);
     let uniqueCode = 0;
@@ -122,6 +123,7 @@ export const Payment = {
     const db = DB.get();
     const user = DB.getUserById(userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
+    if (user.isBlocked) return { success: false, message: 'Akun Anda sedang diblokir oleh Administrator. Permintaan penarikan ditolak.' };
 
     // Check withdrawal schedule / status
     const wdStatus = this.isWithdrawOpen();

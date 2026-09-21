@@ -2639,6 +2639,9 @@ const App = {
         this.renderAll();
       }
     } else {
+      if (res.isBlocked) {
+        alert(res.message);
+      }
       this.showToast(res.message, 'error');
     }
   },

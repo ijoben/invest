@@ -13,6 +13,8 @@ import { Rewards } from './rewards.js';
 
 export const AdminPage = {
   currentTab: 'dashboard',
+  userFilter: 'all',
+  userSearchQuery: '',
 
   init() {
     this.bindEvents();
@@ -457,23 +459,127 @@ export const AdminPage = {
   // 7. Users Table
   renderUsers(db) {
     const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = db.users.map(u => `
-      <tr>
-        <td><strong>${u.username}</strong></td>
-        <td>${u.fullName || '-'}</td>
-        <td>${u.email || u.phone || '-'}</td>
-        <td><strong style="color:#22C55E;">${DB.formatIDR(u.walletBalance)}</strong></td>
-        <td><strong style="color:#C89338;">${DB.formatIDR(u.affiliateBalance)}</strong></td>
-        <td>${u.points || 0}</td>
-        <td>${u.referredBy || '<span style="color:#64748B;">-</span>'}</td>
-        <td>
-          <div class="btn-action-group" style="justify-content: flex-start; gap: 4px;">
-            <button class="btn-admin-action edit" onclick="AdminPage.openEditUserModal('${u.id}')" title="Kelola Saldo & Point">Saldo</button>
-            <button class="btn-admin-action view" onclick="AdminPage.openMemberDetailModal('${u.id}')" style="background: #2563EB; color: #FFFFFF; border-color: #1D4ED8; font-weight: 700;" title="Buka Detail Profil & Bantuan Password">👤 Detail & Bantuan</button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+    if (!tbody) return;
+
+    const allUsers = db.users || [];
+    const totalCount = allUsers.length;
+    const activeCount = allUsers.filter(u => !u.isBlocked).length;
+    const blockedCount = allUsers.filter(u => u.isBlocked).length;
+
+    const cAll = document.getElementById('userCountAll');
+    const cAct = document.getElementById('userCountActive');
+    const cBlk = document.getElementById('userCountBlocked');
+    if (cAll) cAll.textContent = totalCount;
+    if (cAct) cAct.textContent = activeCount;
+    if (cBlk) cBlk.textContent = blockedCount;
+
+    // Filter by status
+    let filtered = allUsers;
+    if (this.userFilter === 'active') {
+      filtered = filtered.filter(u => !u.isBlocked);
+    } else if (this.userFilter === 'blocked') {
+      filtered = filtered.filter(u => u.isBlocked);
+    }
+
+    // Filter by search query
+    if (this.userSearchQuery) {
+      const q = this.userSearchQuery.toLowerCase().trim();
+      filtered = filtered.filter(u => 
+        (u.username && u.username.toLowerCase().includes(q)) ||
+        (u.fullName && u.fullName.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.phone && u.phone.includes(q)) ||
+        (u.referralCode && u.referralCode.toLowerCase().includes(q))
+      );
+    }
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#94A3B8;">Tidak ada data pengguna yang sesuai dengan filter / pencarian.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(u => {
+      const isAdmin = u.role === 'admin';
+      const isBlocked = !!u.isBlocked;
+
+      let statusBadge = '';
+      if (isAdmin) {
+        statusBadge = '<span class="badge-status approved" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; font-weight:800; font-size:10.5px;">👑 ADMIN</span>';
+      } else if (isBlocked) {
+        statusBadge = `<span class="badge-status blocked" style="background:#FEE2E2; color:#DC2626; border:1px solid #FCA5A5; font-weight:800; font-size:10.5px; cursor:help;" title="${u.blockedReason ? 'Alasan: ' + u.blockedReason : 'Akun Diblokir'}">🔴 DIBLOKIR</span>`;
+      } else {
+        statusBadge = '<span class="badge-status approved" style="background:#DCFCE7; color:#166534; border:1px solid #86EFAC; font-weight:800; font-size:10.5px;">🟢 AKTIF</span>';
+      }
+
+      let blockActionBtn = '';
+      if (!isAdmin) {
+        if (isBlocked) {
+          blockActionBtn = `<button class="btn-admin-action approve" onclick="AdminPage.confirmToggleBlock('${u.id}', '${u.username}', true)" style="background:#16A34A; color:#FFFFFF; border-color:#15803D; font-weight:700;" title="Buka blokir akun member ini">✅ Buka Blokir</button>`;
+        } else {
+          blockActionBtn = `<button class="btn-admin-action delete" onclick="AdminPage.confirmToggleBlock('${u.id}', '${u.username}', false)" style="background:#DC2626; color:#FFFFFF; border-color:#B91C1C; font-weight:700;" title="Blokir akses member ini">🚫 Blokir</button>`;
+        }
+      }
+
+      return `
+        <tr style="${isBlocked ? 'background: rgba(254, 226, 226, 0.25);' : ''}">
+          <td><strong>${u.username}</strong></td>
+          <td>${u.fullName || '-'}</td>
+          <td>${statusBadge}</td>
+          <td>${u.email || u.phone || '-'}</td>
+          <td><strong style="color:#22C55E;">${DB.formatIDR(u.walletBalance)}</strong></td>
+          <td><strong style="color:#C89338;">${DB.formatIDR(u.affiliateBalance)}</strong></td>
+          <td>${u.points || 0}</td>
+          <td>${u.referredBy || '<span style="color:#64748B;">-</span>'}</td>
+          <td>
+            <div class="btn-action-group" style="justify-content: flex-start; gap: 4px; flex-wrap: nowrap;">
+              <button class="btn-admin-action edit" onclick="AdminPage.openEditUserModal('${u.id}')" title="Kelola Saldo & Point">Saldo</button>
+              <button class="btn-admin-action view" onclick="AdminPage.openMemberDetailModal('${u.id}')" style="background: #2563EB; color: #FFFFFF; border-color: #1D4ED8; font-weight: 700;" title="Buka Detail Profil & Bantuan Password">👤 Detail</button>
+              ${blockActionBtn}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  setUserFilter(filter) {
+    this.userFilter = filter;
+    ['all', 'active', 'blocked'].forEach(f => {
+      const btn = document.getElementById('userFilter' + f.charAt(0).toUpperCase() + f.slice(1));
+      if (btn) btn.classList.toggle('active', f === filter);
+    });
+    this.renderUsers(DB.get());
+  },
+
+  onUserSearchInput() {
+    const input = document.getElementById('userSearchInput');
+    this.userSearchQuery = input ? input.value : '';
+    this.renderUsers(DB.get());
+  },
+
+  confirmToggleBlock(userId, username, isCurrentlyBlocked) {
+    if (isCurrentlyBlocked) {
+      if (confirm(`Apakah Anda yakin ingin MEMBUKA BLOKIR akun member "${username}"?\n\nMember akan diizinkan login dan mengakses kembali semua fitur sistem.`)) {
+        const res = Admin.toggleBlockUser(userId);
+        if (res.success) {
+          this.showToast(res.message, 'success');
+          this.renderAll();
+        } else {
+          this.showToast(res.message, 'error');
+        }
+      }
+    } else {
+      const reason = prompt(`Masukkan alasan pemblokiran untuk member "${username}" (opsional):\n\nCatatan: Alasan ini akan tampil saat member mencoba login.`, 'Terindikasi pelanggaran ketentuan sistem');
+      if (reason !== null) {
+        const res = Admin.toggleBlockUser(userId, reason);
+        if (res.success) {
+          this.showToast(res.message, 'success');
+          this.renderAll();
+        } else {
+          this.showToast(res.message, 'error');
+        }
+      }
+    }
   },
 
   // 8. Signals Table
@@ -1235,6 +1341,56 @@ export const AdminPage = {
     document.getElementById('admMemDetailRefCode').textContent = user.referralCode || '-';
     document.getElementById('admMemDetailJoinDate').textContent = user.registeredAt ? new Date(user.registeredAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
 
+    // Status Badge & Block Controls in modal
+    const statusBadgeEl = document.getElementById('admMemDetailStatusBadge');
+    const blockTagEl = document.getElementById('admMemBlockStatusTag');
+    const blockInfoBox = document.getElementById('admMemBlockInfoBox');
+    const blockInputWrap = document.getElementById('admMemBlockInputWrap');
+    const blockBtn = document.getElementById('admMemBtnToggleBlock');
+    const reasonInput = document.getElementById('admMemBlockReasonInput');
+
+    const isAdmRole = user.role === 'admin';
+    const isBlocked = !!user.isBlocked;
+
+    if (isAdmRole) {
+      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status approved" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; font-weight:800;">👑 ADMINISTRATOR</span>';
+      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#1D4ED8;">👑 ADMIN (Dilindungi)</span>';
+      if (blockInfoBox) blockInfoBox.style.display = 'none';
+      if (blockInputWrap) blockInputWrap.style.display = 'none';
+      if (blockBtn) blockBtn.style.display = 'none';
+    } else if (isBlocked) {
+      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status blocked" style="background:#FEE2E2; color:#DC2626; border:1px solid #FCA5A5; font-weight:800; font-size:11px;">🔴 DIBLOKIR</span>';
+      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#DC2626; background:#FFE4E6; padding:2px 8px; border-radius:6px; border:1px solid #FDA4AF;">🔴 DIBLOKIR</span>';
+      if (blockInfoBox) {
+        blockInfoBox.style.display = 'block';
+        document.getElementById('admMemBlockedAtText').textContent = user.blockedAt ? new Date(user.blockedAt).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) + ' WIB' : '-';
+        document.getElementById('admMemBlockedReasonText').textContent = user.blockedReason || 'Diblokir oleh Administrator';
+      }
+      if (blockInputWrap) blockInputWrap.style.display = 'none';
+      if (blockBtn) {
+        blockBtn.style.display = 'flex';
+        blockBtn.className = 'btn-admin-action approve';
+        blockBtn.style.background = '#16A34A';
+        blockBtn.style.borderColor = '#15803D';
+        blockBtn.style.color = '#FFFFFF';
+        blockBtn.textContent = '✅ Buka Blokir & Aktifkan Kembali Akun Member';
+      }
+    } else {
+      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status approved" style="background:#DCFCE7; color:#166534; border:1px solid #86EFAC; font-weight:800; font-size:11px;">🟢 AKTIF</span>';
+      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#16A34A; background:#DCFCE7; padding:2px 8px; border-radius:6px; border:1px solid #86EFAC;">🟢 AKTIF / NORMAL</span>';
+      if (blockInfoBox) blockInfoBox.style.display = 'none';
+      if (blockInputWrap) blockInputWrap.style.display = 'block';
+      if (reasonInput) reasonInput.value = '';
+      if (blockBtn) {
+        blockBtn.style.display = 'flex';
+        blockBtn.className = 'btn-admin-action delete';
+        blockBtn.style.background = '#DC2626';
+        blockBtn.style.borderColor = '#B91C1C';
+        blockBtn.style.color = '#FFFFFF';
+        blockBtn.textContent = '🚫 Blokir Akun Member Ini';
+      }
+    }
+
     // Bank details
     const bank = user.bankAccount || {};
     document.getElementById('admMemBankName').textContent = bank.bankName || 'Belum diisi';
@@ -1359,6 +1515,41 @@ export const AdminPage = {
       this.renderAll();
     } else {
       this.showToast(res.message, 'error');
+    }
+  },
+
+  modalToggleBlockUser() {
+    const userId = document.getElementById('admMemDetailUserId').value;
+    if (!userId) return;
+
+    const db = DB.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return;
+
+    if (user.isBlocked) {
+      if (confirm(`Apakah Anda yakin ingin MEMBUKA BLOKIR akun member "${user.username}"?\n\nMember akan diizinkan login dan mengakses kembali semua fitur sistem.`)) {
+        const res = Admin.toggleBlockUser(userId);
+        if (res.success) {
+          this.showToast(res.message, 'success');
+          this.openMemberDetailModal(userId);
+          this.renderAll();
+        } else {
+          this.showToast(res.message, 'error');
+        }
+      }
+    } else {
+      const reasonInput = document.getElementById('admMemBlockReasonInput');
+      const reason = reasonInput ? reasonInput.value.trim() : '';
+      if (confirm(`Apakah Anda yakin ingin MEMBLOKIR akun member "${user.username}"?\n\nMember tidak akan bisa login dan sesi aktifnya langsung diputus.`)) {
+        const res = Admin.toggleBlockUser(userId, reason || 'Pelanggaran ketentuan sistem');
+        if (res.success) {
+          this.showToast(res.message, 'success');
+          this.openMemberDetailModal(userId);
+          this.renderAll();
+        } else {
+          this.showToast(res.message, 'error');
+        }
+      }
     }
   },
 

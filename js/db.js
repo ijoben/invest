@@ -143,6 +143,10 @@ const defaultDB = {
       referralCode: 'ADMINVIP',
       referredBy: null,
       kycStatus: 'verified',
+      isBlocked: false,
+      blockedReason: '',
+      blockedAt: null,
+      blockHistory: [],
       registeredAt: '2026-01-01T00:00:00.000Z'
     },
     {
@@ -165,6 +169,10 @@ const defaultDB = {
       referralCode: 'ALEX88',
       referredBy: 'ADMINVIP',
       kycStatus: 'verified',
+      isBlocked: false,
+      blockedReason: '',
+      blockedAt: null,
+      blockHistory: [],
       registeredAt: '2026-02-15T08:30:00.000Z'
     },
     {
@@ -181,6 +189,10 @@ const defaultDB = {
       referralCode: 'SARAH77',
       referredBy: 'ALEX88',
       kycStatus: 'verified',
+      isBlocked: false,
+      blockedReason: '',
+      blockedAt: null,
+      blockHistory: [],
       registeredAt: '2026-02-20T10:00:00.000Z'
     },
     {
@@ -197,6 +209,10 @@ const defaultDB = {
       referralCode: 'BUDI99',
       referredBy: 'ALEX88',
       kycStatus: 'verified',
+      isBlocked: false,
+      blockedReason: '',
+      blockedAt: null,
+      blockHistory: [],
       registeredAt: '2026-03-01T12:00:00.000Z'
     },
     {
@@ -213,6 +229,10 @@ const defaultDB = {
       referralCode: 'RENDY01',
       referredBy: 'SARAH77', // Level 2 for Alex
       kycStatus: 'verified',
+      isBlocked: false,
+      blockedReason: '',
+      blockedAt: null,
+      blockHistory: [],
       registeredAt: '2026-03-05T14:30:00.000Z'
     }
   ],
@@ -944,6 +964,14 @@ export const DB = {
           }
         });
       }
+      if (Array.isArray(parsed.users)) {
+        parsed.users.forEach(u => {
+          if (u.isBlocked === undefined) u.isBlocked = false;
+          if (u.blockedReason === undefined) u.blockedReason = '';
+          if (u.blockedAt === undefined) u.blockedAt = null;
+          if (!Array.isArray(u.blockHistory)) u.blockHistory = [];
+        });
+      }
       this.save(parsed);
       return parsed;
     } catch (e) {
@@ -969,7 +997,13 @@ export const DB = {
   getCurrentUser() {
     const db = this.get();
     if (!db.currentSession) return null;
-    return db.users.find(u => u.id === db.currentSession.userId) || null;
+    const user = db.users.find(u => u.id === db.currentSession.userId) || null;
+    if (user && user.isBlocked) {
+      db.currentSession = null;
+      this.save(db);
+      return null;
+    }
+    return user;
   },
 
   setSession(user) {
@@ -1016,6 +1050,10 @@ export const DB = {
       kycStatus: 'unverified',
       registeredAt: new Date().toISOString(),
       role: 'user',
+      isBlocked: false,
+      blockedReason: '',
+      blockedAt: null,
+      blockHistory: [],
       ...userData
     };
     db.users.push(newUser);
@@ -1212,6 +1250,63 @@ export const DB = {
 
     this.save(db);
     return { success: true, message: `Password member ${user.username} berhasil direset menjadi: ${cleanPass}` };
+  },
+
+  // Admin Toggle Block / Unblock User
+  toggleBlockUser(userId, reason = '') {
+    const db = this.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'Member tidak ditemukan!' };
+
+    if (user.role === 'admin') {
+      return { success: false, message: 'Akun Administrator tidak dapat diblokir demi keamanan sistem!' };
+    }
+
+    user.blockHistory = user.blockHistory || [];
+
+    if (user.isBlocked) {
+      // Unblock member
+      user.isBlocked = false;
+      user.blockedReason = '';
+      user.unblockedAt = new Date().toISOString();
+      user.blockHistory.push({
+        action: 'unblock',
+        timestamp: user.unblockedAt,
+        note: 'Blokir dibuka oleh Administrator'
+      });
+
+      this.save(db);
+      return {
+        success: true,
+        isBlocked: false,
+        user,
+        message: `Akun member ${user.username} (${user.fullName || 'Member'}) berhasil DIBUKA BLOKIR. Member kini dapat login kembali.`
+      };
+    } else {
+      // Block member
+      const cleanReason = String(reason || '').trim() || 'Diblokir oleh Administrator karena indikasi pelanggaran aturan sistem';
+      user.isBlocked = true;
+      user.blockedReason = cleanReason;
+      user.blockedAt = new Date().toISOString();
+      user.blockHistory.push({
+        action: 'block',
+        timestamp: user.blockedAt,
+        reason: cleanReason
+      });
+
+      // Invalidate active session if member is currently logged in
+      if (db.currentSession && db.currentSession.userId === user.id) {
+        db.currentSession = null;
+      }
+
+      this.save(db);
+      return {
+        success: true,
+        isBlocked: true,
+        user,
+        message: `Akun member ${user.username} (${user.fullName || 'Member'}) berhasil DIBLOKIR. Sesi aktif telah diputus dan akses login ditolak.`
+      };
+    }
   },
 
   // Format IDR currency

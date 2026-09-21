@@ -35,6 +35,15 @@ export const Auth = {
       return { success: false, message: 'Password salah. Silakan coba lagi!' };
     }
 
+    // Blokir guard
+    if (user.isBlocked) {
+      return {
+        success: false,
+        isBlocked: true,
+        message: `Akun Anda telah DIBLOKIR oleh Administrator. Alasan: ${user.blockedReason || 'Pelanggaran ketentuan sistem'}. Silakan hubungi Layanan Pelanggan (CS) untuk bantuan.`
+      };
+    }
+
     DB.setSession(user);
     return { success: true, user, message: `Selamat datang kembali, ${user.fullName || user.username}!` };
   },
@@ -50,6 +59,13 @@ export const Auth = {
     }
 
     if (user) {
+      if (user.isBlocked) {
+        return {
+          success: false,
+          isBlocked: true,
+          message: `Akun demo ${user.username} saat ini sedang DIBLOKIR oleh Administrator. Silakan buka blokir melalui panel Admin.`
+        };
+      }
       DB.setSession(user);
       return { success: true, user, message: `Login sebagai ${user.fullName} (${user.role.toUpperCase()}) berhasil!` };
     }
