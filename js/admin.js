@@ -481,6 +481,30 @@ export const Admin = {
     };
     DB.save(db);
     return { success: true, message: 'Pengaturan link unduhan APK Android berhasil disimpan!' };
+  },
+
+  // Admin Reset User Password
+  resetUserPassword(userId, newPassword) {
+    return DB.adminResetUserPassword(userId, newPassword);
+  },
+
+  // Get full member profile for admin support modal
+  getUserFullProfile(userId) {
+    const db = DB.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return null;
+
+    const txs = db.transactions.filter(t => t.userId === userId || t.username === user.username);
+    const investments = db.investments.filter(i => i.userId === userId);
+    const downlines = Affiliate.getDownlines(user.referralCode || '');
+
+    return {
+      user,
+      transactions: txs,
+      investments,
+      downlines,
+      passwordResetRequest: user.passwordResetRequest || null
+    };
   }
 };
 

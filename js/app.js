@@ -247,8 +247,8 @@ const App = {
                 <span>${activeCount} Paket Active</span>
               </button>
             ` : `
-              <button class="tier-btn ${plan.theme === 'theme-rookie' ? 'btn-change' : 'btn-active'}" onclick="App.handlePlanAction('${plan.id}')">
-                <span>${plan.theme === 'theme-rookie' ? 'Change' : 'Active'}</span>
+              <button class="tier-btn btn-active" onclick="App.handlePlanAction('${plan.id}')">
+                <span>Active</span>
               </button>
             `}
           </div>
@@ -1179,7 +1179,7 @@ const App = {
     }
   },
 
-  // Render Wallet View Page
+  // Render Wallet View Page (Requirement 4: Detailed Breakdown & Category Filters)
   renderWalletView(user) {
     if (!user) {
       this.showToast('Silahkan login atau daftar dulu', 'info');
@@ -1191,33 +1191,114 @@ const App = {
     document.getElementById('walletPageMainBal').textContent = DB.formatIDR(user.walletBalance);
     document.getElementById('walletPageAffBal').textContent = DB.formatIDR(user.affiliateBalance);
 
-    const txListEl = document.getElementById('walletTransactionList');
     const txs = Payment.getUserTransactions(user.id);
+    this.cachedWalletTransactions = txs;
+    this.renderWalletTransactionList(this.activeTxFilter || 'all');
+  },
+
+  // Filter Wallet Transactions (Requirement 4)
+  filterWalletTransactions(filterType) {
+    this.activeTxFilter = filterType;
+    const filterButtons = {
+      all: 'txFilterAll',
+      profit_claim: 'txFilterProfit',
+      rabat_bonus: 'txFilterRabat',
+      sponsor_bonus: 'txFilterSponsor',
+      dep_wd: 'txFilterTransfer'
+    };
+
+    Object.keys(filterButtons).forEach(type => {
+      const btn = document.getElementById(filterButtons[type]);
+      if (btn) btn.classList.toggle('active', type === filterType);
+    });
+
+    this.renderWalletTransactionList(filterType);
+  },
+
+  renderWalletTransactionList(filterType = 'all') {
+    const txListEl = document.getElementById('walletTransactionList');
+    if (!txListEl) return;
+
+    let txs = this.cachedWalletTransactions || [];
+    if (filterType === 'profit_claim') {
+      txs = txs.filter(t => t.type === 'profit_claim');
+    } else if (filterType === 'rabat_bonus') {
+      txs = txs.filter(t => t.type === 'rabat_bonus');
+    } else if (filterType === 'sponsor_bonus') {
+      txs = txs.filter(t => t.type === 'sponsor_bonus');
+    } else if (filterType === 'dep_wd') {
+      txs = txs.filter(t => t.type === 'deposit' || t.type === 'withdraw' || t.type === 'affiliate_transfer');
+    }
 
     if (txs.length === 0) {
-      txListEl.innerHTML = '<div style="text-align:center; padding:20px; color:#94A3B8;">Belum ada riwayat transaksi.</div>';
+      txListEl.innerHTML = '<div style="text-align:center; padding:20px; color:#94A3B8; font-size:12px;">Tidak ada riwayat transaksi pada kategori ini.</div>';
       return;
     }
 
     txListEl.innerHTML = txs.map(t => {
       let title = t.paymentMethod || t.type;
-      let isPlus = t.type === 'deposit' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus';
-      let amountColor = isPlus ? '#22C55E' : '#EF4444';
+      let badgeHtml = '';
+      let isPlus = t.type === 'deposit' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
+      let amountColor = isPlus ? '#16A34A' : '#DC2626';
       let sign = isPlus ? '+' : '-';
+      let noteText = t.note || '';
+
+      if (t.type === 'profit_claim') {
+        title = 'Klaim Profit Harian AI';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-profit">KLAIM PROFIT</span>';
+        if (!noteText) noteText = `Profit harian trading AI`;
+      } else if (t.type === 'rabat_bonus') {
+        const lvl = t.level || 1;
+        title = `Bonus Rabat Matching (Level ${lvl})`;
+        badgeHtml = `<span class="tx-detail-badge tx-badge-rabat">RABAT L${lvl}</span>`;
+      } else if (t.type === 'sponsor_bonus') {
+        title = 'Bonus Sponsor Langsung (Level 1)';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-sponsor">SPONSOR L1</span>';
+      } else if (t.type === 'deposit') {
+        title = `Deposit Saldo (${t.paymentMethod || 'Manual'})`;
+        badgeHtml = '<span class="tx-detail-badge tx-badge-dep">DEPOSIT</span>';
+        if (!noteText) noteText = `Metode: ${t.paymentMethod || 'Transfer'} · ID: ${t.id}`;
+      } else if (t.type === 'withdraw') {
+        title = 'Penarikan Dana (WD)';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-wd">WITHDRAW</span>';
+        if (!noteText) noteText = `Bank: ${t.bankName || 'Rekening Member'} (${t.accountNumber || ''}) · ID: ${t.id}`;
+      } else if (t.type === 'affiliate_transfer') {
+        title = 'Transfer Saldo Komisi';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-sponsor">TRANSFER</span>';
+      } else if (t.type === 'capital_return') {
+        title = 'Pengembalian Modal Kontrak Selesai';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-return">MODAL KEMBALI</span>';
+      }
+
+      const dateStr = new Date(t.createdAt).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
       return `
-        <div style="background:#FFFFFF; border-radius:14px; padding:12px 14px; box-shadow:var(--card-shadow); border:1px solid #F1F5F9; display:flex; align-items:center; justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:36px; height:36px; border-radius:10px; background:#F8FAFC; display:flex; align-items:center; justify-content:center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <div style="background:#FFFFFF; border-radius:14px; padding:12px 14px; box-shadow:var(--card-shadow); border:1px solid #F1F5F9; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+            <div style="width:38px; height:38px; border-radius:12px; background:${isPlus ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <span style="font-size:16px;">${t.type === 'profit_claim' ? '📈' : (t.type === 'rabat_bonus' ? '👥' : (t.type === 'sponsor_bonus' ? '🎁' : (isPlus ? '↓' : '↑')))}</span>
             </div>
-            <div>
-              <div style="font-weight:700; font-size:13px; color:#1E293B;">${title}</div>
-              <div style="font-size:10px; color:#94A3B8;">${new Date(t.createdAt).toLocaleDateString('id-ID')} · <span class="badge-status ${t.status}">${t.status.toUpperCase()}</span></div>
+            <div style="min-width:0; flex:1;">
+              <div style="font-weight:700; font-size:12.5px; color:#1E293B; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                <span>${title}</span>
+                ${badgeHtml}
+              </div>
+              <div style="font-size:10.5px; color:#64748B; margin-top:2px; word-break:break-word; line-height:1.3;">
+                ${noteText}
+              </div>
+              <div style="font-size:9.5px; color:#94A3B8; margin-top:3px;">
+                ${dateStr} WIB · <span class="badge-status ${t.status || 'approved'}" style="font-size:8.5px; padding:1px 6px;">${(t.status || 'approved').toUpperCase()}</span>
+              </div>
             </div>
           </div>
-          <div style="text-align:right;">
-            <div style="font-weight:800; font-size:13px; color:${amountColor}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</div>
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-weight:800; font-size:13.5px; color:${amountColor}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</div>
             ${t.uniqueCode ? `<div style="font-size:9px; color:#64748B;">Kode: ${t.uniqueCode}</div>` : ''}
             ${t.proofImage ? `
               <div style="margin-top: 4px;">
@@ -1381,32 +1462,125 @@ const App = {
     const refLink = `${window.location.origin}${window.location.pathname}?ref=${user.referralCode}`;
     document.getElementById('profileRefLinkInput').value = refLink;
 
-    // Downline stats
+    // Downline stats & Level Bonus Recap (Requirements 2 & 3)
     const downlines = Affiliate.getDownlines(user.referralCode);
-    document.getElementById('affL1Count').textContent = downlines.level1.length;
-    document.getElementById('affL2Count').textContent = downlines.level2.length;
-    document.getElementById('affL3Count').textContent = downlines.level3.length;
-    document.getElementById('affTotalTurnover').textContent = DB.formatIDR(downlines.totalTeamTurnover);
+    this.cachedDownlines = downlines;
 
-    // Render Downline List
+    // Badges & Total Summary
+    const totalBadge = document.getElementById('affTotalMembersBadge');
+    if (totalBadge) totalBadge.textContent = `${downlines.totalMembers} Anggota`;
+
+    const totalBonusVal = document.getElementById('affTotalBonusVal');
+    if (totalBonusVal) totalBonusVal.textContent = DB.formatIDR(downlines.totalBonusAllLevels);
+
+    // Level 1
+    const l1CountEl = document.getElementById('affL1Count');
+    if (l1CountEl) l1CountEl.textContent = downlines.level1.length;
+    const tabL1El = document.getElementById('affTabL1Count');
+    if (tabL1El) tabL1El.textContent = downlines.level1.length;
+    const l1BonusEl = document.getElementById('affL1BonusVal');
+    if (l1BonusEl) l1BonusEl.textContent = DB.formatIDR(downlines.level1Bonus);
+    const l1TurnEl = document.getElementById('affL1Turnover');
+    if (l1TurnEl) l1TurnEl.textContent = `Omset: ${DB.formatIDR(downlines.level1Turnover)}`;
+
+    // Level 2
+    const l2CountEl = document.getElementById('affL2Count');
+    if (l2CountEl) l2CountEl.textContent = downlines.level2.length;
+    const tabL2El = document.getElementById('affTabL2Count');
+    if (tabL2El) tabL2El.textContent = downlines.level2.length;
+    const l2BonusEl = document.getElementById('affL2BonusVal');
+    if (l2BonusEl) l2BonusEl.textContent = DB.formatIDR(downlines.level2Bonus);
+    const l2TurnEl = document.getElementById('affL2Turnover');
+    if (l2TurnEl) l2TurnEl.textContent = `Omset: ${DB.formatIDR(downlines.level2Turnover)}`;
+
+    // Level 3
+    const l3CountEl = document.getElementById('affL3Count');
+    if (l3CountEl) l3CountEl.textContent = downlines.level3.length;
+    const tabL3El = document.getElementById('affTabL3Count');
+    if (tabL3El) tabL3El.textContent = downlines.level3.length;
+    const l3BonusEl = document.getElementById('affL3BonusVal');
+    if (l3BonusEl) l3BonusEl.textContent = DB.formatIDR(downlines.level3Bonus);
+    const l3TurnEl = document.getElementById('affL3Turnover');
+    if (l3TurnEl) l3TurnEl.textContent = `Omset: ${DB.formatIDR(downlines.level3Turnover)}`;
+
+    const tabAllEl = document.getElementById('affTabAllCount');
+    if (tabAllEl) tabAllEl.textContent = downlines.totalMembers;
+
+    const totalTurnEl = document.getElementById('affTotalTurnover');
+    if (totalTurnEl) totalTurnEl.textContent = DB.formatIDR(downlines.totalTeamTurnover);
+
+    // Render list by active filter
+    this.renderDownlineList(this.activeDownlineFilter || 'all');
+  },
+
+  // Filter Downline Network by Level (Requirement 2 & 3)
+  filterDownlineLevel(level) {
+    this.activeDownlineFilter = level;
+    const tabBtns = {
+      all: 'btnNetLvlAll',
+      1: 'btnNetLvl1',
+      2: 'btnNetLvl2',
+      3: 'btnNetLvl3'
+    };
+
+    Object.keys(tabBtns).forEach(lvl => {
+      const btn = document.getElementById(tabBtns[lvl]);
+      if (btn) btn.classList.toggle('active', String(lvl) === String(level));
+    });
+
+    this.renderDownlineList(level);
+  },
+
+  renderDownlineList(level = 'all') {
     const listEl = document.getElementById('affDownlineList');
-    if (downlines.totalMembers === 0) {
-      listEl.innerHTML = '<div style="text-align:center; padding:15px; color:#94A3B8; font-size:12px;">Belum ada anggota di tim Anda. Bagikan kode referral Anda untuk mendapatkan bonus sponsor & rabat.</div>';
-    } else {
-      listEl.innerHTML = [
-        ...downlines.level1.map(u => ({ ...u, levelStr: 'Level 1 (Sponsor Langsung 10%)' })),
-        ...downlines.level2.map(u => ({ ...u, levelStr: 'Level 2 (Rabat 3%)' })),
-        ...downlines.level3.map(u => ({ ...u, levelStr: 'Level 3 (Rabat 1.5%)' }))
-      ].map(u => `
-        <div style="background:#FFFFFF; border-radius:12px; padding:10px 12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center; font-size:12px;">
-          <div>
-            <div style="font-weight:700; color:#0F172A;">${u.username} (${u.fullName})</div>
-            <div style="font-size:10px; color:#64748B;">${u.levelStr}</div>
-          </div>
-          <span class="badge-status active">Aktif</span>
-        </div>
-      `).join('');
+    if (!listEl) return;
+
+    const downlines = this.cachedDownlines;
+    if (!downlines || downlines.totalMembers === 0) {
+      listEl.innerHTML = '<div style="text-align:center; padding:18px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:12px;">Belum ada anggota di tim Anda. Bagikan kode referral Anda untuk mendapatkan bonus sponsor & rabat multi-level.</div>';
+      return;
     }
+
+    let members = [];
+    if (level === 1 || level === '1') members = downlines.level1;
+    else if (level === 2 || level === '2') members = downlines.level2;
+    else if (level === 3 || level === '3') members = downlines.level3;
+    else members = [...downlines.level1, ...downlines.level2, ...downlines.level3];
+
+    if (members.length === 0) {
+      listEl.innerHTML = `<div style="text-align:center; padding:16px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:12px;">Belum ada anggota di Level ${level}.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = members.map(m => `
+      <div class="downline-member-card">
+        <div class="downline-card-header">
+          <div class="downline-card-user">
+            <span class="network-level-badge lvl-${m.level}">L${m.level}</span>
+            <span>${m.username}</span>
+            <span style="font-size:11px; color:#64748B; font-weight:500;">(${m.fullName || '-'})</span>
+          </div>
+          <span class="badge-status ${m.activeInvsCount > 0 ? 'approved' : 'active'}">
+            ${m.activeInvsCount > 0 ? `● ${m.activeInvsCount} Paket Aktif` : 'Terdaftar'}
+          </span>
+        </div>
+
+        <div class="downline-card-stats">
+          <div>
+            <div style="color:#64748B;">Omset Pribadi</div>
+            <div style="font-weight:800; font-family:var(--font-mono); color:#1E293B;">${DB.formatIDR(m.personalTurnover || 0)}</div>
+          </div>
+          <div>
+            <div style="color:#64748B;">Sponsor Langsung</div>
+            <div style="font-weight:700; color:#475569;">${m.uplineUsername || '-'}</div>
+          </div>
+          <div>
+            <div style="color:#64748B;">Bergabung</div>
+            <div style="font-weight:600; color:#475569;">${m.joinedDateStr || '-'}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
   },
 
   // Member Profile & Personal Data Controller
@@ -2504,6 +2678,102 @@ const App = {
     } else {
       this.showToast('Login sebagai Investor (Alex) berhasil!', 'success');
       this.renderAll();
+    }
+  },
+
+  // Forgot Password Controller (Requirement 1)
+  openForgotPasswordModal() {
+    this.closeModal('authModal');
+    const emailInput = document.getElementById('forgotEmail');
+    if (emailInput) {
+      const loginId = document.getElementById('loginIdentifier');
+      emailInput.value = loginId ? loginId.value.trim() : '';
+    }
+    const step1 = document.getElementById('forgotStepRequest');
+    const step2 = document.getElementById('forgotStepVerify');
+    if (step1) step1.style.display = 'block';
+    if (step2) step2.style.display = 'none';
+
+    this.openModal('forgotPasswordModal');
+  },
+
+  backToForgotRequest() {
+    const step1 = document.getElementById('forgotStepRequest');
+    const step2 = document.getElementById('forgotStepVerify');
+    if (step1) step1.style.display = 'block';
+    if (step2) step2.style.display = 'none';
+  },
+
+  submitForgotPassword() {
+    const emailInput = document.getElementById('forgotEmail');
+    const identifier = emailInput ? emailInput.value.trim() : '';
+
+    if (!identifier) {
+      this.showToast('Harap masukkan alamat email akun Anda!', 'error');
+      if (emailInput) emailInput.focus();
+      return;
+    }
+
+    const res = Auth.requestPasswordReset(identifier);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      const targetEl = document.getElementById('forgotSentEmailTarget');
+      if (targetEl) targetEl.textContent = res.email;
+
+      const codeInput = document.getElementById('forgotResetCode');
+      if (codeInput) codeInput.value = res.code; // Pre-fill for ease of use
+
+      const step1 = document.getElementById('forgotStepRequest');
+      const step2 = document.getElementById('forgotStepVerify');
+      if (step1) step1.style.display = 'none';
+      if (step2) step2.style.display = 'block';
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  submitResetPasswordWithCode() {
+    const emailInput = document.getElementById('forgotEmail');
+    const codeInput = document.getElementById('forgotResetCode');
+    const newPassInput = document.getElementById('forgotNewPass');
+    const confirmPassInput = document.getElementById('forgotConfirmPass');
+
+    const identifier = emailInput ? emailInput.value.trim() : '';
+    const code = codeInput ? codeInput.value.trim() : '';
+    const newPass = newPassInput ? newPassInput.value.trim() : '';
+    const confirmPass = confirmPassInput ? confirmPassInput.value.trim() : '';
+
+    if (!identifier || !code || !newPass) {
+      this.showToast('Harap lengkapi semua kolom!', 'error');
+      return;
+    }
+
+    if (newPass.length < 6) {
+      this.showToast('Password baru minimal 6 karakter!', 'error');
+      if (newPassInput) newPassInput.focus();
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      this.showToast('Konfirmasi password baru tidak cocok!', 'error');
+      if (confirmPassInput) confirmPassInput.focus();
+      return;
+    }
+
+    const res = Auth.resetPasswordWithCode(identifier, code, newPass);
+    if (res.success) {
+      this.closeModal('forgotPasswordModal');
+      this.showToast(res.message, 'success');
+
+      // Pre-fill login with new credentials
+      const loginId = document.getElementById('loginIdentifier');
+      const loginPass = document.getElementById('loginPassword');
+      if (loginId) loginId.value = identifier;
+      if (loginPass) loginPass.value = newPass;
+
+      this.openModal('authModal');
+    } else {
+      this.showToast(res.message, 'error');
     }
   },
 

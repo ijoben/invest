@@ -1114,6 +1114,106 @@ export const DB = {
     return { success: true, message: 'Password berhasil diubah! Gunakan password baru untuk login berikutnya.' };
   },
 
+  // Request Password Reset (simulates email dispatch)
+  requestPasswordReset(emailOrPhone) {
+    const db = this.get();
+    const identifier = String(emailOrPhone || '').trim().toLowerCase();
+    if (!identifier) {
+      return { success: false, message: 'Harap masukkan alamat email akun Anda!' };
+    }
+
+    const user = db.users.find(u => 
+      (u.email && u.email.toLowerCase() === identifier) || 
+      (u.username && u.username.toLowerCase() === identifier) ||
+      (u.phone && u.phone === identifier)
+    );
+
+    if (!user) {
+      return { success: false, message: 'Akun dengan email / username tersebut tidak ditemukan di sistem FGT Pro!' };
+    }
+
+    // Generate 6-digit verification code
+    const resetCode = 'FGT-' + Math.floor(100000 + Math.random() * 900000);
+    user.passwordResetRequest = {
+      code: resetCode,
+      requestedAt: new Date().toISOString(),
+      emailTarget: user.email || identifier,
+      status: 'pending'
+    };
+
+    this.save(db);
+    return {
+      success: true,
+      email: user.email || identifier,
+      username: user.username,
+      code: resetCode,
+      message: `Instruksi & kode reset password (${resetCode}) telah dikirimkan ke email ${user.email || identifier}.`
+    };
+  },
+
+  // Reset password using verification code
+  resetPasswordWithCode(identifier, code, newPassword) {
+    const db = this.get();
+    const cleanId = String(identifier || '').trim().toLowerCase();
+    const cleanCode = String(code || '').trim().toUpperCase();
+    const cleanPass = String(newPassword || '').trim();
+
+    if (!cleanId || !cleanCode || !cleanPass) {
+      return { success: false, message: 'Semua kolom (email/username, kode reset, dan password baru) wajib diisi!' };
+    }
+
+    if (cleanPass.length < 6) {
+      return { success: false, message: 'Password baru minimal harus 6 karakter!' };
+    }
+
+    const user = db.users.find(u => 
+      (u.email && u.email.toLowerCase() === cleanId) || 
+      (u.username && u.username.toLowerCase() === cleanId)
+    );
+
+    if (!user) {
+      return { success: false, message: 'Akun pengguna tidak ditemukan!' };
+    }
+
+    if (!user.passwordResetRequest || user.passwordResetRequest.status !== 'pending') {
+      return { success: false, message: 'Tidak ada permintaan reset password yang aktif untuk akun ini. Silakan buat permintaan baru.' };
+    }
+
+    if (user.passwordResetRequest.code.toUpperCase() !== cleanCode) {
+      return { success: false, message: 'Kode reset yang Anda masukkan salah atau sudah tidak valid!' };
+    }
+
+    user.password = cleanPass;
+    user.passwordResetRequest.status = 'completed';
+    user.passwordResetRequest.completedAt = new Date().toISOString();
+    user.passwordUpdatedAt = new Date().toISOString();
+
+    this.save(db);
+    return { success: true, message: 'Password Anda berhasil diperbarui! Silakan masuk menggunakan password baru.' };
+  },
+
+  // Admin Direct Reset User Password
+  adminResetUserPassword(userId, newPassword) {
+    const db = this.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User tidak ditemukan!' };
+
+    const cleanPass = String(newPassword || '').trim();
+    if (!cleanPass || cleanPass.length < 6) {
+      return { success: false, message: 'Password baru minimal harus 6 karakter!' };
+    }
+
+    user.password = cleanPass;
+    user.passwordUpdatedAt = new Date().toISOString();
+    if (user.passwordResetRequest) {
+      user.passwordResetRequest.status = 'completed_by_admin';
+      user.passwordResetRequest.completedAt = new Date().toISOString();
+    }
+
+    this.save(db);
+    return { success: true, message: `Password member ${user.username} berhasil direset menjadi: ${cleanPass}` };
+  },
+
   // Format IDR currency
   formatIDR(amount) {
     return 'IDR ' + Number(amount || 0).toLocaleString('id-ID');

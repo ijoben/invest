@@ -1020,6 +1020,196 @@
     </div>
   </div>
 
+  <!-- ======================================================================
+       MODAL: DETAIL MEMBER & BANTUAN ADMIN (Requirement 6)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="adminMemberDetailModal">
+    <div class="modal-sheet admin-member-detail-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="admMemModalTitle">👤 Detail Profil Member & Bantuan</h3>
+          <p class="modal-subtitle" id="admMemModalSub">Pusat Informasi Pengguna, Bantuan Lupa Password, & Riwayat</p>
+        </div>
+        <button class="modal-close-btn" onclick="AdminPage.closeModal('adminMemberDetailModal')">&times;</button>
+      </div>
+
+      <!-- Navigation Tabs inside Member Detail Modal -->
+      <div class="admin-detail-tabs">
+        <button class="admin-detail-tab-btn active" id="admMemTabBtnProfile" onclick="AdminPage.switchMemberDetailTab('profile')">📋 Profil & Bantuan Password</button>
+        <button class="admin-detail-tab-btn" id="admMemTabBtnTxs" onclick="AdminPage.switchMemberDetailTab('txs')">💳 Riwayat Transaksi</button>
+        <button class="admin-detail-tab-btn" id="admMemTabBtnPlans" onclick="AdminPage.switchMemberDetailTab('plans')">📈 Paket Investasi</button>
+        <button class="admin-detail-tab-btn" id="admMemTabBtnNetwork" onclick="AdminPage.switchMemberDetailTab('network')">👥 Jaringan Tim</button>
+      </div>
+
+      <!-- Tab Content 1: Profil & Bantuan Password -->
+      <div id="admMemTabContentProfile">
+        <!-- Password Reset Request Notice (if any) -->
+        <div id="admMemResetNotice"></div>
+
+        <!-- User Information Grid -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 12px;">
+            <div>
+              <span style="color: #64748B;">Username:</span>
+              <div style="font-weight: 800; font-size: 14px; color: #0F172A;" id="admMemDetailUsername">-</div>
+            </div>
+            <div>
+              <span style="color: #64748B;">Nama Lengkap:</span>
+              <div style="font-weight: 700; color: #0F172A;" id="admMemDetailFullName">-</div>
+            </div>
+            <div>
+              <span style="color: #64748B;">Email Terdaftar:</span>
+              <div style="font-weight: 700; color: #0F172A;" id="admMemDetailEmail">-</div>
+            </div>
+            <div>
+              <span style="color: #64748B;">No. WhatsApp / HP:</span>
+              <div style="font-weight: 700; color: #0F172A;" id="admMemDetailPhone">-</div>
+            </div>
+            <div>
+              <span style="color: #64748B;">Kota Domisili:</span>
+              <div style="font-weight: 700; color: #0F172A;" id="admMemDetailCity">-</div>
+            </div>
+            <div>
+              <span style="color: #64748B;">Sponsor / Upline:</span>
+              <div style="font-weight: 700; color: #2563EB;" id="admMemDetailUpline">-</div>
+            </div>
+            <div>
+              <span style="color: #64748B;">Kode Referral:</span>
+              <div style="font-weight: 800; color: #C89338;" id="admMemDetailRefCode">-</div>
+            </div>
+            <div>
+              <span style="color: #64748B;">Tanggal Bergabung:</span>
+              <div style="font-weight: 600; color: #475569;" id="admMemDetailJoinDate">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bank Account Data for WD -->
+        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 14px; padding: 14px; margin-bottom: 14px;">
+          <h4 style="font-size: 13px; font-weight: 800; color: #166534; margin-bottom: 8px;">🏦 Data Rekening Penarikan (WD)</h4>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px;">
+            <div>
+              <span style="color: #15803D; font-size: 11px;">Bank / E-Wallet:</span>
+              <div style="font-weight: 800;" id="admMemBankName">-</div>
+            </div>
+            <div>
+              <span style="color: #15803D; font-size: 11px;">Nomor Rekening:</span>
+              <div style="font-weight: 800; font-family: var(--font-mono);" id="admMemBankNumber">-</div>
+            </div>
+            <div>
+              <span style="color: #15803D; font-size: 11px;">Atas Nama Rekening:</span>
+              <div style="font-weight: 800;" id="admMemBankHolder">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BANTUAN RESET PASSWORD (ADMIN SUPPORT) -->
+        <div class="admin-reset-pw-box">
+          <div class="flex-between mb-2">
+            <h4 style="font-size: 13px; font-weight: 800; color: #92400E; display: flex; align-items: center; gap: 6px;">
+              🔑 Bantuan Reset Password Member
+            </h4>
+            <span style="font-size: 10.5px; color: #B45309;">Support Admin</span>
+          </div>
+          <p style="font-size: 11px; color: #78350F; margin-bottom: 10px;">
+            Gunakan fitur ini jika member lupa password dan menghubungi Anda untuk bantuan. Masukkan password baru atau buat acak, lalu berikan kepada member.
+          </p>
+
+          <input type="hidden" id="admMemDetailUserId">
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <input type="text" class="admin-input" id="admMemNewPassword" placeholder="Ketik password baru (min. 6 karakter)" style="flex: 1; font-family: var(--font-mono);">
+            <button type="button" class="btn-admin-action edit" onclick="AdminPage.generateRandomPassword()" style="white-space: nowrap;">
+              🎲 Acak Password
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="admin-btn-action-primary" style="flex: 1; justify-content: center; padding: 10px;" onclick="AdminPage.adminSaveNewPassword()">
+              <span>💾 Simpan & Perbarui Password Member</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Riwayat Transaksi -->
+      <div id="admMemTabContentTxs" style="display: none;">
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 12px;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID Trx</th>
+                <th>Tipe & Badge</th>
+                <th>Nominal</th>
+                <th>Keterangan / Level</th>
+                <th>Status</th>
+                <th>Tanggal</th>
+              </tr>
+            </thead>
+            <tbody id="admMemTxsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab Content 3: Paket Investasi -->
+      <div id="admMemTabContentPlans" style="display: none;">
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 12px;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID Investasi</th>
+                <th>Nama Paket</th>
+                <th>Modal Awal</th>
+                <th>Profit Didapat</th>
+                <th>Durasi / Hari</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="admMemPlansTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab Content 4: Jaringan Tim -->
+      <div id="admMemTabContentNetwork" style="display: none;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; text-align: center;">
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px;">
+            <div style="font-size: 10px; color: #64748B;">Level 1</div>
+            <div style="font-weight: 800; font-size: 14px; color: #2563EB;" id="admMemNetL1Count">0</div>
+          </div>
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px;">
+            <div style="font-size: 10px; color: #64748B;">Level 2</div>
+            <div style="font-weight: 800; font-size: 14px; color: #A855F7;" id="admMemNetL2Count">0</div>
+          </div>
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px;">
+            <div style="font-size: 10px; color: #64748B;">Level 3</div>
+            <div style="font-weight: 800; font-size: 14px; color: #C89338;" id="admMemNetL3Count">0</div>
+          </div>
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px;">
+            <div style="font-size: 10px; color: #64748B;">Total Omset</div>
+            <div style="font-weight: 800; font-size: 13px; color: #16A34A;" id="admMemNetTotalTurnover">IDR 0</div>
+          </div>
+        </div>
+
+        <div style="max-height: 350px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 12px;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Username</th>
+                <th>Nama Lengkap</th>
+                <th>Sponsor Langsung</th>
+                <th>Omset Pribadi</th>
+                <th>Status Paket</th>
+              </tr>
+            </thead>
+            <tbody id="admMemNetTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Publish Signal -->
   <div class="modal-backdrop" id="adminSignalModal">
     <div class="modal-sheet">

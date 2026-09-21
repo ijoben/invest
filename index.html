@@ -697,6 +697,13 @@
           <!-- Transaction History -->
           <div>
             <h3 style="font-size: 15px; font-weight: 800; margin-bottom: 10px;">Riwayat Transaksi</h3>
+            <div class="wallet-tx-filters">
+              <button class="wallet-filter-pill active" id="txFilterAll" onclick="App.filterWalletTransactions('all')">Semua</button>
+              <button class="wallet-filter-pill" id="txFilterProfit" onclick="App.filterWalletTransactions('profit_claim')">Klaim Profit</button>
+              <button class="wallet-filter-pill" id="txFilterRabat" onclick="App.filterWalletTransactions('rabat_bonus')">Bonus Rabat</button>
+              <button class="wallet-filter-pill" id="txFilterSponsor" onclick="App.filterWalletTransactions('sponsor_bonus')">Bonus Sponsor</button>
+              <button class="wallet-filter-pill" id="txFilterTransfer" onclick="App.filterWalletTransactions('dep_wd')">Deposit & WD</button>
+            </div>
             <div id="walletTransactionList" style="display: flex; flex-direction: column; gap: 8px;">
               <!-- Rendered via JS -->
             </div>
@@ -830,26 +837,59 @@
 
           <!-- Downline Tree & Turnover Stats -->
           <div style="background: #FFFFFF; border-radius: 18px; padding: 14px 12px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
-            <h3 style="font-size: 14px; font-weight: 800; margin-bottom: 12px;">Struktur Jaringan Tim</h3>
+            <div class="flex-between mb-2">
+              <h3 style="font-size: 14px; font-weight: 800;">Struktur Jaringan Tim</h3>
+              <span class="badge-status approved" id="affTotalMembersBadge">0 Anggota</span>
+            </div>
             
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; margin-bottom: 14px;">
-              <div style="background: #F8FAFC; border-radius: 10px; padding: 8px;">
-                <div style="font-size: 10px; color: #64748B;">Level 1</div>
-                <div style="font-weight: 800; font-size: 15px; color: #2563EB;" id="affL1Count">0</div>
+            <!-- Rekapan Bonus Masing-Masing Level (Requirement 2 & 3) -->
+            <div class="network-bonus-card">
+              <div class="network-bonus-header">
+                <span class="network-bonus-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FDE68A" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  Rekapan Akumulasi Bonus Tim
+                </span>
+                <span class="network-bonus-total" id="affTotalBonusVal">IDR 0</span>
               </div>
-              <div style="background: #F8FAFC; border-radius: 10px; padding: 8px;">
-                <div style="font-size: 10px; color: #64748B;">Level 2</div>
-                <div style="font-weight: 800; font-size: 15px; color: #D946EF;" id="affL2Count">0</div>
-              </div>
-              <div style="background: #F8FAFC; border-radius: 10px; padding: 8px;">
-                <div style="font-size: 10px; color: #64748B;">Level 3</div>
-                <div style="font-weight: 800; font-size: 15px; color: #C89338;" id="affL3Count">0</div>
+
+              <div class="network-level-grid">
+                <!-- Level 1 -->
+                <div class="network-level-card">
+                  <span class="network-level-badge lvl-1">Level 1</span>
+                  <div class="network-card-val" id="affL1BonusVal">IDR 0</div>
+                  <div class="network-card-sub"><span id="affL1Count">0</span> Member (Sponsor 10% + Rabat 5%)</div>
+                  <div style="font-size: 8.5px; color: #60A5FA; margin-top: 3px;" id="affL1Turnover">Omset: IDR 0</div>
+                </div>
+
+                <!-- Level 2 -->
+                <div class="network-level-card">
+                  <span class="network-level-badge lvl-2">Level 2</span>
+                  <div class="network-card-val" id="affL2BonusVal">IDR 0</div>
+                  <div class="network-card-sub"><span id="affL2Count">0</span> Member (Rabat 3%)</div>
+                  <div style="font-size: 8.5px; color: #C084FC; margin-top: 3px;" id="affL2Turnover">Omset: IDR 0</div>
+                </div>
+
+                <!-- Level 3 -->
+                <div class="network-level-card">
+                  <span class="network-level-badge lvl-3">Level 3</span>
+                  <div class="network-card-val" id="affL3BonusVal">IDR 0</div>
+                  <div class="network-card-sub"><span id="affL3Count">0</span> Member (Rabat 1.5%)</div>
+                  <div style="font-size: 8.5px; color: #FDE047; margin-top: 3px;" id="affL3Turnover">Omset: IDR 0</div>
+                </div>
               </div>
             </div>
 
             <div class="flex-between mb-3" style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 10px 12px; border-radius: 12px;">
-              <span style="font-size: 12px; font-weight: 700; color: #166534;">Total Omset Tim:</span>
+              <span style="font-size: 12px; font-weight: 700; color: #166534;">Total Omset Keseluruhan Tim:</span>
               <span style="font-size: 14px; font-weight: 800; color: #15803D;" id="affTotalTurnover">IDR 0</span>
+            </div>
+
+            <!-- Tab Pengelompokkan Level 1, 2, 3 (Requirement 2) -->
+            <div class="network-level-tabs">
+              <button class="network-tab-btn active" id="btnNetLvlAll" onclick="App.filterDownlineLevel('all')">Semua Level (<span id="affTabAllCount">0</span>)</button>
+              <button class="network-tab-btn" id="btnNetLvl1" onclick="App.filterDownlineLevel(1)">Level 1 (<span id="affTabL1Count">0</span>)</button>
+              <button class="network-tab-btn" id="btnNetLvl2" onclick="App.filterDownlineLevel(2)">Level 2 (<span id="affTabL2Count">0</span>)</button>
+              <button class="network-tab-btn" id="btnNetLvl3" onclick="App.filterDownlineLevel(3)">Level 3 (<span id="affTabL3Count">0</span>)</button>
             </div>
 
             <div id="affDownlineList" style="display: flex; flex-direction: column; gap: 8px;">
@@ -981,6 +1021,9 @@
         <div class="form-group">
           <label class="form-label">Password</label>
           <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password" value="user123">
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 12px; margin-top: -6px;">
+          <a href="javascript:void(0)" onclick="App.openForgotPasswordModal()" style="font-size: 11.5px; color: var(--primary-gold); font-weight: 600; text-decoration: none;">Lupa Password?</a>
         </div>
         <button class="btn-cta-gold" onclick="App.submitLogin()">
           <span>Masuk Sekarang</span>
@@ -2145,6 +2188,67 @@
         <button class="tier-btn" style="width: 100%; padding: 10px; background: #F1F5F9; color: #475569;" onclick="App.closeModal('apkDownloadModal')">
           <span>Tutup</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: LUPA PASSWORD / RESET PASSWORD (Requirement 1)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="forgotPasswordModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🔑 Pemulihan Password</h3>
+          <p class="modal-subtitle">Reset password akun member melalui email</p>
+        </div>
+        <button class="modal-close-btn" onclick="App.closeModal('forgotPasswordModal')">&times;</button>
+      </div>
+
+      <!-- Step 1: Request Code to Email -->
+      <div id="forgotStepRequest">
+        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px; padding: 12px; margin-bottom: 14px; font-size: 11.5px; color: #1E40AF; line-height: 1.5;">
+          ℹ️ Masukkan alamat email akun Anda. Sistem akan mengirimkan instruksi dan kode verifikasi reset password ke email Anda.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Terdaftar / Username</label>
+          <input type="text" class="form-input" id="forgotEmail" placeholder="nama@email.com atau username">
+        </div>
+        <button class="btn-cta-gold" id="btnRequestForgot" onclick="App.submitForgotPassword()">
+          <span>Kirim Kode Reset ke Email</span>
+        </button>
+        <div style="text-align: center; margin-top: 14px;">
+          <a href="javascript:void(0)" onclick="App.closeModal('forgotPasswordModal'); App.openModal('authModal');" style="font-size: 12px; color: #64748B; text-decoration: none;">
+            ← Kembali ke Menu Login
+          </a>
+        </div>
+      </div>
+
+      <!-- Step 2: Enter Code & New Password -->
+      <div id="forgotStepVerify" style="display: none;">
+        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 12px; margin-bottom: 14px; font-size: 11.5px; color: #166534; line-height: 1.5;">
+          ✅ Kode verifikasi telah dikirim ke <strong id="forgotSentEmailTarget">email Anda</strong>. Masukkan kode 6-digit di bawah ini bersama password baru Anda.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kode Verifikasi Email</label>
+          <input type="text" class="form-input" id="forgotResetCode" placeholder="Contoh: FGT-123456" style="text-transform: uppercase; font-family: var(--font-mono); font-weight: 700; letter-spacing: 1px;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password Baru (Min. 6 Karakter)</label>
+          <input type="password" class="form-input" id="forgotNewPass" placeholder="Masukkan password baru">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Konfirmasi Password Baru</label>
+          <input type="password" class="form-input" id="forgotConfirmPass" placeholder="Ulangi password baru">
+        </div>
+        <button class="btn-cta-gold" id="btnSubmitNewPass" onclick="App.submitResetPasswordWithCode()">
+          <span>Simpan Password Baru & Masuk</span>
+        </button>
+        <div style="display: flex; justify-content: space-between; margin-top: 14px; font-size: 11.5px;">
+          <a href="javascript:void(0)" onclick="App.backToForgotRequest()" style="color: #64748B; text-decoration: none;">← Ubah Email</a>
+          <a href="javascript:void(0)" onclick="App.submitForgotPassword()" style="color: var(--primary-gold); font-weight: 700; text-decoration: none;">Kirim Ulang Kode</a>
+        </div>
       </div>
     </div>
   </div>

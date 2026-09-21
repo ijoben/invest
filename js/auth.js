@@ -112,6 +112,16 @@ export const Auth = {
     return DB.changeUserPassword(userId, oldPassword, newPassword);
   },
 
+  // Request password reset token to email
+  requestPasswordReset(email) {
+    return DB.requestPasswordReset(email);
+  },
+
+  // Reset password using email verification code
+  resetPasswordWithCode(identifier, code, newPassword) {
+    return DB.resetPasswordWithCode(identifier, code, newPassword);
+  },
+
   // Logout handler
   logout() {
     DB.clearSession();

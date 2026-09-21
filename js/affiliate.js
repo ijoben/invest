@@ -97,37 +97,81 @@ export const Affiliate = {
       level2: [],
       level3: [],
       totalMembers: 0,
-      totalTeamTurnover: 0
+      totalTeamTurnover: 0,
+      level1Turnover: 0,
+      level2Turnover: 0,
+      level3Turnover: 0,
+      level1Bonus: 0,
+      level2Bonus: 0,
+      level3Bonus: 0,
+      totalBonusAllLevels: 0
     };
 
     if (!userReferralCode) return result;
 
+    const uplineUser = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === userReferralCode.toUpperCase());
+    const uplineId = uplineUser ? uplineUser.id : null;
+
+    // Helper to enrich user with active plans and personal turnover
+    const enrichMember = (u, lvl, uplineName) => {
+      const activeInvs = db.investments.filter(inv => inv.userId === u.id && inv.status === 'active');
+      const totalCapital = activeInvs.reduce((sum, inv) => sum + (inv.capital || 0), 0);
+      return {
+        ...u,
+        level: lvl,
+        levelStr: `Level ${lvl}`,
+        uplineUsername: uplineName || '-',
+        activeInvsCount: activeInvs.length,
+        personalTurnover: totalCapital,
+        joinedDateStr: u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Member Aktif'
+      };
+    };
+
     // Level 1 (Direct)
-    result.level1 = db.users.filter(u => u.referredBy === userReferralCode);
+    const rawL1 = db.users.filter(u => u.referredBy && u.referredBy.toUpperCase() === userReferralCode.toUpperCase());
+    result.level1 = rawL1.map(u => enrichMember(u, 1, uplineUser ? uplineUser.username : null));
 
     // Level 2
-    result.level1.forEach(l1 => {
-      const l2List = db.users.filter(u => u.referredBy === l1.referralCode);
-      result.level2.push(...l2List);
+    rawL1.forEach(l1 => {
+      const rawL2 = db.users.filter(u => u.referredBy && u.referredBy.toUpperCase() === (l1.referralCode || '').toUpperCase());
+      result.level2.push(...rawL2.map(u => enrichMember(u, 2, l1.username)));
     });
 
     // Level 3
     result.level2.forEach(l2 => {
-      const l3List = db.users.filter(u => u.referredBy === l2.referralCode);
-      result.level3.push(...l3List);
+      const rawL3 = db.users.filter(u => u.referredBy && u.referredBy.toUpperCase() === (l2.referralCode || '').toUpperCase());
+      result.level3.push(...rawL3.map(u => enrichMember(u, 3, l2.username)));
     });
 
     result.totalMembers = result.level1.length + result.level2.length + result.level3.length;
 
-    // Calculate team turnover from active investments of all downlines
-    const allDownlineUserIds = [
-      ...result.level1.map(u => u.id),
-      ...result.level2.map(u => u.id),
-      ...result.level3.map(u => u.id)
-    ];
+    // Calculate Turnover per level
+    result.level1Turnover = result.level1.reduce((sum, m) => sum + m.personalTurnover, 0);
+    result.level2Turnover = result.level2.reduce((sum, m) => sum + m.personalTurnover, 0);
+    result.level3Turnover = result.level3.reduce((sum, m) => sum + m.personalTurnover, 0);
+    result.totalTeamTurnover = result.level1Turnover + result.level2Turnover + result.level3Turnover;
 
-    const teamInvestments = db.investments.filter(inv => allDownlineUserIds.includes(inv.userId));
-    result.totalTeamTurnover = teamInvestments.reduce((sum, inv) => sum + (inv.capital || 0), 0);
+    // Calculate Bonus Recap per level for this upline user
+    if (uplineId) {
+      const uplineTxs = db.transactions.filter(t => t.userId === uplineId);
+
+      uplineTxs.forEach(t => {
+        if (t.type === 'sponsor_bonus') {
+          result.level1Bonus += (t.amount || 0);
+        } else if (t.type === 'rabat_bonus') {
+          if (t.level === 2) {
+            result.level2Bonus += (t.amount || 0);
+          } else if (t.level === 3) {
+            result.level3Bonus += (t.amount || 0);
+          } else {
+            // Level 1 rabat
+            result.level1Bonus += (t.amount || 0);
+          }
+        }
+      });
+
+      result.totalBonusAllLevels = result.level1Bonus + result.level2Bonus + result.level3Bonus;
+    }
 
     return result;
   },

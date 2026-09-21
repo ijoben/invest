@@ -467,7 +467,10 @@ export const AdminPage = {
         <td>${u.points || 0}</td>
         <td>${u.referredBy || '<span style="color:#64748B;">-</span>'}</td>
         <td>
-          <button class="btn-admin-action edit" onclick="AdminPage.openEditUserModal('${u.id}')">Kelola Saldo</button>
+          <div class="btn-action-group" style="justify-content: flex-start; gap: 4px;">
+            <button class="btn-admin-action edit" onclick="AdminPage.openEditUserModal('${u.id}')" title="Kelola Saldo & Point">Saldo</button>
+            <button class="btn-admin-action view" onclick="AdminPage.openMemberDetailModal('${u.id}')" style="background: #2563EB; color: #FFFFFF; border-color: #1D4ED8; font-weight: 700;" title="Buka Detail Profil & Bantuan Password">👤 Detail & Bantuan</button>
+          </div>
         </td>
       </tr>
     `).join('');
@@ -1183,6 +1186,180 @@ export const AdminPage = {
     this.closeModal('adminUserModal');
     this.showToast('Saldo user berhasil diperbarui!', 'success');
     this.renderAll();
+  },
+
+  // Modal Member Detail & Admin Support (Requirement 6)
+  openMemberDetailModal(userId) {
+    const profileData = Admin.getUserFullProfile(userId);
+    if (!profileData || !profileData.user) {
+      this.showToast('Data member tidak ditemukan!', 'error');
+      return;
+    }
+
+    const { user, transactions, investments, downlines, passwordResetRequest } = profileData;
+
+    // Header info
+    document.getElementById('admMemModalTitle').textContent = `👤 Detail Member: ${user.username}`;
+    document.getElementById('admMemModalSub').textContent = `${user.fullName || 'Member FGT Pro'} · Terdaftar: ${user.registeredAt ? new Date(user.registeredAt).toLocaleDateString('id-ID') : '-'}`;
+
+    // Hidden ID & Fields
+    document.getElementById('admMemDetailUserId').value = user.id;
+    document.getElementById('admMemNewPassword').value = '';
+
+    // Reset Notice
+    const noticeEl = document.getElementById('admMemResetNotice');
+    if (passwordResetRequest && passwordResetRequest.status === 'pending') {
+      noticeEl.innerHTML = `
+        <div style="background: #FEF2F2; border: 1px solid #F87171; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div>
+            <div style="font-weight: 800; font-size: 12.5px; color: #991B1B;">⚠️ PERMINTAAN RESET PASSWORD AKTIF!</div>
+            <div style="font-size: 11px; color: #B91C1C; margin-top: 2px;">
+              Member ini meminta reset password pada <strong>${new Date(passwordResetRequest.requestedAt).toLocaleString('id-ID')}</strong>.
+              Kode Verifikasi: <strong style="font-family: var(--font-mono); background: #FFFFFF; padding: 2px 6px; border-radius: 4px; border: 1px solid #FCA5A5; color: #0F172A;">${passwordResetRequest.code}</strong>
+            </div>
+          </div>
+          <button class="btn-admin-action approve" onclick="AdminPage.generateRandomPassword()" style="white-space: nowrap; flex-shrink: 0;">Bantu Reset Sekarang</button>
+        </div>
+      `;
+    } else {
+      noticeEl.innerHTML = '';
+    }
+
+    // Profil fields
+    document.getElementById('admMemDetailUsername').textContent = user.username;
+    document.getElementById('admMemDetailFullName').textContent = user.fullName || '-';
+    document.getElementById('admMemDetailEmail').textContent = user.email || '-';
+    document.getElementById('admMemDetailPhone').textContent = user.phone || '-';
+    document.getElementById('admMemDetailCity').textContent = user.city || 'Indonesia';
+    document.getElementById('admMemDetailUpline').textContent = user.referredBy || 'Tidak Ada (Direct)';
+    document.getElementById('admMemDetailRefCode').textContent = user.referralCode || '-';
+    document.getElementById('admMemDetailJoinDate').textContent = user.registeredAt ? new Date(user.registeredAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+
+    // Bank details
+    const bank = user.bankAccount || {};
+    document.getElementById('admMemBankName').textContent = bank.bankName || 'Belum diisi';
+    document.getElementById('admMemBankNumber').textContent = bank.accountNumber || '-';
+    document.getElementById('admMemBankHolder').textContent = bank.accountHolder || '-';
+
+    // Render Transactions Table
+    const txBody = document.getElementById('admMemTxsTableBody');
+    if (transactions.length === 0) {
+      txBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:#94A3B8;">Belum ada riwayat transaksi.</td></tr>';
+    } else {
+      txBody.innerHTML = transactions.map(t => {
+        let isPlus = t.type === 'deposit' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
+        let color = isPlus ? '#16A34A' : '#DC2626';
+        let sign = isPlus ? '+' : '-';
+        return `
+          <tr>
+            <td><strong style="font-family:var(--font-mono); font-size:11px;">${t.id}</strong></td>
+            <td><span class="badge-status ${t.status || 'approved'}">${(t.type || 'trx').toUpperCase()}</span></td>
+            <td><strong style="color:${color}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</strong></td>
+            <td style="font-size:11px; max-width:220px; line-height:1.3;">${t.note || t.paymentMethod || '-'}</td>
+            <td><span class="badge-status ${t.status || 'approved'}">${t.status || 'approved'}</span></td>
+            <td style="font-size:10.5px; color:#64748B;">${new Date(t.createdAt).toLocaleDateString('id-ID')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render Plans Table
+    const planBody = document.getElementById('admMemPlansTableBody');
+    if (investments.length === 0) {
+      planBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:#94A3B8;">Belum ada paket investasi aktif atau riwayat investasi.</td></tr>';
+    } else {
+      planBody.innerHTML = investments.map(inv => `
+        <tr>
+          <td><strong style="font-family:var(--font-mono); font-size:11px;">${inv.id}</strong></td>
+          <td><strong>Paket ${inv.planName}</strong></td>
+          <td><strong style="color:#0F172A;">${DB.formatIDR(inv.capital)}</strong></td>
+          <td><strong style="color:#16A34A;">+${DB.formatIDR(inv.totalProfitEarned || 0)}</strong></td>
+          <td>Hari ke-${inv.daysElapsed || 0} dari ${inv.durationDays || 30} Hari</td>
+          <td><span class="badge-status ${inv.status === 'active' ? 'approved' : 'rejected'}">${(inv.status || 'active').toUpperCase()}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Render Network Table & Counts
+    document.getElementById('admMemNetL1Count').textContent = downlines.level1.length;
+    document.getElementById('admMemNetL2Count').textContent = downlines.level2.length;
+    document.getElementById('admMemNetL3Count').textContent = downlines.level3.length;
+    document.getElementById('admMemNetTotalTurnover').textContent = DB.formatIDR(downlines.totalTeamTurnover);
+
+    const netBody = document.getElementById('admMemNetTableBody');
+    const allNetMembers = [...downlines.level1, ...downlines.level2, ...downlines.level3];
+    if (allNetMembers.length === 0) {
+      netBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:#94A3B8;">Member ini belum memiliki downline di jaringan timnya.</td></tr>';
+    } else {
+      netBody.innerHTML = allNetMembers.map(m => `
+        <tr>
+          <td><span class="network-level-badge lvl-${m.level}">L${m.level}</span></td>
+          <td><strong>${m.username}</strong></td>
+          <td>${m.fullName || '-'}</td>
+          <td>${m.uplineUsername || '-'}</td>
+          <td><strong>${DB.formatIDR(m.personalTurnover || 0)}</strong></td>
+          <td><span class="badge-status ${m.activeInvsCount > 0 ? 'approved' : 'active'}">${m.activeInvsCount > 0 ? `${m.activeInvsCount} Paket Aktif` : 'Terdaftar'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Switch to profile tab by default
+    this.switchMemberDetailTab('profile');
+    this.openModal('adminMemberDetailModal');
+  },
+
+  switchMemberDetailTab(tabName) {
+    const tabs = ['profile', 'txs', 'plans', 'network'];
+    tabs.forEach(t => {
+      const contentEl = document.getElementById(`admMemTabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      const btnEl = document.getElementById(`admMemTabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      if (contentEl) contentEl.style.display = (t === tabName) ? 'block' : 'none';
+      if (btnEl) btnEl.classList.toggle('active', t === tabName);
+    });
+  },
+
+  generateRandomPassword() {
+    const randomPass = `Fgt${Math.floor(1000 + Math.random() * 9000)}!`;
+    const input = document.getElementById('admMemNewPassword');
+    if (input) {
+      input.value = randomPass;
+      input.focus();
+      this.showToast(`Password acak berhasil dibuat: ${randomPass}`, 'info');
+    }
+  },
+
+  adminSaveNewPassword() {
+    const userId = document.getElementById('admMemDetailUserId').value;
+    const newPass = document.getElementById('admMemNewPassword').value.trim();
+
+    if (!userId) {
+      this.showToast('ID member tidak valid!', 'error');
+      return;
+    }
+
+    if (!newPass || newPass.length < 6) {
+      this.showToast('Password baru minimal harus 6 karakter!', 'error');
+      const input = document.getElementById('admMemNewPassword');
+      if (input) input.focus();
+      return;
+    }
+
+    const res = Admin.resetUserPassword(userId, newPass);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      // Update modal reset notice
+      const noticeEl = document.getElementById('admMemResetNotice');
+      if (noticeEl) {
+        noticeEl.innerHTML = `
+          <div style="background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 12px; padding: 12px; margin-bottom: 14px; color: #166534; font-size: 12px; font-weight: 700;">
+            ✅ Password member telah berhasil direset menjadi: <span style="font-family: var(--font-mono); font-size: 13px; background: #FFFFFF; padding: 2px 8px; border-radius: 4px; border: 1px solid #BBF7D0;">${newPass}</span>
+          </div>
+        `;
+      }
+      this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
   },
 
   // Modal Signals
