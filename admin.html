@@ -12,6 +12,61 @@
 </head>
 <body class="admin-body">
 
+  <!-- Master Admin Authentication Gate (Security Guard) -->
+  <div id="adminAuthGate" class="admin-auth-gate" style="display: none;">
+    <div class="admin-auth-card">
+      <div class="admin-auth-card-header">
+        <div class="admin-auth-card-badge">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h2 class="admin-auth-card-title">FGT PRO MASTER CONTROL</h2>
+        <p class="admin-auth-card-desc" id="adminAuthGateSubtitle">Area Terbatas: Autentikasi Administrator Diperlukan</p>
+      </div>
+
+      <!-- Warning if logged in as regular user -->
+      <div id="adminForbiddenAlert" style="display: none; background: #450A0A; border: 1px solid #DC2626; border-radius: 10px; padding: 12px; margin-bottom: 16px; color: #FECACA; font-size: 13px;">
+        <div style="font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+          <span>🚫 Akses Ditolak (403 Forbidden)</span>
+        </div>
+        <p id="adminForbiddenMessage" style="margin: 0; line-height: 1.4;">Akun Anda saat ini masuk sebagai Investor biasa dan tidak memiliki wewenang Administrator.</p>
+      </div>
+
+      <!-- Admin Login Form -->
+      <form id="adminLoginForm" onsubmit="event.preventDefault(); AdminPage.handleAdminLogin();">
+        <div class="form-group" style="margin-bottom: 14px; text-align: left;">
+          <label style="font-size: 12px; color: #94A3B8; font-weight: 600; display: block; margin-bottom: 6px;">Username / Email Admin</label>
+          <input type="text" id="adminLoginUsername" class="admin-input" placeholder="admin atau admin@fgtpro.io" style="width: 100%; box-sizing: border-box; background: #0F172A; border: 1px solid #334155; color: #F8FAFC; border-radius: 8px; padding: 10px 12px; font-size: 13px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 18px; text-align: left;">
+          <label style="font-size: 12px; color: #94A3B8; font-weight: 600; display: block; margin-bottom: 6px;">Password Admin</label>
+          <div style="position: relative;">
+            <input type="password" id="adminLoginPassword" class="admin-input" placeholder="Masukkan password admin" style="width: 100%; box-sizing: border-box; background: #0F172A; border: 1px solid #334155; color: #F8FAFC; border-radius: 8px; padding: 10px 42px 10px 12px; font-size: 13px;">
+            <button type="button" onclick="AdminPage.toggleAdminPasswordVisibility()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="admin-btn-action-primary" style="width: 100%; padding: 12px; font-size: 13.5px; font-weight: 700; border-radius: 8px; justify-content: center; margin-bottom: 10px;">
+          <span>Masuk ke Master Admin</span>
+        </button>
+
+        <button type="button" onclick="AdminPage.quickLoginAdmin()" class="btn-demo-pill admin-pill" style="width: 100%; padding: 9px; font-size: 12px; border-radius: 8px; justify-content: center; margin-bottom: 12px; border: 1px dashed #C89338; background: rgba(200, 147, 56, 0.08); color: #E5A83B;">
+          <span>⚡ Demo 1-Klik Login Admin</span>
+        </button>
+
+        <div style="text-align: center; margin-top: 10px;">
+          <a href="./" style="font-size: 12px; color: #94A3B8; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+            <span>← Kembali ke Website Investor</span>
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Backdrop Overlay for Mobile/Sliding Sidebar -->
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
@@ -143,17 +198,32 @@
         </svg>
       </button>
 
-      <!-- Logo & Tulisan Admin -->
+      <!-- Logo & Tulisan Admin with Section Breadcrumb -->
       <div class="admin-topbar-brand">
         <div class="admin-brand-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="admin-topbar-title">FGT PRO ADMIN</div>
+        <span style="color: #475569; margin: 0 4px 0 8px; font-size: 13px;">/</span>
+        <span id="currentSectionTitle" style="font-size: 13px; color: #94A3B8; font-weight: 600;">Dashboard Overview</span>
       </div>
     </div>
 
-    <!-- Icon Logout Button -->
-    <div class="admin-topbar-right">
+    <!-- Topbar Actions & User Profile -->
+    <div class="admin-topbar-right" style="display: flex; align-items: center; gap: 10px;">
+      <!-- Active Admin User Badge -->
+      <div id="topbarAdminInfo" style="display: flex; align-items: center; gap: 7px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); padding: 5px 10px; border-radius: 20px; font-size: 11.5px; color: #94A3B8;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+        <span id="topbarAdminName" style="color: #F8FAFC; font-weight: 600;">System Administrator</span>
+      </div>
+
+      <!-- Quick Link to Investor Portal -->
+      <a href="./" class="sidebar-action-btn portal-link" style="padding: 6px 12px; font-size: 11.5px; border-radius: 8px; margin: 0; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: rgba(200, 147, 56, 0.1); border: 1px solid rgba(200, 147, 56, 0.25); color: #E5A83B;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <span>Portal User</span>
+      </a>
+
+      <!-- Icon Logout Button -->
       <button class="admin-logout-btn" onclick="AdminPage.logout()" title="Logout Admin">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -346,6 +416,46 @@
           </button>
           <button class="btn-admin-action" style="padding: 10px 16px; border: 1px solid #334155; background: #1E293B; color: #F1F5F9; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="AdminPage.testWeekendProfitDistribution()">
             <span>⚡ Uji Coba Cek Status Hari Ini</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 1B: Saklar Profit Harian Khusus (Mode Loss / 0% Hari Ini) - Requirement 4 -->
+      <div class="admin-card" style="margin-bottom: 24px; border-left: 4px solid #EF4444;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📉 Saklar Profit Harian Khusus (Mode Loss / 0% Hari Ini)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Saklar khusus untuk menyetel apakah pasar hari ini menghasilkan profit normal atau mengalami Loss / Flat 0% (tidak ada dividen profit hari ini).</p>
+          </div>
+          <span class="badge-status approved" id="todayLossModeStatusBadge" style="font-size: 12px; padding: 6px 14px;">🟢 Normal Profit (ON)</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Profit Hari Ini (ON / OFF)</div>
+            <div class="setting-desc">Pilih <strong>ON (Normal Profit)</strong> agar member mendapatkan profit normal sesuai paket investasi, atau <strong>OFF (Mode Loss / 0%)</strong> jika hari ini tidak ada profit (0.00%).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <select class="admin-input" id="todayLossModeCfgSelect" onchange="AdminPage.previewTodayLossModeSettings()">
+              <option value="false">🟢 ON - Normal Profit Sesuai Paket</option>
+              <option value="true">🔴 OFF - Mode Loss / 0% Hari Ini (Tanpa Profit)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Pesan Notifikasi untuk Member (Saat Mode Loss / 0% Aktif)</div>
+            <div class="setting-desc">Keterangan yang ditampilkan pada member area saat hari ini tidak ada profit (0%).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 100%; max-width: 520px;">
+            <input type="text" class="admin-input" id="todayLossModeOffMessage" value="Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.">
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.saveTodayLossModeSettings()">
+            <span>💾 Simpan Status Profit Hari Ini</span>
           </button>
         </div>
       </div>

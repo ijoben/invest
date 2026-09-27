@@ -4150,3 +4150,354 @@ html, body {
   padding: 14px;
   margin-top: 14px;
 }
+
+/* ==========================================================================
+   PORTFOLIO ANALYTICS, GROWTH CHART & WEEKLY PROFIT CARDS (Requirements 2, 3, 4)
+   ========================================================================== */
+.portfolio-analytics-container {
+  padding: 0 16px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Loss Mode Alert Banner (Req 4) */
+.loss-mode-banner {
+  background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+  border: 1px solid #FCA5A5;
+  border-left: 5px solid #EF4444;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.08);
+  animation: fadeIn 0.3s ease;
+}
+
+.loss-mode-banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.loss-mode-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Card 1: Portfolio Growth Card */
+.portfolio-growth-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 16px 14px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #E2E8F0;
+  position: relative;
+  overflow: hidden;
+}
+
+.portfolio-growth-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.portfolio-growth-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.portfolio-total-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0F172A;
+  font-family: var(--font-mono);
+  margin-top: 4px;
+  letter-spacing: -0.5px;
+}
+
+.portfolio-growth-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.badge-growth-positive {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #15803D;
+  background: #DCFCE7;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid #86EFAC;
+}
+
+.badge-growth-neutral {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #B91C1C;
+  background: #FEE2E2;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid #FCA5A5;
+}
+
+.portfolio-growth-sub {
+  font-size: 10px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.portfolio-timeframe-group {
+  display: flex;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: 10px;
+  gap: 2px;
+}
+
+.portfolio-tf-btn {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.portfolio-tf-btn:hover {
+  color: #0F172A;
+}
+
+.portfolio-tf-btn.active {
+  background: #0F172A;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+}
+
+.portfolio-canvas-wrap {
+  width: 100%;
+  height: 155px;
+  position: relative;
+  background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
+  border-radius: 14px;
+  padding: 8px 4px 4px;
+  border: 1px solid #F1F5F9;
+  margin-bottom: 10px;
+}
+
+.portfolio-canvas-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.portfolio-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.portfolio-stat-pill strong {
+  color: #0F172A;
+  font-family: var(--font-mono);
+}
+
+.dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-indicator.green {
+  background: #10B981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.dot-indicator.gold {
+  background: #C89338;
+  box-shadow: 0 0 6px rgba(200, 147, 56, 0.5);
+}
+
+/* Card 2: Weekly Profit Card */
+.weekly-profit-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 16px 14px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid #E2E8F0;
+}
+
+.weekly-profit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.weekly-profit-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weekly-summary-badge {
+  text-align: right;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 10px;
+  padding: 4px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.weekly-profit-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+@media (max-width: 480px) {
+  .weekly-profit-grid {
+    grid-template-columns: repeat(7, minmax(52px, 1fr));
+  }
+}
+
+.weekly-day-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 8px 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.weekly-day-card.today {
+  background: #FEF9C3;
+  border-color: #FACC15;
+  box-shadow: 0 2px 8px rgba(250, 204, 21, 0.25);
+}
+
+.weekly-day-card.loss {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+}
+
+.weekly-day-name {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+}
+
+.weekly-day-card.today .weekly-day-name {
+  color: #854D0E;
+  font-weight: 800;
+}
+
+.weekly-day-date {
+  font-size: 8.5px;
+  color: #94A3B8;
+}
+
+.weekly-day-rate {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #16A34A;
+  font-family: var(--font-mono);
+  margin: 2px 0;
+}
+
+.weekly-day-card.loss .weekly-day-rate {
+  color: #DC2626;
+}
+
+.weekly-day-pill {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  background: #DCFCE7;
+  color: #15803D;
+  white-space: nowrap;
+}
+
+.weekly-day-card.loss .weekly-day-pill {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.weekly-profit-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.weekly-meta-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.weekly-meta-label {
+  color: #64748B;
+}
+
+.weekly-meta-val {
+  color: #0F172A;
+  font-family: var(--font-mono);
+}
+
+.badge-status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+.badge-status-pill.approved {
+  background: #DCFCE7;
+  color: #16A34A;
+  border: 1px solid #86EFAC;
+}
+
+.badge-status-pill.rejected {
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+}
+

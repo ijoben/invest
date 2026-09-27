@@ -174,6 +174,13 @@ export const Plans = {
   // Calculate today profit % for a specific user
   getUserTodayProfitRate(userId) {
     if (!userId) return 0;
+    const db = DB.get();
+
+    // Requirement 4: Check if Today Profit Loss Mode (0%) is active
+    if (db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss) {
+      return 0.0;
+    }
+
     const userInvs = this.getUserInvestments(userId);
     if (!userInvs || userInvs.length === 0) return 0;
 
@@ -200,6 +207,49 @@ export const Plans = {
 
     if (totalCapital === 0) return 0;
     return parseFloat((totalWeightedRate / totalCapital).toFixed(2));
+  },
+
+  // Requirement 3: Get 7-Day Rolling Daily Profit Breakdown & History
+  getWeeklyProfitHistory() {
+    const db = DB.get();
+    const todayLossMode = db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
+    let list = Array.isArray(db.settings.weeklyProfitHistory) ? [...db.settings.weeklyProfitHistory] : [
+      { dayName: 'Senin', date: '22 Sep', rate: 1.25, isLoss: false },
+      { dayName: 'Selasa', date: '23 Sep', rate: 0.85, isLoss: false },
+      { dayName: 'Rabu', date: '24 Sep', rate: 1.40, isLoss: false },
+      { dayName: 'Kamis', date: '25 Sep', rate: 0.60, isLoss: false },
+      { dayName: 'Jumat', date: '26 Sep', rate: 1.15, isLoss: false },
+      { dayName: 'Sabtu', date: '27 Sep', rate: 0.50, isLoss: false },
+      { dayName: 'Minggu (Hari Ini)', date: '28 Sep', rate: 1.10, isLoss: false }
+    ];
+
+    // Map today's rate if today is loss mode
+    const mapped = list.map((item, idx) => {
+      const isToday = idx === list.length - 1;
+      if (isToday && todayLossMode) {
+        return {
+          ...item,
+          rate: 0.0,
+          isLoss: true,
+          statusLabel: '🔴 Loss 0%'
+        };
+      }
+      return {
+        ...item,
+        statusLabel: (item.isLoss || item.rate === 0) ? '🔴 Loss 0%' : `🟢 +${item.rate.toFixed(2)}%`
+      };
+    });
+
+    const totalRate = mapped.reduce((sum, h) => sum + (h.rate || 0), 0);
+    const avgRate = mapped.length > 0 ? totalRate / mapped.length : 0;
+
+    return {
+      records: mapped,
+      totalRate: parseFloat(totalRate.toFixed(2)),
+      avgRate: parseFloat(avgRate.toFixed(2)),
+      todayIsLoss: !!todayLossMode,
+      lossMessage: todayLossMode ? (db.settings.todayProfitLossMode.message || 'Hari ini pasar 0%') : ''
+    };
   },
 
   // Buy / Activate Plan
@@ -291,6 +341,17 @@ export const Plans = {
   yieldDailyProfits(force = false) {
     const db = DB.get();
     const marketStatus = this.isWeekendMarketClosed();
+    const isTodayLossMode = db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
+
+    if (!force && isTodayLossMode) {
+      return {
+        success: false,
+        isLossMode: true,
+        updatedCount: 0,
+        totalYielded: 0,
+        message: 'Distribusi dividen profit 0%: Mode Loss / Flat 0% sedang AKTIF hari ini oleh Administrator. Modal member 100% terjaga aman.'
+      };
+    }
 
     if (!force && marketStatus.closed) {
       return {
@@ -309,7 +370,7 @@ export const Plans = {
     db.investments.forEach(inv => {
       if (inv.status === 'active') {
         if (inv.daysElapsed < inv.durationDays && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
-          const rate = this.generateRandomDailyRate(inv.minRate, inv.maxRate);
+          const rate = isTodayLossMode ? 0.0 : this.generateRandomDailyRate(inv.minRate, inv.maxRate);
           const profitAmount = Math.floor((inv.capital * rate) / 100);
 
           inv.pendingProfitClaim = profitAmount;

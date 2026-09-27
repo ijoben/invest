@@ -1085,3 +1085,74 @@ body.admin-body.sidebar-open {
   }
 }
 
+/* ==========================================================================
+   ADMIN AUTHENTICATION GATE & OVERLAY
+   ========================================================================== */
+.admin-auth-gate {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 20%, #1E293B 0%, #0B0F19 100%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.admin-auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(200, 147, 56, 0.3);
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(200, 147, 56, 0.15);
+  animation: adminGateFadeIn 0.3s ease-out;
+}
+
+@keyframes adminGateFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.admin-auth-card-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.admin-auth-card-badge {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: rgba(200, 147, 56, 0.12);
+  border: 1px solid rgba(200, 147, 56, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px auto;
+  box-shadow: 0 4px 16px rgba(200, 147, 56, 0.2);
+}
+
+.admin-auth-card-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: #F8FAFC;
+  letter-spacing: 0.5px;
+  margin: 0 0 6px 0;
+}
+
+.admin-auth-card-desc {
+  font-size: 12.5px;
+  color: #94A3B8;
+  margin: 0;
+}
+
+

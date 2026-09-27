@@ -163,6 +163,108 @@
           </div>
         </section>
 
+        <!-- 2B. GRAFIK PORTOFOLIO PERTUMBUHAN ASET & RINCIAN PROFIT 7 HARI (Requirement 2 & 3 & 4) -->
+        <section class="portfolio-analytics-container">
+          
+          <!-- Mode Loss Notice Banner (Req 4: If Admin sets Mode Loss 0%) -->
+          <div id="lossModeNoticeBanner" class="loss-mode-banner" style="display: none;">
+            <div class="loss-mode-banner-content">
+              <span class="loss-mode-icon">🛡️</span>
+              <div>
+                <strong style="color: #991B1B; font-size: 12px; display: block;">Proteksi Modal Aktif: Mode Loss (0% Hari Ini)</strong>
+                <p id="lossModeNoticeText" style="color: #B91C1C; font-size: 10.5px; margin-top: 2px; line-height: 1.3;">
+                  Hari ini pasar mengalami penyesuaian fluktuasi sehingga dividen profit disetel 0.00%. Fitur proteksi modal menjaga 100% saldo pokok Anda tetap aman.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 1: Grafik Portofolio Pertumbuhan Aset Berjalan (Requirement 2) -->
+          <div class="portfolio-growth-card" id="portfolioGrowthCard">
+            <div class="portfolio-growth-header">
+              <div>
+                <div class="portfolio-growth-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                    <polyline points="17 6 23 6 23 12"></polyline>
+                  </svg>
+                  <span>Pertumbuhan Portofolio Aset</span>
+                </div>
+                <div class="portfolio-total-val" id="portfolioTotalAssetVal">IDR 0</div>
+                <div class="portfolio-growth-meta">
+                  <span class="badge-growth-positive" id="portfolioGrowthRateBadge">▲ +0.00% Return</span>
+                  <span class="portfolio-growth-sub" id="portfolioGrowthSubText">Total Aset (Dompet + Modal + Afiliasi)</span>
+                </div>
+              </div>
+
+              <!-- Timeframe Selector (7H, 14H, 30H) -->
+              <div class="portfolio-timeframe-group">
+                <button class="portfolio-tf-btn active" id="btnTf7d" onclick="App.changePortfolioTimeframe(7)">7H</button>
+                <button class="portfolio-tf-btn" id="btnTf14d" onclick="App.changePortfolioTimeframe(14)">14H</button>
+                <button class="portfolio-tf-btn" id="btnTf30d" onclick="App.changePortfolioTimeframe(30)">30H</button>
+              </div>
+            </div>
+
+            <!-- Canvas Curve -->
+            <div class="portfolio-canvas-wrap">
+              <canvas id="portfolioGrowthCanvas" height="155" style="width: 100%; height: 155px; display: block;"></canvas>
+            </div>
+
+            <div class="portfolio-canvas-footer">
+              <div class="portfolio-stat-pill">
+                <span class="dot-indicator green"></span>
+                <span>Modal Aktif: <strong id="chartStatActiveCap">IDR 0</strong></span>
+              </div>
+              <div class="portfolio-stat-pill">
+                <span class="dot-indicator gold"></span>
+                <span>Total Dividen: <strong id="chartStatTotalProfit">IDR 0</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Rincian Persentase Profit Harian Berjalan 1 Minggu (Requirement 3 & 4) -->
+          <div class="weekly-profit-card" id="weeklyProfitCard">
+            <div class="weekly-profit-header">
+              <div>
+                <div class="weekly-profit-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <span>Rincian Profit Harian (1 Minggu Berjalan)</span>
+                </div>
+                <p style="font-size: 10.5px; color: #64748B; margin-top: 2px;">
+                  Histori persentase bagi hasil 7 hari terakhir s/d hari ini
+                </p>
+              </div>
+              <div class="weekly-summary-badge">
+                <span style="font-size: 9.5px; color: #64748B;">Total 7 Hari</span>
+                <strong id="weeklyTotalReturnRate" style="color: #16A34A; font-size: 13px;">+0.00%</strong>
+              </div>
+            </div>
+
+            <!-- 7-Day Horizontal Grid of Profit Percentages -->
+            <div class="weekly-profit-grid" id="weeklyProfitGridContainer">
+              <!-- Dynamically populated by App.renderWeeklyProfitBreakdown() -->
+            </div>
+
+            <!-- Weekly Stats Footer -->
+            <div class="weekly-profit-footer">
+              <div class="weekly-meta-col">
+                <span class="weekly-meta-label">Rata-rata Profit:</span>
+                <strong class="weekly-meta-val" id="weeklyAvgDailyRate">+0.00% / hari</strong>
+              </div>
+              <div class="weekly-meta-col">
+                <span class="weekly-meta-label">Status Hari Ini:</span>
+                <span id="weeklyTodayStatusPill" class="badge-status-pill approved">🟢 Normal (+0.00%)</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
         <!-- 3. VIP / INVESTMENT PLAN CAROUSEL (Horizontal Scroll) -->
         <section class="tier-carousel-container">
           <div class="tier-carousel" id="tierCarouselContainer">
@@ -832,7 +934,7 @@
               <input type="text" class="form-input" id="profileRefLinkInput" readonly style="font-size: 11px;">
               <button class="tier-btn btn-topup" style="flex: 0 0 70px;" onclick="App.copyText(document.getElementById('profileRefLinkInput').value, 'Link Referral')">Salin</button>
             </div>
-            <p style="font-size: 10px; color: #64748B; margin-top: 8px;">Dapatkan <strong>Bonus Sponsor Langsung 10%</strong> dan <strong>Bonus Rabat Matching Profit hingga 3 Level</strong> dari setiap transaksi tim Anda.</p>
+            <p id="affiliateMainDesc" style="font-size: 10px; color: #64748B; margin-top: 8px;">Dapatkan <strong>Bonus Sponsor Langsung 10%</strong> dan <strong>Bonus Rabat Matching Profit hingga 3 Level</strong> dari setiap transaksi tim Anda.</p>
           </div>
 
           <!-- Downline Tree & Turnover Stats -->
@@ -857,7 +959,7 @@
                 <div class="network-level-card">
                   <span class="network-level-badge lvl-1">Level 1</span>
                   <div class="network-card-val" id="affL1BonusVal">IDR 0</div>
-                  <div class="network-card-sub"><span id="affL1Count">0</span> Member (Sponsor 10% + Rabat 5%)</div>
+                  <div class="network-card-sub" id="affL1SubTitle"><span id="affL1Count">0</span> Member (Sponsor 10% + Rabat 5%)</div>
                   <div style="font-size: 8.5px; color: #60A5FA; margin-top: 3px;" id="affL1Turnover">Omset: IDR 0</div>
                 </div>
 
@@ -865,7 +967,7 @@
                 <div class="network-level-card">
                   <span class="network-level-badge lvl-2">Level 2</span>
                   <div class="network-card-val" id="affL2BonusVal">IDR 0</div>
-                  <div class="network-card-sub"><span id="affL2Count">0</span> Member (Rabat 3%)</div>
+                  <div class="network-card-sub" id="affL2SubTitle"><span id="affL2Count">0</span> Member (Rabat 3%)</div>
                   <div style="font-size: 8.5px; color: #C084FC; margin-top: 3px;" id="affL2Turnover">Omset: IDR 0</div>
                 </div>
 
@@ -873,7 +975,7 @@
                 <div class="network-level-card">
                   <span class="network-level-badge lvl-3">Level 3</span>
                   <div class="network-card-val" id="affL3BonusVal">IDR 0</div>
-                  <div class="network-card-sub"><span id="affL3Count">0</span> Member (Rabat 1.5%)</div>
+                  <div class="network-card-sub" id="affL3SubTitle"><span id="affL3Count">0</span> Member (Rabat 1.5%)</div>
                   <div style="font-size: 8.5px; color: #FDE047; margin-top: 3px;" id="affL3Turnover">Omset: IDR 0</div>
                 </div>
               </div>
@@ -1016,11 +1118,16 @@
       <div id="loginForm">
         <div class="form-group">
           <label class="form-label">Username / Email / No. HP</label>
-          <input type="text" class="form-input" id="loginIdentifier" placeholder="Contoh: alex_investor atau admin" value="alex_investor">
+          <input type="text" class="form-input" id="loginIdentifier" placeholder="Username, email, atau no. HP">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
-          <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password" value="user123">
+          <div style="position: relative;">
+            <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password Anda" style="padding-right: 42px;">
+            <button type="button" onclick="App.togglePasswordVisibility('loginPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
         <div style="display: flex; justify-content: flex-end; margin-bottom: 12px; margin-top: -6px;">
           <a href="javascript:void(0)" onclick="App.openForgotPasswordModal()" style="font-size: 11.5px; color: var(--primary-gold); font-weight: 600; text-decoration: none;">Lupa Password?</a>
@@ -1034,11 +1141,11 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <button type="button" class="btn-demo-pill" onclick="App.quickLogin('user')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <span>Login User</span>
+              <span>Login User Demo</span>
             </button>
             <button type="button" class="btn-demo-pill admin-pill" onclick="App.quickLogin('admin')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>Login Admin</span>
+              <span>Login Admin Demo</span>
             </button>
           </div>
         </div>
@@ -1047,15 +1154,15 @@
       <!-- Register Form -->
       <div id="registerForm" style="display: none;">
         <div class="form-group">
-          <label class="form-label">Username</label>
-          <input type="text" class="form-input" id="regUsername" placeholder="Contoh: investor_pro">
+          <label class="form-label">Username <span style="color: #EF4444;">*</span></label>
+          <input type="text" class="form-input" id="regUsername" placeholder="Contoh: investor_pro (3-20 karakter)">
         </div>
         <div class="form-group">
           <label class="form-label">Nama Lengkap</label>
-          <input type="text" class="form-input" id="regFullName" placeholder="Nama lengkap Anda">
+          <input type="text" class="form-input" id="regFullName" placeholder="Nama lengkap sesuai identitas">
         </div>
         <div class="form-group">
-          <label class="form-label">Email</label>
+          <label class="form-label">Email <span style="color: #EF4444;">*</span></label>
           <input type="email" class="form-input" id="regEmail" placeholder="nama@email.com">
         </div>
         <div class="form-group">
@@ -1063,8 +1170,22 @@
           <input type="tel" class="form-input" id="regPhone" placeholder="0812xxxxxxxx">
         </div>
         <div class="form-group">
-          <label class="form-label">Password</label>
-          <input type="password" class="form-input" id="regPassword" placeholder="Minimal 6 karakter">
+          <label class="form-label">Password <span style="color: #EF4444;">*</span></label>
+          <div style="position: relative;">
+            <input type="password" class="form-input" id="regPassword" placeholder="Minimal 6 karakter" style="padding-right: 42px;">
+            <button type="button" onclick="App.togglePasswordVisibility('regPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Konfirmasi Password <span style="color: #EF4444;">*</span></label>
+          <div style="position: relative;">
+            <input type="password" class="form-input" id="regConfirmPassword" placeholder="Ketik ulang password" style="padding-right: 42px;">
+            <button type="button" onclick="App.togglePasswordVisibility('regConfirmPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Konfirmasi Password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Kode Referral (Opsional)</label>

@@ -3,7 +3,7 @@
  * Controls admin.html views, tables, modal actions, and settings.
  */
 
-import { DB, createReceiptBase64 } from './db.js';
+import { DB, createReceiptBase64, escapeHtml } from './db.js';
 import { Admin } from './admin.js';
 import { Auth } from './auth.js';
 import { Plans } from './plans.js';
@@ -18,7 +18,106 @@ export const AdminPage = {
 
   init() {
     this.bindEvents();
-    this.renderAll();
+    if (this.checkAdminAuth()) {
+      this.renderAll();
+    }
+  },
+
+  checkAdminAuth() {
+    const user = Auth.getUser();
+    const gate = document.getElementById('adminAuthGate');
+    const forbiddenAlert = document.getElementById('adminForbiddenAlert');
+    const forbiddenMsg = document.getElementById('adminForbiddenMessage');
+    const sidebar = document.getElementById('adminSidebar');
+    const topbar = document.querySelector('.admin-topbar');
+    const container = document.querySelector('.admin-standalone-container');
+
+    if (!user || user.role !== 'admin') {
+      if (sidebar) sidebar.style.display = 'none';
+      if (topbar) topbar.style.display = 'none';
+      if (container) container.style.display = 'none';
+
+      if (gate) {
+        gate.style.display = 'flex';
+        if (user && user.role !== 'admin') {
+          if (forbiddenAlert) forbiddenAlert.style.display = 'block';
+          if (forbiddenMsg) {
+            forbiddenMsg.textContent = `Anda saat ini masuk sebagai akun @${escapeHtml(user.username)} (${escapeHtml(user.fullName || 'Investor')}). Halaman ini terproteksi khusus untuk Administrator.`;
+          }
+        } else {
+          if (forbiddenAlert) forbiddenAlert.style.display = 'none';
+        }
+      }
+      return false;
+    }
+
+    // Admin verified
+    if (gate) gate.style.display = 'none';
+    if (sidebar) sidebar.style.display = '';
+    if (topbar) topbar.style.display = 'flex';
+    if (container) container.style.display = '';
+
+    this.updateAdminTopbar(user);
+    return true;
+  },
+
+  updateAdminTopbar(user) {
+    const nameEl = document.getElementById('topbarAdminName');
+    if (nameEl && user) {
+      nameEl.textContent = user.fullName || user.username || 'System Administrator';
+    }
+  },
+
+  handleAdminLogin() {
+    const uInput = document.getElementById('adminLoginUsername');
+    const pInput = document.getElementById('adminLoginPassword');
+    const username = uInput ? uInput.value.trim() : '';
+    const password = pInput ? pInput.value.trim() : '';
+
+    if (!username || !password) {
+      this.showToast('Harap masukkan username dan password admin!', 'error');
+      return;
+    }
+
+    const res = Auth.login(username, password);
+    if (!res.success) {
+      this.showToast(res.message, 'error');
+      return;
+    }
+
+    if (res.user.role !== 'admin') {
+      Auth.logout();
+      this.showToast('Akun ini tidak memiliki hak akses Administrator!', 'error');
+      const forbiddenAlert = document.getElementById('adminForbiddenAlert');
+      const forbiddenMsg = document.getElementById('adminForbiddenMessage');
+      if (forbiddenAlert) forbiddenAlert.style.display = 'block';
+      if (forbiddenMsg) forbiddenMsg.textContent = `Login ditolak: Akun @${escapeHtml(res.user.username)} bukan Administrator.`;
+      return;
+    }
+
+    this.showToast('Login Administrator berhasil!', 'success');
+    if (pInput) pInput.value = '';
+    if (this.checkAdminAuth()) {
+      this.renderAll();
+    }
+  },
+
+  quickLoginAdmin() {
+    const res = Auth.quickLogin('admin');
+    if (res.success && res.user && res.user.role === 'admin') {
+      this.showToast('Login Admin Demo Berhasil!', 'success');
+      if (this.checkAdminAuth()) {
+        this.renderAll();
+      }
+    } else {
+      this.showToast('Gagal login admin demo', 'error');
+    }
+  },
+
+  toggleAdminPasswordVisibility() {
+    const input = document.getElementById('adminLoginPassword');
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
   },
 
   renderAll() {
@@ -55,6 +154,7 @@ export const AdminPage = {
     this.renderPlans(db);
     this.renderMarketMasterSettings(db);
     this.renderWeekendProfitSettings(db);
+    this.renderTodayLossModeSettings(db);
 
     // 5. Affiliate Config Values
     this.renderAffiliateSettings(db);
@@ -96,25 +196,25 @@ export const AdminPage = {
 
     tbody.innerHTML = deposits.map(t => `
       <tr>
-        <td><strong>${t.id}</strong></td>
+        <td><strong>${escapeHtml(t.id)}</strong></td>
         <td>${new Date(t.createdAt).toLocaleString('id-ID')}</td>
-        <td><strong>${t.username}</strong></td>
-        <td>${t.paymentMethod}</td>
+        <td><strong>${escapeHtml(t.username)}</strong></td>
+        <td>${escapeHtml(t.paymentMethod)}</td>
         <td><strong style="color:#22C55E;">${DB.formatIDR(t.amount)}</strong></td>
-        <td>${t.txid ? `<span style="font-family:var(--font-mono); font-size:10px;">${t.txid.substring(0, 16)}...</span>` : (t.uniqueCode || '-')}</td>
+        <td>${t.txid ? `<span style="font-family:var(--font-mono); font-size:10px;">${escapeHtml(t.txid.substring(0, 16))}...</span>` : escapeHtml(t.uniqueCode || '-')}</td>
         <td>
           ${t.proofImage ? `
-            <button class="btn-admin-action" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AdminPage.viewDepositProof('${t.id}')">
+            <button class="btn-admin-action" style="background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AdminPage.viewDepositProof('${escapeHtml(t.id)}')">
               <span>🖼️ Cek Bukti</span>
             </button>
           ` : `<span style="font-size: 10px; color: #94A3B8;">-</span>`}
         </td>
-        <td><span class="badge-status ${t.status}">${t.status.toUpperCase()}</span></td>
+        <td><span class="badge-status ${escapeHtml(t.status)}">${escapeHtml(t.status.toUpperCase())}</span></td>
         <td>
           ${t.status === 'pending' ? `
             <div class="btn-action-group">
-              <button class="btn-admin-action approve" onclick="AdminPage.approveDeposit('${t.id}')">✓ Setujui</button>
-              <button class="btn-admin-action reject" onclick="AdminPage.rejectDeposit('${t.id}')">✕ Tolak</button>
+              <button class="btn-admin-action approve" onclick="AdminPage.approveDeposit('${escapeHtml(t.id)}')">✓ Setujui</button>
+              <button class="btn-admin-action reject" onclick="AdminPage.rejectDeposit('${escapeHtml(t.id)}')">✕ Tolak</button>
             </div>
           ` : '<span style="color:#64748B;">Selesai</span>'}
         </td>
@@ -134,18 +234,18 @@ export const AdminPage = {
 
     tbody.innerHTML = withdrawals.map(t => `
       <tr>
-        <td><strong>${t.id}</strong></td>
+        <td><strong>${escapeHtml(t.id)}</strong></td>
         <td>${new Date(t.createdAt).toLocaleString('id-ID')}</td>
-        <td><strong>${t.username}</strong></td>
-        <td>${t.walletSource || 'Wallet Balance'}</td>
-        <td>${t.destinationAccount || t.paymentMethod}</td>
+        <td><strong>${escapeHtml(t.username)}</strong></td>
+        <td>${escapeHtml(t.walletSource || 'Wallet Balance')}</td>
+        <td>${escapeHtml(t.destinationAccount || t.paymentMethod)}</td>
         <td><strong style="color:#EF4444;">${DB.formatIDR(t.netAmount || t.amount)}</strong> (Total: ${DB.formatIDR(t.amount)})</td>
-        <td><span class="badge-status ${t.status}">${t.status.toUpperCase()}</span></td>
+        <td><span class="badge-status ${escapeHtml(t.status)}">${escapeHtml(t.status.toUpperCase())}</span></td>
         <td>
           ${t.status === 'pending' ? `
             <div class="btn-action-group">
-              <button class="btn-admin-action approve" onclick="AdminPage.approveWithdraw('${t.id}')">✓ Setujui</button>
-              <button class="btn-admin-action reject" onclick="AdminPage.rejectWithdraw('${t.id}')">✕ Tolak</button>
+              <button class="btn-admin-action approve" onclick="AdminPage.approveWithdraw('${escapeHtml(t.id)}')">✓ Setujui</button>
+              <button class="btn-admin-action reject" onclick="AdminPage.rejectWithdraw('${escapeHtml(t.id)}')">✕ Tolak</button>
             </div>
           ` : '<span style="color:#64748B;">Selesai</span>'}
         </td>
@@ -318,6 +418,76 @@ export const AdminPage = {
       alert(`ℹ️ Status Hari Ini (${currentDayName}):\nPROFIT AKHIR PEKAN AKTIF\nHari ini akhir pekan tetapi profit disetel AKTIF (7 Hari Penuh).\nDividen trading tetap dibagikan secara normal.`);
     } else {
       alert(`ℹ️ Status Hari Ini (${currentDayName}):\nHARI KERJA AKTIF\nPasar beroperasi normal. Dividen profit dibagikan seperti biasa.`);
+    }
+  },
+
+  // 4.2 Today Profit Loss Mode Settings (Req 4: Saklar ON/OFF Loss 0% Hari Ini)
+  renderTodayLossModeSettings(db) {
+    const cfg = (db && db.settings && db.settings.todayProfitLossMode) || {
+      isLoss: false,
+      message: 'Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.'
+    };
+
+    const isLoss = cfg.isLoss === true;
+    const selectEl = document.getElementById('todayLossModeCfgSelect');
+    const msgEl = document.getElementById('todayLossModeOffMessage');
+    const badgeEl = document.getElementById('todayLossModeStatusBadge');
+
+    if (selectEl) selectEl.value = String(isLoss);
+    if (msgEl) msgEl.value = cfg.message || '';
+
+    if (badgeEl) {
+      if (isLoss) {
+        badgeEl.textContent = '🔴 Mode Loss (0% Hari Ini)';
+        badgeEl.className = 'badge-status rejected';
+        badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+        badgeEl.style.color = '#EF4444';
+        badgeEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      } else {
+        badgeEl.textContent = '🟢 Normal Profit (ON)';
+        badgeEl.className = 'badge-status approved';
+        badgeEl.style.background = 'rgba(34, 197, 94, 0.15)';
+        badgeEl.style.color = '#22C55E';
+        badgeEl.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+      }
+    }
+  },
+
+  previewTodayLossModeSettings() {
+    const selectEl = document.getElementById('todayLossModeCfgSelect');
+    const badgeEl = document.getElementById('todayLossModeStatusBadge');
+    if (!selectEl || !badgeEl) return;
+
+    const isLoss = selectEl.value === 'true';
+    if (isLoss) {
+      badgeEl.textContent = '🔴 Mode Loss (0% Hari Ini)';
+      badgeEl.className = 'badge-status rejected';
+      badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+      badgeEl.style.color = '#EF4444';
+      badgeEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+    } else {
+      badgeEl.textContent = '🟢 Normal Profit (ON)';
+      badgeEl.className = 'badge-status approved';
+      badgeEl.style.background = 'rgba(34, 197, 94, 0.15)';
+      badgeEl.style.color = '#22C55E';
+      badgeEl.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+    }
+  },
+
+  saveTodayLossModeSettings() {
+    const selectEl = document.getElementById('todayLossModeCfgSelect');
+    const msgEl = document.getElementById('todayLossModeOffMessage');
+    if (!selectEl) return;
+
+    const isLoss = selectEl.value === 'true';
+    const message = msgEl ? msgEl.value.trim() : '';
+
+    const res = Admin.saveTodayProfitMode({ isLoss, message });
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderTodayLossModeSettings(DB.get());
+    } else {
+      this.showToast(res.message || 'Gagal menyimpan status profit hari ini', 'error');
     }
   },
 
@@ -522,18 +692,18 @@ export const AdminPage = {
 
       return `
         <tr style="${isBlocked ? 'background: rgba(254, 226, 226, 0.25);' : ''}">
-          <td><strong>${u.username}</strong></td>
-          <td>${u.fullName || '-'}</td>
+          <td><strong>${escapeHtml(u.username)}</strong></td>
+          <td>${escapeHtml(u.fullName || '-')}</td>
           <td>${statusBadge}</td>
-          <td>${u.email || u.phone || '-'}</td>
+          <td>${escapeHtml(u.email || u.phone || '-')}</td>
           <td><strong style="color:#22C55E;">${DB.formatIDR(u.walletBalance)}</strong></td>
           <td><strong style="color:#C89338;">${DB.formatIDR(u.affiliateBalance)}</strong></td>
           <td>${u.points || 0}</td>
-          <td>${u.referredBy || '<span style="color:#64748B;">-</span>'}</td>
+          <td>${escapeHtml(u.referredBy || '-') }</td>
           <td>
             <div class="btn-action-group" style="justify-content: flex-start; gap: 4px; flex-wrap: nowrap;">
-              <button class="btn-admin-action edit" onclick="AdminPage.openEditUserModal('${u.id}')" title="Kelola Saldo & Point">Saldo</button>
-              <button class="btn-admin-action view" onclick="AdminPage.openMemberDetailModal('${u.id}')" style="background: #2563EB; color: #FFFFFF; border-color: #1D4ED8; font-weight: 700;" title="Buka Detail Profil & Bantuan Password">👤 Detail</button>
+              <button class="btn-admin-action edit" onclick="AdminPage.openEditUserModal('${escapeHtml(u.id)}')" title="Kelola Saldo & Point">Saldo</button>
+              <button class="btn-admin-action view" onclick="AdminPage.openMemberDetailModal('${escapeHtml(u.id)}')" style="background: #2563EB; color: #FFFFFF; border-color: #1D4ED8; font-weight: 700;" title="Buka Detail Profil & Bantuan Password">👤 Detail</button>
               ${blockActionBtn}
             </div>
           </td>

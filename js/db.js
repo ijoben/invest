@@ -42,6 +42,20 @@ const defaultDB = {
       offMessage: 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.'
     },
     weekendProfitEnabled: true,
+    todayProfitLossMode: {
+      isLoss: false, // false = Normal Profit (ON), true = Loss / 0% (OFF)
+      lossRate: 0.0,
+      message: 'Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.'
+    },
+    weeklyProfitHistory: [
+      { dayName: 'Senin', date: '22 Sep', rate: 1.25, isLoss: false },
+      { dayName: 'Selasa', date: '23 Sep', rate: 0.85, isLoss: false },
+      { dayName: 'Rabu', date: '24 Sep', rate: 1.40, isLoss: false },
+      { dayName: 'Kamis', date: '25 Sep', rate: 0.60, isLoss: false },
+      { dayName: 'Jumat', date: '26 Sep', rate: 1.15, isLoss: false },
+      { dayName: 'Sabtu', date: '27 Sep', rate: 0.50, isLoss: false },
+      { dayName: 'Minggu (Hari Ini)', date: '28 Sep', rate: 1.10, isLoss: false }
+    ],
     sponsorBonusPercent: 10, // 10% direct sponsor bonus
     rabatLevels: [
       { level: 1, percent: 5.0 },
@@ -930,6 +944,12 @@ export const DB = {
         if (parsed.settings.weekendProfitEnabled === undefined) {
           parsed.settings.weekendProfitEnabled = parsed.settings.weekendProfit.enabled !== undefined ? parsed.settings.weekendProfit.enabled : true;
         }
+        if (!parsed.settings.todayProfitLossMode) {
+          parsed.settings.todayProfitLossMode = defaultDB.settings.todayProfitLossMode;
+        }
+        if (!parsed.settings.weeklyProfitHistory || !Array.isArray(parsed.settings.weeklyProfitHistory) || parsed.settings.weeklyProfitHistory.length === 0) {
+          parsed.settings.weeklyProfitHistory = defaultDB.settings.weeklyProfitHistory;
+        }
       }
       if (!parsed.testimonials || !Array.isArray(parsed.testimonials) || parsed.testimonials.length === 0) {
         parsed.testimonials = defaultDB.testimonials;
@@ -1025,8 +1045,26 @@ export const DB = {
 
   // Users
   getUserByUsername(username) {
+    if (!username) return null;
+    const clean = String(username).trim().toLowerCase();
     const db = this.get();
-    return db.users.find(u => u.username.toLowerCase() === username.toLowerCase() || u.email.toLowerCase() === username.toLowerCase() || u.phone === username);
+    return db.users.find(u => 
+      (u.username && u.username.toLowerCase() === clean) || 
+      (u.email && u.email.toLowerCase() === clean) || 
+      (u.phone && String(u.phone).trim() === clean)
+    ) || null;
+  },
+
+  getUserByPhone(phone) {
+    if (!phone) return null;
+    const clean = String(phone).trim().replace(/[^0-9]/g, '');
+    if (!clean) return null;
+    const db = this.get();
+    return db.users.find(u => {
+      if (!u.phone) return false;
+      const uClean = String(u.phone).trim().replace(/[^0-9]/g, '');
+      return uClean === clean;
+    }) || null;
   },
 
   getUserById(id) {

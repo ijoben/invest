@@ -97,6 +97,9 @@ const App = {
     // 2. Render 4-Column Wallet Balance Card
     this.renderWalletSummary(user);
 
+    // 2.5 Render Portfolio Analytics & Growth Chart (Requirements 2, 3, 4)
+    this.renderPortfolioAnalytics(user, db);
+
     // 3. Render Plan / VIP Tier Carousel
     this.renderTierCarousel(user, db);
 
@@ -179,6 +182,21 @@ const App = {
     const pointEl = document.getElementById('valPoint');
     const profitEl = document.getElementById('valTodayProfit');
     const marketStatus = Plans.isMarketOpen();
+    const db = DB.get();
+    const isLossMode = db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
+    const lossMessage = (db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.message) || 'Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.';
+
+    // Mode Loss Banner Notice (Requirement 4)
+    const lossBanner = document.getElementById('lossModeNoticeBanner');
+    const lossText = document.getElementById('lossModeNoticeText');
+    if (lossBanner) {
+      if (isLossMode) {
+        lossBanner.style.display = 'block';
+        if (lossText) lossText.textContent = lossMessage;
+      } else {
+        lossBanner.style.display = 'none';
+      }
+    }
 
     if (user) {
       mainBalEl.textContent = DB.formatIDR(user.walletBalance);
@@ -187,13 +205,17 @@ const App = {
       
       const rate = Plans.getUserTodayProfitRate(user.id);
       if (profitEl) {
-        if (!marketStatus.isOpen) {
+        if (isLossMode) {
+          profitEl.textContent = '0.00% (Loss)';
+          profitEl.style.color = '#EF4444';
+          profitEl.title = 'Mode Loss aktif hari ini (Dividen 0.00%, modal pokok 100% aman)';
+        } else if (!marketStatus.isOpen) {
           profitEl.textContent = '0.00% (OFF)';
           profitEl.style.color = '#EF4444';
           profitEl.title = 'Pasar sedang libur / OFF. Dividen profit akan berjalan aktif saat pasar ON.';
         } else {
           profitEl.textContent = rate > 0 ? `+${rate.toFixed(2)}%` : '+0.00%';
-          profitEl.style.color = '#0F172A';
+          profitEl.style.color = rate > 0 ? '#16A34A' : '#0F172A';
           profitEl.title = 'Profit dividen harian AI berjalan realtime';
         }
       }
@@ -202,10 +224,313 @@ const App = {
       affBalEl.textContent = 'IDR 0';
       pointEl.textContent = '0';
       if (profitEl) {
-        profitEl.textContent = !marketStatus.isOpen ? '0.00% (OFF)' : '+0.00%';
-        profitEl.style.color = !marketStatus.isOpen ? '#EF4444' : '#0F172A';
+        if (isLossMode) {
+          profitEl.textContent = '0.00% (Loss)';
+          profitEl.style.color = '#EF4444';
+        } else if (!marketStatus.isOpen) {
+          profitEl.textContent = '0.00% (OFF)';
+          profitEl.style.color = '#EF4444';
+        } else {
+          profitEl.textContent = '+0.00%';
+          profitEl.style.color = '#0F172A';
+        }
       }
     }
+  },
+
+  // 2.5 Portfolio Analytics, Growth Curve & 7-Day Profit Breakdown (Requirements 2, 3, 4)
+  portfolioTimeframe: 7,
+
+  changePortfolioTimeframe(days) {
+    this.portfolioTimeframe = Number(days) || 7;
+    ['btnTf7d', 'btnTf14d', 'btnTf30d'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.classList.remove('active');
+    });
+
+    const activeBtn = document.getElementById(`btnTf${days}d`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const user = Auth.getUser();
+    const db = DB.get();
+    this.renderPortfolioGrowthChart(user, db, this.portfolioTimeframe);
+  },
+
+  renderPortfolioAnalytics(user, db) {
+    const totalAssetValEl = document.getElementById('portfolioTotalAssetVal');
+    const growthBadgeEl = document.getElementById('portfolioGrowthRateBadge');
+    const chartActiveCapEl = document.getElementById('chartStatActiveCap');
+    const chartTotalProfitEl = document.getElementById('chartStatTotalProfit');
+
+    let totalAsset = 0;
+    let activeCapital = 0;
+    let totalProfitEarned = 0;
+
+    if (user) {
+      const userInvs = (db.investments || []).filter(i => i.userId === user.id);
+      const activeInvs = userInvs.filter(i => i.status === 'active');
+      activeCapital = activeInvs.reduce((sum, i) => sum + (i.capital || 0), 0);
+      totalProfitEarned = userInvs.reduce((sum, i) => sum + (i.totalProfitEarned || 0) + (i.pendingProfitClaim || 0), 0);
+      totalAsset = (user.walletBalance || 0) + (user.affiliateBalance || 0) + activeCapital;
+    } else {
+      totalAsset = 0;
+      activeCapital = 0;
+      totalProfitEarned = 0;
+    }
+
+    if (totalAssetValEl) totalAssetValEl.textContent = DB.formatIDR(totalAsset);
+    if (chartActiveCapEl) chartActiveCapEl.textContent = DB.formatIDR(activeCapital);
+    if (chartTotalProfitEl) chartTotalProfitEl.textContent = DB.formatIDR(totalProfitEarned);
+
+    // Calculate growth % over time
+    const weeklyData = Plans.getWeeklyProfitHistory();
+    const totalWeeklyRate = weeklyData.totalRate || 0;
+    if (growthBadgeEl) {
+      if (weeklyData.todayIsLoss) {
+        growthBadgeEl.textContent = `▲ +${totalWeeklyRate.toFixed(2)}% Return (0% Hari Ini)`;
+        growthBadgeEl.className = 'badge-growth-neutral';
+      } else {
+        growthBadgeEl.textContent = `▲ +${totalWeeklyRate.toFixed(2)}% 7-Day Return`;
+        growthBadgeEl.className = 'badge-growth-positive';
+      }
+    }
+
+    // Render Canvas Chart
+    this.renderPortfolioGrowthChart(user, db, this.portfolioTimeframe || 7);
+
+    // Render 7-Day Weekly Breakdown
+    this.renderWeeklyProfitBreakdown(db);
+  },
+
+  renderWeeklyProfitBreakdown(db) {
+    const container = document.getElementById('weeklyProfitGridContainer');
+    const totalRateEl = document.getElementById('weeklyTotalReturnRate');
+    const avgRateEl = document.getElementById('weeklyAvgDailyRate');
+    const statusPillEl = document.getElementById('weeklyTodayStatusPill');
+
+    const weekly = Plans.getWeeklyProfitHistory();
+
+    if (totalRateEl) totalRateEl.textContent = `+${weekly.totalRate.toFixed(2)}%`;
+    if (avgRateEl) avgRateEl.textContent = `+${weekly.avgRate.toFixed(2)}% / hari`;
+
+    if (statusPillEl) {
+      if (weekly.todayIsLoss) {
+        statusPillEl.textContent = '🔴 Mode Loss (0.00%)';
+        statusPillEl.className = 'badge-status-pill rejected';
+      } else {
+        const todayRate = weekly.records && weekly.records.length > 0 ? weekly.records[weekly.records.length - 1].rate : 1.1;
+        statusPillEl.textContent = `🟢 Normal (+${todayRate.toFixed(2)}%)`;
+        statusPillEl.className = 'badge-status-pill approved';
+      }
+    }
+
+    if (container && Array.isArray(weekly.records)) {
+      container.innerHTML = weekly.records.map((rec, idx) => {
+        const isToday = idx === weekly.records.length - 1;
+        const isLoss = rec.isLoss || rec.rate === 0;
+        const cardClass = `weekly-day-card ${isToday ? 'today' : ''} ${isLoss ? 'loss' : ''}`;
+        const pillText = isLoss ? 'Loss 0%' : 'Profit';
+        const displayRate = isLoss ? '0.00%' : `+${rec.rate.toFixed(2)}%`;
+        const dayLabel = isToday ? 'Hari Ini' : rec.dayName.substring(0, 3);
+
+        return `
+          <div class="${cardClass}" title="${rec.dayName} (${rec.date}): ${rec.statusLabel}">
+            <span class="weekly-day-name">${dayLabel}</span>
+            <span class="weekly-day-date">${rec.date}</span>
+            <div class="weekly-day-rate">${displayRate}</div>
+            <span class="weekly-day-pill">${pillText}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  },
+
+  renderPortfolioGrowthChart(user, db, days = 7) {
+    const canvas = document.getElementById('portfolioGrowthCanvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Handle high DPI retina display
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const width = rect.width || 340;
+    const height = 155;
+
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Get weekly profit points
+    const weekly = Plans.getWeeklyProfitHistory();
+    const records = weekly.records || [];
+    const isLossToday = weekly.todayIsLoss;
+
+    // Calculate baseline asset and progression points
+    let currentTotalAsset = 0;
+    let activeCapital = 0;
+    if (user) {
+      const userInvs = (db.investments || []).filter(i => i.userId === user.id && i.status === 'active');
+      activeCapital = userInvs.reduce((sum, i) => sum + (i.capital || 0), 0);
+      currentTotalAsset = (user.walletBalance || 0) + (user.affiliateBalance || 0) + activeCapital;
+    }
+
+    // Progression curve calculation
+    let points = [];
+    let dates = [];
+
+    if (days === 7) {
+      const baseAsset = currentTotalAsset > 0 ? currentTotalAsset * 0.93 : 10000000;
+      let cumAsset = baseAsset;
+      points = records.map((r, i) => {
+        const rateFactor = (r.rate || 0) / 100;
+        cumAsset = cumAsset * (1 + rateFactor);
+        return cumAsset;
+      });
+      dates = records.map(r => r.date);
+    } else if (days === 14) {
+      const numPoints = 14;
+      const baseAsset = currentTotalAsset > 0 ? currentTotalAsset * 0.88 : 8500000;
+      let cumAsset = baseAsset;
+      for (let i = 0; i < numPoints; i++) {
+        const isLast = i === numPoints - 1;
+        const rate = (isLast && isLossToday) ? 0 : (0.7 + (Math.sin(i * 0.9) * 0.4 + 0.3));
+        cumAsset = cumAsset * (1 + rate / 100);
+        points.push(cumAsset);
+        dates.push(`${15 + i} Sep`);
+      }
+    } else {
+      // 30 days
+      const numPoints = 15;
+      const baseAsset = currentTotalAsset > 0 ? currentTotalAsset * 0.78 : 7000000;
+      let cumAsset = baseAsset;
+      for (let i = 0; i < numPoints; i++) {
+        const isLast = i === numPoints - 1;
+        const rate = (isLast && isLossToday) ? 0 : (0.8 + (Math.cos(i * 0.6) * 0.3 + 0.2));
+        cumAsset = cumAsset * (1 + rate / 100);
+        points.push(cumAsset);
+        dates.push(`${i * 2 + 1} Sep`);
+      }
+    }
+
+    if (points.length === 0) return;
+
+    // Coordinates mapping
+    const paddingLeft = 36;
+    const paddingRight = 18;
+    const paddingTop = 20;
+    const paddingBottom = 26;
+
+    const chartWidth = width - paddingLeft - paddingRight;
+    const chartHeight = height - paddingTop - paddingBottom;
+
+    const minVal = Math.min(...points) * 0.985;
+    const maxVal = Math.max(...points) * 1.015;
+    const valRange = (maxVal - minVal) || 1;
+
+    const getX = (index) => paddingLeft + (index / (points.length - 1)) * chartWidth;
+    const getY = (val) => paddingTop + chartHeight - ((val - minVal) / valRange) * chartHeight;
+
+    // Draw horizontal dashed grid lines
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.setLineDash([4, 4]);
+
+    for (let i = 0; i <= 3; i++) {
+      const y = paddingTop + (chartHeight / 3) * i;
+      ctx.beginPath();
+      ctx.moveTo(paddingLeft, y);
+      ctx.lineTo(width - paddingRight, y);
+      ctx.stroke();
+
+      // Axis labels (approximate IDR values)
+      const valAtY = maxVal - (valRange / 3) * i;
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '8.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const labelText = (valAtY >= 1000000) ? (valAtY / 1000000).toFixed(1) + 'M' : (valAtY / 1000).toFixed(0) + 'K';
+      ctx.fillText(labelText, paddingLeft - 4, y);
+    }
+    ctx.setLineDash([]); // Reset dash
+
+    // Draw Smooth Bezier Curve Path
+    ctx.beginPath();
+    ctx.moveTo(getX(0), getY(points[0]));
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const x0 = getX(i);
+      const y0 = getY(points[i]);
+      const x1 = getX(i + 1);
+      const y1 = getY(points[i + 1]);
+
+      const cx = (x0 + x1) / 2;
+      ctx.bezierCurveTo(cx, y0, cx, y1, x1, y1);
+    }
+
+    // Fill Gradient under curve
+    const gradient = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + chartHeight);
+    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.28)');
+    gradient.addColorStop(0.7, 'rgba(16, 185, 129, 0.05)');
+    gradient.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+
+    ctx.save();
+    ctx.lineTo(getX(points.length - 1), paddingTop + chartHeight);
+    ctx.lineTo(getX(0), paddingTop + chartHeight);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    ctx.restore();
+
+    // Stroke the curve line
+    ctx.beginPath();
+    ctx.moveTo(getX(0), getY(points[0]));
+    for (let i = 0; i < points.length - 1; i++) {
+      const x0 = getX(i);
+      const y0 = getY(points[i]);
+      const x1 = getX(i + 1);
+      const y1 = getY(points[i + 1]);
+      const cx = (x0 + x1) / 2;
+      ctx.bezierCurveTo(cx, y0, cx, y1, x1, y1);
+    }
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Draw Data Point Circles
+    points.forEach((val, i) => {
+      const x = getX(i);
+      const y = getY(val);
+      const isLast = i === points.length - 1;
+
+      // Glow circle for last point
+      if (isLast) {
+        ctx.beginPath();
+        ctx.arc(x, y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = isLossToday ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.25)';
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(x, y, isLast ? 4 : 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = isLast && isLossToday ? '#EF4444' : (isLast ? '#10B981' : '#FFFFFF');
+      ctx.strokeStyle = isLast && isLossToday ? '#B91C1C' : '#10B981';
+      ctx.lineWidth = 1.8;
+      ctx.fill();
+      ctx.stroke();
+
+      // Date labels on X-axis (sample 4 labels)
+      if (i === 0 || i === Math.floor(points.length / 2) || isLast) {
+        ctx.fillStyle = isLast ? '#0F172A' : '#94A3B8';
+        ctx.font = isLast ? 'bold 8.5px "Plus Jakarta Sans", sans-serif' : '8px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(isLast ? 'Hari Ini' : (dates[i] || ''), x, paddingTop + chartHeight + 14);
+      }
+    });
   },
 
   // 3. Tier Carousel (Learn, Rookie, Sophomore, VIP)
@@ -1509,6 +1834,38 @@ const App = {
     const totalTurnEl = document.getElementById('affTotalTurnover');
     if (totalTurnEl) totalTurnEl.textContent = DB.formatIDR(downlines.totalTeamTurnover);
 
+    // Update dynamic affiliate commission & rabat level descriptions (Requirement 1)
+    const db = DB.get();
+    const cfg = db.settings || {};
+    const sponsorPct = cfg.sponsorBonusPercent !== undefined ? cfg.sponsorBonusPercent : 10;
+    const rabatLevels = cfg.rabatLevels || [];
+    const r1 = rabatLevels.find(l => l.level === 1);
+    const r2 = rabatLevels.find(l => l.level === 2);
+    const r3 = rabatLevels.find(l => l.level === 3);
+    const r1Pct = r1 ? r1.percent : 5;
+    const r2Pct = r2 ? r2.percent : 3;
+    const r3Pct = r3 ? r3.percent : 1.5;
+
+    const affDescEl = document.getElementById('affiliateMainDesc');
+    if (affDescEl) {
+      affDescEl.innerHTML = `Dapatkan <strong>Bonus Sponsor Langsung ${sponsorPct}%</strong> dan <strong>Bonus Rabat Matching Profit hingga 3 Level (L1: ${r1Pct}%, L2: ${r2Pct}%, L3: ${r3Pct}%)</strong> dari setiap transaksi tim Anda.`;
+    }
+
+    const affL1Sub = document.getElementById('affL1SubTitle');
+    if (affL1Sub) {
+      affL1Sub.innerHTML = `<span id="affL1Count">${downlines.level1.length}</span> Member (Sponsor ${sponsorPct}% + Rabat ${r1Pct}%)`;
+    }
+
+    const affL2Sub = document.getElementById('affL2SubTitle');
+    if (affL2Sub) {
+      affL2Sub.innerHTML = `<span id="affL2Count">${downlines.level2.length}</span> Member (Rabat ${r2Pct}%)`;
+    }
+
+    const affL3Sub = document.getElementById('affL3SubTitle');
+    if (affL3Sub) {
+      affL3Sub.innerHTML = `<span id="affL3Count">${downlines.level3.length}</span> Member (Rabat ${r3Pct}%)`;
+    }
+
     // Render list by active filter
     this.renderDownlineList(this.activeDownlineFilter || 'all');
   },
@@ -2659,16 +3016,34 @@ const App = {
     const email = document.getElementById('regEmail') ? document.getElementById('regEmail').value.trim() : '';
     const phone = document.getElementById('regPhone') ? document.getElementById('regPhone').value.trim() : '';
     const password = document.getElementById('regPassword') ? document.getElementById('regPassword').value : '';
+    const confirmPassword = document.getElementById('regConfirmPassword') ? document.getElementById('regConfirmPassword').value : '';
     const referralCode = document.getElementById('regReferral') ? document.getElementById('regReferral').value.trim() : '';
 
-    const res = Auth.register({ username, fullName, email, phone, password, referralCode });
+    const res = Auth.register({ username, fullName, email, phone, password, confirmPassword, referralCode });
     if (res.success) {
       this.closeAllModals();
       if (riskCheckbox) riskCheckbox.checked = false;
+      // Clear inputs
+      ['regUsername', 'regFullName', 'regEmail', 'regPhone', 'regPassword', 'regConfirmPassword', 'regReferral'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
       this.showToast(res.message, 'success');
       this.renderAll();
     } else {
       this.showToast(res.message, 'error');
+    }
+  },
+
+  togglePasswordVisibility(inputId, btnEl) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    if (btnEl) {
+      btnEl.innerHTML = isPassword
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
     }
   },
 
@@ -3341,6 +3716,15 @@ const App = {
 
   // Profit percentage info toast/modal helper
   showTodayProfitDetails() {
+    const db = DB.get();
+    const isLossMode = db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
+    const lossMsg = (db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.message) || 'Hari ini dividen profit 0% (Mode Loss). Proteksi modal aktif.';
+
+    if (isLossMode) {
+      this.showToast(`🛡️ Mode Loss / 0% Aktif: ${lossMsg}`, 'info');
+      return;
+    }
+
     const user = Auth.getCurrentUser();
     if (!user) {
       this.showToast('Silakan login untuk melihat persentase profit harian paket investasi Anda.', 'info');

@@ -453,6 +453,45 @@ export const Admin = {
     };
   },
 
+  // Today Profit / Loss Mode (Requirement 4: ON/OFF Loss 0% Hari Ini)
+  getTodayProfitMode() {
+    const db = DB.get();
+    return db.settings.todayProfitLossMode || {
+      isLoss: false,
+      message: 'Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.'
+    };
+  },
+
+  saveTodayProfitMode({ isLoss, message }) {
+    const db = DB.get();
+    const lossVal = isLoss === true || isLoss === 'true';
+    db.settings.todayProfitLossMode = {
+      isLoss: lossVal,
+      message: message ? message.trim() : 'Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.',
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update today's entry in weeklyProfitHistory
+    if (Array.isArray(db.settings.weeklyProfitHistory) && db.settings.weeklyProfitHistory.length > 0) {
+      const todayEntry = db.settings.weeklyProfitHistory[db.settings.weeklyProfitHistory.length - 1];
+      if (todayEntry) {
+        todayEntry.isLoss = lossVal;
+        if (lossVal) {
+          todayEntry.rate = 0.0;
+        } else if (todayEntry.rate === 0) {
+          todayEntry.rate = 1.10;
+        }
+      }
+    }
+
+    DB.save(db);
+    return {
+      success: true,
+      isLoss: lossVal,
+      message: `Status Profit Hari Ini berhasil disimpan: ${lossVal ? '🔴 MODE LOSS / 0% DIAKTIFKAN (Member mendapat 0% hari ini)' : '🟢 NORMAL PROFIT ON (Dividen berjalan normal)'}`
+    };
+  },
+
   // Trigger Daily Profit Yield manually from Admin
   triggerProfitYield(force = false) {
     return Plans.yieldDailyProfits(force);
