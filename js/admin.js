@@ -549,6 +549,47 @@ export const Admin = {
   // Admin Toggle Block / Unblock User
   toggleBlockUser(userId, reason = '') {
     return DB.toggleBlockUser(userId, reason);
+  },
+
+  // --------------------------------------------------------------------------
+  // EMAIL & OTP SETTINGS (ADMIN CONFIGURATION)
+  // --------------------------------------------------------------------------
+  getEmailSettings() {
+    const db = DB.get();
+    return db.settings.email || {
+      verificationRequired: false,
+      adminNotificationOnRegister: true,
+      adminNotificationEmail: 'admin@fgtpro-investasi.com',
+      welcomeEmailEnabled: true,
+      mailMethod: 'cpanel',
+      smtp: {
+        host: 'mail.fgtpro-investasi.com',
+        port: 465,
+        secure: 'ssl',
+        user: 'noreply@fgtpro-investasi.com',
+        pass: '',
+        fromName: 'FGT Pro Investment Official',
+        fromEmail: 'noreply@fgtpro-investasi.com'
+      }
+    };
+  },
+
+  saveEmailSettings(emailConfig) {
+    const db = DB.get();
+    db.settings.email = {
+      ...(db.settings.email || {}),
+      ...emailConfig
+    };
+    DB.save(db);
+    return { success: true, message: 'Konfigurasi Email & Sistem OTP Pendaftaran berhasil disimpan!' };
+  },
+
+  async sendTestEmail(targetEmail) {
+    return await DB.dispatchMailApi('test', { targetEmail });
+  },
+
+  manuallyVerifyUser(userId) {
+    return DB.adminVerifyUserEmail(userId);
   }
 };
 

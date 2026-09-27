@@ -167,6 +167,15 @@
           <span>Kelola Pengguna</span>
         </button>
       </nav>
+
+      <div class="sidebar-group-title">SISTEM & PENGATURAN</div>
+      <nav class="sidebar-menu">
+        <button class="admin-nav-btn" data-tab="email_settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          <span>Konfigurasi Email & OTP</span>
+          <span class="admin-nav-badge" id="badgeEmailStatus" style="background: #10B981;">cPanel</span>
+        </button>
+      </nav>
     </div>
 
     <!-- Sidebar Footer Quick Actions -->
@@ -1057,6 +1066,189 @@
             <tbody id="testimonialsTableBody"></tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         14. PANEL KONFIGURASI EMAIL, NOTIFIKASI & VERIFIKASI OTP
+         ==================================================================== -->
+    <section id="pane-email_settings" class="admin-view-panel">
+      <!-- Card 1: Saklar Kontrol Verifikasi & Notifikasi -->
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📧 Kontrol Verifikasi Email Pendaftaran & Notifikasi</h3>
+            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Atur kewajiban verifikasi kode OTP 6-digit saat member baru mendaftar dan alert email ke administrator.</p>
+          </div>
+          <span class="badge-status approved" id="emailStatusBadgeHeader" style="background: rgba(34, 197, 94, 0.15); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 12px; padding: 4px 10px;">🟢 Siap Digunakan</span>
+        </div>
+
+        <!-- Setting: Wajib Verifikasi Email (OTP) -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title" style="display: flex; align-items: center; gap: 8px;">
+              <span>Wajib Verifikasi Email Pendaftaran (OTP 6-Digit)</span>
+              <span id="emailVerifyBadge" class="badge-status" style="font-size: 10px;">-</span>
+            </div>
+            <div class="setting-desc">Jika AKTIF, member baru wajib memasukkan 6 digit kode OTP yang dikirimkan ke email untuk mengaktifkan akun. Jika NONAKTIF, member langsung aktif tanpa kode.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <select class="admin-input" id="emailCfgVerificationRequired" onchange="AdminPage.previewEmailBadge()">
+              <option value="false">⚪ NONAKTIF (Langsung Aktif Tanpa OTP)</option>
+              <option value="true">🟢 AKTIF (Wajib Verifikasi Kode OTP 6-Digit)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Setting: Notifikasi Email ke Admin -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Notifikasi Email ke Admin saat Member Baru Daftar</div>
+            <div class="setting-desc">Kirim email ringkasan data member (Username, Nama, WA, Sponsor) secara otomatis ke email Administrator saat ada pendaftaran baru.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <select class="admin-input" id="emailCfgAdminNotification">
+              <option value="true">🟢 AKTIF (Kirim Email ke Admin)</option>
+              <option value="false">🔴 NONAKTIF (Tanpa Notifikasi)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Setting: Alamat Email Admin -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Alamat Email Penerima Notifikasi Admin</div>
+            <div class="setting-desc">Alamat email yang akan menerima laporan pendaftaran member baru.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <input type="email" class="admin-input" id="emailCfgAdminEmail" placeholder="admin@domain.com">
+          </div>
+        </div>
+
+        <!-- Setting: Welcome Email -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Email Sambutan (Welcome Email) ke Member</div>
+            <div class="setting-desc">Kirim email ucapan selamat datang resmi FGT Pro ke inbox member setelah akun aktif.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <select class="admin-input" id="emailCfgWelcomeEmail">
+              <option value="true">🟢 AKTIF (Kirim Welcome Email)</option>
+              <option value="false">🔴 NONAKTIF (Jangan Kirim)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Pengaturan Server Pengirim Email (cPanel Mailer / SMTP) -->
+      <div class="admin-card" style="margin-top: 24px;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">⚙️ Konfigurasi Server Pengirim Email (SMTP / cPanel Mailer)</h3>
+            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Pilih metode pengiriman email bawaan hosting cPanel (PHP mail) atau server SMTP eksternal kustom.</p>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Metode Pengiriman Email</div>
+            <div class="setting-desc">Gunakan PHP mail() untuk hosting cPanel (otomatis & tanpa setup port) atau SMTP Server jika menggunakan Google Workspace / Titan Mail / Mailgun.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <select class="admin-input" id="emailCfgMethod" onchange="AdminPage.toggleSmtpFields()">
+              <option value="cpanel">🚀 PHP mail() Standar cPanel (Direkomendasikan - Tanpa Password)</option>
+              <option value="smtp">🌐 Custom SMTP Server (Host, Port & Autentikasi Sandi)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Nama Pengirim Resmi (Sender Name)</div>
+            <div class="setting-desc">Nama institusi/aplikasi yang tertera di kotak masuk email penerima.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <input type="text" class="admin-input" id="emailCfgFromName" placeholder="FGT Pro Investment Official">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Alamat Email Pengirim (From Email)</div>
+            <div class="setting-desc">Alamat email pengirim (sebaiknya gunakan domain yang sama dengan hosting, misal: noreply@domainanda.com).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <input type="email" class="admin-input" id="emailCfgFromEmail" placeholder="noreply@fgtpro-investasi.com">
+          </div>
+        </div>
+
+        <!-- SMTP Detail Fields (Hidden if cpanel mode) -->
+        <div id="smtpFieldsWrap" style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 16px; margin: 16px 0;">
+          <div style="font-size: 12px; font-weight: 700; color: #E5A83B; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <span>🌐 Parameter Server SMTP:</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div>
+              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Host Server SMTP:</label>
+              <input type="text" class="admin-input" id="emailCfgSmtpHost" placeholder="mail.domainanda.com / smtp.gmail.com">
+            </div>
+            <div>
+              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Port SMTP:</label>
+              <input type="number" class="admin-input" id="emailCfgSmtpPort" placeholder="465">
+            </div>
+            <div>
+              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Enkripsi:</label>
+              <select class="admin-input" id="emailCfgSmtpSecure">
+                <option value="ssl">SSL (Port 465)</option>
+                <option value="tls">TLS (Port 587)</option>
+                <option value="none">Tanpa Enkripsi (25)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Username / Akun Email SMTP:</label>
+              <input type="text" class="admin-input" id="emailCfgSmtpUser" placeholder="noreply@domainanda.com">
+            </div>
+            <div>
+              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Password / App Password:</label>
+              <input type="password" class="admin-input" id="emailCfgSmtpPass" placeholder="••••••••">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 18px;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.saveEmailSettings()">
+            <span>💾 Simpan Semua Pengaturan Email</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 3: Uji Coba Pengiriman Email (Live Test Mail) -->
+      <div class="admin-card" style="margin-top: 24px; border-left: 4px solid #3B82F6;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🧪 Uji Coba Pengiriman Email (Live Test Dispatch)</h3>
+            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Kirim pesan uji coba langsung ke email pribadi Anda untuk memastikan server cPanel dan email dapat menerima pesan dengan baik.</p>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Alamat Email Tujuan Pengujian</div>
+            <div class="setting-desc">Masukkan alamat email aktif Anda untuk menerima email uji coba resmi FGT Pro.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px; display: flex; gap: 8px;">
+            <input type="email" class="admin-input" id="emailTestTargetInput" placeholder="emailanda@gmail.com" style="flex: 1;">
+            <button class="admin-btn-action-primary" id="btnSendTestEmail" style="white-space: nowrap; padding: 8px 14px; font-size: 12px;" onclick="AdminPage.sendTestEmail()">
+              <span>✉️ Kirim Tes</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="emailTestResultBox" style="display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; font-size: 12px; line-height: 1.5;"></div>
       </div>
     </section>
 

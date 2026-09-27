@@ -3002,6 +3002,12 @@ const App = {
         this.renderAll();
       }
     } else {
+      if (res.requiresVerification && res.user) {
+        this.closeModal('authModal');
+        this.openEmailVerificationModal(res.user);
+        this.showToast(res.message, 'info');
+        return;
+      }
       if (res.isBlocked) {
         alert(res.message);
       }
@@ -3027,15 +3033,102 @@ const App = {
 
     const res = Auth.register({ username, fullName, email, phone, password, confirmPassword, referralCode });
     if (res.success) {
-      this.closeAllModals();
       if (riskCheckbox) riskCheckbox.checked = false;
       // Clear inputs
       ['regUsername', 'regFullName', 'regEmail', 'regPhone', 'regPassword', 'regConfirmPassword', 'regReferral'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
+
+      if (res.requiresVerification) {
+        this.closeModal('authModal');
+        this.openEmailVerificationModal(res.user, res.otpCode);
+        this.showToast(res.message, 'info');
+      } else {
+        this.closeAllModals();
+        this.showToast(res.message, 'success');
+        this.renderAll();
+      }
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  // Email OTP Registration Verification Handlers
+  openEmailVerificationModal(user, hintOtp = null) {
+    if (!user) return;
+    const idEl = document.getElementById('emailOtpUserId');
+    const emailEl = document.getElementById('emailOtpUserEmail');
+    const targetBadge = document.getElementById('emailOtpTargetBadge');
+    const otpInput = document.getElementById('emailOtpInput');
+
+    if (idEl) idEl.value = user.id;
+    if (emailEl) emailEl.value = user.email;
+    if (targetBadge) targetBadge.textContent = user.email;
+    if (otpInput) {
+      otpInput.value = '';
+      setTimeout(() => otpInput.focus(), 250);
+    }
+
+    this.startOtpResendTimer(60);
+    this.openModal('emailOtpModal');
+  },
+
+  startOtpResendTimer(seconds = 60) {
+    if (this._otpTimer) clearInterval(this._otpTimer);
+    let remaining = seconds;
+    const btn = document.getElementById('btnResendEmailOtp');
+    const cdEl = document.getElementById('resendOtpCountdown');
+    if (btn) btn.disabled = true;
+
+    this._otpTimer = setInterval(() => {
+      remaining--;
+      if (cdEl) cdEl.textContent = remaining;
+      if (remaining <= 0) {
+        clearInterval(this._otpTimer);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = 'Kirim Ulang Kode OTP';
+        }
+      }
+    }, 1000);
+  },
+
+  submitEmailVerificationOtp() {
+    const userId = document.getElementById('emailOtpUserId') ? document.getElementById('emailOtpUserId').value : '';
+    const code = document.getElementById('emailOtpInput') ? document.getElementById('emailOtpInput').value.trim() : '';
+
+    if (!code || code.length < 6) {
+      this.showToast('Harap masukkan 6 digit kode OTP verifikasi email!', 'error');
+      const input = document.getElementById('emailOtpInput');
+      if (input) input.focus();
+      return;
+    }
+
+    const res = Auth.verifyRegistrationOtp(userId, code);
+    if (res.success) {
+      if (this._otpTimer) clearInterval(this._otpTimer);
+      this.closeModal('emailOtpModal');
       this.showToast(res.message, 'success');
       this.renderAll();
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
+  resendEmailOtp() {
+    const userId = document.getElementById('emailOtpUserId') ? document.getElementById('emailOtpUserId').value : '';
+    if (!userId) return;
+
+    const res = Auth.resendRegistrationOtp(userId);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.startOtpResendTimer(60);
+      const input = document.getElementById('emailOtpInput');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
     } else {
       this.showToast(res.message, 'error');
     }

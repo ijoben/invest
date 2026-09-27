@@ -2375,6 +2375,49 @@
     </div>
   </div>
 
+  <!-- ======================================================================
+       MODAL: VERIFIKASI EMAIL PENDAFTARAN (OTP 6 DIGIT)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="emailOtpModal">
+    <div class="modal-sheet" style="max-width: 440px;">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🔐 Verifikasi Email Pendaftaran</h3>
+          <p class="modal-subtitle">Aktivasi akun investasi FGT Pro Anda</p>
+        </div>
+        <button class="modal-close-btn" onclick="App.closeModal('emailOtpModal')">&times;</button>
+      </div>
+
+      <div style="background: rgba(200, 147, 56, 0.08); border: 1px solid rgba(200, 147, 56, 0.25); border-radius: 12px; padding: 14px; margin-bottom: 16px; text-align: center;">
+        <div style="font-size: 11.5px; color: #64748B; margin-bottom: 4px;">Kode OTP 6-Digit telah dikirimkan ke:</div>
+        <div id="emailOtpTargetBadge" style="font-size: 14px; font-weight: 800; color: #C89338; word-break: break-all;">member@email.com</div>
+        <div style="font-size: 10.5px; color: #94A3B8; margin-top: 6px;">Periksa folder <strong>Kotak Masuk (Inbox)</strong> atau <strong>Spam</strong> email Anda.</div>
+      </div>
+
+      <input type="hidden" id="emailOtpUserId">
+      <input type="hidden" id="emailOtpUserEmail">
+
+      <div class="form-group" style="text-align: center;">
+        <label class="form-label" style="text-align: center; margin-bottom: 8px;">Masukkan 6-Digit Kode OTP</label>
+        <input type="text" class="form-input" id="emailOtpInput" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="text-align: center; font-size: 24px; font-weight: 800; letter-spacing: 8px; font-family: var(--font-mono, monospace); padding: 12px; border: 2px solid #C89338; border-radius: 12px; max-width: 260px; margin: 0 auto; display: block;">
+      </div>
+
+      <button class="btn-cta-gold" id="btnVerifyEmailOtp" style="width: 100%; padding: 13px; font-size: 14px; font-weight: 700; justify-content: center; margin-top: 14px;" onclick="App.submitEmailVerificationOtp()">
+        <span>✓ Verifikasi & Aktifkan Akun</span>
+      </button>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12px; color: #64748B;">
+        <button type="button" id="btnResendEmailOtp" onclick="App.resendEmailOtp()" style="background: none; border: none; color: #C89338; font-weight: 700; cursor: pointer; padding: 0;">
+          Kirim Ulang Kode (<span id="resendOtpCountdown">60</span>s)
+        </button>
+        <a href="javascript:void(0)" onclick="App.closeModal('emailOtpModal'); App.openModal('authModal');" style="color: #94A3B8; text-decoration: none;">
+          Batalkan
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 

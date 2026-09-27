@@ -15,6 +15,22 @@ export const AdminPage = {
   currentTab: 'dashboard',
   userFilter: 'all',
   userSearchQuery: '',
+  tabTitles: {
+    dashboard: 'Dashboard Overview',
+    deposits: 'Konfirmasi Deposit',
+    withdrawals: 'Konfirmasi Penarikan',
+    redemptions: 'Konfirmasi Penukaran',
+    gateways: 'Gateway & Rekening',
+    plans: 'Plan Investasi & Profit',
+    rewards: 'Katalog Hadiah Point',
+    affiliate: 'Sponsor & Komisi Rabat',
+    signals: 'Sinyal Prof GPT',
+    announcements: 'Teks Berjalan',
+    banners: 'Banner Slider Carousel',
+    testimonials: 'Kelola Testimoni User',
+    users: 'Manajemen Pengguna',
+    email_settings: 'Konfigurasi Email & OTP'
+  },
 
   init() {
     this.bindEvents();
@@ -184,6 +200,9 @@ export const AdminPage = {
 
     // 13. Testimonials Table
     this.renderTestimonials(db);
+
+    // 14. Email & OTP Verification Configuration
+    this.renderEmailSettings(db);
   },
 
   // 2. Deposit Table
@@ -628,6 +647,191 @@ export const AdminPage = {
     if (apkSizeEl) apkSizeEl.value = apk.size || '';
   },
 
+  // 6.2 Email & OTP Configuration
+  renderEmailSettings(db) {
+    const emailCfg = (db && db.settings && db.settings.email) || Admin.getEmailSettings();
+
+    const vReqEl = document.getElementById('emailCfgVerificationRequired');
+    if (vReqEl) vReqEl.value = String(!!emailCfg.verificationRequired);
+
+    const aNotifEl = document.getElementById('emailCfgAdminNotification');
+    if (aNotifEl) aNotifEl.value = String(emailCfg.adminNotificationOnRegister !== false);
+
+    const aEmailEl = document.getElementById('emailCfgAdminEmail');
+    if (aEmailEl) aEmailEl.value = emailCfg.adminNotificationEmail || 'admin@fgtpro-investasi.com';
+
+    const wEmailEl = document.getElementById('emailCfgWelcomeEmail');
+    if (wEmailEl) wEmailEl.value = String(emailCfg.welcomeEmailEnabled !== false);
+
+    const mMethodEl = document.getElementById('emailCfgMethod');
+    if (mMethodEl) mMethodEl.value = emailCfg.mailMethod || 'cpanel';
+
+    const fNameEl = document.getElementById('emailCfgFromName');
+    if (fNameEl) fNameEl.value = (emailCfg.smtp && emailCfg.smtp.fromName) || 'FGT Pro Investment Official';
+
+    const fEmailEl = document.getElementById('emailCfgFromEmail');
+    if (fEmailEl) fEmailEl.value = (emailCfg.smtp && emailCfg.smtp.fromEmail) || 'noreply@fgtpro-investasi.com';
+
+    // SMTP specifics
+    const smtp = emailCfg.smtp || {};
+    const sHostEl = document.getElementById('emailCfgSmtpHost');
+    if (sHostEl) sHostEl.value = smtp.host || 'mail.fgtpro-investasi.com';
+
+    const sPortEl = document.getElementById('emailCfgSmtpPort');
+    if (sPortEl) sPortEl.value = smtp.port || 465;
+
+    const sSecEl = document.getElementById('emailCfgSmtpSecure');
+    if (sSecEl) sSecEl.value = smtp.secure || 'ssl';
+
+    const sUserEl = document.getElementById('emailCfgSmtpUser');
+    if (sUserEl) sUserEl.value = smtp.user || '';
+
+    const sPassEl = document.getElementById('emailCfgSmtpPass');
+    if (sPassEl) sPassEl.value = smtp.pass || '';
+
+    this.previewEmailBadge();
+    this.toggleSmtpFields();
+  },
+
+  previewEmailBadge() {
+    const vReqEl = document.getElementById('emailCfgVerificationRequired');
+    const badgeEl = document.getElementById('emailVerifyBadge');
+    if (!vReqEl || !badgeEl) return;
+
+    const isReq = vReqEl.value === 'true';
+    if (isReq) {
+      badgeEl.textContent = '🟢 Wajib OTP 6-Digit';
+      badgeEl.style.background = 'rgba(34, 197, 94, 0.15)';
+      badgeEl.style.color = '#22C55E';
+      badgeEl.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+    } else {
+      badgeEl.textContent = '⚪ Langsung Aktif (Tanpa OTP)';
+      badgeEl.style.background = 'rgba(148, 163, 184, 0.15)';
+      badgeEl.style.color = '#94A3B8';
+      badgeEl.style.border = '1px solid rgba(148, 163, 184, 0.3)';
+    }
+  },
+
+  toggleSmtpFields() {
+    const methodEl = document.getElementById('emailCfgMethod');
+    const smtpWrap = document.getElementById('smtpFieldsWrap');
+    const badgeStatus = document.getElementById('badgeEmailStatus');
+    if (!methodEl) return;
+
+    const isSmtp = methodEl.value === 'smtp';
+    if (smtpWrap) smtpWrap.style.display = isSmtp ? 'block' : 'none';
+    if (badgeStatus) {
+      badgeStatus.textContent = isSmtp ? 'SMTP' : 'cPanel';
+      badgeStatus.style.background = isSmtp ? '#3B82F6' : '#10B981';
+    }
+  },
+
+  saveEmailSettings() {
+    const verificationRequired = document.getElementById('emailCfgVerificationRequired').value === 'true';
+    const adminNotificationOnRegister = document.getElementById('emailCfgAdminNotification').value === 'true';
+    const adminNotificationEmail = document.getElementById('emailCfgAdminEmail').value.trim();
+    const welcomeEmailEnabled = document.getElementById('emailCfgWelcomeEmail').value === 'true';
+    const mailMethod = document.getElementById('emailCfgMethod').value;
+    const fromName = document.getElementById('emailCfgFromName').value.trim();
+    const fromEmail = document.getElementById('emailCfgFromEmail').value.trim();
+
+    const host = document.getElementById('emailCfgSmtpHost').value.trim();
+    const port = Number(document.getElementById('emailCfgSmtpPort').value) || 465;
+    const secure = document.getElementById('emailCfgSmtpSecure').value;
+    const user = document.getElementById('emailCfgSmtpUser').value.trim();
+    const pass = document.getElementById('emailCfgSmtpPass').value;
+
+    const newCfg = {
+      verificationRequired,
+      adminNotificationOnRegister,
+      adminNotificationEmail: adminNotificationEmail || 'admin@fgtpro-investasi.com',
+      welcomeEmailEnabled,
+      mailMethod,
+      smtp: {
+        host: host || 'mail.fgtpro-investasi.com',
+        port,
+        secure,
+        user,
+        pass,
+        fromName: fromName || 'FGT Pro Investment Official',
+        fromEmail: fromEmail || 'noreply@fgtpro-investasi.com'
+      }
+    };
+
+    const res = Admin.saveEmailSettings(newCfg);
+    this.showToast(res.message, 'success');
+    this.renderEmailSettings(DB.get());
+  },
+
+  async sendTestEmail() {
+    const input = document.getElementById('emailTestTargetInput');
+    const resultBox = document.getElementById('emailTestResultBox');
+    const btn = document.getElementById('btnSendTestEmail');
+    const targetEmail = input ? input.value.trim() : '';
+
+    if (!targetEmail) {
+      this.showToast('Harap masukkan alamat email tujuan uji coba!', 'error');
+      if (input) input.focus();
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>Mengirim...</span>';
+    }
+
+    if (resultBox) {
+      resultBox.style.display = 'block';
+      resultBox.style.background = '#1E293B';
+      resultBox.style.color = '#38BDF8';
+      resultBox.style.border = '1px solid #334155';
+      resultBox.textContent = `⏳ Sedang menghubungkan ke server email dan mengirim pesan uji coba ke ${targetEmail}...`;
+    }
+
+    try {
+      const res = await Admin.sendTestEmail(targetEmail);
+      if (resultBox) {
+        if (res.sent || res.success) {
+          resultBox.style.background = 'rgba(34, 197, 94, 0.12)';
+          resultBox.style.color = '#22C55E';
+          resultBox.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+          resultBox.innerHTML = `<strong>✅ Sukses Terkirim!</strong> ${res.message || 'Email uji coba berhasil dikirim. Periksa inbox dan spam email Anda.'}`;
+          this.showToast('Email tes berhasil dikirim!', 'success');
+        } else {
+          resultBox.style.background = 'rgba(239, 68, 68, 0.12)';
+          resultBox.style.color = '#EF4444';
+          resultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+          resultBox.innerHTML = `<strong>⚠️ Status:</strong> ${res.message || 'Gagal mengirim email tes. Periksa kembali konfigurasi SMTP / mail server di hosting cPanel.'}`;
+          this.showToast(res.message || 'Gagal mengirim email tes', 'error');
+        }
+      }
+    } catch (e) {
+      if (resultBox) {
+        resultBox.style.background = 'rgba(239, 68, 68, 0.12)';
+        resultBox.style.color = '#EF4444';
+        resultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+        resultBox.innerHTML = `<strong>⚠️ Error:</strong> ${e.message}`;
+      }
+      this.showToast('Gagal menghubungi server email: ' + e.message, 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✉️ Kirim Tes</span>';
+      }
+    }
+  },
+
+  adminVerifyUserFromList(userId, username) {
+    if (!confirm(`Verifikasi email dan aktifkan akun @${username} secara manual sekarang?`)) return;
+    const res = Admin.manuallyVerifyUser(userId);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      this.renderUsers(DB.get());
+    } else {
+      this.showToast(res.message, 'error');
+    }
+  },
+
   // 7. Users Table
   renderUsers(db) {
     const tbody = document.getElementById('usersTableBody');
@@ -679,6 +883,8 @@ export const AdminPage = {
         statusBadge = '<span class="badge-status approved" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; font-weight:800; font-size:10.5px;">👑 ADMIN</span>';
       } else if (isBlocked) {
         statusBadge = `<span class="badge-status blocked" style="background:#FEE2E2; color:#DC2626; border:1px solid #FCA5A5; font-weight:800; font-size:10.5px; cursor:help;" title="${u.blockedReason ? 'Alasan: ' + u.blockedReason : 'Akun Diblokir'}">🔴 DIBLOKIR</span>`;
+      } else if (u.isPendingVerification && !u.emailVerified) {
+        statusBadge = `<span class="badge-status pending" style="background:#FEF3C7; color:#B45309; border:1px solid #FCD34D; font-weight:800; font-size:10.5px;" title="Menunggu verifikasi kode OTP email">⏳ VERIFIKASI OTP</span>`;
       } else {
         statusBadge = '<span class="badge-status approved" style="background:#DCFCE7; color:#166534; border:1px solid #86EFAC; font-weight:800; font-size:10.5px;">🟢 AKTIF</span>';
       }
@@ -690,6 +896,11 @@ export const AdminPage = {
         } else {
           blockActionBtn = `<button class="btn-admin-action delete" onclick="AdminPage.confirmToggleBlock('${u.id}', '${u.username}', false)" style="background:#DC2626; color:#FFFFFF; border-color:#B91C1C; font-weight:700;" title="Blokir akses member ini">🚫 Blokir</button>`;
         }
+      }
+
+      let verifyActionBtn = '';
+      if (u.isPendingVerification && !u.emailVerified) {
+        verifyActionBtn = `<button class="btn-admin-action approve" onclick="AdminPage.adminVerifyUserFromList('${u.id}', '${escapeHtml(u.username)}')" style="background:#10B981; color:#FFFFFF; border-color:#059669; font-weight:700;" title="Verifikasi email akun ini secara manual">✓ Verif</button>`;
       }
 
       return `
@@ -704,6 +915,7 @@ export const AdminPage = {
           <td>${escapeHtml(u.referredBy || '-') }</td>
           <td>
             <div class="btn-action-group" style="justify-content: flex-start; gap: 4px; flex-wrap: nowrap;">
+              ${verifyActionBtn}
               <button class="btn-admin-action edit" onclick="AdminPage.openEditUserModal('${escapeHtml(u.id)}')" title="Kelola Saldo & Point">Saldo</button>
               <button class="btn-admin-action view" onclick="AdminPage.openMemberDetailModal('${escapeHtml(u.id)}')" style="background: #2563EB; color: #FFFFFF; border-color: #1D4ED8; font-weight: 700;" title="Buka Detail Profil & Bantuan Password">👤 Detail</button>
               ${blockActionBtn}

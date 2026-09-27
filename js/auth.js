@@ -79,6 +79,16 @@ export const Auth = {
       DB.updateUser(user.id, { failedLoginAttempts: 0, lockUntil: null });
     }
 
+    // Email verification check
+    if (user.isPendingVerification && !user.emailVerified) {
+      return {
+        success: false,
+        requiresVerification: true,
+        user,
+        message: 'Akun Anda belum aktif karena belum diverifikasi. Silakan masukkan kode OTP yang dikirimkan ke email Anda.'
+      };
+    }
+
     DB.setSession(user);
     return { success: true, user, message: `Selamat datang kembali, ${user.fullName || user.username}!` };
   },
@@ -185,6 +195,9 @@ export const Auth = {
     // Generate random referral code for new user
     const generatedRef = cleanUsername.substring(0, 4).toUpperCase() + Math.floor(100 + Math.random() * 900);
 
+    const db = DB.get();
+    const isVerifyRequired = !!(db.settings && db.settings.email && db.settings.email.verificationRequired);
+
     const newUser = DB.addUser({
       username: cleanUsername,
       fullName: cleanFullName || cleanUsername,
@@ -192,11 +205,63 @@ export const Auth = {
       phone: cleanPhone || '',
       password: cleanPassword,
       referralCode: generatedRef,
-      referredBy: uplineCode
+      referredBy: uplineCode,
+      emailVerified: !isVerifyRequired,
+      isPendingVerification: isVerifyRequired
     });
 
+    // Send admin notification alert if enabled
+    if (db.settings && db.settings.email && db.settings.email.adminNotificationOnRegister) {
+      DB.dispatchMailApi('admin_notification', {
+        user: {
+          username: newUser.username,
+          fullName: newUser.fullName,
+          email: newUser.email,
+          phone: newUser.phone,
+          referralCode: newUser.referralCode,
+          referredBy: newUser.referredBy
+        }
+      });
+    }
+
+    // If verification is required, send OTP to member email
+    if (isVerifyRequired) {
+      const otpData = DB.generateUserEmailOtp(newUser.id);
+      DB.dispatchMailApi('send_otp', {
+        email: newUser.email,
+        name: newUser.fullName || newUser.username,
+        code: otpData.code
+      });
+
+      return {
+        success: true,
+        requiresVerification: true,
+        user: newUser,
+        otpCode: otpData.code,
+        message: `Registrasi berhasil! Kode OTP 6-digit telah dikirimkan ke email ${newUser.email}. Silakan verifikasi untuk mengaktifkan akun.`
+      };
+    }
+
+    // Direct Login if verification is OFF
     DB.setSession(newUser);
-    return { success: true, user: newUser, message: 'Registrasi berhasil! Selamat bergabung di FGT Pro.' };
+    return { success: true, requiresVerification: false, user: newUser, message: 'Registrasi berhasil! Selamat bergabung di FGT Pro.' };
+  },
+
+  // Verify Registration OTP
+  verifyRegistrationOtp(identifier, code) {
+    return DB.verifyUserEmailOtp(identifier, code);
+  },
+
+  // Resend Registration OTP
+  resendRegistrationOtp(identifier) {
+    const res = DB.generateUserEmailOtp(identifier);
+    if (!res) return { success: false, message: 'Akun member tidak ditemukan.' };
+    DB.dispatchMailApi('send_otp', {
+      email: res.email,
+      name: res.fullName || res.username,
+      code: res.code
+    });
+    return { success: true, code: res.code, email: res.email, message: `Kode OTP baru telah dikirimkan ke email ${res.email}.` };
   },
 
   // Forgot Password Simulation

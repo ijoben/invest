@@ -35,6 +35,22 @@ const defaultDB = {
       updatedAt: '2026-09-18',
       enabled: true
     },
+    email: {
+      verificationRequired: false, // Default false: instant register without OTP. Admin can toggle to true to enforce 6-digit email OTP.
+      adminNotificationOnRegister: true, // Send alert to admin when a new user registers
+      adminNotificationEmail: 'admin@fgtpro-investasi.com',
+      welcomeEmailEnabled: true,
+      mailMethod: 'cpanel', // 'cpanel' (PHP mail) or 'smtp'
+      smtp: {
+        host: 'mail.fgtpro-investasi.com',
+        port: 465,
+        secure: 'ssl',
+        user: 'noreply@fgtpro-investasi.com',
+        pass: '',
+        fromName: 'FGT Pro Investment Official',
+        fromEmail: 'noreply@fgtpro-investasi.com'
+      }
+    },
     profitCycleDurationHours: 24, // Real 24-hour cycle
     autoProfitIntervalSeconds: 86400, // 24 hours in seconds
     weekendProfit: {
@@ -950,6 +966,9 @@ export const DB = {
         if (!parsed.settings.weeklyProfitHistory || !Array.isArray(parsed.settings.weeklyProfitHistory) || parsed.settings.weeklyProfitHistory.length === 0) {
           parsed.settings.weeklyProfitHistory = defaultDB.settings.weeklyProfitHistory;
         }
+        if (!parsed.settings.email) {
+          parsed.settings.email = defaultDB.settings.email;
+        }
       }
       if (!parsed.testimonials || !Array.isArray(parsed.testimonials) || parsed.testimonials.length === 0) {
         parsed.testimonials = defaultDB.testimonials;
@@ -1121,12 +1140,16 @@ export const DB = {
 
   addUser(userData) {
     const db = this.get();
+    const isVerifyRequired = !!(db.settings && db.settings.email && db.settings.email.verificationRequired);
     const newUser = {
       id: 'usr-' + Date.now(),
       walletBalance: 0,
       affiliateBalance: 0,
       points: 10, // welcome bonus points
       kycStatus: 'unverified',
+      emailVerified: !isVerifyRequired,
+      isPendingVerification: isVerifyRequired,
+      verificationOtp: null,
       registeredAt: new Date().toISOString(),
       role: 'user',
       isBlocked: false,
@@ -1384,6 +1407,116 @@ export const DB = {
         isBlocked: true,
         user,
         message: `Akun member ${user.username} (${user.fullName || 'Member'}) berhasil DIBLOKIR. Sesi aktif telah diputus dan akses login ditolak.`
+      };
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // EMAIL OTP & REGISTRATION VERIFICATION
+  // --------------------------------------------------------------------------
+  generateUserEmailOtp(userId) {
+    const db = this.get();
+    const user = db.users.find(u => u.id === userId || (u.email && u.email.toLowerCase() === String(userId).toLowerCase()) || (u.username && u.username.toLowerCase() === String(userId).toLowerCase()));
+    if (!user) return null;
+
+    // Generate secure 6-digit numeric OTP code
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    user.verificationOtp = {
+      code,
+      generatedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 mins validity
+      attempts: 0
+    };
+    user.emailVerified = false;
+    user.isPendingVerification = true;
+    this.save(db);
+    return { code, email: user.email, username: user.username, fullName: user.fullName || user.username };
+  },
+
+  verifyUserEmailOtp(identifier, code) {
+    const db = this.get();
+    const cleanId = String(identifier || '').trim().toLowerCase();
+    const cleanCode = String(code || '').trim();
+
+    if (!cleanId || !cleanCode) {
+      return { success: false, message: 'Harap masukkan kode OTP 6-digit verifikasi email!' };
+    }
+
+    const user = db.users.find(u => 
+      u.id === identifier || 
+      (u.email && u.email.toLowerCase() === cleanId) || 
+      (u.username && u.username.toLowerCase() === cleanId)
+    );
+
+    if (!user) {
+      return { success: false, message: 'Akun member tidak ditemukan.' };
+    }
+
+    if (user.emailVerified && !user.isPendingVerification) {
+      return { success: true, user, message: 'Akun ini sudah terverifikasi sebelumnya.' };
+    }
+
+    if (!user.verificationOtp || !user.verificationOtp.code) {
+      return { success: false, message: 'Kode OTP tidak ditemukan. Silakan minta kirim ulang kode baru.' };
+    }
+
+    // Check expiration
+    if (user.verificationOtp.expiresAt && new Date(user.verificationOtp.expiresAt) < new Date()) {
+      return { success: false, message: 'Kode OTP telah kedaluwarsa (lebih dari 15 menit). Silakan klik Kirim Ulang Kode.' };
+    }
+
+    if (user.verificationOtp.code !== cleanCode) {
+      user.verificationOtp.attempts = (user.verificationOtp.attempts || 0) + 1;
+      this.save(db);
+      return { success: false, message: 'Kode OTP salah. Silakan periksa kembali email Anda.' };
+    }
+
+    // Success! Verify and activate member
+    user.emailVerified = true;
+    user.isPendingVerification = false;
+    user.verificationOtp.verifiedAt = new Date().toISOString();
+    this.save(db);
+    this.setSession(user);
+
+    return { success: true, user, message: 'Selamat! Email akun Anda berhasil diverifikasi dan akun telah aktif.' };
+  },
+
+  adminVerifyUserEmail(userId) {
+    const db = this.get();
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User tidak ditemukan.' };
+
+    user.emailVerified = true;
+    user.isPendingVerification = false;
+    if (user.verificationOtp) {
+      user.verificationOtp.verifiedAt = new Date().toISOString();
+      user.verificationOtp.manuallyVerifiedByAdmin = true;
+    }
+    this.save(db);
+    return { success: true, user, message: `Akun @${user.username} berhasil diverifikasi secara manual oleh Admin!` };
+  },
+
+  async dispatchMailApi(action, payload) {
+    try {
+      const db = this.get();
+      const bodyData = {
+        action,
+        settings: db.settings,
+        ...payload
+      };
+
+      const res = await fetch('api/mail.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyData)
+      });
+      return await res.json();
+    } catch (e) {
+      // Graceful fallback for offline / mock testing
+      return {
+        success: true,
+        offlineSimulated: true,
+        message: 'Email dispatch diproses (mode offline/simulasi)'
       };
     }
   },

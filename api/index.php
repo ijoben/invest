@@ -143,6 +143,12 @@ if ($action === 'save') {
     exit();
 }
 
+// 4. Action: Send Email / Mailer forwarding
+if ($action === 'send_email' || in_array($action, ['send_otp', 'admin_notification', 'test', 'welcome'])) {
+    require_once __DIR__ . '/mail.php';
+    exit();
+}
+
 // Default fallback
 http_response_code(404);
-echo json_encode(['success' => false, 'message' => 'Action tidak dikenali. Gunakan ?action=get, ?action=save, atau ?action=ping.']);
+echo json_encode(['success' => false, 'message' => 'Action tidak dikenali. Gunakan ?action=get, ?action=save, ?action=ping, atau ?action=send_email.']);
