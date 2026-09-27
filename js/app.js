@@ -47,6 +47,9 @@ const App = {
     this.startProfitCountdownLoop();
     this.initAiTradingChart();
 
+    // Background sync with MySQL (if cPanel API is active)
+    DB.initCloudSync(() => this.renderAll());
+
     // Show quick welcome toast
     setTimeout(() => {
       if (!Auth.isLoggedIn()) {

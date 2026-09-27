@@ -20,6 +20,8 @@ export const AdminPage = {
     this.bindEvents();
     if (this.checkAdminAuth()) {
       this.renderAll();
+      // Background sync with MySQL (if cPanel API is active)
+      DB.initCloudSync(() => this.renderAll());
     }
   },
 

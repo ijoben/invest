@@ -1003,8 +1003,49 @@ export const DB = {
   save(data) {
     try {
       localStorage.setItem(DB_KEY, JSON.stringify(data));
+      // Asynchronously persist to MySQL if cPanel API is active
+      if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        this.syncToCloud(data);
+      }
     } catch (e) {
       console.error('Error saving DB to localStorage:', e);
+    }
+  },
+
+  // Asynchronous Cloud Sync Engine (cPanel MySQL via api/index.php)
+  async syncToCloud(data) {
+    try {
+      if (typeof window === 'undefined' || typeof window.fetch !== 'function') return;
+      await fetch('api/index.php?action=save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    } catch (e) {
+      // Offline / API not yet configured; silently fallback to local
+    }
+  },
+
+  async syncFromCloud() {
+    try {
+      if (typeof window === 'undefined' || typeof window.fetch !== 'function') return null;
+      const res = await fetch('api/index.php?action=get');
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        localStorage.setItem(DB_KEY, JSON.stringify(json.data));
+        return json.data;
+      }
+    } catch (e) {
+      // Offline / API not yet configured; silently fallback to local
+    }
+    return null;
+  },
+
+  async initCloudSync(callback) {
+    const data = await this.syncFromCloud();
+    if (data && typeof callback === 'function') {
+      callback(data);
     }
   },
 
