@@ -155,3 +155,69 @@
   }
 }
 
+/* ==========================================================================
+   MOBILE HEADER PERFECTION (Screens <= 480px and <= 380px)
+   ========================================================================== */
+@media (max-width: 480px) {
+  .top-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .header-user {
+    gap: 8px;
+  }
+  .user-avatar-badge {
+    width: 38px;
+    height: 38px;
+    font-size: 14px;
+  }
+  .greeting-user-name {
+    font-size: 13.5px;
+  }
+  .header-actions {
+    gap: 5px;
+  }
+  .header-btn {
+    width: 33px;
+    height: 33px;
+  }
+  .header-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .top-header {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .header-user {
+    gap: 7px;
+  }
+  .user-avatar-badge {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+  }
+  .greeting-user-name {
+    font-size: 12.5px;
+  }
+  .greeting-sponsor-text {
+    font-size: 8.5px;
+    max-width: 80px;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .header-btn {
+    width: 30px;
+    height: 30px;
+  }
+  .header-btn svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+

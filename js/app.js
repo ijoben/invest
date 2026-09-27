@@ -125,7 +125,7 @@ const App = {
     if (this.currentTab === 'markets') this.renderMarketsView();
   },
 
-  // 1. Header Rendering
+  // 1. Header Rendering (Optimized for Mobile Screens)
   renderHeader(user) {
     const greetingEl = document.getElementById('userGreetingText');
     const avatarEl = document.getElementById('userAvatarBadge');
@@ -133,23 +133,26 @@ const App = {
     if (user) {
       const activePlans = Plans.getUserInvestments(user.id);
       const isMemberActive = activePlans.length > 0;
-      const sponsorName = user.referredBy ? user.referredBy : 'Optional';
+      const sponsorName = user.referredBy ? user.referredBy : 'Opsional';
       const statusBadge = isMemberActive
-        ? `<span class="badge-member-active" style="padding: 1px 6px; font-size: 9px;">🟢 Member Aktif</span>`
-        : `<span class="badge-member-inactive" style="padding: 1px 6px; font-size: 9px;">⚪ Belum Aktif</span>`;
+        ? `<span class="badge-member-active-mini">🟢 Member Aktif</span>`
+        : `<span class="badge-member-inactive-mini">⚪ Belum Aktif</span>`;
 
       greetingEl.innerHTML = `
-        <div style="font-size: 13.5px; font-weight: 800; line-height: 1.2;">Hi <span class="user-name">${user.fullName || user.username}</span></div>
-        <div style="font-size: 9.5px; color: #64748B; margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+        <div class="greeting-user-name">Hi, <span class="user-name">${user.fullName || user.username}</span></div>
+        <div class="greeting-meta-row">
           ${statusBadge}
-          <span style="color: #94A3B8;">·</span>
-          <span style="color: #475569;">Sponsor: <strong>${sponsorName}</strong></span>
+          <span style="color: #94A3B8; font-size: 8px;">•</span>
+          <span class="greeting-sponsor-text">Sponsor: <strong>${sponsorName}</strong></span>
         </div>
       `;
       avatarEl.classList.add('logged-in');
       avatarEl.innerHTML = `<span>${(user.username || 'U')[0].toUpperCase()}</span><span class="online-dot"></span>`;
     } else {
-      greetingEl.innerHTML = `Hi guest,`;
+      greetingEl.innerHTML = `
+        <div class="greeting-guest-name">Hi guest,</div>
+        <div class="greeting-guest-sub">Klik untuk Masuk / Daftar</div>
+      `;
       avatarEl.classList.remove('logged-in');
       avatarEl.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
