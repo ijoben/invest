@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
 const FTP_CONFIG = {
-  host: '103.243.172.244', // Resolves from ftp.autotrading.my.id
+  host: '103.243.172.244',
   user: 'miningus@autotrading.my.id',
   password: 'Vxv;)W1n_^y%yv!M',
   port: 21,
@@ -17,12 +17,27 @@ const FTP_CONFIG = {
 const DEPLOY_ITEMS = [
   { type: 'file', local: 'index.html', remote: 'index.html' },
   { type: 'file', local: 'admin.html', remote: 'admin.html' },
-  { type: 'file', local: '.htaccess', remote: '.htaccess' },
+  { type: '.htaccess', local: '.htaccess', remote: '.htaccess' },
   { type: 'file', local: 'database.sql', remote: 'database.sql' },
+  { type: 'file', local: 'api/config.php', remote: 'api/config.php' },
+  { type: 'file', local: 'api/index.php', remote: 'api/index.php' },
+  { type: 'file', local: 'api/mail.php', remote: 'api/mail.php' },
+  { type: 'file', local: 'api/.htaccess', remote: 'api/.htaccess' },
   { type: 'dir', local: 'css', remote: 'css' },
-  { type: 'dir', local: 'js', remote: 'js' },
-  { type: 'dir', local: 'api', remote: 'api' }
+  { type: 'dir', local: 'js', remote: 'js' }
 ];
+
+async function withRetry(fn, retries = 3, delay = 1200) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === retries) throw err;
+      console.warn(`   (Warning: ${err.message}. Retrying in ${delay}ms... [Attempt ${i + 1}/${retries}])`);
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+}
 
 export async function deployToCpanel() {
   console.log('====================================================');
@@ -31,31 +46,42 @@ export async function deployToCpanel() {
   console.log('====================================================\n');
 
   const client = new ftp.Client();
-  client.ftp.verbose = false; // clean readable output
+  client.ftp.verbose = false;
+
+  async function connect() {
+    await client.access(FTP_CONFIG);
+  }
 
   try {
     console.log('1. Connecting to cPanel FTP...');
-    await client.access(FTP_CONFIG);
+    await withRetry(() => connect(), 3, 2000);
     console.log('   CONNECTED! Remote root directory verified.\n');
 
     console.log('2. Deploying website files to cPanel...');
     for (const item of DEPLOY_ITEMS) {
       const localPath = path.join(rootDir, item.local);
       if (!fs.existsSync(localPath)) {
-        console.warn(`   [SKIP] ${item.local} not found locally.`);
         continue;
       }
 
-      if (item.type === 'file') {
-        process.stdout.write(`   Uploading file: ${item.local} ... `);
-        await client.uploadFrom(localPath, item.remote);
-        console.log('OK');
-      } else if (item.type === 'dir') {
-        console.log(`   Syncing directory: ${item.local}/ -> ${item.remote}/`);
-        await client.ensureDir(item.remote);
-        await client.uploadFromDir(localPath, item.remote);
-        await client.cd('/'); // Return to root
-      }
+      await withRetry(async () => {
+        if (client.closed) await connect();
+        if (item.type === 'file' || item.type === '.htaccess') {
+          process.stdout.write(`   Uploading file: ${item.local} ... `);
+          const dir = path.dirname(item.remote);
+          if (dir && dir !== '.') {
+            await client.ensureDir(dir);
+            await client.cd('/');
+          }
+          await client.uploadFrom(localPath, item.remote);
+          console.log('OK');
+        } else if (item.type === 'dir') {
+          console.log(`   Syncing directory: ${item.local}/ -> ${item.remote}/`);
+          await client.ensureDir(item.remote);
+          await client.uploadFromDir(localPath, item.remote);
+          await client.cd('/');
+        }
+      }, 3, 2000);
     }
 
     console.log('\n3. Verifying remote deployment...');

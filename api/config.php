@@ -18,9 +18,9 @@ if (basename($_SERVER['PHP_SELF'] ?? '') === basename(__FILE__)) {
 
 // Database Credentials
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'fgt_pro_invest'); // Ganti dengan Nama Database cPanel Anda (misal: u1234567_invest)
-define('DB_USER', 'root');           // Ganti dengan Username Database cPanel Anda (misal: u1234567_admin)
-define('DB_PASS', '');               // Ganti dengan Password Database cPanel Anda
+define('DB_NAME', 'autotradingmy_good');
+define('DB_USER', 'autotradingmy_good');
+define('DB_PASS', 'hFQ}?Q^~M7jgl4vY');
 
 // CORS & Headers
 header('Access-Control-Allow-Origin: *');
