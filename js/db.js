@@ -1,9 +1,21 @@
 /**
- * FGT PRO - LOCAL STORAGE DATABASE & STATE MANAGEMENT ENGINE
- * Handles persistent data storage, mock database seeding, and reactive states.
+ * FGT PRO - REAL MYSQL STATE MANAGEMENT ENGINE
+ * Direct synchronization with phpMyAdmin / MySQL Database via cPanel REST API.
+ * Pure Cloud / phpMyAdmin Architecture - Browser localStorage completely purged.
  */
 
-const DB_KEY = 'FGT_PRO_DATABASE_V1';
+// Proactive legacy cleanup: remove any leftover localStorage data from past sessions
+if (typeof localStorage !== 'undefined') {
+  try {
+    localStorage.removeItem('FGT_PRO_DATABASE_V1');
+    localStorage.removeItem('FGT_PRO_DATABASE');
+  } catch (e) {
+    // Ignore sandbox errors
+  }
+}
+
+// In-Memory Live Database State (Synchronized directly with phpMyAdmin MySQL backend)
+let _activeDB = null;
 
 // Default initial state
 const defaultDB = {
@@ -904,12 +916,10 @@ defaultDB.testimonials = defaultTestimonials;
 export const DB = {
   get() {
     try {
-      const data = localStorage.getItem(DB_KEY);
-      if (!data) {
-        this.save(defaultDB);
-        return defaultDB;
+      if (!_activeDB) {
+        _activeDB = JSON.parse(JSON.stringify(defaultDB));
       }
-      const parsed = JSON.parse(data);
+      const parsed = _activeDB;
       if (!parsed.announcements) {
         parsed.announcements = defaultDB.announcements;
       }
@@ -1011,23 +1021,23 @@ export const DB = {
           if (!Array.isArray(u.blockHistory)) u.blockHistory = [];
         });
       }
-      this.save(parsed);
+      _activeDB = parsed;
       return parsed;
     } catch (e) {
-      console.error('Error loading DB from localStorage:', e);
+      console.error('Error loading DB state:', e);
       return defaultDB;
     }
   },
 
   save(data) {
     try {
-      localStorage.setItem(DB_KEY, JSON.stringify(data));
-      // Asynchronously persist to MySQL if cPanel API is active
+      _activeDB = data;
+      // Immediately sync with phpMyAdmin MySQL database
       if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
         this.syncToCloud(data);
       }
     } catch (e) {
-      console.error('Error saving DB to localStorage:', e);
+      console.error('Error saving DB state:', e);
     }
   },
 
@@ -1041,7 +1051,7 @@ export const DB = {
         body: JSON.stringify(data)
       });
     } catch (e) {
-      // Offline / API not yet configured; silently fallback to local
+      // Offline / API not yet configured; silently proceed with memory state
     }
   },
 
@@ -1052,11 +1062,11 @@ export const DB = {
       if (!res.ok) return null;
       const json = await res.json();
       if (json && json.success && json.data) {
-        localStorage.setItem(DB_KEY, JSON.stringify(json.data));
+        _activeDB = json.data;
         return json.data;
       }
     } catch (e) {
-      // Offline / API not yet configured; silently fallback to local
+      // Offline / API not yet configured; silently proceed with memory state
     }
     return null;
   },
@@ -1073,20 +1083,37 @@ export const DB = {
     return defaultDB;
   },
 
-  // Auth & Session
+  // Auth & Session (Session-scoped in memory / sessionStorage for active browser tab)
   getCurrentUser() {
     const db = this.get();
-    if (!db.currentSession) return null;
-    const user = db.users.find(u => u.id === db.currentSession.userId) || null;
+    let userId = null;
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        userId = sessionStorage.getItem('fgt_session_user_id');
+      } catch (e) {}
+    }
+    if (!userId && db.currentSession) {
+      userId = db.currentSession.userId;
+    }
+    if (!userId) return null;
+    const user = db.users.find(u => u.id === userId) || null;
     if (user && user.isBlocked) {
-      db.currentSession = null;
-      this.save(db);
+      this.clearSession();
       return null;
     }
     return user;
   },
 
   setSession(user) {
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        if (user && user.id) {
+          sessionStorage.setItem('fgt_session_user_id', user.id);
+        } else {
+          sessionStorage.removeItem('fgt_session_user_id');
+        }
+      } catch (e) {}
+    }
     const db = this.get();
     db.currentSession = user ? {
       userId: user.id,
@@ -1098,6 +1125,11 @@ export const DB = {
   },
 
   clearSession() {
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        sessionStorage.removeItem('fgt_session_user_id');
+      } catch (e) {}
+    }
     const db = this.get();
     db.currentSession = null;
     this.save(db);
@@ -1809,8 +1841,9 @@ export const DB = {
 
   // Reset database to default seed state
   reset() {
-    localStorage.removeItem(DB_KEY);
-    return this.get();
+    _activeDB = JSON.parse(JSON.stringify(defaultDB));
+    this.save(_activeDB);
+    return _activeDB;
   }
 };
 
