@@ -3800,26 +3800,6 @@ html, body {
   background: #DC2626;
 }
 
-.btn-sample-proof {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: #EFF6FF;
-  border: 1px solid #BFDBFE;
-  color: #2563EB;
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s;
-  margin-top: 6px;
-}
-
-.btn-sample-proof:hover {
-  background: #DBEAFE;
-}
-
 .deposit-proof-badge {
   display: inline-flex;
   align-items: center;
@@ -4648,4 +4628,84 @@ html, body {
   color: #DC2626;
   border: 1px solid #FCA5A5;
 }
+
+.badge-status-pill.neutral {
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #CBD5E1;
+}
+
+/* Weekend OFF styling (Sabtu & Minggu) */
+.weekly-day-card.weekend-off {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  opacity: 0.85;
+}
+
+.weekly-day-card.weekend-off .weekly-day-name {
+  color: #94A3B8;
+}
+
+.weekly-day-card.weekend-off .weekly-day-rate {
+  color: #94A3B8;
+  font-weight: 700;
+}
+
+.weekly-day-card.weekend-off .weekly-day-pill {
+  background: #E2E8F0;
+  color: #64748B;
+}
+
+/* Guest Locked State */
+.weekly-day-card.guest-locked {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+}
+
+.weekly-day-card.guest-locked .weekly-day-rate {
+  color: #94A3B8;
+  font-weight: 700;
+}
+
+.weekly-day-card.guest-locked .weekly-day-pill {
+  background: #EFF6FF;
+  color: #3B82F6;
+}
+
+/* Guest Lock Notice Banner */
+.weekly-guest-lock-banner {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+  border: 1px solid #FDE68A;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+}
+
+.weekly-guest-lock-banner:hover {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+/* Forex 5 Pair Rows */
+.forex-pair-row:hover {
+  background: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+}
+
+.guest-auth-actions .btn-cta-gold {
+  box-shadow: 0 4px 14px rgba(200, 147, 56, 0.25);
+  transition: all 0.2s ease;
+}
+
+.guest-auth-actions .btn-cta-gold:hover {
+  transform: translateY(-1px);
+}
+
 

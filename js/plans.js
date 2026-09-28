@@ -176,6 +176,13 @@ export const Plans = {
     if (!userId) return 0;
     const db = DB.get();
 
+    // Check if weekend (market OFF on Saturday & Sunday)
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return 0.0;
+    }
+
     // Requirement 4: Check if Today Profit Loss Mode (0%) is active
     if (db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss) {
       return 0.0;
@@ -184,10 +191,9 @@ export const Plans = {
     const userInvs = this.getUserInvestments(userId);
     if (!userInvs || userInvs.length === 0) return 0;
 
-    const marketStatus = this.isWeekendMarketClosed();
     let totalCapital = 0;
     let totalWeightedRate = 0;
-    const todayStr = new Date().toLocaleDateString('id-ID');
+    const todayStr = now.toLocaleDateString('id-ID');
 
     userInvs.forEach(inv => {
       totalCapital += inv.capital;
@@ -196,10 +202,8 @@ export const Plans = {
       let rate = 0;
       if (todayHistory) {
         rate = todayHistory.rate;
-      } else if (marketStatus.closed) {
-        rate = 0; // Market is closed today
       } else {
-        // Average active range or base daily rate
+        // Average active range or base daily rate for this plan
         rate = (inv.minRate + inv.maxRate) / 2;
       }
       totalWeightedRate += (rate * inv.capital);
@@ -209,46 +213,171 @@ export const Plans = {
     return parseFloat((totalWeightedRate / totalCapital).toFixed(2));
   },
 
-  // Requirement 3: Get 7-Day Rolling Daily Profit Breakdown & History
-  getWeeklyProfitHistory() {
+  // Requirement 1, 3, 5: Get 7-Day (Senin-Minggu) Daily Profit Breakdown & History
+  getWeeklyProfitHistory(userId = null) {
     const db = DB.get();
     const todayLossMode = db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
-    let list = Array.isArray(db.settings.weeklyProfitHistory) ? [...db.settings.weeklyProfitHistory] : [
-      { dayName: 'Senin', date: '22 Sep', rate: 1.25, isLoss: false },
-      { dayName: 'Selasa', date: '23 Sep', rate: 0.85, isLoss: false },
-      { dayName: 'Rabu', date: '24 Sep', rate: 1.40, isLoss: false },
-      { dayName: 'Kamis', date: '25 Sep', rate: 0.60, isLoss: false },
-      { dayName: 'Jumat', date: '26 Sep', rate: 1.15, isLoss: false },
-      { dayName: 'Sabtu', date: '27 Sep', rate: 0.50, isLoss: false },
-      { dayName: 'Minggu (Hari Ini)', date: '28 Sep', rate: 1.10, isLoss: false }
-    ];
+    const now = new Date();
+    const currentDay = now.getDay(); // 0: Minggu, 1: Senin, ..., 6: Sabtu
+    const isWeekendToday = (currentDay === 0 || currentDay === 6);
 
-    // Map today's rate if today is loss mode
-    const mapped = list.map((item, idx) => {
-      const isToday = idx === list.length - 1;
-      if (isToday && todayLossMode) {
+    // Monday-based offset (Senin = 0, Selasa = 1, ..., Sabtu = 5, Minggu = 6)
+    const currentMondayIdx = currentDay === 0 ? 6 : currentDay - 1;
+
+    // Base Monday of current week
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+    const mondayDate = new Date(now);
+    mondayDate.setDate(now.getDate() + mondayOffset);
+
+    const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+    // Base fallback rates from settings for Monday-Friday
+    const defaultRates = [1.00, 1.50, 1.20, 1.35, 1.15];
+    const settingsHistory = Array.isArray(db.settings.weeklyProfitHistory) ? db.settings.weeklyProfitHistory : [];
+
+    const isGuest = !userId;
+    let todayRateForUser = 0;
+    let userInvs = [];
+    if (!isGuest) {
+      todayRateForUser = this.getUserTodayProfitRate(userId);
+      userInvs = this.getUserInvestments(userId);
+    }
+
+    const records = dayNames.map((dName, idx) => {
+      const dayDate = new Date(mondayDate);
+      dayDate.setDate(mondayDate.getDate() + idx);
+      const dateStr = `${dayDate.getDate()} ${monthNames[dayDate.getMonth()]}`;
+      const fullDateStr = dayDate.toLocaleDateString('id-ID');
+      const isToday = idx === currentMondayIdx;
+      const isPast = idx < currentMondayIdx;
+      const isWeekend = (idx === 5 || idx === 6); // Sabtu or Minggu
+
+      // Sabtu and Minggu: Always OFF / empty (Requirement 5)
+      if (isWeekend) {
         return {
-          ...item,
-          rate: 0.0,
-          isLoss: true,
-          statusLabel: '🔴 Loss 0%'
+          dayName: dName,
+          date: dateStr,
+          fullDate: fullDateStr,
+          rate: null,
+          isWeekend: true,
+          isOff: true,
+          isToday,
+          isGuest,
+          displayRate: '-',
+          statusLabel: 'Pasar OFF',
+          pillText: 'Pasar OFF'
         };
       }
+
+      // Guest View: Empty (Requirement 3)
+      if (isGuest) {
+        return {
+          dayName: dName,
+          date: dateStr,
+          fullDate: fullDateStr,
+          rate: null,
+          isWeekend: false,
+          isOff: false,
+          isToday,
+          isGuest: true,
+          displayRate: '-',
+          statusLabel: 'Khusus Member',
+          pillText: 'Member'
+        };
+      }
+
+      // Member Logged In:
+      let rate = 0;
+      let isLoss = false;
+
+      if (isToday) {
+        // Requirement 1: EXACT MATCH with valTodayProfit!
+        if (todayLossMode) {
+          rate = 0.0;
+          isLoss = true;
+        } else if (isWeekendToday) {
+          rate = 0.0;
+        } else {
+          rate = todayRateForUser;
+          // If member has no active package, show default benchmark
+          if (rate === 0 && userInvs.length === 0) {
+            rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
+              ? settingsHistory[idx].rate
+              : defaultRates[idx];
+          }
+        }
+      } else if (isPast) {
+        // Look up member's yield history for this date if available
+        let foundHistoryRate = null;
+        if (userInvs.length > 0) {
+          userInvs.forEach(inv => {
+            const h = inv.history && inv.history.find(item => item.date === fullDateStr);
+            if (h && typeof h.rate === 'number') foundHistoryRate = h.rate;
+          });
+        }
+        if (foundHistoryRate !== null) {
+          rate = foundHistoryRate;
+        } else {
+          // Use settings benchmark for that day
+          rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
+            ? settingsHistory[idx].rate
+            : defaultRates[idx];
+        }
+      } else {
+        // Future weekdays: Plan expected rate or benchmark
+        if (userInvs.length > 0) {
+          const avgUserRate = userInvs.reduce((acc, inv) => acc + (inv.minRate + inv.maxRate) / 2, 0) / userInvs.length;
+          rate = parseFloat(avgUserRate.toFixed(2));
+        } else {
+          rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
+            ? settingsHistory[idx].rate
+            : defaultRates[idx];
+        }
+      }
+
+      rate = parseFloat(Number(rate || 0).toFixed(2));
+      isLoss = rate === 0 && (todayLossMode || (isToday && todayLossMode));
+
       return {
-        ...item,
-        statusLabel: (item.isLoss || item.rate === 0) ? '🔴 Loss 0%' : `🟢 +${item.rate.toFixed(2)}%`
+        dayName: dName,
+        date: dateStr,
+        fullDate: fullDateStr,
+        rate,
+        isWeekend: false,
+        isOff: false,
+        isLoss,
+        isToday,
+        isGuest: false,
+        displayRate: isLoss ? '0.00%' : `+${rate.toFixed(2)}%`,
+        statusLabel: isLoss ? '🔴 Loss 0%' : `🟢 +${rate.toFixed(2)}%`,
+        pillText: isLoss ? 'Loss 0%' : 'Profit'
       };
     });
 
-    const totalRate = mapped.reduce((sum, h) => sum + (h.rate || 0), 0);
-    const avgRate = mapped.length > 0 ? totalRate / mapped.length : 0;
+    // Sum and average only over the 5 trading days (Senin - Jumat)
+    let totalRate = 0;
+    let countActiveDays = 0;
+
+    if (!isGuest) {
+      records.forEach(r => {
+        if (!r.isWeekend && typeof r.rate === 'number') {
+          totalRate += r.rate;
+          countActiveDays++;
+        }
+      });
+    }
+
+    const avgRate = countActiveDays > 0 ? totalRate / countActiveDays : 0;
 
     return {
-      records: mapped,
-      totalRate: parseFloat(totalRate.toFixed(2)),
-      avgRate: parseFloat(avgRate.toFixed(2)),
+      records,
+      totalRate: isGuest ? null : parseFloat(totalRate.toFixed(2)),
+      avgRate: isGuest ? null : parseFloat(avgRate.toFixed(2)),
+      isGuest,
       todayIsLoss: !!todayLossMode,
-      lossMessage: todayLossMode ? (db.settings.todayProfitLossMode.message || 'Hari ini pasar 0%') : ''
+      isWeekendToday,
+      lossMessage: todayLossMode ? (db.settings.todayProfitLossMode?.message || 'Hari ini dividen profit 0%') : ''
     };
   },
 

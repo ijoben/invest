@@ -79,14 +79,24 @@ const defaultDB = {
       message: 'Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.'
     },
     weeklyProfitHistory: [
-      { dayName: 'Senin', date: '22 Sep', rate: 1.25, isLoss: false },
-      { dayName: 'Selasa', date: '23 Sep', rate: 0.85, isLoss: false },
-      { dayName: 'Rabu', date: '24 Sep', rate: 1.40, isLoss: false },
-      { dayName: 'Kamis', date: '25 Sep', rate: 0.60, isLoss: false },
-      { dayName: 'Jumat', date: '26 Sep', rate: 1.15, isLoss: false },
-      { dayName: 'Sabtu', date: '27 Sep', rate: 0.50, isLoss: false },
-      { dayName: 'Minggu (Hari Ini)', date: '28 Sep', rate: 1.10, isLoss: false }
+      { dayName: 'Senin', date: 'Senin', rate: 1.00, isLoss: false, isWeekend: false },
+      { dayName: 'Selasa', date: 'Selasa', rate: 1.50, isLoss: false, isWeekend: false },
+      { dayName: 'Rabu', date: 'Rabu', rate: 1.20, isLoss: false, isWeekend: false },
+      { dayName: 'Kamis', date: 'Kamis', rate: 1.35, isLoss: false, isWeekend: false },
+      { dayName: 'Jumat', date: 'Jumat', rate: 1.15, isLoss: false, isWeekend: false },
+      { dayName: 'Sabtu', date: 'Sabtu', rate: null, isLoss: false, isWeekend: true },
+      { dayName: 'Minggu', date: 'Minggu', rate: null, isLoss: false, isWeekend: true }
     ],
+    cs: {
+      whatsapp: '6281234567890',
+      telegram: 'https://t.me/autotrading_cs',
+      waMessage: 'Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform...'
+    },
+    kelasTrading: {
+      whatsapp: 'https://wa.me/6281234567890?text=Halo%20Mentor%20AUTOTRADING,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi',
+      telegram: 'https://t.me/autotrading_official_channel',
+      desc: 'Komunitas edukasi trading AI, webinar eksklusif & sinyal pasar harian'
+    },
     sponsorBonusPercent: 10, // 10% direct sponsor bonus
     rabatLevels: [
       { level: 1, percent: 5.0 },
@@ -554,12 +564,13 @@ const defaultDB = {
 
   // Live Market Tickers
   marketTickers: [
-    { id: 'XAUUSD', name: 'XAUUSD', price: 4343.65, change: 1.18, isUp: true, time: '19:13 WIB', code1: 'AU', code2: 'US' },
-    { id: 'EURUSD', name: 'EURUSD', price: 1.15352, change: -0.01, isUp: false, time: '19:13 WIB', code1: 'EU', code2: 'US' },
-    { id: 'GBPUSD', name: 'GBPUSD', price: 1.34531, change: -0.09, isUp: false, time: '19:13 WIB', code1: 'GB', code2: 'US' },
-    { id: 'APPLE.US', name: 'APPLE.US', price: 331.52, change: -0.44, isUp: false, time: '02:54 WIB', code1: 'AP', code2: 'US' },
-    { id: 'BTCUSDT', name: 'BTCUSDT', price: 68420.00, change: 3.42, isUp: true, time: '19:15 WIB', code1: 'BTC', code2: 'USD' },
-    { id: 'NVDA.US', name: 'NVDA.US', price: 128.90, change: 2.15, isUp: true, time: '02:54 WIB', code1: 'NV', code2: 'US' }
+    { id: 'EURUSD', name: 'EURUSD', pair: 'EUR/USD', desc: 'Euro / US Dollar', price: 1.15380, change: 0.12, isUp: true, time: 'Live', code1: 'EU', code2: 'US' },
+    { id: 'GBPUSD', name: 'GBPUSD', pair: 'GBP/USD', desc: 'British Pound / US Dollar', price: 1.34560, change: -0.09, isUp: false, time: 'Live', code1: 'GB', code2: 'US' },
+    { id: 'USDJPY', name: 'USDJPY', pair: 'USD/JPY', desc: 'US Dollar / Japanese Yen', price: 148.850, change: 0.25, isUp: true, time: 'Live', code1: 'US', code2: 'JP' },
+    { id: 'AUDUSD', name: 'AUDUSD', pair: 'AUD/USD', desc: 'Australian Dollar / US Dollar', price: 0.65420, change: 0.18, isUp: true, time: 'Live', code1: 'AU', code2: 'US' },
+    { id: 'USDCHF', name: 'USDCHF', pair: 'USD/CHF', desc: 'US Dollar / Swiss Franc', price: 0.89240, change: -0.05, isUp: false, time: 'Live', code1: 'US', code2: 'CH' },
+    { id: 'XAUUSD', name: 'XAUUSD', pair: 'XAU/USD', desc: 'Gold Spot / US Dollar', price: 4343.65, change: 1.18, isUp: true, time: 'Live', code1: 'AU', code2: 'US' },
+    { id: 'BTCUSDT', name: 'BTCUSDT', pair: 'BTC/USDT', desc: 'Bitcoin / Tether USDT', price: 68420.00, change: 3.42, isUp: true, time: 'Live', code1: 'BTC', code2: 'USD' }
   ],
 
   // Running Text / Announcements Ticker
@@ -978,6 +989,21 @@ export const DB = {
         }
         if (!parsed.settings.weeklyProfitHistory || !Array.isArray(parsed.settings.weeklyProfitHistory) || parsed.settings.weeklyProfitHistory.length === 0) {
           parsed.settings.weeklyProfitHistory = defaultDB.settings.weeklyProfitHistory;
+        }
+        // Ensure weekend entries in weeklyProfitHistory are flagged as isWeekend: true and rate: null
+        if (Array.isArray(parsed.settings.weeklyProfitHistory)) {
+          parsed.settings.weeklyProfitHistory.forEach(item => {
+            if (item.dayName && (item.dayName.includes('Sabtu') || item.dayName.includes('Minggu'))) {
+              item.isWeekend = true;
+              item.rate = null;
+            }
+          });
+        }
+        if (!parsed.settings.cs) {
+          parsed.settings.cs = defaultDB.settings.cs;
+        }
+        if (!parsed.settings.kelasTrading) {
+          parsed.settings.kelasTrading = defaultDB.settings.kelasTrading;
         }
         if (!parsed.settings.email) {
           parsed.settings.email = defaultDB.settings.email;

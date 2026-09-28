@@ -30,6 +30,7 @@ export const AdminPage = {
     testimonials: 'Kelola Testimoni User',
     users: 'Manajemen Pengguna',
     email_settings: 'Konfigurasi Email & OTP',
+    kontak_kelas: 'Kontak CS & Kelas Trading',
     pengaturan: 'Pengaturan Web'
   },
 
@@ -217,6 +218,9 @@ export const AdminPage = {
 
     // 15. Pengaturan Web (General Web Settings)
     this.renderWebSettings();
+
+    // 16. Kontak CS & Kelas Trading Manual Links
+    this.renderCsAndKelasSettings();
   },
 
   // 2. Deposit Table
@@ -1271,6 +1275,10 @@ export const AdminPage = {
 
     if (tabId === 'pengaturan') {
       this.renderWebSettings();
+    }
+
+    if (tabId === 'kontak_kelas') {
+      this.renderCsAndKelasSettings();
     }
 
     // Auto close sliding sidebar drawer on item select
@@ -3044,6 +3052,123 @@ export const AdminPage = {
     const len = el.value.length;
     counter.textContent = `${len} / ${maxChars} karakter`;
     counter.className = len > maxChars ? 'char-over' : 'char-ok';
+  },
+
+  // ============================================================
+  // KONTAK CS & KELAS TRADING — Handler Methods
+  // ============================================================
+
+  /** Load current CS and Kelas Trading values into form fields */
+  renderCsAndKelasSettings() {
+    const db = DB.get();
+    const cfg = db.settings || {};
+    const cs = cfg.cs || {};
+    const kt = cfg.kelasTrading || {};
+
+    // Customer Service
+    this._setVal('cfgCsWhatsapp', cs.whatsapp || '');
+    this._setVal('cfgCsTelegram', cs.telegram || '');
+    this._setVal('cfgCsWaMessage', cs.waMessage || 'Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform...');
+
+    // Kelas Trading
+    this._setVal('cfgKelasWhatsapp', kt.whatsapp || '');
+    this._setVal('cfgKelasTelegram', kt.telegram || '');
+    this._setVal('cfgKelasDesc', kt.desc || 'Komunitas edukasi trading AI, webinar eksklusif & sinyal pasar harian');
+  },
+
+  /** Save Customer Service Settings */
+  saveCsSettings() {
+    const db = DB.get();
+    if (!db.settings) db.settings = {};
+    if (!db.settings.cs) db.settings.cs = {};
+
+    const wa = document.getElementById('cfgCsWhatsapp')?.value.trim() || '';
+    const tg = document.getElementById('cfgCsTelegram')?.value.trim() || '';
+    const msg = document.getElementById('cfgCsWaMessage')?.value.trim() || '';
+
+    db.settings.cs.whatsapp = wa;
+    db.settings.cs.telegram = tg;
+    db.settings.cs.waMessage = msg;
+
+    DB.save(db);
+    this.showToast('✅ Kontak WhatsApp & Telegram CS berhasil disimpan dan aktif!', 'success');
+  },
+
+  /** Save Kelas Trading Settings */
+  saveKelasTradingSettings() {
+    const db = DB.get();
+    if (!db.settings) db.settings = {};
+    if (!db.settings.kelasTrading) db.settings.kelasTrading = {};
+
+    const wa = document.getElementById('cfgKelasWhatsapp')?.value.trim() || '';
+    const tg = document.getElementById('cfgKelasTelegram')?.value.trim() || '';
+    const desc = document.getElementById('cfgKelasDesc')?.value.trim() || '';
+
+    db.settings.kelasTrading.whatsapp = wa;
+    db.settings.kelasTrading.telegram = tg;
+    db.settings.kelasTrading.desc = desc;
+
+    DB.save(db);
+    this.showToast('✅ Kontak WhatsApp & Telegram Kelas Trading berhasil disimpan dan aktif!', 'success');
+  },
+
+  /** Test Live CS Link */
+  testCsLink(channel = 'whatsapp') {
+    const wa = document.getElementById('cfgCsWhatsapp')?.value.trim() || '';
+    const tg = document.getElementById('cfgCsTelegram')?.value.trim() || '';
+    const msg = document.getElementById('cfgCsWaMessage')?.value.trim() || 'Halo CS Resmi AUTOTRADING, saya ingin bertanya seputar layanan...';
+
+    if (channel === 'whatsapp') {
+      if (!wa) {
+        this.showToast('Masukkan nomor atau link WhatsApp CS terlebih dahulu!', 'error');
+        return;
+      }
+      let target = wa;
+      if (!target.startsWith('http')) {
+        const cleanWa = target.replace(/[^0-9]/g, '');
+        target = `https://wa.me/${cleanWa}?text=${encodeURIComponent(msg)}`;
+      }
+      window.open(target, '_blank');
+    } else if (channel === 'telegram') {
+      if (!tg) {
+        this.showToast('Masukkan link atau username Telegram CS terlebih dahulu!', 'error');
+        return;
+      }
+      let target = tg;
+      if (!target.startsWith('http')) {
+        target = 'https://t.me/' + target.replace('@', '');
+      }
+      window.open(target, '_blank');
+    }
+  },
+
+  /** Test Live Kelas Trading Link */
+  testKelasLink(channel = 'whatsapp') {
+    const wa = document.getElementById('cfgKelasWhatsapp')?.value.trim() || '';
+    const tg = document.getElementById('cfgKelasTelegram')?.value.trim() || '';
+
+    if (channel === 'whatsapp') {
+      if (!wa) {
+        this.showToast('Masukkan link WhatsApp Kelas Trading terlebih dahulu!', 'error');
+        return;
+      }
+      let target = wa;
+      if (!target.startsWith('http')) {
+        const cleanWa = target.replace(/[^0-9]/g, '');
+        target = `https://wa.me/${cleanWa}?text=${encodeURIComponent('Halo Mentor AUTOTRADING, saya ingin bergabung ke Kelas Trading')}`;
+      }
+      window.open(target, '_blank');
+    } else if (channel === 'telegram') {
+      if (!tg) {
+        this.showToast('Masukkan link Telegram Kelas Trading terlebih dahulu!', 'error');
+        return;
+      }
+      let target = tg;
+      if (!target.startsWith('http')) {
+        target = 'https://t.me/' + target.replace('@', '');
+      }
+      window.open(target, '_blank');
+    }
   },
 
   /** Reset all web settings to default */

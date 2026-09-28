@@ -181,6 +181,11 @@
 
       <div class="sidebar-group-title">SISTEM & PENGATURAN</div>
       <nav class="sidebar-menu">
+        <button class="admin-nav-btn" data-tab="kontak_kelas">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          <span>Kontak CS &amp; Kelas</span>
+          <span class="admin-nav-badge" style="background: #10B981;">WA/TG</span>
+        </button>
         <button class="admin-nav-btn" data-tab="pengaturan">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span>Pengaturan Web</span>
@@ -1269,6 +1274,151 @@
     </section>
 
     <!-- ====================================================================
+         PANEL KONTAK CS & KELAS TRADING (Manual Input WhatsApp & Telegram)
+         ==================================================================== -->
+    <section id="pane-kontak_kelas" class="admin-view-panel">
+
+      <!-- Card 1: Pengaturan Manual Kontak Customer Service (CS) -->
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🎧 Kontak Customer Service (CS) Resmi</h3>
+            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">
+              Atur nomor WhatsApp dan link Telegram resmi yang akan dihubungi oleh member saat menekan tombol "Layanan Bantuan 24/7" di aplikasi.
+            </p>
+          </div>
+          <span class="badge-status active">LIVE MEMBER AREA</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Nomor / Link WhatsApp CS</div>
+            <div class="setting-desc">Format nomor internasional tanpa tanda + atau link lengkap (contoh: <code>6281234567890</code> atau <code>https://wa.me/6281234567890</code>).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <input type="text" class="admin-input" id="cfgCsWhatsapp" placeholder="6281234567890">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Link / Username Telegram CS Support</div>
+            <div class="setting-desc">Tautan langsung akun atau bot Telegram CS (contoh: <code>https://t.me/autotrading_cs</code> atau <code>@autotrading_cs</code>).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <input type="text" class="admin-input" id="cfgCsTelegram" placeholder="https://t.me/autotrading_cs">
+          </div>
+        </div>
+
+        <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <div class="setting-info">
+            <div class="setting-title">Template Pesan Otomatis WhatsApp CS</div>
+            <div class="setting-desc">Teks pembuka yang otomatis muncul di kolom chat member saat membuka WhatsApp CS.</div>
+          </div>
+          <div style="width: 100%;">
+            <textarea class="admin-input" id="cfgCsWaMessage" rows="2" placeholder="Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform..." style="width: 100%; box-sizing: border-box; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="admin-btn-action-primary" onclick="AdminPage.saveCsSettings()">
+            <span>💾 Simpan Kontak CS</span>
+          </button>
+          <button type="button" class="admin-btn-action-secondary" onclick="AdminPage.testCsLink('whatsapp')">
+            <span>🟢 Uji Buka WhatsApp CS</span>
+          </button>
+          <button type="button" class="admin-btn-action-secondary" onclick="AdminPage.testCsLink('telegram')">
+            <span>🔵 Uji Buka Telegram CS</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 2: Pengaturan Manual Kelas Trading & Edukasi -->
+      <div class="admin-card" style="margin-top: 24px;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🎓 Kontak Kelas Trading & Edukasi Resmi</h3>
+            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">
+              Atur link grup WhatsApp dan channel/grup Telegram untuk menu "Kelas Trading" yang diakses oleh member di menu cepat aplikasi.
+            </p>
+          </div>
+          <span class="badge-status active">LIVE MEMBER AREA</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Link Grup / Mentor WhatsApp Kelas Trading</div>
+            <div class="setting-desc">Link undangan grup WhatsApp atau nomor mentor kelas (contoh: <code>https://chat.whatsapp.com/xxx</code> atau <code>https://wa.me/6281234567890</code>).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <input type="text" class="admin-input" id="cfgKelasWhatsapp" placeholder="https://chat.whatsapp.com/xxx">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Link Channel / Grup Telegram Kelas Trading</div>
+            <div class="setting-desc">Tautan channel atau grup Telegram resmi untuk edukasi dan analisa pasar (contoh: <code>https://t.me/autotrading_official_channel</code>).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <input type="text" class="admin-input" id="cfgKelasTelegram" placeholder="https://t.me/autotrading_official_channel">
+          </div>
+        </div>
+
+        <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <div class="setting-info">
+            <div class="setting-title">Deskripsi Singkat / Slogan Kelas Trading</div>
+            <div class="setting-desc">Keterangan manfaat program kelas edukasi yang tampil di pop-up aplikasi member.</div>
+          </div>
+          <div style="width: 100%;">
+            <textarea class="admin-input" id="cfgKelasDesc" rows="2" placeholder="Komunitas edukasi trading AI, webinar eksklusif & sinyal pasar harian" style="width: 100%; box-sizing: border-box; resize: vertical;"></textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="admin-btn-action-primary" onclick="AdminPage.saveKelasTradingSettings()">
+            <span>💾 Simpan Kontak Kelas Trading</span>
+          </button>
+          <button type="button" class="admin-btn-action-secondary" onclick="AdminPage.testKelasLink('whatsapp')">
+            <span>🟢 Uji Buka WhatsApp Kelas</span>
+          </button>
+          <button type="button" class="admin-btn-action-secondary" onclick="AdminPage.testKelasLink('telegram')">
+            <span>🔵 Uji Buka Telegram Kelas</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 3: Panduan Integrasi Member Area -->
+      <div class="admin-card" style="margin-top: 24px; border-left: 4px solid #C89338;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">👁️ Panduan Integrasi Member Area</h3>
+            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">
+              Tautan di atas akan langsung aktif di seluruh tombol member berikut:
+            </p>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; font-size: 12px; color: #94A3B8; line-height: 1.6;">
+          <div style="background: #0B0F19; border: 1px solid #1E293B; border-radius: 10px; padding: 12px 14px;">
+            <strong style="color: #22C55E; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <span>💬 Layanan Bantuan (CS)</span>
+            </strong>
+            <div>• Tombol WhatsApp di pop-up bantuan membuka nomor CS dengan pesan pembuka otomatis.</div>
+            <div>• Tombol Telegram Support membuka akun CS resmi untuk tiket bantuan &amp; komplain transaksi.</div>
+          </div>
+          <div style="background: #0B0F19; border: 1px solid #1E293B; border-radius: 10px; padding: 12px 14px;">
+            <strong style="color: #38BDF8; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <span>🎓 Kelas Trading</span>
+            </strong>
+            <div>• Tombol "Kelas Trading" di menu cepat membuka pop-up WhatsApp &amp; Telegram edukasi.</div>
+            <div>• Member diarahkan langsung ke grup mentoring VIP &amp; channel sinyal pasar real-time.</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ====================================================================
          PANEL PENGATURAN WEB (General Site Settings)
          ==================================================================== -->
     <section id="pane-pengaturan" class="admin-view-panel">
@@ -1653,6 +1803,18 @@
             </div>
             <div class="setting-input-wrap" style="width:300px;">
               <input type="url" class="admin-input" id="cfgSocialFacebook" placeholder="https://facebook.com/autotradingofficial">
+            </div>
+          </div>
+
+          <div class="setting-row" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; padding: 12px 14px; margin-top: 14px;">
+            <div class="setting-info">
+              <div class="setting-title" style="color: #10B981;">🎧 WhatsApp &amp; Telegram Kontak CS &amp; Kelas Trading</div>
+              <div class="setting-desc">Tautan manual WhatsApp &amp; Telegram khusus untuk Customer Service dan Kelas Trading dapat diatur secara lengkap di menu tersendiri.</div>
+            </div>
+            <div>
+              <button type="button" class="admin-btn-action-primary" style="background: #10B981; font-size: 11.5px; padding: 8px 14px; white-space: nowrap;" onclick="AdminPage.switchTab('kontak_kelas')">
+                <span>Buka Menu Kontak CS &amp; Kelas &rarr;</span>
+              </button>
             </div>
           </div>
 

@@ -166,7 +166,7 @@ const App = {
     } else {
       greetingEl.innerHTML = `
         <div class="greeting-guest-name">Hi guest,</div>
-        <div class="greeting-guest-sub">Masuk ke AUTOTRADING</div>
+        <div class="greeting-guest-sub">Selamat Datang</div>
       `;
       avatarEl.classList.remove('logged-in');
       avatarEl.innerHTML = `
@@ -301,14 +301,17 @@ const App = {
     if (chartTotalProfitEl) chartTotalProfitEl.textContent = DB.formatIDR(totalProfitEarned);
 
     // Calculate growth % over time
-    const weeklyData = Plans.getWeeklyProfitHistory();
+    const weeklyData = Plans.getWeeklyProfitHistory(user ? user.id : null);
     const totalWeeklyRate = weeklyData.totalRate || 0;
     if (growthBadgeEl) {
-      if (weeklyData.todayIsLoss) {
+      if (weeklyData.isGuest) {
+        growthBadgeEl.textContent = '▲ Portofolio AI Aktif';
+        growthBadgeEl.className = 'badge-growth-neutral';
+      } else if (weeklyData.todayIsLoss) {
         growthBadgeEl.textContent = `▲ +${totalWeeklyRate.toFixed(2)}% Return (0% Hari Ini)`;
         growthBadgeEl.className = 'badge-growth-neutral';
       } else {
-        growthBadgeEl.textContent = `▲ +${totalWeeklyRate.toFixed(2)}% 7-Day Return`;
+        growthBadgeEl.textContent = `▲ +${totalWeeklyRate.toFixed(2)}% 5-Day Return`;
         growthBadgeEl.className = 'badge-growth-positive';
       }
     }
@@ -317,39 +320,61 @@ const App = {
     this.renderPortfolioGrowthChart(user, db, this.portfolioTimeframe || 7);
 
     // Render 7-Day Weekly Breakdown
-    this.renderWeeklyProfitBreakdown(db);
+    this.renderWeeklyProfitBreakdown(user, db);
   },
 
-  renderWeeklyProfitBreakdown(db) {
+  renderWeeklyProfitBreakdown(user, db) {
     const container = document.getElementById('weeklyProfitGridContainer');
     const totalRateEl = document.getElementById('weeklyTotalReturnRate');
     const avgRateEl = document.getElementById('weeklyAvgDailyRate');
     const statusPillEl = document.getElementById('weeklyTodayStatusPill');
 
-    const weekly = Plans.getWeeklyProfitHistory();
+    const weekly = Plans.getWeeklyProfitHistory(user ? user.id : null);
 
-    if (totalRateEl) totalRateEl.textContent = `+${weekly.totalRate.toFixed(2)}%`;
-    if (avgRateEl) avgRateEl.textContent = `+${weekly.avgRate.toFixed(2)}% / hari`;
+    if (weekly.isGuest) {
+      // Requirement 3: Guest view - rincian mingguan kosong (hanya untuk member saat login)
+      if (totalRateEl) totalRateEl.textContent = '-';
+      if (avgRateEl) avgRateEl.textContent = '-';
+      if (statusPillEl) {
+        statusPillEl.textContent = '🔒 Khusus Member';
+        statusPillEl.className = 'badge-status-pill';
+        statusPillEl.style.background = '#F1F5F9';
+        statusPillEl.style.color = '#64748B';
+      }
+    } else {
+      // Member logged in:
+      if (totalRateEl) totalRateEl.textContent = `+${weekly.totalRate.toFixed(2)}%`;
+      if (avgRateEl) avgRateEl.textContent = `+${weekly.avgRate.toFixed(2)}% / hari`;
 
-    if (statusPillEl) {
-      if (weekly.todayIsLoss) {
-        statusPillEl.textContent = '🔴 Mode Loss (0.00%)';
-        statusPillEl.className = 'badge-status-pill rejected';
-      } else {
-        const todayRate = weekly.records && weekly.records.length > 0 ? weekly.records[weekly.records.length - 1].rate : 1.1;
-        statusPillEl.textContent = `🟢 Normal (+${todayRate.toFixed(2)}%)`;
-        statusPillEl.className = 'badge-status-pill approved';
+      if (statusPillEl) {
+        statusPillEl.style.background = '';
+        statusPillEl.style.color = '';
+        if (weekly.todayIsLoss) {
+          statusPillEl.textContent = '🔴 Mode Loss (0.00%)';
+          statusPillEl.className = 'badge-status-pill rejected';
+        } else if (weekly.isWeekendToday) {
+          statusPillEl.textContent = '⏸️ Pasar OFF (Libur)';
+          statusPillEl.className = 'badge-status-pill neutral';
+        } else {
+          const todayRec = (weekly.records || []).find(r => r.isToday);
+          const todayRate = todayRec && typeof todayRec.rate === 'number' ? todayRec.rate : 0;
+          statusPillEl.textContent = `🟢 Normal (+${todayRate.toFixed(2)}%)`;
+          statusPillEl.className = 'badge-status-pill approved';
+        }
       }
     }
 
     if (container && Array.isArray(weekly.records)) {
-      container.innerHTML = weekly.records.map((rec, idx) => {
-        const isToday = idx === weekly.records.length - 1;
-        const isLoss = rec.isLoss || rec.rate === 0;
-        const cardClass = `weekly-day-card ${isToday ? 'today' : ''} ${isLoss ? 'loss' : ''}`;
-        const pillText = isLoss ? 'Loss 0%' : 'Profit';
-        const displayRate = isLoss ? '0.00%' : `+${rec.rate.toFixed(2)}%`;
-        const dayLabel = isToday ? 'Hari Ini' : rec.dayName.substring(0, 3);
+      const cardsHtml = weekly.records.map((rec) => {
+        let cardClass = 'weekly-day-card';
+        if (rec.isToday) cardClass += ' today';
+        if (rec.isLoss) cardClass += ' loss';
+        if (rec.isWeekend) cardClass += ' weekend-off';
+        if (weekly.isGuest) cardClass += ' guest-locked';
+
+        const dayLabel = rec.isToday ? 'Hari Ini' : rec.dayName.substring(0, 3);
+        const displayRate = rec.displayRate;
+        const pillText = rec.pillText;
 
         return `
           <div class="${cardClass}" title="${rec.dayName} (${rec.date}): ${rec.statusLabel}">
@@ -360,6 +385,22 @@ const App = {
           </div>
         `;
       }).join('');
+
+      let guestNoticeHtml = '';
+      if (weekly.isGuest) {
+        guestNoticeHtml = `
+          <div class="weekly-guest-lock-banner" onclick="App.openAuthModalWithTab('login')">
+            <span style="font-size: 16px;">🔒</span>
+            <div style="flex: 1;">
+              <strong style="color: #92400E; font-size: 11.5px; display: block;">Rincian Profit Khusus Member</strong>
+              <p style="color: #B45309; font-size: 10px; margin: 2px 0 0 0; line-height: 1.3;">Rincian profit harian selama seminggu hanya bisa dicek saat login. Klik untuk <strong>Login atau Daftar</strong>.</p>
+            </div>
+            <span style="font-size: 11px; font-weight: 800; color: #C89338;">Buka ›</span>
+          </div>
+        `;
+      }
+
+      container.innerHTML = cardsHtml + guestNoticeHtml;
     }
   },
 
@@ -2217,41 +2258,74 @@ const App = {
     }
   },
 
-  // Render Markets / Riwayat View Page with Interactive Chart & Live Running Text
+  // Render Markets / Riwayat View Page with TradingView Live Chart & 5-Row Forex Watchlist
   renderMarketsView() {
     this.renderRiwayatTickers();
+    this.renderForex5Watchlist();
+  },
 
-    const chartCanvas = document.getElementById('marketChartCanvas');
-    if (chartCanvas && chartCanvas.getContext) {
-      const ctx = chartCanvas.getContext('2d');
-      const w = chartCanvas.width = chartCanvas.parentElement.clientWidth || 360;
-      const h = chartCanvas.height = 180;
+  // 5 Major Forex Currency Rows (Requirement 4)
+  renderForex5Watchlist() {
+    const container = document.getElementById('marketForex5List');
+    if (!container) return;
 
-      ctx.clearRect(0, 0, w, h);
-      
-      // Draw smooth line
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.7);
-      const points = [0.7, 0.65, 0.68, 0.5, 0.55, 0.42, 0.48, 0.35, 0.38, 0.25, 0.3, 0.2];
-      const step = w / (points.length - 1);
-      
-      points.forEach((p, idx) => {
-        ctx.lineTo(idx * step, h * p + Math.sin(idx + Date.now() / 1000) * 4);
-      });
+    const db = DB.get();
+    const pairs = [
+      { id: 'EURUSD', name: 'EUR/USD', desc: 'Euro / US Dollar', code: 'EU', defaultPrice: 1.15380, change: 0.12 },
+      { id: 'GBPUSD', name: 'GBP/USD', desc: 'British Pound / US Dollar', code: 'GB', defaultPrice: 1.34560, change: -0.09 },
+      { id: 'USDJPY', name: 'USD/JPY', desc: 'US Dollar / Japanese Yen', code: 'JP', defaultPrice: 148.850, change: 0.25 },
+      { id: 'AUDUSD', name: 'AUD/USD', desc: 'Australian Dollar / US Dollar', code: 'AU', defaultPrice: 0.65420, change: 0.18 },
+      { id: 'USDCHF', name: 'USD/CHF', desc: 'US Dollar / Swiss Franc', code: 'CH', defaultPrice: 0.89240, change: -0.05 }
+    ];
 
-      ctx.strokeStyle = '#C89338';
-      ctx.lineWidth = 3;
-      ctx.stroke();
+    const liveTickers = db.marketTickers || [];
+    container.innerHTML = pairs.map(p => {
+      const match = liveTickers.find(t => t.id === p.id || (t.name && t.name.replace('/', '') === p.id));
+      const price = match ? match.price : p.defaultPrice;
+      const change = match ? match.change : p.change;
+      const isUp = change >= 0;
+      const changeColor = isUp ? '#16A34A' : '#DC2626';
+      const changeBg = isUp ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
+      const sign = isUp ? '+' : '';
+      const decimals = p.id.includes('JPY') ? 3 : 5;
 
-      // Gradient Fill Under Line
-      ctx.lineTo(w, h);
-      ctx.lineTo(0, h);
-      ctx.closePath();
-      const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, 'rgba(200, 147, 56, 0.35)');
-      grad.addColorStop(1, 'rgba(200, 147, 56, 0.0)');
-      ctx.fillStyle = grad;
-      ctx.fill();
+      return `
+        <div class="forex-pair-row" id="forexRow_${p.id}" style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#FFFFFF; border:1px solid #F1F5F9; border-radius:12px; transition: all 0.2s ease;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:34px; height:34px; border-radius:50%; background:#EFF6FF; border:1px solid #BFDBFE; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px; color:#2563EB;">
+              ${p.code}
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <strong style="font-size:13.5px; color:#0F172A;">${p.name}</strong>
+                <span class="pulse-live-dot" style="width:6px; height:6px; border-radius:50%; background:#22C55E; display:inline-block;"></span>
+              </div>
+              <div style="font-size:10px; color:#94A3B8;">${p.desc}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div id="forexPrice_${p.id}" style="font-family:var(--font-mono); font-weight:800; font-size:13.5px; color:#0F172A;">
+              ${price.toFixed(decimals)}
+            </div>
+            <span id="forexChange_${p.id}" style="font-size:10px; font-weight:700; color:${changeColor}; background:${changeBg}; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:2px;">
+              ${sign}${change.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Also update EUR/USD header on TradingView card if element exists
+    const eurusdMatch = liveTickers.find(t => t.id === 'EURUSD');
+    const tvPriceEl = document.getElementById('tvLiveEurUsdPrice');
+    const tvChangeEl = document.getElementById('tvLiveEurUsdChange');
+    if (eurusdMatch && tvPriceEl) {
+      tvPriceEl.textContent = eurusdMatch.price.toFixed(5);
+    }
+    if (eurusdMatch && tvChangeEl) {
+      const isUp = eurusdMatch.change >= 0;
+      tvChangeEl.textContent = `${isUp ? '+' : ''}${eurusdMatch.change.toFixed(2)}% ${isUp ? '🟢' : '🔴'}`;
+      tvChangeEl.style.color = isUp ? '#16A34A' : '#DC2626';
     }
   },
 
@@ -2442,6 +2516,63 @@ const App = {
     if (modal) {
       modal.classList.add('show');
       document.body.style.overflow = 'hidden';
+    }
+  },
+
+  // Open Auth Modal directly to login or register tab (Requirement 2)
+  openAuthModalWithTab(tab = 'login') {
+    this.openModal('authModal');
+    if (tab === 'register') {
+      const regTab = document.getElementById('authTabRegister');
+      if (regTab) regTab.click();
+    } else {
+      const logTab = document.getElementById('authTabLogin');
+      if (logTab) logTab.click();
+    }
+  },
+
+  // Open CS channel dynamically based on Admin configuration (Requirement 7)
+  openCustomerService(channel = 'whatsapp') {
+    const db = DB.get();
+    const cs = db.settings.cs || {};
+    if (channel === 'whatsapp') {
+      let wa = cs.whatsapp || '6281234567890';
+      if (!wa.startsWith('http')) {
+        const cleanWa = wa.replace(/[^0-9]/g, '');
+        const msg = encodeURIComponent(cs.waMessage || 'Halo CS Resmi AUTOTRADING, saya ingin bertanya seputar layanan...');
+        wa = `https://wa.me/${cleanWa}?text=${msg}`;
+      }
+      this.showToast('Membuka layanan WhatsApp Customer Service AUTOTRADING...', 'info');
+      window.open(wa, '_blank');
+    } else if (channel === 'telegram') {
+      let tg = cs.telegram || 'https://t.me/autotrading_cs';
+      if (!tg.startsWith('http')) {
+        tg = 'https://t.me/' + tg.replace('@', '');
+      }
+      this.showToast('Membuka Telegram Support Center AUTOTRADING...', 'info');
+      window.open(tg, '_blank');
+    }
+  },
+
+  // Open Kelas Trading channel dynamically based on Admin configuration (Requirement 6)
+  openKelasTrading(channel = 'whatsapp') {
+    const db = DB.get();
+    const kt = db.settings.kelasTrading || {};
+    if (channel === 'whatsapp') {
+      let wa = kt.whatsapp || 'https://wa.me/6281234567890?text=Halo%20Mentor%20AUTOTRADING,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi';
+      if (!wa.startsWith('http')) {
+        const cleanWa = wa.replace(/[^0-9]/g, '');
+        wa = `https://wa.me/${cleanWa}?text=${encodeURIComponent('Halo Mentor AUTOTRADING, saya ingin bergabung ke Kelas Trading Resmi')}`;
+      }
+      this.showToast('Membuka saluran WhatsApp Kelas Trading AUTOTRADING...', 'info');
+      window.open(wa, '_blank');
+    } else if (channel === 'telegram') {
+      let tg = kt.telegram || 'https://t.me/autotrading_official_channel';
+      if (!tg.startsWith('http')) {
+        tg = 'https://t.me/' + tg.replace('@', '');
+      }
+      this.showToast('Membuka saluran Telegram Kelas Trading AUTOTRADING...', 'info');
+      window.open(tg, '_blank');
     }
   },
 
@@ -3520,33 +3651,6 @@ const App = {
     if (placeholder) placeholder.style.display = 'flex';
   },
 
-  useSampleDepositProof() {
-    const user = Auth.getUser();
-    const method = document.getElementById('depMethodSelect').value;
-    const amount = Number(document.getElementById('depAmountInput').value) || 500000;
-    let bankName = 'BCA Mobile';
-    if (method === 'qris') bankName = 'QRIS Instant';
-    else if (method === 'usdt') bankName = 'Binance USDT Pay';
-
-    const sampleReceipt = createReceiptBase64({
-      bank: bankName,
-      name: user ? (user.fullName || user.username) : 'Member AUTOTRADING',
-      amount: amount,
-      timeAgo: 'Baru saja',
-      refNo: 'TRX-' + Math.floor(100000 + Math.random() * 900000)
-    });
-
-    this.uploadedDepositProofBase64 = sampleReceipt;
-    const previewImg = document.getElementById('depProofPreviewImg');
-    const previewWrap = document.getElementById('depProofPreviewWrap');
-    const placeholder = document.getElementById('depProofPlaceholder');
-
-    if (previewImg) previewImg.src = sampleReceipt;
-    if (previewWrap) previewWrap.style.display = 'block';
-    if (placeholder) placeholder.style.display = 'none';
-    this.showToast('Contoh struk resmi transfer berhasil dibuat.', 'info');
-  },
-
   submitDeposit() {
     const user = Auth.getUser();
     if (!user) return;
@@ -3833,6 +3937,13 @@ const App = {
 
     if (isLossMode) {
       this.showToast(`🛡️ Mode Loss / 0% Aktif: ${lossMsg}`, 'info');
+      return;
+    }
+
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      this.showToast('⏸️ Pasar Finansial Libur Akhir Pekan (Sabtu & Minggu). Dividen profit akan aktif kembali hari Senin.', 'info');
       return;
     }
 

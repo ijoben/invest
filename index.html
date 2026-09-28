@@ -89,7 +89,7 @@
            1. TOP HEADER (Identical to 1000836359.jpg)
            ==================================================================== -->
       <header class="top-header">
-        <div class="header-user" onclick="App.isLoggedIn() ? App.switchTab('profile') : (App.showToast('Silahkan login atau daftar dulu', 'info'), App.openModal('authModal'))">
+        <div class="header-user" onclick="App.isLoggedIn() ? App.switchTab('profile') : void(0);">
           <div class="user-avatar-badge" id="userAvatarBadge">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -98,7 +98,7 @@
           </div>
           <div class="user-greeting" id="userGreetingText">
             <div class="greeting-guest-name">Hi guest,</div>
-            <div class="greeting-guest-sub">Masuk ke AUTOTRADING</div>
+            <div class="greeting-guest-sub">Selamat Datang</div>
           </div>
         </div>
 
@@ -470,13 +470,20 @@
         <section class="trading-banner-container">
           <div class="trading-banner-card">
             
-            <!-- Guest State -->
+            <!-- Guest State (Requirement 2: Satu menu Login atau Daftar di bagian bawah) -->
             <div id="tradingBannerGuest">
               <h2 class="trading-banner-title">Mulai Trading di AUTOTRADING</h2>
-              <p class="trading-banner-subtitle">Agar bisa deposit & trading, kamu perlu login dulu.</p>
-              <button class="btn-cta-gold" onclick="App.openModal('authModal')">
-                <span>Login</span>
-              </button>
+              <p class="trading-banner-subtitle">Dapatkan dividen profit harian otomatis dan rabat afiliasi 3 level terpercaya.</p>
+              <div class="guest-auth-actions" style="display: flex; gap: 10px; margin-top: 14px;">
+                <button class="btn-cta-gold" style="flex: 1; padding: 12px 14px; font-weight: 800; font-size: 13.5px;" onclick="App.openAuthModalWithTab('login')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                  <span>Login</span>
+                </button>
+                <button class="btn-cta-gold" style="flex: 1; padding: 12px 14px; font-weight: 800; font-size: 13.5px; background: linear-gradient(135deg, #1E293B, #0F172A); border: 1.5px solid #C89338; color: #F59E0B;" onclick="App.openAuthModalWithTab('register')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                  <span>Daftar Akun</span>
+                </button>
+              </div>
             </div>
 
             <!-- Logged-in State (Active Capital & Profit Claim Engine) -->
@@ -665,67 +672,45 @@
               <!-- Rendered via JS -->
             </div>
           </div>
-          <!-- Interactive Chart Simulator -->
-          <div style="background: #FFFFFF; border-radius: 18px; padding: 16px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
-            <div class="flex-between mb-3">
-              <div>
-                <span style="font-weight: 800; font-size: 16px;">XAU/USD (Gold Spot)</span>
-                <span style="color: #22C55E; font-weight: 700; font-size: 12px; margin-left: 6px;">+1.18%</span>
+          <!-- Requirement 4: TradingView Chart EUR/USD (UER/USD) Real-Time -->
+          <div class="tradingview-live-card" style="background: #FFFFFF; border-radius: 18px; padding: 14px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0; margin-bottom: 14px;">
+            <div class="flex-between mb-2" style="align-items: center;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #EFF6FF; border: 1.5px solid #BFDBFE; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 11px; color: #2563EB;">EU</div>
+                <div>
+                  <div style="font-weight: 800; font-size: 15px; color: #0F172A; display: flex; align-items: center; gap: 6px;">
+                    <span>EUR/USD</span>
+                    <span style="font-size: 9.5px; background: #DCFCE7; color: #166534; padding: 1px 6px; border-radius: 6px; font-weight: 800;">REAL-TIME</span>
+                  </div>
+                  <div style="font-size: 10px; color: #64748B;">Euro / US Dollar • TradingView Realtime</div>
+                </div>
               </div>
-              <span style="font-family: var(--font-mono); font-weight: 800; font-size: 16px;">4,343.65</span>
+              <div style="text-align: right;">
+                <div id="tvLiveEurUsdPrice" style="font-family: var(--font-mono); font-weight: 800; font-size: 15px; color: #0F172A;">1.15380</div>
+                <div id="tvLiveEurUsdChange" style="font-size: 10.5px; color: #16A34A; font-weight: 700;">+0.12% 🟢</div>
+              </div>
             </div>
-            <canvas id="marketChartCanvas" style="width: 100%; height: 180px;"></canvas>
+
+            <!-- TradingView Interactive Embed Iframe -->
+            <div class="tradingview-widget-wrap" style="height: 250px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; background: #0B0E14;">
+              <iframe id="tradingview_eurusd_iframe" src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_eurusd_iframe&symbol=FX%3AEURUSD&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=f1f3f6&studies=%5B%5D&theme=light&style=1&timezone=Asia%2FJakarta&locale=id" style="width: 100%; height: 100%; border: none; display: block;" title="TradingView EUR/USD Live Chart"></iframe>
+            </div>
           </div>
 
-          <!-- Watchlist Items -->
-          <div style="background: #FFFFFF; border-radius: 18px; padding: 16px; box-shadow: var(--card-shadow);">
-            <h3 style="font-size: 14px; font-weight: 800; margin-bottom: 12px;">Daftar Instrumen Populer</h3>
-            <div id="marketFullWatchlist" style="display: flex; flex-direction: column; gap: 10px;">
-              <!-- Item XAUUSD -->
-              <div class="flex-between" style="padding: 8px 0; border-bottom: 1px solid #F1F5F9;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #FEF3C7; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; color: #D97706;">AU</div>
-                  <div>
-                    <div style="font-weight: 700; font-size: 13px;">XAUUSD</div>
-                    <div style="font-size: 10px; color: #94A3B8;">Gold Spot / US Dollar</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13px;">4,343.65</div>
-                  <div style="font-size: 10px; color: #22C55E; font-weight: 700;">+1.18%</div>
-                </div>
+          <!-- Requirement 4: 5 Baris Nama Mata Uang Real-Time di Bawah Chart -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 14px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
+            <div class="flex-between mb-2">
+              <div>
+                <h3 style="font-size: 13.5px; font-weight: 800; color: #0F172A; display: flex; align-items: center; gap: 6px;">
+                  <span>💱 5 Pasangan Mata Uang Utama (Real-Time)</span>
+                </h3>
+                <p style="font-size: 10px; color: #64748B; margin-top: 2px;">Harga fluktuasi live forex exchange rate 24 jam</p>
               </div>
+              <span class="badge-status-pill approved" style="font-size: 9px; padding: 2px 7px;">LIVE MARKET</span>
+            </div>
 
-              <!-- Item EURUSD -->
-              <div class="flex-between" style="padding: 8px 0; border-bottom: 1px solid #F1F5F9;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #DBEAFE; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; color: #2563EB;">EU</div>
-                  <div>
-                    <div style="font-weight: 700; font-size: 13px;">EURUSD</div>
-                    <div style="font-size: 10px; color: #94A3B8;">Euro / US Dollar</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13px;">1.15352</div>
-                  <div style="font-size: 10px; color: #EF4444; font-weight: 700;">-0.01%</div>
-                </div>
-              </div>
-
-              <!-- Item BTCUSDT -->
-              <div class="flex-between" style="padding: 8px 0;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #FEF3C7; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; color: #D97706;">BTC</div>
-                  <div>
-                    <div style="font-weight: 700; font-size: 13px;">BTCUSDT</div>
-                    <div style="font-size: 10px; color: #94A3B8;">Bitcoin / Tether USDT</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13px;">68,420.00</div>
-                  <div style="font-size: 10px; color: #22C55E; font-weight: 700;">+3.42%</div>
-                </div>
-              </div>
-
+            <div id="marketForex5List" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- 5 Rows Rendered dynamically via App.renderForex5Watchlist() -->
             </div>
           </div>
         </div>
@@ -1380,11 +1365,8 @@
             <button type="button" class="btn-remove-proof" onclick="event.stopPropagation(); App.removeDepositProof()" title="Hapus foto">&times;</button>
           </div>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-          <span style="font-size: 10.5px; color: #64748B;">💡 <em>Admin akan mengecek dan memvalidasi struk ini.</em></span>
-          <button type="button" class="btn-sample-proof" onclick="App.useSampleDepositProof()">
-            <span>⚡ Contoh Struk Otomatis</span>
-          </button>
+        <div style="margin-top: 6px;">
+          <span style="font-size: 10.5px; color: #64748B;">💡 <em>Harap upload screenshot (SS) bukti transfer asli dari bank / e-wallet Anda. Admin akan memverifikasi sebelum menyetujui saldo.</em></span>
         </div>
       </div>
 
@@ -1627,10 +1609,12 @@
         <h4 style="font-weight: 800; margin-bottom: 4px;">Customer Service & Konsultasi</h4>
         <p style="font-size: 12px; color: #64748B; margin-bottom: 16px;">Hubungi tim representatif resmi AUTOTRADING jika Anda membutuhkan bantuan seputar deposit, penarikan, atau bonus kemitraan.</p>
         
-        <button class="btn-cta-gold" style="background: #25D366; margin-bottom: 8px;" onclick="window.open('https://wa.me/', '_blank')">
+        <button class="btn-cta-gold" style="background: #25D366; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="App.openCustomerService('whatsapp')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg>
           <span>WhatsApp CS Resmi</span>
         </button>
-        <button class="btn-cta-gold" style="background: #0088CC;" onclick="window.open('https://t.me/', '_blank')">
+        <button class="btn-cta-gold" style="background: #0088CC; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="App.openCustomerService('telegram')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
           <span>Telegram Support Center</span>
         </button>
       </div>
@@ -2117,8 +2101,8 @@
           Tingkatkan profit dan keahlian trading Anda. Pilih saluran resmi komunitas AUTOTRADING untuk terhubung ke WhatsApp atau Telegram langsung bersama master trader:
         </p>
 
-        <!-- WhatsApp Button -->
-        <a href="https://wa.me/6281234567890?text=Halo%20Mentor%20AUTOTRADING,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi" target="_blank" class="kelas-channel-card kelas-wa" onclick="App.showToast('Membuka grup resmi Kelas Trading WhatsApp AUTOTRADING...', 'info')">
+        <!-- WhatsApp Button (Requirement 6: Diatur manual di admin) -->
+        <a href="javascript:void(0)" onclick="App.openKelasTrading('whatsapp')" class="kelas-channel-card kelas-wa">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg>
           <div style="text-align: left; flex: 1;">
             <div style="font-weight: 800; font-size: 14px;">Gabung Grup WhatsApp Resmi</div>
@@ -2127,8 +2111,8 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </a>
 
-        <!-- Telegram Button -->
-        <a href="https://t.me/autotrading_official_channel" target="_blank" class="kelas-channel-card kelas-tg" onclick="App.showToast('Membuka channel resmi Kelas Trading Telegram AUTOTRADING...', 'info')">
+        <!-- Telegram Button (Requirement 6: Diatur manual di admin) -->
+        <a href="javascript:void(0)" onclick="App.openKelasTrading('telegram')" class="kelas-channel-card kelas-tg">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
           <div style="text-align: left; flex: 1;">
             <div style="font-weight: 800; font-size: 14px;">Gabung Channel Telegram Resmi</div>
