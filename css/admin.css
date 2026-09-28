@@ -1156,3 +1156,63 @@ body.admin-body.sidebar-open {
 }
 
 
+/* ==========================================================================
+   PENGATURAN WEB - Inner Settings Tab Navigation
+   ========================================================================== */
+
+.admin-settings-tabs-wrap {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid #1E293B;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.admin-settings-tabs-wrap::-webkit-scrollbar { display: none; }
+
+.admin-settings-tab {
+  background: none;
+  border: none;
+  color: #64748B;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.admin-settings-tab:hover {
+  color: #CBD5E1;
+  background: rgba(255,255,255,0.04);
+}
+
+.admin-settings-tab.active {
+  color: #C89338;
+  border-bottom-color: #C89338;
+  background: rgba(200, 147, 56, 0.07);
+}
+
+.admin-settings-tab-pane {
+  animation: fadeInPane 0.2s ease;
+}
+
+@keyframes fadeInPane {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo upload area hover */
+#logoUploadArea:hover,
+#faviconUploadArea:hover {
+  border-color: #C89338;
+  cursor: pointer;
+}
+
+/* Character counter color */
+.char-over { color: #EF4444 !important; }
+.char-ok   { color: #22C55E !important; }

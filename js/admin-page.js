@@ -29,7 +29,8 @@ export const AdminPage = {
     banners: 'Banner Slider Carousel',
     testimonials: 'Kelola Testimoni User',
     users: 'Manajemen Pengguna',
-    email_settings: 'Konfigurasi Email & OTP'
+    email_settings: 'Konfigurasi Email & OTP',
+    pengaturan: 'Pengaturan Web'
   },
 
   init() {
@@ -203,6 +204,9 @@ export const AdminPage = {
 
     // 14. Email & OTP Verification Configuration
     this.renderEmailSettings(db);
+
+    // 15. Pengaturan Web (General Web Settings)
+    this.renderWebSettings();
   },
 
   // 2. Deposit Table
@@ -2832,7 +2836,207 @@ export const AdminPage = {
         reader.readAsDataURL(file);
       });
     }
-  }
+  },
+
+  // ============================================================
+  // PENGATURAN WEB — Handler Methods
+  // ============================================================
+
+  /** Switch inner settings tab */
+  switchSettingsTab(tab) {
+    // Update tab buttons
+    document.querySelectorAll('.admin-settings-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.settingsTab === tab);
+    });
+    // Show/hide panes
+    document.querySelectorAll('.admin-settings-tab-pane').forEach(pane => {
+      pane.style.display = pane.id === `settings-tab-${tab}` ? '' : 'none';
+    });
+  },
+
+  /** Load current settings values into Pengaturan form fields */
+  renderWebSettings() {
+    const db = DB.get();
+    const cfg = db.settings || {};
+    const ws  = cfg.webSettings || {};
+    const seo = cfg.seo || {};
+    const social = cfg.social || {};
+    const maint  = cfg.maintenance || {};
+
+    // --- General ---
+    this._setVal('cfgSiteAppName',      cfg.appName || 'AUTOTRADING');
+    this._setVal('cfgSiteTagline',      ws.tagline  || 'Platform Investasi & AI Trading Mobile Terpercaya');
+    this._setVal('cfgSiteDomain',       ws.domain   || 'https://autotrading.my.id');
+    this._setVal('cfgSiteCompanyName',  ws.companyName  || 'PT AUTOTRADING INVESTASI');
+    this._setVal('cfgSiteContactEmail', ws.contactEmail || 'cs@autotrading.my.id');
+    this._setVal('cfgSiteWhatsapp',     ws.whatsapp     || '');
+    this._setVal('cfgSiteCopyright',    ws.copyright    || `© ${new Date().getFullYear()} AUTOTRADING. All rights reserved.`);
+
+    // --- Logo ---
+    this._setVal('cfgLogoUrl',    ws.logoUrl    || '');
+    this._setVal('cfgFaviconUrl', ws.faviconUrl || '');
+    if (ws.logoUrl) {
+      const img = document.getElementById('cfgLogoPreview');
+      const ph  = document.getElementById('cfgLogoPlaceholder');
+      if (img) { img.src = ws.logoUrl; img.style.display = ''; }
+      if (ph)  { ph.style.display = 'none'; }
+    }
+    if (ws.faviconUrl) {
+      const img = document.getElementById('cfgFaviconPreview');
+      const ph  = document.getElementById('cfgFaviconPlaceholder');
+      if (img) { img.src = ws.faviconUrl; img.style.display = ''; }
+      if (ph)  { ph.style.display = 'none'; }
+    }
+
+    // --- Appearance ---
+    this._setVal('cfgColorPrimary',    ws.colorPrimary    || '#C89338');
+    this._setVal('cfgColorPrimaryHex', ws.colorPrimary    || '#C89338');
+    this._setVal('cfgColorBg',         ws.colorBg         || '#0B0F19');
+    this._setVal('cfgColorBgHex',      ws.colorBg         || '#0B0F19');
+    this._setVal('cfgFontFamily',      ws.fontFamily      || 'Inter');
+    this._setVal('cfgDisplayMode',     ws.displayMode     || 'dark');
+
+    // --- SEO ---
+    this._setVal('cfgSeoTitle',        seo.title       || '');
+    this._setVal('cfgSeoDescription',  seo.description || '');
+    this._setVal('cfgSeoKeywords',     seo.keywords    || '');
+    this._setVal('cfgSeoRobots',       seo.robots      || 'index, follow');
+    this._setVal('cfgGoogleAnalyticsId', seo.gaId || '');
+
+    // --- Social ---
+    this._setVal('cfgSocialTelegram',  social.telegram  || '');
+    this._setVal('cfgSocialInstagram', social.instagram || '');
+    this._setVal('cfgSocialTiktok',    social.tiktok    || '');
+    this._setVal('cfgSocialYoutube',   social.youtube   || '');
+    this._setVal('cfgSocialTwitter',   social.twitter   || '');
+    this._setVal('cfgSocialFacebook',  social.facebook  || '');
+
+    // --- Maintenance ---
+    this._setVal('cfgMaintenanceEnabled', String(maint.enabled || 'false'));
+    this._setVal('cfgMaintenanceMessage', maint.message || 'Sistem sedang dalam pemeliharaan terjadwal. Kami akan kembali online dalam beberapa saat.');
+    this.previewMaintenanceBadge();
+  },
+
+  /** Helper: set value of an input/select/textarea */
+  _setVal(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val;
+  },
+
+  /** Save web settings based on section */
+  saveWebSettings(section) {
+    const db = DB.get();
+    if (!db.settings.webSettings) db.settings.webSettings = {};
+    if (!db.settings.seo) db.settings.seo = {};
+    if (!db.settings.social) db.settings.social = {};
+    if (!db.settings.maintenance) db.settings.maintenance = {};
+
+    const ws = db.settings.webSettings;
+
+    if (section === 'general' || section === 'logo') {
+      if (section === 'general') {
+        const appName = document.getElementById('cfgSiteAppName')?.value.trim();
+        if (appName) db.settings.appName = appName;
+        ws.tagline      = document.getElementById('cfgSiteTagline')?.value.trim() || ws.tagline;
+        ws.domain       = document.getElementById('cfgSiteDomain')?.value.trim()  || ws.domain;
+        ws.companyName  = document.getElementById('cfgSiteCompanyName')?.value.trim()  || ws.companyName;
+        ws.contactEmail = document.getElementById('cfgSiteContactEmail')?.value.trim() || ws.contactEmail;
+        ws.whatsapp     = document.getElementById('cfgSiteWhatsapp')?.value.trim()     || ws.whatsapp;
+        ws.copyright    = document.getElementById('cfgSiteCopyright')?.value.trim()    || ws.copyright;
+      }
+      if (section === 'logo') {
+        const logoUrl    = document.getElementById('cfgLogoUrl')?.value.trim();
+        const faviconUrl = document.getElementById('cfgFaviconUrl')?.value.trim();
+        if (logoUrl)    ws.logoUrl    = logoUrl;
+        if (faviconUrl) ws.faviconUrl = faviconUrl;
+      }
+    }
+
+    if (section === 'appearance') {
+      ws.colorPrimary = document.getElementById('cfgColorPrimaryHex')?.value.trim() || '#C89338';
+      ws.colorBg      = document.getElementById('cfgColorBgHex')?.value.trim()     || '#0B0F19';
+      ws.fontFamily   = document.getElementById('cfgFontFamily')?.value   || 'Inter';
+      ws.displayMode  = document.getElementById('cfgDisplayMode')?.value  || 'dark';
+    }
+
+    if (section === 'seo') {
+      db.settings.seo.title       = document.getElementById('cfgSeoTitle')?.value.trim()       || '';
+      db.settings.seo.description = document.getElementById('cfgSeoDescription')?.value.trim() || '';
+      db.settings.seo.keywords    = document.getElementById('cfgSeoKeywords')?.value.trim()    || '';
+      db.settings.seo.robots      = document.getElementById('cfgSeoRobots')?.value             || 'index, follow';
+      db.settings.seo.gaId        = document.getElementById('cfgGoogleAnalyticsId')?.value.trim() || '';
+    }
+
+    if (section === 'social') {
+      db.settings.social.telegram  = document.getElementById('cfgSocialTelegram')?.value.trim()  || '';
+      db.settings.social.instagram = document.getElementById('cfgSocialInstagram')?.value.trim() || '';
+      db.settings.social.tiktok    = document.getElementById('cfgSocialTiktok')?.value.trim()    || '';
+      db.settings.social.youtube   = document.getElementById('cfgSocialYoutube')?.value.trim()   || '';
+      db.settings.social.twitter   = document.getElementById('cfgSocialTwitter')?.value.trim()   || '';
+      db.settings.social.facebook  = document.getElementById('cfgSocialFacebook')?.value.trim()  || '';
+    }
+
+    if (section === 'maintenance') {
+      db.settings.maintenance.enabled = document.getElementById('cfgMaintenanceEnabled')?.value === 'true';
+      db.settings.maintenance.message = document.getElementById('cfgMaintenanceMessage')?.value.trim() || '';
+    }
+
+    DB.save(db);
+    this.showToast('✅ Pengaturan berhasil disimpan!', 'success');
+  },
+
+  /** Preview maintenance badge */
+  previewMaintenanceBadge() {
+    const sel = document.getElementById('cfgMaintenanceEnabled');
+    const badge = document.getElementById('maintenanceBadge');
+    if (!sel || !badge) return;
+    const isOn = sel.value === 'true';
+    badge.textContent = isOn ? '🔴 MAINTENANCE' : '🟢 ONLINE';
+    badge.style.background = isOn ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)';
+    badge.style.color = isOn ? '#EF4444' : '#22C55E';
+    badge.style.border = isOn ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(34,197,94,0.3)';
+  },
+
+  /** Preview logo/favicon upload */
+  previewLogoUpload(input, previewId, placeholderId, urlInputId) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.getElementById(previewId);
+      const ph  = document.getElementById(placeholderId);
+      const url = document.getElementById(urlInputId);
+      if (img) { img.src = e.target.result; img.style.display = ''; }
+      if (ph)  { ph.style.display = 'none'; }
+      if (url) { url.value = e.target.result; }
+    };
+    reader.readAsDataURL(file);
+  },
+
+  /** Character counter for SEO fields */
+  countChars(inputId, counterId, maxChars) {
+    const el = document.getElementById(inputId);
+    const counter = document.getElementById(counterId);
+    if (!el || !counter) return;
+    const len = el.value.length;
+    counter.textContent = `${len} / ${maxChars} karakter`;
+    counter.className = len > maxChars ? 'char-over' : 'char-ok';
+  },
+
+  /** Reset all web settings to default */
+  resetWebSettings() {
+    if (!confirm('Reset semua pengaturan web ke nilai default? Tindakan ini tidak dapat dibatalkan.')) return;
+    const db = DB.get();
+    db.settings.webSettings = {};
+    db.settings.seo = {};
+    db.settings.social = {};
+    db.settings.maintenance = {};
+    DB.save(db);
+    this.renderWebSettings();
+    this.showToast('🔄 Semua pengaturan web direset ke default!', 'success');
+  },
+
 };
 
 window.AdminPage = AdminPage;
