@@ -7,11 +7,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
 const FTP_CONFIG = {
-  host: '103.243.172.244',
-  user: 'miningus@autotrading.my.id',
-  password: 'Vxv;)W1n_^y%yv!M',
+  host: 'ftp.autotrading.my.id',
+  user: 'autotrading@autotrading.my.id',
+  password: '0QcK+H6G^NS[yEus',
   port: 21,
-  secure: false
+  secure: true,
+  secureOptions: { rejectUnauthorized: false }
 };
 
 const DEPLOY_ITEMS = [
