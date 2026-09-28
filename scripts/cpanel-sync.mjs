@@ -41,7 +41,7 @@ async function withRetry(fn, retries = 3, delay = 1200) {
 
 export async function deployToCpanel() {
   console.log('====================================================');
-  console.log('FGT PRO - CPANEL LIVE DEPLOYMENT ENGINE');
+  console.log('AUTOTRADING - CPANEL LIVE DEPLOYMENT ENGINE');
   console.log('Target Server:', FTP_CONFIG.host, '(' + FTP_CONFIG.user + ')');
   console.log('====================================================\n');
 

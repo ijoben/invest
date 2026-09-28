@@ -3,7 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  
+  <!-- Master Admin Meta & Security -->
   <title>AUTOTRADING - Master Admin Control Panel</title>
+  <meta name="title" content="AUTOTRADING - Master Admin Control Panel">
+  <meta name="description" content="Pusat Kendali Master Admin AUTOTRADING untuk manajemen anggota, persetujuan deposit & penarikan, pemantauan transaksi, dan pengaturan sistem.">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="apple-mobile-web-app-title" content="AUTOTRADING Admin">
+  
+  <!-- Favicon SVG -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23C89338'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
   
   <!-- CSS Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
@@ -37,7 +48,7 @@
       <form id="adminLoginForm" onsubmit="event.preventDefault(); AdminPage.handleAdminLogin();">
         <div class="form-group" style="margin-bottom: 14px; text-align: left;">
           <label style="font-size: 12px; color: #94A3B8; font-weight: 600; display: block; margin-bottom: 6px;">Username / Email Admin</label>
-          <input type="text" id="adminLoginUsername" class="admin-input" placeholder="admin atau admin@fgtpro.io" style="width: 100%; box-sizing: border-box; background: #0F172A; border: 1px solid #334155; color: #F8FAFC; border-radius: 8px; padding: 10px 12px; font-size: 13px;">
+          <input type="text" id="adminLoginUsername" class="admin-input" placeholder="admin atau admin@autotrading.my.id" style="width: 100%; box-sizing: border-box; background: #0F172A; border: 1px solid #334155; color: #F8FAFC; border-radius: 8px; padding: 10px 12px; font-size: 13px;">
         </div>
 
         <div class="form-group" style="margin-bottom: 18px; text-align: left;">
@@ -654,7 +665,7 @@
           <div class="admin-qris-preview-card" style="background: #0B0F19; border: 1px solid #1E293B; border-radius: 14px; padding: 16px; text-align: center;">
             <div style="font-size: 11px; font-weight: 700; color: #C89338; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Pratinjau QRIS Member</div>
             <div style="background: #FFFFFF; border-radius: 10px; padding: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 8px;">
-              <img id="qrisAdminPreviewImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=FGT_PRO_OFFICIAL_QRIS_DEPOSIT" alt="QRIS Preview" style="width: 150px; height: 150px; object-fit: contain; display: block;">
+              <img id="qrisAdminPreviewImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=AUTOTRADING_OFFICIAL_QRIS_DEPOSIT" alt="QRIS Preview" style="width: 150px; height: 150px; object-fit: contain; display: block;">
             </div>
             <div id="qrisAdminPreviewMerchant" style="font-size: 12px; font-weight: 800; color: #F8FAFC;">AUTOTRADING OFFICIAL QRIS</div>
             <div id="qrisAdminPreviewNmid" style="font-size: 10.5px; color: #94A3B8; font-family: var(--font-mono, monospace); margin-top: 2px;">NMID: ID1029384756201</div>
@@ -803,7 +814,7 @@
             <div class="setting-desc">URL langsung file .apk (contoh: direct download link atau server CDN)</div>
           </div>
           <div class="setting-input-wrap" style="width: 340px;">
-            <input type="text" class="admin-input" id="apkCfgUrl" value="https://fgtpro-investasi.com/downloads/fgt-pro-v2.4.apk">
+            <input type="text" class="admin-input" id="apkCfgUrl" value="https://autotrading.my.id/downloads/autotrading-v2.4.apk">
           </div>
         </div>
 
@@ -1178,7 +1189,7 @@
             <div class="setting-desc">Alamat email pengirim (sebaiknya gunakan domain yang sama dengan hosting, misal: noreply@domainanda.com).</div>
           </div>
           <div class="setting-input-wrap" style="width: 320px;">
-            <input type="email" class="admin-input" id="emailCfgFromEmail" placeholder="noreply@fgtpro-investasi.com">
+            <input type="email" class="admin-input" id="emailCfgFromEmail" placeholder="noreply@autotrading.my.id">
           </div>
         </div>
 

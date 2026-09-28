@@ -568,7 +568,7 @@ export const AdminPage = {
       active: true,
       merchantName: 'AUTOTRADING OFFICIAL QRIS',
       nmid: 'ID1029384756201',
-      imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=FGT_PRO_OFFICIAL_QRIS_DEPOSIT'
+      imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=AUTOTRADING_OFFICIAL_QRIS_DEPOSIT'
     };
 
     const activeEl = document.getElementById('qrisCfgActive');
@@ -658,7 +658,7 @@ export const AdminPage = {
     if (aNotifEl) aNotifEl.value = String(emailCfg.adminNotificationOnRegister !== false);
 
     const aEmailEl = document.getElementById('emailCfgAdminEmail');
-    if (aEmailEl) aEmailEl.value = emailCfg.adminNotificationEmail || 'admin@fgtpro-investasi.com';
+    if (aEmailEl) aEmailEl.value = emailCfg.adminNotificationEmail || 'admin@autotrading.my.id';
 
     const wEmailEl = document.getElementById('emailCfgWelcomeEmail');
     if (wEmailEl) wEmailEl.value = String(emailCfg.welcomeEmailEnabled !== false);
@@ -670,12 +670,12 @@ export const AdminPage = {
     if (fNameEl) fNameEl.value = (emailCfg.smtp && emailCfg.smtp.fromName) || 'AUTOTRADING Official';
 
     const fEmailEl = document.getElementById('emailCfgFromEmail');
-    if (fEmailEl) fEmailEl.value = (emailCfg.smtp && emailCfg.smtp.fromEmail) || 'noreply@fgtpro-investasi.com';
+    if (fEmailEl) fEmailEl.value = (emailCfg.smtp && emailCfg.smtp.fromEmail) || 'noreply@autotrading.my.id';
 
     // SMTP specifics
     const smtp = emailCfg.smtp || {};
     const sHostEl = document.getElementById('emailCfgSmtpHost');
-    if (sHostEl) sHostEl.value = smtp.host || 'mail.fgtpro-investasi.com';
+    if (sHostEl) sHostEl.value = smtp.host || 'mail.autotrading.my.id';
 
     const sPortEl = document.getElementById('emailCfgSmtpPort');
     if (sPortEl) sPortEl.value = smtp.port || 465;
@@ -744,17 +744,17 @@ export const AdminPage = {
     const newCfg = {
       verificationRequired,
       adminNotificationOnRegister,
-      adminNotificationEmail: adminNotificationEmail || 'admin@fgtpro-investasi.com',
+      adminNotificationEmail: adminNotificationEmail || 'admin@autotrading.my.id',
       welcomeEmailEnabled,
       mailMethod,
       smtp: {
-        host: host || 'mail.fgtpro-investasi.com',
+        host: host || 'mail.autotrading.my.id',
         port,
         secure,
         user,
         pass,
         fromName: fromName || 'AUTOTRADING Official',
-        fromEmail: fromEmail || 'noreply@fgtpro-investasi.com'
+        fromEmail: fromEmail || 'noreply@autotrading.my.id'
       }
     };
 
@@ -1859,7 +1859,7 @@ export const AdminPage = {
   },
 
   generateRandomPassword() {
-    const randomPass = `Fgt${Math.floor(1000 + Math.random() * 9000)}!`;
+    const randomPass = `Auto${Math.floor(1000 + Math.random() * 9000)}!`;
     const input = document.getElementById('admMemNewPassword');
     if (input) {
       input.value = randomPass;

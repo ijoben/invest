@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FGT PRO - RESPONSIVE & ANIMATIONS STYLESHEET
+   AUTOTRADING - RESPONSIVE & ANIMATIONS STYLESHEET
    ========================================================================== */
 
 /* Device Simulator Header for Desktop */
@@ -177,6 +177,14 @@
   .header-actions {
     gap: 5px;
   }
+  .header-brand-badge {
+    padding: 3px 8px;
+    gap: 4px;
+  }
+  .header-brand-text {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
   .header-btn {
     width: 33px;
     height: 33px;
@@ -206,6 +214,14 @@
   .greeting-sponsor-text {
     font-size: 8.5px;
     max-width: 80px;
+  }
+  .header-brand-badge {
+    padding: 3px 6px;
+    gap: 3px;
+  }
+  .header-brand-text {
+    font-size: 9px;
+    letter-spacing: 0.3px;
   }
   .header-actions {
     gap: 4px;

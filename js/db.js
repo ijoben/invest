@@ -41,7 +41,7 @@ const defaultDB = {
       "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
     ],
     apkDownload: {
-      url: 'https://fgtpro-investasi.com/downloads/fgt-pro-v2.4.apk',
+      url: 'https://autotrading.my.id/downloads/autotrading-v2.4.apk',
       version: 'v2.4.0 (Official Release)',
       size: '18.5 MB',
       updatedAt: '2026-09-18',
@@ -50,17 +50,17 @@ const defaultDB = {
     email: {
       verificationRequired: false, // Default false: instant register without OTP. Admin can toggle to true to enforce 6-digit email OTP.
       adminNotificationOnRegister: true, // Send alert to admin when a new user registers
-      adminNotificationEmail: 'admin@fgtpro-investasi.com',
+      adminNotificationEmail: 'admin@autotrading.my.id',
       welcomeEmailEnabled: true,
       mailMethod: 'cpanel', // 'cpanel' (PHP mail) or 'smtp'
       smtp: {
-        host: 'mail.fgtpro-investasi.com',
+        host: 'mail.autotrading.my.id',
         port: 465,
         secure: 'ssl',
-        user: 'noreply@fgtpro-investasi.com',
+        user: 'noreply@autotrading.my.id',
         pass: '',
         fromName: 'AUTOTRADING Official',
-        fromEmail: 'noreply@fgtpro-investasi.com'
+        fromEmail: 'noreply@autotrading.my.id'
       }
     },
     profitCycleDurationHours: 24, // Real 24-hour cycle
@@ -108,7 +108,7 @@ const defaultDB = {
         active: true,
         merchantName: 'AUTOTRADING OFFICIAL QRIS',
         nmid: 'ID1029384756201',
-        imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5916FGT_PRO_OFFICIAL6007JAKARTA61051234062070703A016304E8A2'
+        imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2'
       },
       usdt: {
         trc20Address: 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1',
@@ -175,7 +175,7 @@ const defaultDB = {
       id: 'usr-admin',
       username: 'admin',
       fullName: 'System Administrator',
-      email: 'admin@fgtpro.io',
+      email: 'admin@autotrading.my.id',
       phone: '081299990000',
       password: 'admin',
       role: 'admin',
@@ -1089,7 +1089,7 @@ export const DB = {
     let userId = null;
     if (typeof sessionStorage !== 'undefined') {
       try {
-        userId = sessionStorage.getItem('fgt_session_user_id');
+        userId = sessionStorage.getItem('autotrading_session_user_id') || sessionStorage.getItem('fgt_session_user_id');
       } catch (e) {}
     }
     if (!userId && db.currentSession) {
@@ -1108,8 +1108,10 @@ export const DB = {
     if (typeof sessionStorage !== 'undefined') {
       try {
         if (user && user.id) {
+          sessionStorage.setItem('autotrading_session_user_id', user.id);
           sessionStorage.setItem('fgt_session_user_id', user.id);
         } else {
+          sessionStorage.removeItem('autotrading_session_user_id');
           sessionStorage.removeItem('fgt_session_user_id');
         }
       } catch (e) {}
@@ -1127,6 +1129,7 @@ export const DB = {
   clearSession() {
     if (typeof sessionStorage !== 'undefined') {
       try {
+        sessionStorage.removeItem('autotrading_session_user_id');
         sessionStorage.removeItem('fgt_session_user_id');
       } catch (e) {}
     }
@@ -1305,7 +1308,7 @@ export const DB = {
     }
 
     // Generate 6-digit verification code
-    const resetCode = 'FGT-' + Math.floor(100000 + Math.random() * 900000);
+    const resetCode = 'AT-' + Math.floor(100000 + Math.random() * 900000);
     user.passwordResetRequest = {
       code: resetCode,
       requestedAt: new Date().toISOString(),

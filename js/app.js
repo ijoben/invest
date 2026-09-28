@@ -35,6 +35,7 @@ const App = {
     const urlParams = new URLSearchParams(window.location.search);
     const refParam = urlParams.get('ref');
     if (refParam) {
+      sessionStorage.setItem('autotrading_ref_code', refParam);
       sessionStorage.setItem('fgt_ref_code', refParam);
       const refInput = document.getElementById('regReferral');
       if (refInput) refInput.value = refParam;
@@ -154,7 +155,7 @@ const App = {
     } else {
       greetingEl.innerHTML = `
         <div class="greeting-guest-name">Hi guest,</div>
-        <div class="greeting-guest-sub">Klik untuk Masuk / Daftar</div>
+        <div class="greeting-guest-sub">Masuk ke AUTOTRADING</div>
       `;
       avatarEl.classList.remove('logged-in');
       avatarEl.innerHTML = `
@@ -2189,13 +2190,13 @@ const App = {
       return;
     }
 
-    const downloadUrl = apk.url || 'https://fgtpro-investasi.com/downloads/fgt-pro-v2.4.apk';
+    const downloadUrl = apk.url || 'https://autotrading.my.id/downloads/autotrading-v2.4.apk';
     this.showToast(`Memulai pengunduhan APK AUTOTRADING (${apk.version || 'v2.4.0'})...`, 'success');
 
     try {
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `FGT_Pro_${(apk.version || 'v2.4.0').replace(/[^a-zA-Z0-9.]/g, '_')}.apk`;
+      link.download = `AUTOTRADING_${(apk.version || 'v2.4.0').replace(/[^a-zA-Z0-9.]/g, '_')}.apk`;
       link.target = '_blank';
       document.body.appendChild(link);
       link.click();

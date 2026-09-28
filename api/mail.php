@@ -99,7 +99,7 @@ function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) 
     $headers[] = "Subject: {$encodedSubject}";
     $headers[] = "MIME-Version: 1.0";
     $headers[] = "Content-Type: text/html; charset=UTF-8";
-    $headers[] = "X-Mailer: FGT-Pro-SMTP";
+    $headers[] = "X-Mailer: AUTOTRADING-SMTP";
 
     $body = implode("\r\n", $headers) . "\r\n\r\n" . $htmlContent . "\r\n.";
     $write($body);
@@ -114,7 +114,7 @@ function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) 
 // Master email dispatcher
 function dispatchEmail($to, $subject, $htmlContent, $emailSettings) {
     $fromName = !empty($emailSettings['smtp']['fromName']) ? $emailSettings['smtp']['fromName'] : 'AUTOTRADING Official';
-    $fromEmail = !empty($emailSettings['smtp']['fromEmail']) ? $emailSettings['smtp']['fromEmail'] : 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'fgtpro-investasi.com');
+    $fromEmail = !empty($emailSettings['smtp']['fromEmail']) ? $emailSettings['smtp']['fromEmail'] : 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id');
     $method = !empty($emailSettings['mailMethod']) ? strtolower($emailSettings['mailMethod']) : 'cpanel';
 
     if ($method === 'smtp' && !empty($emailSettings['smtp']['host'])) {
@@ -195,7 +195,7 @@ if (empty($action)) {
 $emailSettings = $data['settings']['email'] ?? [
     'verificationRequired' => true,
     'adminNotificationOnRegister' => true,
-    'adminNotificationEmail' => 'admin@fgtpro-investasi.com',
+    'adminNotificationEmail' => 'admin@autotrading.my.id',
     'welcomeEmailEnabled' => true,
     'mailMethod' => 'cpanel',
     'smtp' => [
@@ -205,7 +205,7 @@ $emailSettings = $data['settings']['email'] ?? [
         'user' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'localhost'),
         'pass' => '',
         'fromName' => 'AUTOTRADING Official',
-        'fromEmail' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'fgtpro-investasi.com')
+        'fromEmail' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id')
     ]
 ];
 
@@ -258,7 +258,7 @@ HTML;
 
 // 2. ACTION: SEND ADMIN NOTIFICATION FOR NEW REGISTER
 if ($action === 'admin_notification') {
-    $adminEmail = !empty($emailSettings['adminNotificationEmail']) ? $emailSettings['adminNotificationEmail'] : 'admin@fgtpro-investasi.com';
+    $adminEmail = !empty($emailSettings['adminNotificationEmail']) ? $emailSettings['adminNotificationEmail'] : 'admin@autotrading.my.id';
     $u = $data['user'] ?? $data;
 
     $username = htmlspecialchars($u['username'] ?? '-');

@@ -559,17 +559,17 @@ export const Admin = {
     return db.settings.email || {
       verificationRequired: false,
       adminNotificationOnRegister: true,
-      adminNotificationEmail: 'admin@fgtpro-investasi.com',
+      adminNotificationEmail: 'admin@autotrading.my.id',
       welcomeEmailEnabled: true,
       mailMethod: 'cpanel',
       smtp: {
-        host: 'mail.fgtpro-investasi.com',
+        host: 'mail.autotrading.my.id',
         port: 465,
         secure: 'ssl',
-        user: 'noreply@fgtpro-investasi.com',
+        user: 'noreply@autotrading.my.id',
         pass: '',
         fromName: 'AUTOTRADING Official',
-        fromEmail: 'noreply@fgtpro-investasi.com'
+        fromEmail: 'noreply@autotrading.my.id'
       }
     };
   },

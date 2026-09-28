@@ -1,6 +1,6 @@
 <?php
 /**
- * FGT PRO - CPANEL MYSQL DATABASE CONFIGURATION
+ * AUTOTRADING - CPANEL MYSQL DATABASE CONFIGURATION
  * Edit the credentials below with your cPanel MySQL Database details.
  */
 
