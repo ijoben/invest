@@ -1,5 +1,5 @@
 /**
- * FGT PRO - AUTHENTICATION & SESSION MANAGER
+ * AUTOTRADING - AUTHENTICATION & SESSION MANAGER
  * Manages Login, Register, Forgot Password, Referral Link auto-capture, and User State.
  */
 
@@ -178,7 +178,7 @@ export const Auth = {
     if (cleanPhone) {
       const existingPhone = DB.getUserByPhone ? DB.getUserByPhone(cleanPhone) : null;
       if (existingPhone) {
-        return { success: false, message: 'Nomor WhatsApp / HP sudah terdaftar di sistem FGT Pro!' };
+        return { success: false, message: 'Nomor WhatsApp / HP sudah terdaftar di sistem AUTOTRADING!' };
       }
     }
 
@@ -244,7 +244,7 @@ export const Auth = {
 
     // Direct Login if verification is OFF
     DB.setSession(newUser);
-    return { success: true, requiresVerification: false, user: newUser, message: 'Registrasi berhasil! Selamat bergabung di FGT Pro.' };
+    return { success: true, requiresVerification: false, user: newUser, message: 'Registrasi berhasil! Selamat bergabung di AUTOTRADING.' };
   },
 
   // Verify Registration OTP

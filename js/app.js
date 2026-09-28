@@ -1,5 +1,5 @@
 /**
- * FGT PRO - MAIN APPLICATION CONTROLLER & UI RENDERER
+ * AUTOTRADING - MAIN APPLICATION CONTROLLER & UI RENDERER
  * Connects DOM events, handles SPA routing, renders views, and synchronizes real-time state.
  * Premium Fintech Edition: Vector SVG Icons & Polished UI.
  */
@@ -53,7 +53,7 @@ const App = {
     // Show quick welcome toast
     setTimeout(() => {
       if (!Auth.isLoggedIn()) {
-        this.showToast('Selamat datang di FGT Pro. Silakan login untuk mengakses fitur lengkap.', 'info');
+        this.showToast('Selamat datang di AUTOTRADING. Silakan login untuk mengakses fitur lengkap.', 'info');
       }
     }, 800);
   },
@@ -173,7 +173,7 @@ const App = {
 
     const announcements = DB.getActiveAnnouncements();
     if (announcements.length === 0) {
-      el.textContent = 'Selamat datang di FGT Pro Platform Investasi AI Trading Resmi 2026.';
+      el.textContent = 'Selamat datang di AUTOTRADING Platform Investasi AI Trading Resmi 2026.';
       return;
     }
 
@@ -833,7 +833,7 @@ const App = {
       const imgSource = b.imageUrl || 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80';
       return `
         <div class="banner-slide" onclick="App.onBannerClick('${b.actionUrl || ''}')" data-index="${idx}">
-          <img class="banner-img" src="${imgSource}" alt="${b.title || 'FGT Pro Banner'}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80'">
+          <img class="banner-img" src="${imgSource}" alt="${b.title || 'AUTOTRADING Banner'}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80'">
           <div class="banner-overlay">
             ${b.badge ? `<span class="banner-badge">${b.badge}</span>` : ''}
             <h3 class="banner-title">${b.title || ''}</h3>
@@ -1097,7 +1097,7 @@ const App = {
           <div class="reward-card-body">
             <span class="reward-category-label">${r.category || 'HADIAH'}</span>
             <h4 class="reward-title" title="${r.title}">${r.title}</h4>
-            <p class="reward-desc-snippet">${r.description || 'Tukarkan poin loyalty trading FGT Pro Anda.'}</p>
+            <p class="reward-desc-snippet">${r.description || 'Tukarkan poin loyalty trading AUTOTRADING Anda.'}</p>
             <div class="reward-points-row">
               <div class="reward-points-tag">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="#C89338"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -1305,7 +1305,7 @@ const App = {
         <div style="text-align: center; padding: 30px 15px; color: #94A3B8;">
           <div style="font-size: 32px; margin-bottom: 8px;">💳</div>
           <div style="font-weight: 700; color: #475569; font-size: 14px;">Belum Ada Testimoni Kategori Ini</div>
-          <div style="font-size: 11.5px; margin-top: 4px;">Pilih kategori "Semua Bank" untuk melihat seluruh bukti penarikan member FGT Pro.</div>
+          <div style="font-size: 11.5px; margin-top: 4px;">Pilih kategori "Semua Bank" untuk melihat seluruh bukti penarikan member AUTOTRADING.</div>
         </div>
       `;
       return;
@@ -1351,7 +1351,7 @@ const App = {
           </div>
 
           <div class="testi-comment-box">
-            "${t.comment || 'Penarikan sukses landing cepat tanpa kendala. Terimakasih FGT Pro!'}"
+            "${t.comment || 'Penarikan sukses landing cepat tanpa kendala. Terimakasih AUTOTRADING!'}"
           </div>
 
           <!-- M-Banking Screenshot Frame (Clickable for Zoom Preview) -->
@@ -2190,7 +2190,7 @@ const App = {
     }
 
     const downloadUrl = apk.url || 'https://fgtpro-investasi.com/downloads/fgt-pro-v2.4.apk';
-    this.showToast(`Memulai pengunduhan APK FGT Pro (${apk.version || 'v2.4.0'})...`, 'success');
+    this.showToast(`Memulai pengunduhan APK AUTOTRADING (${apk.version || 'v2.4.0'})...`, 'success');
 
     try {
       const link = document.createElement('a');
@@ -3312,7 +3312,7 @@ const App = {
       if (qrisImg) {
         qrisImg.src = qris.imageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qris.merchantName || 'QRIS')}`;
       }
-      if (qrisMerchant) qrisMerchant.textContent = qris.merchantName || 'FGT PRO OFFICIAL QRIS';
+      if (qrisMerchant) qrisMerchant.textContent = qris.merchantName || 'AUTOTRADING OFFICIAL QRIS';
       if (qrisNmid) qrisNmid.textContent = qris.nmid ? `NMID: ${qris.nmid}` : '';
     } else {
       if (optQris) optQris.style.display = 'none';
@@ -3518,7 +3518,7 @@ const App = {
 
     const sampleReceipt = createReceiptBase64({
       bank: bankName,
-      name: user ? (user.fullName || user.username) : 'Member FGT Pro',
+      name: user ? (user.fullName || user.username) : 'Member AUTOTRADING',
       amount: amount,
       timeAgo: 'Baru saja',
       refNo: 'TRX-' + Math.floor(100000 + Math.random() * 900000)

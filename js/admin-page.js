@@ -1,5 +1,5 @@
 /**
- * FGT PRO - STANDALONE ADMIN PAGE CONTROLLER
+ * AUTOTRADING - STANDALONE ADMIN PAGE CONTROLLER
  * Controls admin.html views, tables, modal actions, and settings.
  */
 
@@ -566,7 +566,7 @@ export const AdminPage = {
   renderQrisSettings(db) {
     const qris = (db.settings.paymentGateways && db.settings.paymentGateways.qris) || {
       active: true,
-      merchantName: 'FGT PRO OFFICIAL QRIS',
+      merchantName: 'AUTOTRADING OFFICIAL QRIS',
       nmid: 'ID1029384756201',
       imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=FGT_PRO_OFFICIAL_QRIS_DEPOSIT'
     };
@@ -577,7 +577,7 @@ export const AdminPage = {
     const imgUrlEl = document.getElementById('qrisCfgImageUrl');
 
     if (activeEl) activeEl.value = String(qris.active !== false);
-    if (merchantEl) merchantEl.value = qris.merchantName || 'FGT PRO OFFICIAL QRIS';
+    if (merchantEl) merchantEl.value = qris.merchantName || 'AUTOTRADING OFFICIAL QRIS';
     if (nmidEl) nmidEl.value = qris.nmid || '';
     if (imgUrlEl) imgUrlEl.value = qris.imageUrl || '';
 
@@ -594,7 +594,7 @@ export const AdminPage = {
     const previewMerchant = document.getElementById('qrisAdminPreviewMerchant');
     const previewNmid = document.getElementById('qrisAdminPreviewNmid');
 
-    const merchantVal = merchantEl ? merchantEl.value.trim() : 'FGT PRO OFFICIAL QRIS';
+    const merchantVal = merchantEl ? merchantEl.value.trim() : 'AUTOTRADING OFFICIAL QRIS';
     const nmidVal = nmidEl ? nmidEl.value.trim() : 'ID1029384756201';
     let imgVal = imgUrlEl ? imgUrlEl.value.trim() : '';
 
@@ -603,7 +603,7 @@ export const AdminPage = {
     }
 
     if (previewImg) previewImg.src = imgVal;
-    if (previewMerchant) previewMerchant.textContent = merchantVal || 'FGT PRO OFFICIAL QRIS';
+    if (previewMerchant) previewMerchant.textContent = merchantVal || 'AUTOTRADING OFFICIAL QRIS';
     if (previewNmid) previewNmid.textContent = nmidVal ? `NMID: ${nmidVal}` : 'NMID: -';
   },
 
@@ -667,7 +667,7 @@ export const AdminPage = {
     if (mMethodEl) mMethodEl.value = emailCfg.mailMethod || 'cpanel';
 
     const fNameEl = document.getElementById('emailCfgFromName');
-    if (fNameEl) fNameEl.value = (emailCfg.smtp && emailCfg.smtp.fromName) || 'FGT Pro Investment Official';
+    if (fNameEl) fNameEl.value = (emailCfg.smtp && emailCfg.smtp.fromName) || 'AUTOTRADING Official';
 
     const fEmailEl = document.getElementById('emailCfgFromEmail');
     if (fEmailEl) fEmailEl.value = (emailCfg.smtp && emailCfg.smtp.fromEmail) || 'noreply@fgtpro-investasi.com';
@@ -753,7 +753,7 @@ export const AdminPage = {
         secure,
         user,
         pass,
-        fromName: fromName || 'FGT Pro Investment Official',
+        fromName: fromName || 'AUTOTRADING Official',
         fromEmail: fromEmail || 'noreply@fgtpro-investasi.com'
       }
     };
@@ -1285,7 +1285,7 @@ export const AdminPage = {
   },
 
   logout() {
-    if (!confirm('Apakah Anda yakin ingin keluar (logout) dari panel Admin FGT Pro?')) return;
+    if (!confirm('Apakah Anda yakin ingin keluar (logout) dari panel Admin AUTOTRADING?')) return;
     Auth.logout();
     this.showToast('Logout admin berhasil. Mengalihkan ke halaman utama...', 'success');
     setTimeout(() => {
@@ -1690,7 +1690,7 @@ export const AdminPage = {
 
     // Header info
     document.getElementById('admMemModalTitle').textContent = `👤 Detail Member: ${user.username}`;
-    document.getElementById('admMemModalSub').textContent = `${user.fullName || 'Member FGT Pro'} · Terdaftar: ${user.registeredAt ? new Date(user.registeredAt).toLocaleDateString('id-ID') : '-'}`;
+    document.getElementById('admMemModalSub').textContent = `${user.fullName || 'Member AUTOTRADING'} · Terdaftar: ${user.registeredAt ? new Date(user.registeredAt).toLocaleDateString('id-ID') : '-'}`;
 
     // Hidden ID & Fields
     document.getElementById('admMemDetailUserId').value = user.id;

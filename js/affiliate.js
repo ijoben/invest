@@ -1,5 +1,5 @@
 /**
- * FGT PRO - AFFILIATE, SPONSOR BONUS, RABAT & LEVEL ENGINE
+ * AUTOTRADING - AFFILIATE, SPONSOR BONUS, RABAT & LEVEL ENGINE
  * Manages Multi-tier referral calculations, sponsor bonus, matching ROI (rabat),
  * turnover milestones, and downline hierarchy.
  */

@@ -1,5 +1,5 @@
 /**
- * FGT PRO - REAL MYSQL STATE MANAGEMENT ENGINE
+ * AUTOTRADING - REAL MYSQL STATE MANAGEMENT ENGINE
  * Direct synchronization with phpMyAdmin / MySQL Database via cPanel REST API.
  * Pure Cloud / phpMyAdmin Architecture - Browser localStorage completely purged.
  */
@@ -21,7 +21,7 @@ let _activeDB = null;
 const defaultDB = {
   // Application Settings
   settings: {
-    appName: 'FGT Pro',
+    appName: 'AUTOTRADING',
     currency: 'IDR',
     usdIdrRate: 16250,
     minDeposit: 50000,
@@ -59,7 +59,7 @@ const defaultDB = {
         secure: 'ssl',
         user: 'noreply@fgtpro-investasi.com',
         pass: '',
-        fromName: 'FGT Pro Investment Official',
+        fromName: 'AUTOTRADING Official',
         fromEmail: 'noreply@fgtpro-investasi.com'
       }
     },
@@ -100,13 +100,13 @@ const defaultDB = {
     ],
     paymentGateways: {
       banks: [
-        { id: 'bca', name: 'Bank Central Asia (BCA)', accountNo: '8271928374', accountName: 'PT FGT PRO INVESTASI', active: true },
-        { id: 'mandiri', name: 'Bank Mandiri', accountNo: '1370029384721', accountName: 'PT FGT PRO INVESTASI', active: true },
-        { id: 'bri', name: 'Bank BRI', accountNo: '034101002938531', accountName: 'PT FGT PRO INVESTASI', active: true }
+        { id: 'bca', name: 'Bank Central Asia (BCA)', accountNo: '8271928374', accountName: 'PT AUTOTRADING INVESTASI', active: true },
+        { id: 'mandiri', name: 'Bank Mandiri', accountNo: '1370029384721', accountName: 'PT AUTOTRADING INVESTASI', active: true },
+        { id: 'bri', name: 'Bank BRI', accountNo: '034101002938531', accountName: 'PT AUTOTRADING INVESTASI', active: true }
       ],
       qris: {
         active: true,
-        merchantName: 'FGT PRO OFFICIAL QRIS',
+        merchantName: 'AUTOTRADING OFFICIAL QRIS',
         nmid: 'ID1029384756201',
         imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5916FGT_PRO_OFFICIAL6007JAKARTA61051234062070703A016304E8A2'
       },
@@ -128,7 +128,7 @@ const defaultDB = {
       minDailyProfit: 1.2, // 1.2%
       maxDailyProfit: 2.2, // 2.2%
       durationDays: 15,
-      description: 'Paket Pemula & Edukasi Trading Algoritma FGT Pro',
+      description: 'Paket Pemula & Edukasi Trading Algoritma AUTOTRADING',
       activeCount: 1420
     },
     {
@@ -563,7 +563,7 @@ const defaultDB = {
   announcements: [
     {
       id: 'ann-1',
-      text: 'Selamat datang di FGT Pro Platform Investasi AI Trading Resmi 2026. Dapatkan bonus sponsor 10% dan profit harian otomatis 24/7!',
+      text: 'Selamat datang di AUTOTRADING Platform Investasi AI Trading Resmi 2026. Dapatkan bonus sponsor 10% dan profit harian otomatis 24/7!',
       active: true,
       createdAt: '2026-09-15T00:00:00.000Z'
     },
@@ -585,7 +585,7 @@ const defaultDB = {
   banners: [
     {
       id: 'ban-1',
-      title: 'AI Trading Algoritma FGT Pro v4.2',
+      title: 'AI Trading Algoritma AUTOTRADING v4.2',
       subtitle: 'Otomasi profit harian dengan akurasi eksekusi 94.8% dan proteksi modal terintegrasi.',
       badge: 'PROMO UNGGULAN',
       imageUrl: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80',
@@ -643,12 +643,12 @@ const defaultDB = {
     },
     {
       id: 'rew-3',
-      title: 'Kaos Eksklusif FGT Pro Trader 2026 Edition',
+      title: 'Kaos Eksklusif AUTOTRADING Trader 2026 Edition',
       category: 'Merchandise',
       badge: 'OFFICIAL',
       pointsCost: 150,
       stock: 35,
-      description: 'T-Shirt Cotton Combed 24s premium dengan bordir emas logo FGT Pro Trading AI.',
+      description: 'T-Shirt Cotton Combed 24s premium dengan bordir emas logo AUTOTRADING Trading AI.',
       imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=80',
       active: true,
       createdAt: '2026-09-15T02:00:00.000Z'
@@ -714,7 +714,7 @@ const defaultDB = {
 };
 
 // Helper to generate crisp, standard Base64 SVG Mobile Banking Receipts
-export function createReceiptBase64({ bank = 'BCA Mobile', name = 'Member FGT Pro', amount = 10000000, timeAgo = 'Baru saja', refNo = '' }) {
+export function createReceiptBase64({ bank = 'BCA Mobile', name = 'Member AUTOTRADING', amount = 10000000, timeAgo = 'Baru saja', refNo = '' }) {
   let primaryColor = '#003B7A';
   let titleText = 'TRANSFER KE REKENING BCA BERHASIL';
   let iconStroke = '#059669';
@@ -768,7 +768,7 @@ export function createReceiptBase64({ bank = 'BCA Mobile', name = 'Member FGT Pr
     <text x="300" y="222" fill="${primaryColor}" font-family="Arial, sans-serif" font-size="30" font-weight="900" text-anchor="middle">${formattedAmount}</text>
     <line x1="45" y1="245" x2="555" y2="245" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="6 6"/>
     <text x="50" y="275" fill="#64748B" font-family="Arial, sans-serif" font-size="13">Pengirim:</text>
-    <text x="550" y="275" fill="#0F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">PT FGT PRO INVESTASI</text>
+    <text x="550" y="275" fill="#0F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">PT AUTOTRADING INVESTASI</text>
     <text x="50" y="305" fill="#64748B" font-family="Arial, sans-serif" font-size="13">Penerima:</text>
     <text x="550" y="305" fill="#0F172A" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="end">${name}</text>
     <text x="50" y="335" fill="#64748B" font-family="Arial, sans-serif" font-size="13">Waktu:</text>
@@ -836,7 +836,7 @@ const defaultTestimonials = [
     bank: 'BRImo',
     amount: 7300000,
     rating: 5,
-    comment: 'Profit harian konsisten tiap hari tinggal klik klaim profit. WD 7.3jt ke rekening BRI masuk cepet banget. Bukti m-banking nyata no rekayasa! Sukses selalu FGT Pro.',
+    comment: 'Profit harian konsisten tiap hari tinggal klik klaim profit. WD 7.3jt ke rekening BRI masuk cepet banget. Bukti m-banking nyata no rekayasa! Sukses selalu AUTOTRADING.',
     receiptImage: createReceiptBase64({
       bank: 'BRImo (Bank BRI)',
       name: 'RIAN HIDAYAT (03410****8531)',
@@ -876,7 +876,7 @@ const defaultTestimonials = [
     bank: 'BNI Mobile',
     amount: 12000000,
     rating: 5,
-    comment: 'Bonus rabat referral tim cair terus tiap hari. Sekarang WD 12jt ke BNI langsung masuk. Temen-temen yang saya ajak juga udah pada cuan semua. Terimakasih FGT Pro!',
+    comment: 'Bonus rabat referral tim cair terus tiap hari. Sekarang WD 12jt ke BNI langsung masuk. Temen-temen yang saya ajak juga udah pada cuan semua. Terimakasih AUTOTRADING!',
     receiptImage: createReceiptBase64({
       bank: 'BNI Mobile Banking',
       name: 'DEWI LESTARI (09827****102)',
@@ -1301,7 +1301,7 @@ export const DB = {
     );
 
     if (!user) {
-      return { success: false, message: 'Akun dengan email / username tersebut tidak ditemukan di sistem FGT Pro!' };
+      return { success: false, message: 'Akun dengan email / username tersebut tidak ditemukan di sistem AUTOTRADING!' };
     }
 
     // Generate 6-digit verification code
@@ -1770,7 +1770,7 @@ export const DB = {
     const newTestimonial = {
       id: 'testi-' + Date.now(),
       userId: userId || null,
-      name: (name || 'Member FGT Pro').trim(),
+      name: (name || 'Member AUTOTRADING').trim(),
       city: (city || 'Indonesia').trim(),
       avatar: (avatar || '').trim() || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Member')}&background=C89338&color=fff`,
       bank: (bank || 'BCA Mobile').trim(),

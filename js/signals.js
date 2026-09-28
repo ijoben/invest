@@ -1,5 +1,5 @@
 /**
- * FGT PRO - SIGNALS & LIVE MARKET SIMULATOR
+ * AUTOTRADING - SIGNALS & LIVE MARKET SIMULATOR
  * Simulates real-time price changes on market tickers and manages Prof GPT AI Signals.
  */
 

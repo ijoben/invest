@@ -1,6 +1,6 @@
 <?php
 /**
- * FGT PRO - EMAIL NOTIFICATION & VERIFICATION SERVICE
+ * AUTOTRADING - EMAIL NOTIFICATION & VERIFICATION SERVICE
  * Handles OTP verification emails, admin new-member alerts, welcome emails, and SMTP dispatch for cPanel.
  */
 
@@ -113,7 +113,7 @@ function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) 
 
 // Master email dispatcher
 function dispatchEmail($to, $subject, $htmlContent, $emailSettings) {
-    $fromName = !empty($emailSettings['smtp']['fromName']) ? $emailSettings['smtp']['fromName'] : 'FGT Pro Investment Official';
+    $fromName = !empty($emailSettings['smtp']['fromName']) ? $emailSettings['smtp']['fromName'] : 'AUTOTRADING Official';
     $fromEmail = !empty($emailSettings['smtp']['fromEmail']) ? $emailSettings['smtp']['fromEmail'] : 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'fgtpro-investasi.com');
     $method = !empty($emailSettings['mailMethod']) ? strtolower($emailSettings['mailMethod']) : 'cpanel';
 
@@ -149,7 +149,7 @@ function getEmailWrapper($title, $innerContent) {
                     <span style="font-size: 22px; font-weight: 900; color: #080C14; line-height: 44px;">◈</span>
                   </td>
                   <td style="padding-left: 12px; text-align: left;">
-                    <div style="font-size: 20px; font-weight: 900; letter-spacing: 1.5px; color: #F8FAFC;">FGT PRO</div>
+                    <div style="font-size: 20px; font-weight: 900; letter-spacing: 1.5px; color: #F8FAFC;">AUTOTRADING</div>
                     <div style="font-size: 11px; font-weight: 600; color: #E5A83B; letter-spacing: 0.8px;">AI TRADING & INVESTMENT PLATFORM</div>
                   </td>
                 </tr>
@@ -165,9 +165,9 @@ function getEmailWrapper($title, $innerContent) {
           <!-- Footer -->
           <tr>
             <td style="padding: 20px 24px; text-align: center; background-color: #080C14; border-top: 1px solid #1E293B; font-size: 11.5px; color: #64748B; line-height: 1.6;">
-              <div>Pesan ini dikirim otomatis oleh sistem resmi <strong>FGT Pro Indonesia</strong>.</div>
+              <div>Pesan ini dikirim otomatis oleh sistem resmi <strong>AUTOTRADING Indonesia</strong>.</div>
               <div style="margin-top: 4px;">Jangan pernah membagikan kode OTP atau password Anda kepada siapapun demi keamanan aset Anda.</div>
-              <div style="margin-top: 10px; color: #475569;">&copy; 2026 FGT Pro Investment Platform. All rights reserved.</div>
+              <div style="margin-top: 10px; color: #475569;">&copy; 2026 AUTOTRADING Investment Platform. All rights reserved.</div>
             </td>
           </tr>
         </table>
@@ -204,7 +204,7 @@ $emailSettings = $data['settings']['email'] ?? [
         'secure' => 'ssl',
         'user' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'localhost'),
         'pass' => '',
-        'fromName' => 'FGT Pro Investment Official',
+        'fromName' => 'AUTOTRADING Official',
         'fromEmail' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'fgtpro-investasi.com')
     ]
 ];
@@ -212,7 +212,7 @@ $emailSettings = $data['settings']['email'] ?? [
 // 1. ACTION: SEND OTP VERIFICATION TO NEW USER
 if ($action === 'send_otp') {
     $email = trim($data['email'] ?? '');
-    $name = trim($data['name'] ?? $data['fullName'] ?? 'Investor FGT Pro');
+    $name = trim($data['name'] ?? $data['fullName'] ?? 'Investor AUTOTRADING');
     $otp = trim($data['code'] ?? $data['otp'] ?? '');
 
     if (empty($email) || empty($otp)) {
@@ -221,11 +221,11 @@ if ($action === 'send_otp') {
         exit();
     }
 
-    $subject = "[FGT Pro] Kode Verifikasi Pendaftaran Anda: {$otp}";
+    $subject = "[AUTOTRADING] Kode Verifikasi Pendaftaran Anda: {$otp}";
     $innerContent = <<<HTML
       <h2 style="font-size: 19px; font-weight: 800; color: #F8FAFC; margin: 0 0 10px 0;">Halo, {$name}! 👋</h2>
       <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 20px 0;">
-        Terima kasih telah mendaftarkan akun di platform <strong>FGT Pro</strong>. Untuk mengaktifkan akun dan memastikan keamanan email Anda, silakan gunakan kode verifikasi (OTP) berikut:
+        Terima kasih telah mendaftarkan akun di platform <strong>AUTOTRADING</strong>. Untuk mengaktifkan akun dan memastikan keamanan email Anda, silakan gunakan kode verifikasi (OTP) berikut:
       </p>
 
       <!-- OTP Display Box -->
@@ -236,11 +236,11 @@ if ($action === 'send_otp') {
       </div>
 
       <div style="background-color: #1E293B; border-left: 4px solid #E5A83B; border-radius: 6px; padding: 12px 14px; margin-bottom: 20px; font-size: 12px; color: #CBD5E1; line-height: 1.5;">
-        <strong>Perhatian Keamanan:</strong> Jangan berikan kode OTP ini kepada siapa pun, termasuk staf yang mengatasnamakan admin FGT Pro.
+        <strong>Perhatian Keamanan:</strong> Jangan berikan kode OTP ini kepada siapa pun, termasuk staf yang mengatasnamakan admin AUTOTRADING.
       </div>
 
       <p style="font-size: 12px; color: #64748B; margin: 0;">
-        Jika Anda tidak merasa mendaftar di FGT Pro, silakan abaikan pesan email ini.
+        Jika Anda tidak merasa mendaftar di AUTOTRADING, silakan abaikan pesan email ini.
       </p>
 HTML;
 
@@ -269,7 +269,7 @@ if ($action === 'admin_notification') {
     $upline = htmlspecialchars($u['referredBy'] ?? 'Organik / Tanpa Sponsor');
     $regTime = date('d M Y - H:i:s') . ' WIB';
 
-    $subject = "[FGT Pro Admin Alert] Member Baru Mendaftar: @{$username}";
+    $subject = "[AUTOTRADING Admin Alert] Member Baru Mendaftar: @{$username}";
     $innerContent = <<<HTML
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
         <span style="background: #10B981; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">NEW MEMBER</span>
@@ -277,7 +277,7 @@ if ($action === 'admin_notification') {
       </div>
 
       <p style="font-size: 13px; color: #94A3B8; margin-bottom: 18px;">
-        Sistem mendeteksi ada investor baru yang baru saja mendaftar di platform FGT Pro:
+        Sistem mendeteksi ada investor baru yang baru saja mendaftar di platform AUTOTRADING:
       </p>
 
       <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
@@ -309,7 +309,7 @@ if ($action === 'admin_notification') {
 
       <div style="text-align: center;">
         <a href="admin" style="background: linear-gradient(135deg, #E5A83B 0%, #C89338 100%); color: #080C14; font-weight: 800; font-size: 12.5px; padding: 11px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">
-          Buka Panel Admin FGT Pro &rarr;
+          Buka Panel Admin AUTOTRADING &rarr;
         </a>
       </div>
 HTML;
@@ -337,7 +337,7 @@ if ($action === 'test') {
 
     $nowStr = date('d M Y - H:i:s') . ' WIB';
     $methodStr = strtoupper($emailSettings['mailMethod'] ?? 'cpanel');
-    $subject = "[FGT Pro] Tes Konfigurasi Server Email Berhasil!";
+    $subject = "[AUTOTRADING] Tes Konfigurasi Server Email Berhasil!";
 
     $innerContent = <<<HTML
       <div style="text-align: center; margin-bottom: 20px;">
@@ -345,7 +345,7 @@ if ($action === 'test') {
           <span style="font-size: 26px; color: #22C55E; line-height: 50px;">✓</span>
         </div>
         <h2 style="font-size: 20px; font-weight: 800; color: #F8FAFC; margin: 0 0 6px 0;">Konfigurasi Email Berfungsi Normal!</h2>
-        <p style="font-size: 13px; color: #94A3B8; margin: 0;">Pengaturan email dan server notifikasi FGT Pro Anda telah terhubung dengan sukses.</p>
+        <p style="font-size: 13px; color: #94A3B8; margin: 0;">Pengaturan email dan server notifikasi AUTOTRADING Anda telah terhubung dengan sukses.</p>
       </div>
 
       <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
@@ -368,7 +368,7 @@ if ($action === 'test') {
       </table>
 
       <p style="font-size: 12px; color: #64748B; text-align: center; margin: 0;">
-        Pesan ini dikirim atas permintaan uji coba dari Panel Administrator FGT Pro.
+        Pesan ini dikirim atas permintaan uji coba dari Panel Administrator AUTOTRADING.
       </p>
 HTML;
 

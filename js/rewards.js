@@ -1,5 +1,5 @@
 /**
- * FGT PRO - REWARDS & POINT REDEMPTION ENGINE
+ * AUTOTRADING - REWARDS & POINT REDEMPTION ENGINE
  * Manages reward catalog querying, user point redemptions, stock deduction, and status tracking.
  */
 

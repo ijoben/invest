@@ -1,6 +1,6 @@
 <?php
 /**
- * FGT PRO - CPANEL MYSQL BACKEND REST API
+ * AUTOTRADING - CPANEL MYSQL BACKEND REST API
  * Handles database read, write, and synchronization with phpMyAdmin / MySQL.
  * Synchronizes both high-performance atomic JSON state and relational tables (users, transactions, investments, settings).
  */

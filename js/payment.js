@@ -1,5 +1,5 @@
 /**
- * FGT PRO - PAYMENT GATEWAY (LOCAL BANK, QRIS, & USDT)
+ * AUTOTRADING - PAYMENT GATEWAY (LOCAL BANK, QRIS, & USDT)
  * Handles deposit transactions, withdrawal requests, unique nominal codes,
  * exchange rate conversions, and transaction processing.
  */

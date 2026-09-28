@@ -1,5 +1,5 @@
 /**
- * FGT PRO - ADMIN CONTROL PANEL ENGINE
+ * AUTOTRADING - ADMIN CONTROL PANEL ENGINE
  * Manages full platform administrative controls, transaction approvals,
  * plan configurations, affiliate rates, profit engine, and user balances.
  */
@@ -244,7 +244,7 @@ export const Admin = {
     db.settings.paymentGateways = db.settings.paymentGateways || {};
     db.settings.paymentGateways.qris = {
       active: active !== undefined ? Boolean(active) : true,
-      merchantName: merchantName ? merchantName.trim() : 'FGT PRO OFFICIAL QRIS',
+      merchantName: merchantName ? merchantName.trim() : 'AUTOTRADING OFFICIAL QRIS',
       nmid: nmid ? nmid.trim() : '',
       imageUrl: imageUrl ? imageUrl.trim() : ''
     };
@@ -568,7 +568,7 @@ export const Admin = {
         secure: 'ssl',
         user: 'noreply@fgtpro-investasi.com',
         pass: '',
-        fromName: 'FGT Pro Investment Official',
+        fromName: 'AUTOTRADING Official',
         fromEmail: 'noreply@fgtpro-investasi.com'
       }
     };

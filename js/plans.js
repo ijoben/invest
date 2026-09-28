@@ -1,5 +1,5 @@
 /**
- * FGT PRO - INVESTMENT PLANS & RANDOM DAILY PROFIT ENGINE
+ * AUTOTRADING - INVESTMENT PLANS & RANDOM DAILY PROFIT ENGINE
  * Calculates fluctuating daily profits within min-max ranges, handles plan activation,
  * and distributes profit claims.
  */
