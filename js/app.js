@@ -36,7 +36,7 @@ const App = {
     const refParam = urlParams.get('ref');
     if (refParam) {
       sessionStorage.setItem('autotrading_ref_code', refParam);
-      sessionStorage.setItem('fgt_ref_code', refParam);
+      sessionStorage.setItem('fgt_ref_code', refParam); // legacy compat
       const refInput = document.getElementById('regReferral');
       if (refInput) refInput.value = refParam;
     }
@@ -2604,7 +2604,7 @@ const App = {
     const wds = Payment.getLiveMemberWithdrawals();
 
     const renderDepHtml = deposits.map(d => `
-      <span class="fgt-marquee-item">
+      <span class="autotrading-marquee-item fgt-marquee-item">
         <span class="badge-tag badge-dep">DEPOSIT</span>
         <span>${d.username}</span>
         <span class="amount-val">+${DB.formatIDR(d.amount)}</span>
@@ -2614,7 +2614,7 @@ const App = {
     `).join('');
 
     const renderWdHtml = wds.map(w => `
-      <span class="fgt-marquee-item">
+      <span class="autotrading-marquee-item fgt-marquee-item">
         <span class="badge-tag badge-wd">WITHDRAW</span>
         <span>${w.username}</span>
         <span class="amount-val">-${DB.formatIDR(w.amount)}</span>
@@ -2701,7 +2701,7 @@ const App = {
     const trackEl = document.getElementById('leadMarqueeTrack');
     if (trackEl) {
       const topSponsorItems = sponsors.slice(0, 5).map((s, idx) => `
-        <span class="fgt-marquee-item">
+        <span class="autotrading-marquee-item fgt-marquee-item">
           <span class="badge-tag badge-lead">TOP ${idx + 1} SPONSOR</span>
           <span style="font-weight:700;">${s.username}</span>
           <span class="amount-val">${DB.formatIDR(s.commission)} Komisi</span>
@@ -2710,7 +2710,7 @@ const App = {
       `).join('');
 
       const topProfitItems = profits.slice(0, 5).map((p, idx) => `
-        <span class="fgt-marquee-item">
+        <span class="autotrading-marquee-item fgt-marquee-item">
           <span class="badge-tag badge-dep">TOP ${idx + 1} PROFIT</span>
           <span style="font-weight:700;">${p.username}</span>
           <span class="amount-val">+${DB.formatIDR(p.totalProfit)}</span>

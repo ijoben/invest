@@ -136,7 +136,7 @@ export const Auth = {
     }
 
     // Reserved usernames protection
-    const reserved = ['admin', 'administrator', 'system', 'root', 'support', 'fgtpro', 'official', 'fgt'];
+    const reserved = ['admin', 'administrator', 'system', 'root', 'support', 'autotrading', 'official', 'fgtpro', 'fgt'];
     if (reserved.includes(cleanUsername)) {
       return { success: false, message: 'Username ini sudah dipesan oleh sistem dan tidak dapat digunakan!' };
     }

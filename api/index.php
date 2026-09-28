@@ -14,7 +14,15 @@ $pdo = getDbConnection();
 function ensureTablesExist($pdo) {
     if (!$pdo) return false;
     try {
-        // 1. Unified state table
+        // 1. Unified state table (Supports autotrading_system_state and fgt_system_state)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `autotrading_system_state` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `state_key` VARCHAR(64) NOT NULL UNIQUE,
+            `data_json` LONGTEXT NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS `fgt_system_state` (
             `id` INT AUTO_INCREMENT PRIMARY KEY,
             `state_key` VARCHAR(64) NOT NULL UNIQUE,
@@ -22,6 +30,17 @@ function ensureTablesExist($pdo) {
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        try {
+            $countNew = (int)$pdo->query("SELECT COUNT(*) FROM `autotrading_system_state`")->fetchColumn();
+            if ($countNew === 0) {
+                $oldRow = $pdo->query("SELECT `state_key`, `data_json` FROM `fgt_system_state` WHERE `state_key` = 'main_state' LIMIT 1")->fetch();
+                if ($oldRow && !empty($oldRow['data_json'])) {
+                    $ins = $pdo->prepare("INSERT INTO `autotrading_system_state` (`state_key`, `data_json`) VALUES ('main_state', :dj)");
+                    $ins->execute([':dj' => $oldRow['data_json']]);
+                }
+            }
+        } catch(PDOException $e) {}
 
         // 2. Relational Users table
         $pdo->exec("CREATE TABLE IF NOT EXISTS `users` (
@@ -271,6 +290,8 @@ if ($action === 'ping') {
         echo json_encode([
             'success' => true,
             'connected' => true,
+            'debug_dir' => __DIR__,
+            'debug_doc_root' => $_SERVER['DOCUMENT_ROOT'] ?? '',
             'message' => 'Database MySQL cPanel terhubung dengan sukses!'
         ]);
     } else {
@@ -297,9 +318,16 @@ if ($action === 'get') {
     ensureTablesExist($pdo);
 
     try {
-        $stmt = $pdo->prepare("SELECT `data_json` FROM `fgt_system_state` WHERE `state_key` = 'main_state' LIMIT 1");
+        $stmt = $pdo->prepare("SELECT `data_json` FROM `autotrading_system_state` WHERE `state_key` = 'main_state' LIMIT 1");
         $stmt->execute();
         $row = $stmt->fetch();
+        if (!$row || empty($row['data_json'])) {
+            try {
+                $stmtOld = $pdo->prepare("SELECT `data_json` FROM `fgt_system_state` WHERE `state_key` = 'main_state' LIMIT 1");
+                $stmtOld->execute();
+                $row = $stmtOld->fetch();
+            } catch (Exception $eOld) {}
+        }
 
         $data = null;
         if ($row && !empty($row['data_json'])) {
@@ -441,9 +469,9 @@ if ($action === 'save') {
     }
 
     try {
-        // 1. Atomic state save into fgt_system_state
+        // 1. Atomic state save into autotrading_system_state and fgt_system_state
         $stmt = $pdo->prepare("
-            INSERT INTO `fgt_system_state` (`state_key`, `data_json`)
+            INSERT INTO `autotrading_system_state` (`state_key`, `data_json`)
             VALUES ('main_state', :data_json)
             ON DUPLICATE KEY UPDATE `data_json` = :data_json_update, `updated_at` = CURRENT_TIMESTAMP
         ");
@@ -451,6 +479,18 @@ if ($action === 'save') {
             ':data_json' => $rawInput,
             ':data_json_update' => $rawInput
         ]);
+
+        try {
+            $stmtFgt = $pdo->prepare("
+                INSERT INTO `fgt_system_state` (`state_key`, `data_json`)
+                VALUES ('main_state', :data_json)
+                ON DUPLICATE KEY UPDATE `data_json` = :data_json_update, `updated_at` = CURRENT_TIMESTAMP
+            ");
+            $stmtFgt->execute([
+                ':data_json' => $rawInput,
+                ':data_json_update' => $rawInput
+            ]);
+        } catch (Exception $eFgt) {}
 
         // 2. Synchronize individual relational tables in phpMyAdmin
         syncRelationalTables($pdo, $parsed);

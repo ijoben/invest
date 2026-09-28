@@ -7,6 +7,9 @@
 // Proactive legacy cleanup: remove any leftover localStorage data from past sessions
 if (typeof localStorage !== 'undefined') {
   try {
+    localStorage.removeItem('AUTOTRADING_DATABASE_V1');
+    localStorage.removeItem('AUTOTRADING_DATABASE');
+    // Remove legacy FGT keys
     localStorage.removeItem('FGT_PRO_DATABASE_V1');
     localStorage.removeItem('FGT_PRO_DATABASE');
   } catch (e) {
@@ -1089,7 +1092,7 @@ export const DB = {
     let userId = null;
     if (typeof sessionStorage !== 'undefined') {
       try {
-        userId = sessionStorage.getItem('autotrading_session_user_id') || sessionStorage.getItem('fgt_session_user_id');
+        userId = sessionStorage.getItem('autotrading_session_user_id') || sessionStorage.getItem('fgt_session_user_id'); // fallback legacy
       } catch (e) {}
     }
     if (!userId && db.currentSession) {
@@ -1109,6 +1112,7 @@ export const DB = {
       try {
         if (user && user.id) {
           sessionStorage.setItem('autotrading_session_user_id', user.id);
+          // Legacy key kept for backward compat
           sessionStorage.setItem('fgt_session_user_id', user.id);
         } else {
           sessionStorage.removeItem('autotrading_session_user_id');
@@ -1130,7 +1134,7 @@ export const DB = {
     if (typeof sessionStorage !== 'undefined') {
       try {
         sessionStorage.removeItem('autotrading_session_user_id');
-        sessionStorage.removeItem('fgt_session_user_id');
+        sessionStorage.removeItem('fgt_session_user_id'); // legacy cleanup
       } catch (e) {}
     }
     const db = this.get();
