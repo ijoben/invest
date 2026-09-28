@@ -2,5 +2,11 @@
   "name": "fgt-pro-investasi",
   "version": "1.0.0",
   "type": "module",
-  "private": true
+  "private": true,
+  "scripts": {
+    "deploy": "node scripts/cpanel-sync.mjs"
+  },
+  "dependencies": {
+    "basic-ftp": "^6.2.1"
+  }
 }
