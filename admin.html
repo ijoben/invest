@@ -1274,21 +1274,26 @@
     <section id="pane-pengaturan" class="admin-view-panel">
 
       <!-- Inner Tab Navigation -->
-      <div class="admin-settings-tabs-wrap" style="margin-bottom: 20px; border-bottom: 1px solid #1E293B; display: flex; gap: 4px; overflow-x: auto; padding-bottom: 0; scrollbar-width: none;">
-        <button class="admin-settings-tab active" data-settings-tab="general" onclick="AdminPage.switchSettingsTab('general')">
-          🌐 Identitas Web
+      <div class="admin-settings-tabs-wrap" role="tablist" aria-label="Kategori Pengaturan Web">
+        <button type="button" class="admin-settings-tab active" data-settings-tab="general" role="tab" aria-selected="true" onclick="AdminPage.switchSettingsTab('general')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span>Identitas Web</span>
         </button>
-        <button class="admin-settings-tab" data-settings-tab="appearance" onclick="AdminPage.switchSettingsTab('appearance')">
-          🎨 Tampilan
+        <button type="button" class="admin-settings-tab" data-settings-tab="appearance" role="tab" aria-selected="false" onclick="AdminPage.switchSettingsTab('appearance')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+          <span>Tampilan &amp; Logo</span>
         </button>
-        <button class="admin-settings-tab" data-settings-tab="seo" onclick="AdminPage.switchSettingsTab('seo')">
-          🔍 SEO &amp; Meta
+        <button type="button" class="admin-settings-tab" data-settings-tab="seo" role="tab" aria-selected="false" onclick="AdminPage.switchSettingsTab('seo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span>SEO &amp; Meta</span>
         </button>
-        <button class="admin-settings-tab" data-settings-tab="social" onclick="AdminPage.switchSettingsTab('social')">
-          📱 Media Sosial
+        <button type="button" class="admin-settings-tab" data-settings-tab="social" role="tab" aria-selected="false" onclick="AdminPage.switchSettingsTab('social')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <span>Media Sosial</span>
         </button>
-        <button class="admin-settings-tab" data-settings-tab="maintenance" onclick="AdminPage.switchSettingsTab('maintenance')">
-          🔧 Pemeliharaan
+        <button type="button" class="admin-settings-tab" data-settings-tab="maintenance" role="tab" aria-selected="false" onclick="AdminPage.switchSettingsTab('maintenance')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Pemeliharaan</span>
         </button>
       </div>
 

@@ -143,6 +143,16 @@ export const AdminPage = {
     const db = DB.get();
     const stats = Admin.getStats();
 
+    // 0. Synchronize Browser Tab Title & Favicon
+    const cfg = db.settings || {};
+    const appName = cfg.appName || 'AUTOTRADING';
+    document.title = `${appName} - Master Admin Control Panel`;
+    const ws = cfg.webSettings || {};
+    if (ws.faviconUrl) {
+      const link = document.querySelector("link[rel*='icon']");
+      if (link) link.href = ws.faviconUrl;
+    }
+
     // 1. Dashboard Stats
     document.getElementById('statTotalUsers').textContent = stats.totalUsers;
     document.getElementById('statTotalDeposits').textContent = DB.formatIDR(stats.totalDeposits);
@@ -1218,21 +1228,6 @@ export const AdminPage = {
     }).join('');
   },
 
-  tabTitles: {
-    dashboard: 'Dashboard Overview',
-    deposits: 'Konfirmasi Deposit',
-    withdrawals: 'Konfirmasi Penarikan',
-    redemptions: 'Konfirmasi Penukaran Hadiah',
-    gateways: 'Gateway & Rekening',
-    plans: 'Plan Investasi & Profit',
-    rewards: 'Katalog Hadiah (Reward Point)',
-    affiliate: 'Sponsor & Rabat ROI',
-    signals: 'Sinyal Prof GPT',
-    announcements: 'Teks Berjalan & Notif',
-    banners: 'Banner Slider Carousel',
-    users: 'Kelola Pengguna'
-  },
-
   // Sidebar Drawer Controls
   openSidebar() {
     const sidebar = document.getElementById('adminSidebar');
@@ -1272,6 +1267,10 @@ export const AdminPage = {
     const titleEl = document.getElementById('currentSectionTitle');
     if (titleEl && this.tabTitles[tabId]) {
       titleEl.textContent = this.tabTitles[tabId];
+    }
+
+    if (tabId === 'pengaturan') {
+      this.renderWebSettings();
     }
 
     // Auto close sliding sidebar drawer on item select
@@ -2653,6 +2652,15 @@ export const AdminPage = {
       });
     });
 
+    // Pengaturan Web Sub-tabs Navigation
+    document.querySelectorAll('.admin-settings-tab').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tab = btn.getAttribute('data-settings-tab');
+        if (tab) this.switchSettingsTab(tab);
+      });
+    });
+
     // Modal Close Buttons
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
       btn.addEventListener('click', () => this.closeAllModals());
@@ -2844,14 +2852,21 @@ export const AdminPage = {
 
   /** Switch inner settings tab */
   switchSettingsTab(tab) {
+    if (!tab) return;
     // Update tab buttons
     document.querySelectorAll('.admin-settings-tab').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.settingsTab === tab);
+      const isActive = btn.getAttribute('data-settings-tab') === tab;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
     // Show/hide panes
     document.querySelectorAll('.admin-settings-tab-pane').forEach(pane => {
-      pane.style.display = pane.id === `settings-tab-${tab}` ? '' : 'none';
+      const isActive = pane.id === `settings-tab-${tab}`;
+      pane.classList.toggle('active', isActive);
+      pane.style.display = isActive ? 'block' : 'none';
     });
+    // Reload form values from DB
+    this.renderWebSettings();
   },
 
   /** Load current settings values into Pengaturan form fields */
@@ -2937,7 +2952,10 @@ export const AdminPage = {
     if (section === 'general' || section === 'logo') {
       if (section === 'general') {
         const appName = document.getElementById('cfgSiteAppName')?.value.trim();
-        if (appName) db.settings.appName = appName;
+        if (appName) {
+          db.settings.appName = appName;
+          document.title = `${appName} - Master Admin Control Panel`;
+        }
         ws.tagline      = document.getElementById('cfgSiteTagline')?.value.trim() || ws.tagline;
         ws.domain       = document.getElementById('cfgSiteDomain')?.value.trim()  || ws.domain;
         ws.companyName  = document.getElementById('cfgSiteCompanyName')?.value.trim()  || ws.companyName;
@@ -2949,7 +2967,11 @@ export const AdminPage = {
         const logoUrl    = document.getElementById('cfgLogoUrl')?.value.trim();
         const faviconUrl = document.getElementById('cfgFaviconUrl')?.value.trim();
         if (logoUrl)    ws.logoUrl    = logoUrl;
-        if (faviconUrl) ws.faviconUrl = faviconUrl;
+        if (faviconUrl) {
+          ws.faviconUrl = faviconUrl;
+          const link = document.querySelector("link[rel*='icon']");
+          if (link) link.href = faviconUrl;
+        }
       }
     }
 

@@ -81,6 +81,17 @@ const App = {
     const user = Auth.getUser();
     const db = DB.get();
 
+    // 0. Synchronize Browser Tab Title & Favicon from Settings
+    const cfg = db.settings || {};
+    const ws = cfg.webSettings || {};
+    const appName = cfg.appName || 'AUTOTRADING';
+    const tagline = ws.tagline || 'Platform Investasi & AI Trading Mobile Terpercaya';
+    document.title = `${appName} - ${tagline}`;
+    if (ws.faviconUrl) {
+      const link = document.querySelector("link[rel*='icon']");
+      if (link) link.href = ws.faviconUrl;
+    }
+
     // Guest Protection: Pastikan user belum login tidak berada di tab member
     if (!user && this.currentTab && this.currentTab !== 'home') {
       this.currentTab = 'home';

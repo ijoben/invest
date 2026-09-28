@@ -1157,53 +1157,98 @@ body.admin-body.sidebar-open {
 
 
 /* ==========================================================================
-   PENGATURAN WEB - Inner Settings Tab Navigation
+/* ==========================================================================
+   PENGATURAN WEB - Premium Pill Settings Tab Navigation
    ========================================================================== */
 
 .admin-settings-tabs-wrap {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
   overflow-x: auto;
-  border-bottom: 1px solid #1E293B;
-  margin-bottom: 20px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 8px;
+  margin-bottom: 24px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 .admin-settings-tabs-wrap::-webkit-scrollbar { display: none; }
 
 .admin-settings-tab {
-  background: none;
-  border: none;
-  color: #64748B;
-  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94A3B8;
+  font-size: 13px;
   font-weight: 600;
-  padding: 10px 16px;
+  padding: 10px 18px;
   cursor: pointer;
   white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  border-radius: 8px 8px 0 0;
-  transition: all 0.2s ease;
+  border-radius: 10px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
+  user-select: none;
+  position: relative;
+}
+
+.admin-settings-tab svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition: transform 0.2s ease, stroke 0.2s ease;
+  flex-shrink: 0;
 }
 
 .admin-settings-tab:hover {
-  color: #CBD5E1;
-  background: rgba(255,255,255,0.04);
+  color: #F8FAFC;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.admin-settings-tab:hover svg {
+  transform: scale(1.1);
+  stroke: #C89338;
 }
 
 .admin-settings-tab.active {
-  color: #C89338;
-  border-bottom-color: #C89338;
-  background: rgba(200, 147, 56, 0.07);
+  color: #FBBF24;
+  background: linear-gradient(135deg, rgba(200, 147, 56, 0.22) 0%, rgba(200, 147, 56, 0.08) 100%);
+  border: 1px solid rgba(200, 147, 56, 0.45);
+  box-shadow: 0 4px 16px rgba(200, 147, 56, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+}
+
+.admin-settings-tab.active svg {
+  stroke: #FBBF24;
+  filter: drop-shadow(0 0 6px rgba(200, 147, 56, 0.6));
 }
 
 .admin-settings-tab-pane {
-  animation: fadeInPane 0.2s ease;
+  display: none;
+  animation: fadeInPane 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-settings-tab-pane.active {
+  display: block;
 }
 
 @keyframes fadeInPane {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Logo upload area hover */
