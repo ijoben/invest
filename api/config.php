@@ -4,6 +4,18 @@
  * Edit the credentials below with your cPanel MySQL Database details.
  */
 
+// Block direct browser access to this configuration file
+if (basename($_SERVER['PHP_SELF'] ?? '') === basename(__FILE__)) {
+    http_response_code(403);
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode([
+        'success' => false,
+        'error' => '403 Forbidden',
+        'message' => 'Akses langsung ke file konfigurasi dilarang.'
+    ]);
+    exit();
+}
+
 // Database Credentials
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'fgt_pro_invest'); // Ganti dengan Nama Database cPanel Anda (misal: u1234567_invest)

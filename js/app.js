@@ -2996,7 +2996,7 @@ const App = {
       this.closeAllModals();
       if (res.user && res.user.role === 'admin') {
         this.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
-        setTimeout(() => { window.location.href = 'admin.html'; }, 600);
+        setTimeout(() => { window.location.href = 'admin'; }, 600);
       } else {
         this.showToast(res.message, 'success');
         this.renderAll();
@@ -3151,7 +3151,7 @@ const App = {
     this.closeAllModals();
     if (role === 'admin') {
       this.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
-      setTimeout(() => { window.location.href = 'admin.html'; }, 600);
+      setTimeout(() => { window.location.href = 'admin'; }, 600);
     } else {
       this.showToast('Login sebagai Investor (Alex) berhasil!', 'success');
       this.renderAll();

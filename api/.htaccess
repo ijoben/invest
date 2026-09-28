@@ -1,0 +1,28 @@
+# ==============================================================================
+# FGT PRO - API DIRECTORY SECURITY GUARD (.htaccess)
+# ==============================================================================
+
+# Disable directory browsing completely
+Options -Indexes
+
+# Deny direct access to config.php and sensitive files
+<FilesMatch "^(config\.php|\.env|\.git.*|.*\.sql|.*\.log|.*\.bak|.*\.ini)$">
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+
+# Only allow legitimate HTTP request methods
+<LimitExcept GET POST OPTIONS>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</LimitExcept>

@@ -308,7 +308,7 @@ if ($action === 'admin_notification') {
       </table>
 
       <div style="text-align: center;">
-        <a href="admin.html" style="background: linear-gradient(135deg, #E5A83B 0%, #C89338 100%); color: #080C14; font-weight: 800; font-size: 12.5px; padding: 11px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">
+        <a href="admin" style="background: linear-gradient(135deg, #E5A83B 0%, #C89338 100%); color: #080C14; font-weight: 800; font-size: 12.5px; padding: 11px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">
           Buka Panel Admin FGT Pro &rarr;
         </a>
       </div>
