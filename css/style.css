@@ -4708,4 +4708,41 @@ html, body {
   transform: translateY(-1px);
 }
 
+/* User Without Active Package (Empty State) */
+.weekly-day-card.no-plan {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  opacity: 0.88;
+}
+
+.weekly-day-card.no-plan .weekly-day-rate {
+  color: #94A3B8;
+  font-weight: 700;
+}
+
+.weekly-day-card.no-plan .weekly-day-pill {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+.weekly-no-plan-banner {
+  grid-column: 1 / -1;
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+}
+
+.weekly-no-plan-banner:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  transform: translateY(-1px);
+}
+
 

@@ -221,7 +221,9 @@ const App = {
       affBalEl.textContent = DB.formatIDR(user.affiliateBalance);
       pointEl.textContent = user.points || 0;
       
-      const rate = Plans.getUserTodayProfitRate(user.id);
+      const userInvs = Plans.getUserInvestments(user.id);
+      const hasActivePlan = Array.isArray(userInvs) && userInvs.some(i => i.status === 'active');
+      const rate = hasActivePlan ? Plans.getUserTodayProfitRate(user.id) : 0;
       if (profitEl) {
         if (isLossMode) {
           profitEl.textContent = '0.00% (Loss)';
@@ -231,6 +233,10 @@ const App = {
           profitEl.textContent = '0.00% (OFF)';
           profitEl.style.color = '#EF4444';
           profitEl.title = 'Pasar sedang libur / OFF. Dividen profit akan berjalan aktif saat pasar ON.';
+        } else if (!hasActivePlan) {
+          profitEl.textContent = '0.00%';
+          profitEl.style.color = '#64748B';
+          profitEl.title = 'Belum ada paket investasi aktif. Aktifkan paket untuk mulai mendapatkan profit harian.';
         } else {
           profitEl.textContent = rate > 0 ? `+${rate.toFixed(2)}%` : '+0.00%';
           profitEl.style.color = rate > 0 ? '#16A34A' : '#0F172A';
@@ -249,8 +255,9 @@ const App = {
           profitEl.textContent = '0.00% (OFF)';
           profitEl.style.color = '#EF4444';
         } else {
-          profitEl.textContent = '+0.00%';
-          profitEl.style.color = '#0F172A';
+          profitEl.textContent = '0.00%';
+          profitEl.style.color = '#64748B';
+          profitEl.title = 'Silakan login untuk melihat profit berjalan paket Anda.';
         }
       }
     }
@@ -307,6 +314,9 @@ const App = {
       if (weeklyData.isGuest) {
         growthBadgeEl.textContent = '▲ Portofolio AI Aktif';
         growthBadgeEl.className = 'badge-growth-neutral';
+      } else if (!weeklyData.hasActivePackage) {
+        growthBadgeEl.textContent = '0.00% Return (Paket Belum Aktif)';
+        growthBadgeEl.className = 'badge-growth-neutral';
       } else if (weeklyData.todayIsLoss) {
         growthBadgeEl.textContent = `▲ +${totalWeeklyRate.toFixed(2)}% Return (0% Hari Ini)`;
         growthBadgeEl.className = 'badge-growth-neutral';
@@ -341,8 +351,18 @@ const App = {
         statusPillEl.style.background = '#F1F5F9';
         statusPillEl.style.color = '#64748B';
       }
+    } else if (!weekly.hasActivePackage) {
+      // User Revision: User baru/belum aktif paket -> rincian kosong
+      if (totalRateEl) totalRateEl.textContent = '0.00%';
+      if (avgRateEl) avgRateEl.textContent = '0.00% / hari';
+      if (statusPillEl) {
+        statusPillEl.textContent = '⚪ Belum Ada Paket Aktif';
+        statusPillEl.className = 'badge-status-pill neutral';
+        statusPillEl.style.background = '#F1F5F9';
+        statusPillEl.style.color = '#64748B';
+      }
     } else {
-      // Member logged in:
+      // Member logged in with active package:
       if (totalRateEl) totalRateEl.textContent = `+${weekly.totalRate.toFixed(2)}%`;
       if (avgRateEl) avgRateEl.textContent = `+${weekly.avgRate.toFixed(2)}% / hari`;
 
@@ -371,6 +391,7 @@ const App = {
         if (rec.isLoss) cardClass += ' loss';
         if (rec.isWeekend) cardClass += ' weekend-off';
         if (weekly.isGuest) cardClass += ' guest-locked';
+        if (!weekly.isGuest && !weekly.hasActivePackage) cardClass += ' no-plan';
 
         const dayLabel = rec.isToday ? 'Hari Ini' : rec.dayName.substring(0, 3);
         const displayRate = rec.displayRate;
@@ -386,9 +407,9 @@ const App = {
         `;
       }).join('');
 
-      let guestNoticeHtml = '';
+      let bannerNoticeHtml = '';
       if (weekly.isGuest) {
-        guestNoticeHtml = `
+        bannerNoticeHtml = `
           <div class="weekly-guest-lock-banner" onclick="App.openAuthModalWithTab('login')">
             <span style="font-size: 16px;">🔒</span>
             <div style="flex: 1;">
@@ -398,9 +419,22 @@ const App = {
             <span style="font-size: 11px; font-weight: 800; color: #C89338;">Buka ›</span>
           </div>
         `;
+      } else if (!weekly.hasActivePackage) {
+        bannerNoticeHtml = `
+          <div class="weekly-no-plan-banner" onclick="document.getElementById('tierCarouselContainer').scrollIntoView({ behavior: 'smooth' })">
+            <span style="font-size: 16px;">📦</span>
+            <div style="flex: 1;">
+              <strong style="color: #0F172A; font-size: 11.5px; display: block;">Paket Investasi Belum Aktif</strong>
+              <p style="color: #64748B; font-size: 10px; margin: 2px 0 0 0; line-height: 1.3;">
+                Rincian profit harian berjalan akan aktif otomatis setelah paket Anda aktif. Klik untuk <strong>Pilih & Aktifkan Paket</strong>.
+              </p>
+            </div>
+            <span style="font-size: 11px; font-weight: 800; color: #C89338;">Pilih Paket ›</span>
+          </div>
+        `;
       }
 
-      container.innerHTML = cardsHtml + guestNoticeHtml;
+      container.innerHTML = cardsHtml + bannerNoticeHtml;
     }
   },
 
@@ -424,9 +458,10 @@ const App = {
     ctx.clearRect(0, 0, width, height);
 
     // Get weekly profit points
-    const weekly = Plans.getWeeklyProfitHistory();
+    const weekly = Plans.getWeeklyProfitHistory(user ? user.id : null);
     const records = weekly.records || [];
     const isLossToday = weekly.todayIsLoss;
+    const hasActivePackage = weekly.hasActivePackage;
 
     // Calculate baseline asset and progression points
     let currentTotalAsset = 0;
@@ -441,7 +476,11 @@ const App = {
     let points = [];
     let dates = [];
 
-    if (days === 7) {
+    if (!hasActivePackage) {
+      const baseline = currentTotalAsset;
+      points = records.map(() => baseline);
+      dates = records.map(r => r.date);
+    } else if (days === 7) {
       const baseAsset = currentTotalAsset > 0 ? currentTotalAsset * 0.93 : 10000000;
       let cumAsset = baseAsset;
       points = records.map((r, i) => {
@@ -590,6 +629,13 @@ const App = {
         ctx.fillText(isLast ? 'Hari Ini' : (dates[i] || ''), x, paddingTop + chartHeight + 14);
       }
     });
+
+    if (!hasActivePackage) {
+      ctx.fillStyle = '#64748B';
+      ctx.font = '600 11px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(user ? 'Belum Ada Paket Investasi Aktif' : 'Silakan Login untuk Melihat Portofolio', width / 2, paddingTop + chartHeight / 2);
+    }
   },
 
   // 3. Tier Carousel (Learn, Rookie, Sophomore, VIP)

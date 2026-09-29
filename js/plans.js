@@ -244,6 +244,49 @@ export const Plans = {
       userInvs = this.getUserInvestments(userId);
     }
 
+    const activeInvs = !isGuest && Array.isArray(userInvs) ? userInvs.filter(inv => inv.status === 'active') : [];
+    const hasActivePackage = activeInvs.length > 0;
+
+    // Requirement Revision: Jika user belum mengaktifkan paket, rincian profit seminggu KOSONG
+    if (!isGuest && !hasActivePackage) {
+      const emptyRecords = dayNames.map((dName, idx) => {
+        const dayDate = new Date(mondayDate);
+        dayDate.setDate(mondayDate.getDate() + idx);
+        const dateStr = `${dayDate.getDate()} ${monthNames[dayDate.getMonth()]}`;
+        const fullDateStr = dayDate.toLocaleDateString('id-ID');
+        const isToday = idx === currentMondayIdx;
+        const isWeekend = (idx === 5 || idx === 6);
+
+        return {
+          dayName: dName,
+          date: dateStr,
+          fullDate: fullDateStr,
+          rate: null,
+          isWeekend,
+          isOff: isWeekend,
+          isLoss: false,
+          isToday,
+          isGuest: false,
+          hasActivePackage: false,
+          displayRate: '-',
+          statusLabel: isWeekend ? 'Pasar OFF' : 'Belum Ada Paket',
+          pillText: isWeekend ? 'Pasar OFF' : 'Kosong'
+        };
+      });
+
+      return {
+        records: emptyRecords,
+        totalRate: 0,
+        avgRate: 0,
+        countActiveDays: 0,
+        todayRate: 0,
+        todayIsLoss: false,
+        isWeekendToday,
+        isGuest: false,
+        hasActivePackage: false
+      };
+    }
+
     const records = dayNames.map((dName, idx) => {
       const dayDate = new Date(mondayDate);
       dayDate.setDate(mondayDate.getDate() + idx);
@@ -264,6 +307,7 @@ export const Plans = {
           isOff: true,
           isToday,
           isGuest,
+          hasActivePackage,
           displayRate: '-',
           statusLabel: 'Pasar OFF',
           pillText: 'Pasar OFF'
@@ -281,13 +325,14 @@ export const Plans = {
           isOff: false,
           isToday,
           isGuest: true,
+          hasActivePackage: false,
           displayRate: '-',
           statusLabel: 'Khusus Member',
           pillText: 'Member'
         };
       }
 
-      // Member Logged In:
+      // Member Logged In with Active Package:
       let rate = 0;
       let isLoss = false;
 
@@ -300,40 +345,49 @@ export const Plans = {
           rate = 0.0;
         } else {
           rate = todayRateForUser;
-          // If member has no active package, show default benchmark
-          if (rate === 0 && userInvs.length === 0) {
-            rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
-              ? settingsHistory[idx].rate
-              : defaultRates[idx];
-          }
         }
       } else if (isPast) {
         // Look up member's yield history for this date if available
         let foundHistoryRate = null;
-        if (userInvs.length > 0) {
-          userInvs.forEach(inv => {
-            const h = inv.history && inv.history.find(item => item.date === fullDateStr);
-            if (h && typeof h.rate === 'number') foundHistoryRate = h.rate;
-          });
-        }
+        activeInvs.forEach(inv => {
+          const h = inv.history && inv.history.find(item => item.date === fullDateStr);
+          if (h && typeof h.rate === 'number') foundHistoryRate = h.rate;
+        });
+
         if (foundHistoryRate !== null) {
           rate = foundHistoryRate;
         } else {
-          // Use settings benchmark for that day
-          rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
-            ? settingsHistory[idx].rate
-            : defaultRates[idx];
+          // Check if package was already active on that day
+          const dayEnd = new Date(dayDate);
+          dayEnd.setHours(23, 59, 59, 999);
+          const wasActiveOnDate = activeInvs.some(inv => new Date(inv.createdAt) <= dayEnd);
+          if (wasActiveOnDate) {
+            rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
+              ? settingsHistory[idx].rate
+              : defaultRates[idx];
+          } else {
+            // Before package was activated
+            return {
+              dayName: dName,
+              date: dateStr,
+              fullDate: fullDateStr,
+              rate: null,
+              isWeekend: false,
+              isOff: false,
+              isLoss: false,
+              isToday,
+              isGuest: false,
+              hasActivePackage: true,
+              displayRate: '-',
+              statusLabel: 'Belum Aktif',
+              pillText: 'Kosong'
+            };
+          }
         }
       } else {
-        // Future weekdays: Plan expected rate or benchmark
-        if (userInvs.length > 0) {
-          const avgUserRate = userInvs.reduce((acc, inv) => acc + (inv.minRate + inv.maxRate) / 2, 0) / userInvs.length;
-          rate = parseFloat(avgUserRate.toFixed(2));
-        } else {
-          rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
-            ? settingsHistory[idx].rate
-            : defaultRates[idx];
-        }
+        // Future weekdays: Plan expected rate
+        const avgUserRate = activeInvs.reduce((acc, inv) => acc + (inv.minRate + inv.maxRate) / 2, 0) / activeInvs.length;
+        rate = parseFloat(avgUserRate.toFixed(2));
       }
 
       rate = parseFloat(Number(rate || 0).toFixed(2));
@@ -349,6 +403,7 @@ export const Plans = {
         isLoss,
         isToday,
         isGuest: false,
+        hasActivePackage: true,
         displayRate: isLoss ? '0.00%' : `+${rate.toFixed(2)}%`,
         statusLabel: isLoss ? '🔴 Loss 0%' : `🟢 +${rate.toFixed(2)}%`,
         pillText: isLoss ? 'Loss 0%' : 'Profit'
@@ -359,7 +414,7 @@ export const Plans = {
     let totalRate = 0;
     let countActiveDays = 0;
 
-    if (!isGuest) {
+    if (!isGuest && hasActivePackage) {
       records.forEach(r => {
         if (!r.isWeekend && typeof r.rate === 'number') {
           totalRate += r.rate;
@@ -374,9 +429,12 @@ export const Plans = {
       records,
       totalRate: isGuest ? null : parseFloat(totalRate.toFixed(2)),
       avgRate: isGuest ? null : parseFloat(avgRate.toFixed(2)),
-      isGuest,
+      countActiveDays,
+      todayRate: todayRateForUser,
       todayIsLoss: !!todayLossMode,
       isWeekendToday,
+      isGuest,
+      hasActivePackage,
       lossMessage: todayLossMode ? (db.settings.todayProfitLossMode?.message || 'Hari ini dividen profit 0%') : ''
     };
   },
