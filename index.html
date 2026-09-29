@@ -1154,203 +1154,108 @@
        MODAL 1: AUTH (LOGIN & REGISTER & FORGOT PASSWORD)
        ====================================================================== -->
   <div class="modal-backdrop" id="authModal">
-    <div class="modal-sheet auth-modal-sheet">
+    <div class="modal-sheet">
       <div class="modal-handle"></div>
-
-      <!-- Modern Header with Brand Emblem -->
-      <div class="auth-modal-header">
-        <div class="auth-brand-badge">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-            <polyline points="16 7 22 7 22 13"/>
-          </svg>
-        </div>
-        <div class="auth-header-info">
-          <h3 class="auth-title">Akses Akun AUTOTRADING</h3>
-          <p class="auth-subtitle">Kelola portofolio trading forex otomatis Anda</p>
-        </div>
-        <button type="button" class="modal-close-btn auth-close-btn" aria-label="Tutup Popup">&times;</button>
+      <div class="modal-header">
+        <h3 class="modal-title">Akses Akun AUTOTRADING</h3>
+        <button class="modal-close-btn">&times;</button>
       </div>
 
-      <!-- Segmented Switcher Pill Tabs -->
-      <div class="auth-segmented-switch">
-        <button type="button" id="authTabLogin" class="auth-tab-pill active">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          <span>Masuk (Login)</span>
-        </button>
-        <button type="button" id="authTabRegister" class="auth-tab-pill">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-          <span>Daftar Akun Baru</span>
-        </button>
+      <!-- Switch Tabs -->
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button id="authTabLogin" class="btn-cta-gold" style="flex: 1; padding: 10px;">Login</button>
+        <button id="authTabRegister" class="tier-btn" style="flex: 1; padding: 10px; background: #F1F5F9; color: #475569;">Daftar Akun</button>
       </div>
 
-      <!-- Login Form Pane -->
-      <div id="loginForm" class="auth-form-pane">
-        <div class="auth-field-group">
-          <label class="auth-field-label" for="loginIdentifier">Username / Email / No. HP</label>
-          <div class="auth-input-box">
-            <span class="auth-input-icon">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </span>
-            <input type="text" class="form-input auth-styled-input" id="loginIdentifier" placeholder="Username, email, atau no. HP" autocomplete="username">
-          </div>
+      <!-- Login Form -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Username / Email / No. HP</label>
+          <input type="text" class="form-input" id="loginIdentifier" placeholder="Username, email, atau no. HP">
         </div>
-
-        <div class="auth-field-group">
-          <div class="auth-field-header-row">
-            <label class="auth-field-label" for="loginPassword">Password</label>
-            <a href="javascript:void(0)" onclick="App.openForgotPasswordModal()" class="auth-forgot-link">Lupa Password?</a>
-          </div>
-          <div class="auth-input-box">
-            <span class="auth-input-icon">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </span>
-            <input type="password" class="form-input auth-styled-input" id="loginPassword" placeholder="Masukkan password Anda" autocomplete="current-password" style="padding-right: 42px;">
-            <button type="button" class="auth-pw-toggle" onclick="App.togglePasswordVisibility('loginPassword', this)" aria-label="Lihat Password">
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div style="position: relative;">
+            <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password Anda" style="padding-right: 42px;">
+            <button type="button" onclick="App.togglePasswordVisibility('loginPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Password">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
         </div>
-
-        <button type="button" class="auth-primary-submit-btn" onclick="App.submitLogin()">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 12px; margin-top: -6px;">
+          <a href="javascript:void(0)" onclick="App.openForgotPasswordModal()" style="font-size: 11.5px; color: var(--primary-gold); font-weight: 600; text-decoration: none;">Lupa Password?</a>
+        </div>
+        <button class="btn-cta-gold" onclick="App.submitLogin()">
           <span>Masuk Sekarang</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
 
-        <!-- Toggle to Register Prompt -->
-        <div class="auth-toggle-prompt">
-          <span>Belum punya akun AUTOTRADING?</span>
-          <button type="button" class="auth-link-action" onclick="document.getElementById('authTabRegister').click()">Daftar Akun Baru &rsaquo;</button>
-        </div>
-
-        <!-- Quick Demo Testing Shortcut -->
-        <div class="auth-demo-shortcut">
-          <div class="auth-demo-heading">
-            <span class="auth-demo-tag">Uji Coba Cepat (Demo)</span>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="auth-mini-demo-pill" onclick="App.quickLogin('user')">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <span>Investor Demo</span>
-              </button>
-              <button type="button" class="auth-mini-demo-pill admin" onclick="App.quickLogin('admin')">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <span>Admin Demo</span>
-              </button>
-            </div>
+        <!-- Quick Login Selection (User & Admin) -->
+        <div class="quick-demo-login">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <button type="button" class="btn-demo-pill" onclick="App.quickLogin('user')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>Login User Demo</span>
+            </button>
+            <button type="button" class="btn-demo-pill admin-pill" onclick="App.quickLogin('admin')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Login Admin Demo</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Register Form Pane -->
-      <div id="registerForm" class="auth-form-pane" style="display: none;">
-        <div class="auth-grid-2col">
-          <div class="auth-field-group">
-            <label class="auth-field-label" for="regUsername">Username <span class="required-star">*</span></label>
-            <div class="auth-input-box">
-              <span class="auth-input-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </span>
-              <input type="text" class="form-input auth-styled-input" id="regUsername" placeholder="Contoh: investor_pro" autocomplete="username">
-            </div>
-          </div>
-
-          <div class="auth-field-group">
-            <label class="auth-field-label" for="regFullName">Nama Lengkap</label>
-            <div class="auth-input-box">
-              <span class="auth-input-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              </span>
-              <input type="text" class="form-input auth-styled-input" id="regFullName" placeholder="Sesuai KTP / Bank" autocomplete="name">
-            </div>
+      <!-- Register Form -->
+      <div id="registerForm" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Username <span style="color: #EF4444;">*</span></label>
+          <input type="text" class="form-input" id="regUsername" placeholder="Contoh: investor_pro (3-20 karakter)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" class="form-input" id="regFullName" placeholder="Nama lengkap sesuai identitas">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email <span style="color: #EF4444;">*</span></label>
+          <input type="email" class="form-input" id="regEmail" placeholder="nama@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">No. WhatsApp / HP</label>
+          <input type="tel" class="form-input" id="regPhone" placeholder="0812xxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password <span style="color: #EF4444;">*</span></label>
+          <div style="position: relative;">
+            <input type="password" class="form-input" id="regPassword" placeholder="Minimal 6 karakter" style="padding-right: 42px;">
+            <button type="button" onclick="App.togglePasswordVisibility('regPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
           </div>
         </div>
-
-        <div class="auth-grid-2col">
-          <div class="auth-field-group">
-            <label class="auth-field-label" for="regEmail">Email Aktif <span class="required-star">*</span></label>
-            <div class="auth-input-box">
-              <span class="auth-input-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              </span>
-              <input type="email" class="form-input auth-styled-input" id="regEmail" placeholder="nama@email.com" autocomplete="email">
-            </div>
-          </div>
-
-          <div class="auth-field-group">
-            <label class="auth-field-label" for="regPhone">No. WhatsApp / HP <span class="required-star">*</span></label>
-            <div class="auth-input-box">
-              <span class="auth-input-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              </span>
-              <input type="tel" class="form-input auth-styled-input" id="regPhone" placeholder="0812xxxxxxxx" autocomplete="tel">
-            </div>
+        <div class="form-group">
+          <label class="form-label">Konfirmasi Password <span style="color: #EF4444;">*</span></label>
+          <div style="position: relative;">
+            <input type="password" class="form-input" id="regConfirmPassword" placeholder="Ketik ulang password" style="padding-right: 42px;">
+            <button type="button" onclick="App.togglePasswordVisibility('regConfirmPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Konfirmasi Password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
           </div>
         </div>
-
-        <div class="auth-grid-2col">
-          <div class="auth-field-group">
-            <label class="auth-field-label" for="regPassword">Password <span class="required-star">*</span></label>
-            <div class="auth-input-box">
-              <span class="auth-input-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </span>
-              <input type="password" class="form-input auth-styled-input" id="regPassword" placeholder="Min. 6 karakter" autocomplete="new-password" style="padding-right: 42px;">
-              <button type="button" class="auth-pw-toggle" onclick="App.togglePasswordVisibility('regPassword', this)" aria-label="Lihat Password">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="auth-field-group">
-            <label class="auth-field-label" for="regConfirmPassword">Ulangi Password <span class="required-star">*</span></label>
-            <div class="auth-input-box">
-              <span class="auth-input-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              </span>
-              <input type="password" class="form-input auth-styled-input" id="regConfirmPassword" placeholder="Ulangi password" autocomplete="new-password" style="padding-right: 42px;">
-              <button type="button" class="auth-pw-toggle" onclick="App.togglePasswordVisibility('regConfirmPassword', this)" aria-label="Lihat Konfirmasi Password">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
-            </div>
-          </div>
+        <div class="form-group">
+          <label class="form-label">Kode Referral (Opsional)</label>
+          <input type="text" class="form-input" id="regReferral" placeholder="KODE SPONSOR" style="text-transform: uppercase;">
         </div>
 
-        <div class="auth-field-group">
-          <label class="auth-field-label" for="regReferral">Kode Referral Sponsor (Opsional)</label>
-          <div class="auth-input-box">
-            <span class="auth-input-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            </span>
-            <input type="text" class="form-input auth-styled-input" id="regReferral" placeholder="KODE SPONSOR" style="text-transform: uppercase;">
-          </div>
-        </div>
-
-        <!-- Premium Risk Agreement Warning Box -->
+        <!-- Checkbox Persetujuan Resiko Investasi -->
         <div class="register-risk-box">
           <label class="register-risk-label" for="regRiskAgreement">
             <input type="checkbox" id="regRiskAgreement" class="register-risk-checkbox">
-            <span class="register-risk-text">
-              <strong>Pernyataan Resiko:</strong> Saya sadar dan mengerti bahwa transaksi investasi memiliki resiko fluktuasi pasar, dan saya menyetujui seluruh ketentuan layanan AUTOTRADING secara sadar tanpa paksaan.
-            </span>
+            <span class="register-risk-text">saya sadar dan mengerti investasi mengandung resiko kerugian, saya tidak akan meminta ganti rugi apabila terjadi kerugian diakibatkan pasar forex di aplikasi ini</span>
           </label>
         </div>
 
-        <button type="button" class="auth-primary-submit-btn" onclick="App.submitRegister()">
-          <span>Buat Akun & Mulai Investasi</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <button class="btn-cta-gold" onclick="App.submitRegister()">
+          <span>Buat Akun & Mulai</span>
         </button>
-
-        <!-- Toggle to Login Prompt -->
-        <div class="auth-toggle-prompt">
-          <span>Sudah memiliki akun terdaftar?</span>
-          <button type="button" class="auth-link-action" onclick="document.getElementById('authTabLogin').click()">Masuk ke Akun Anda &rsaquo;</button>
-        </div>
-      </div>
-
-      <!-- Trust & Security Seal -->
-      <div class="auth-security-badge">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>Enkripsi 256-Bit SSL &bull; Keamanan Data & Portofolio Terproteksi</span>
       </div>
 
     </div>
