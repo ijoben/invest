@@ -15,18 +15,24 @@ const FTP_CONFIG = {
   secureOptions: { rejectUnauthorized: false }
 };
 
-const DEPLOY_ITEMS = [
-  { type: 'file', local: 'index.html', remote: 'index.html' },
-  { type: 'file', local: 'admin.html', remote: 'admin.html' },
-  { type: '.htaccess', local: '.htaccess', remote: '.htaccess' },
-  { type: 'file', local: 'database.sql', remote: 'database.sql' },
-  { type: 'file', local: 'api/config.php', remote: 'api/config.php' },
-  { type: 'file', local: 'api/index.php', remote: 'api/index.php' },
-  { type: 'file', local: 'api/mail.php', remote: 'api/mail.php' },
-  { type: 'file', local: 'api/.htaccess', remote: 'api/.htaccess' },
-  { type: 'dir', local: 'css', remote: 'css' },
-  { type: 'dir', local: 'js', remote: 'js' }
-];
+const DEPLOY_DIRECTORIES = ['css', 'js', 'api'];
+const DEPLOY_ROOT_FILES = ['index.html', 'admin.html', '.htaccess', 'database.sql'];
+
+function getFilesRecursively(dir, baseDir = '') {
+  let results = [];
+  const list = fs.readdirSync(dir);
+  for (const file of list) {
+    const fullPath = path.join(dir, file);
+    const relPath = path.posix.join(baseDir, file);
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      results = results.concat(getFilesRecursively(fullPath, relPath));
+    } else {
+      results.push({ fullPath, relPath });
+    }
+  }
+  return results;
+}
 
 async function withRetry(fn, retries = 3, delay = 1200) {
   for (let i = 1; i <= retries; i++) {
@@ -58,30 +64,39 @@ export async function deployToCpanel() {
     await withRetry(() => connect(), 3, 2000);
     console.log('   CONNECTED! Remote root directory verified.\n');
 
-    console.log('2. Deploying website files to cPanel...');
-    for (const item of DEPLOY_ITEMS) {
-      const localPath = path.join(rootDir, item.local);
-      if (!fs.existsSync(localPath)) {
-        continue;
-      }
+    // Clean up any stray nested js/js if created previously
+    try {
+      await client.removeDir('js/js');
+      console.log('   Cleaned up stray js/js directory.');
+    } catch (e) {}
 
+    // Gather all files to upload
+    const filesToUpload = [];
+    for (const file of DEPLOY_ROOT_FILES) {
+      const fullPath = path.join(rootDir, file);
+      if (fs.existsSync(fullPath)) {
+        filesToUpload.push({ fullPath, relPath: file });
+      }
+    }
+    for (const dir of DEPLOY_DIRECTORIES) {
+      const fullDir = path.join(rootDir, dir);
+      if (fs.existsSync(fullDir)) {
+        filesToUpload.push(...getFilesRecursively(fullDir, dir));
+      }
+    }
+
+    console.log(`2. Deploying ${filesToUpload.length} files to cPanel...`);
+    for (const item of filesToUpload) {
       await withRetry(async () => {
         if (client.closed) await connect();
-        if (item.type === 'file' || item.type === '.htaccess') {
-          process.stdout.write(`   Uploading file: ${item.local} ... `);
-          const dir = path.dirname(item.remote);
-          if (dir && dir !== '.') {
-            await client.ensureDir(dir);
-            await client.cd('/');
-          }
-          await client.uploadFrom(localPath, item.remote);
-          console.log('OK');
-        } else if (item.type === 'dir') {
-          console.log(`   Syncing directory: ${item.local}/ -> ${item.remote}/`);
-          await client.ensureDir(item.remote);
-          await client.uploadFromDir(localPath, item.remote);
+        process.stdout.write(`   Uploading: ${item.relPath} ... `);
+        const remoteDir = path.posix.dirname(item.relPath);
+        if (remoteDir && remoteDir !== '.') {
+          await client.ensureDir(remoteDir);
           await client.cd('/');
         }
+        await client.uploadFrom(item.fullPath, item.relPath);
+        console.log('OK');
       }, 3, 2000);
     }
 
