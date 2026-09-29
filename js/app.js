@@ -3891,21 +3891,46 @@ const App = {
 
     if (authTabLogin && authTabRegister) {
       authTabLogin.addEventListener('click', () => {
-        authTabLogin.classList.add('btn-cta-gold');
-        authTabRegister.classList.remove('btn-cta-gold');
-        authTabRegister.style.background = '#F1F5F9';
-        authTabRegister.style.color = '#475569';
+        authTabLogin.classList.add('active');
+        authTabLogin.setAttribute('aria-selected', 'true');
+        authTabRegister.classList.remove('active');
+        authTabRegister.setAttribute('aria-selected', 'false');
         loginForm.style.display = 'block';
         registerForm.style.display = 'none';
       });
 
       authTabRegister.addEventListener('click', () => {
-        authTabRegister.classList.add('btn-cta-gold');
-        authTabLogin.classList.remove('btn-cta-gold');
-        authTabLogin.style.background = '#F1F5F9';
-        authTabLogin.style.color = '#475569';
+        authTabRegister.classList.add('active');
+        authTabRegister.setAttribute('aria-selected', 'true');
+        authTabLogin.classList.remove('active');
+        authTabLogin.setAttribute('aria-selected', 'false');
         registerForm.style.display = 'block';
         loginForm.style.display = 'none';
+      });
+    }
+
+    // Auto-submit login on Enter key in login fields
+    const loginPassInput = document.getElementById('loginPassword');
+    const loginIdInput = document.getElementById('loginIdentifier');
+    [loginPassInput, loginIdInput].forEach(inp => {
+      if (inp) {
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.submitLogin();
+          }
+        });
+      }
+    });
+
+    // Auto-submit register on Enter key in confirm password
+    const regConfirmPassInput = document.getElementById('regConfirmPassword');
+    if (regConfirmPassInput) {
+      regConfirmPassInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.submitRegister();
+        }
       });
     }
 
