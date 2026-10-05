@@ -64,6 +64,22 @@
   }
   </script>
 
+  <!-- Theme Early Initializer (Anti-flash) -->
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('autotrading_theme') || 'dark';
+        if (t === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('theme-dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.remove('theme-dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- CSS Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/responsive.css">
@@ -89,7 +105,7 @@
            1. TOP HEADER (Identical to 1000836359.jpg)
            ==================================================================== -->
       <header class="top-header">
-        <div class="header-user" onclick="App.isLoggedIn() ? App.switchTab('profile') : void(0);">
+        <div class="header-user" onclick="App.isLoggedIn() ? App.switchTab('profile') : (App.showToast('Silakan login atau daftar akun terlebih dahulu!', 'info'), App.openAuthModalWithTab('login'));">
           <div class="user-avatar-badge" id="userAvatarBadge">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -111,29 +127,42 @@
         </div>
 
         <div class="header-actions">
-          <!-- Notification Bell -->
-          <button class="header-btn" onclick="App.openModal('notifModal')" title="Notifikasi">
+          <!-- Dark/Light Mode Switcher -->
+          <button class="header-btn header-theme-btn" id="headerThemeToggleBtn" onclick="App.toggleTheme()" title="Ubah Mode Gelap/Terang" aria-label="Toggle Dark Mode">
+            <span class="theme-icon-dark">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </span>
+            <span class="theme-icon-light" style="display: none;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+            </span>
+          </button>
+
+          <!-- Customer Support Chat -->
+          <button class="header-btn header-support-btn" onclick="App.openSupport()" title="Layanan Bantuan CS" aria-label="Customer Support">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </button>
+
+          <!-- Notification Bell with Dynamic Realtime Counter -->
+          <button class="header-btn header-notif-btn" id="headerNotifBtn" onclick="App.openModal('notifModal')" title="Pusat Notifikasi" aria-label="Notifikasi Realtime">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
             </svg>
-            <span class="badge-dot"></span>
-          </button>
-          
-          <!-- Megaphone / Announcement -->
-          <button class="header-btn" onclick="App.openModal('announcementModal')" title="Pengumuman">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-          </button>
-          
-          <!-- Customer Support Chat -->
-          <button class="header-btn" onclick="App.openModal('supportModal')" title="Customer Support">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
+            <span class="header-notif-badge" id="headerNotifBadge" style="display: none;">0</span>
           </button>
         </div>
       </header>
@@ -201,7 +230,7 @@
             </div>
 
             <!-- Col 3: Points -->
-            <div class="wallet-col" onclick="App.showToast('Point reward dapat ditukarkan dengan saldo modal atau merchandise eksklusif AUTOTRADING.', 'info')">
+            <div class="wallet-col" onclick="App.isLoggedIn() ? App.openMyRedemptionsModal() : (App.showToast('Point reward khusus untuk member terdaftar. Silakan login atau daftar akun!', 'info'), App.openAuthModalWithTab('login'))">
               <div class="wallet-icon-svg-wrap">
                 <!-- Gold Coin Medallion Vector -->
                 <svg viewBox="0 0 28 28" fill="none">
@@ -456,6 +485,40 @@
               </div>
 
             </div>
+          </div>
+        </section>
+
+        <!-- 4B. DUAL ACTION STRIP: ABSENSI HARIAN 7 HARI & DOWNLOAD APK WEBVIEW (SIAP ON) -->
+        <section class="member-featured-strip-container" style="padding: 0 12px; margin-bottom: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            
+            <!-- Card 1: Absensi Harian 7 Hari -->
+            <div class="daily-checkin-banner-btn" onclick="App.openDailyCheckInModal()" style="margin: 0; padding: 10px 12px; flex-direction: column; align-items: flex-start; gap: 6px; background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border: 1.5px solid #FCD34D;">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span style="font-size: 20px;">📅</span>
+                <span style="font-size: 9.5px; font-weight: 800; background: #F59E0B; color: #FFFFFF; padding: 2px 7px; border-radius: 12px;">+Rp 1.000</span>
+              </div>
+              <div>
+                <strong style="font-size: 11.5px; color: #92400E; display: block;">Absensi 7 Hari</strong>
+                <span style="font-size: 9.5px; color: #B45309;" id="dashboardCheckInStreakLabel">Klaim Bonus Login ›</span>
+              </div>
+            </div>
+
+            <!-- Card 2: Download APK WebView (Siap ON) -->
+            <div class="daily-checkin-banner-btn" onclick="App.openDownloadApkModal()" style="margin: 0; padding: 10px 12px; flex-direction: column; align-items: flex-start; gap: 6px; background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%); border: 1.5px solid #86EFAC;">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span style="font-size: 20px;">📲</span>
+                <span style="font-size: 9.5px; font-weight: 800; background: #16A34A; color: #FFFFFF; padding: 2px 7px; border-radius: 12px; display: flex; align-items: center; gap: 3px;">
+                  <span style="width: 5px; height: 5px; background: #FFFFFF; border-radius: 50%; display: inline-block;"></span>
+                  SIAP ON
+                </span>
+              </div>
+              <div>
+                <strong style="font-size: 11.5px; color: #166534; display: block;">APK WebView</strong>
+                <span style="font-size: 9.5px; color: #15803D;">Download Aplikasi ›</span>
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -885,19 +948,19 @@
             </div>
             <div style="flex: 1;">
               <div class="flex-between">
-                <div style="font-weight: 800; font-size: 16px; color: #0F172A;" id="profileUsername">Alex Investor</div>
+                <div style="font-weight: 800; font-size: 16px; color: #0F172A;" id="profileUsername">Investor AUTOTRADING</div>
                 <span id="profileMemberStatusBadge" class="badge-member-active">🟢 Member Aktif</span>
               </div>
-              <div style="font-size: 11px; color: #64748B;" id="profileEmail">alex@gmail.com</div>
+              <div style="font-size: 11px; color: #64748B;" id="profileEmail">-</div>
 
               <div class="user-profile-meta-box">
                 <div class="user-sponsor-info">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span id="profileSponsorText">Sponsor: Tidak ada sponsor (Opsional)</span>
+                  <span id="profileSponsorText">Sponsor: -</span>
                 </div>
                 <div class="user-joined-info">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  <span id="profileJoinedText">Bergabung sejak: 19 September 2026</span>
+                  <span id="profileJoinedText">Bergabung sejak: -</span>
                 </div>
               </div>
             </div>
@@ -914,17 +977,17 @@
             <div class="profile-info-grid">
               <div class="profile-info-item">
                 <span class="profile-info-lbl">Nomor WhatsApp / HP:</span>
-                <strong class="profile-info-val" id="profilePhoneVal">081234567890</strong>
+                <strong class="profile-info-val" id="profilePhoneVal">-</strong>
               </div>
               <div class="profile-info-item">
                 <span class="profile-info-lbl">Kota / Domisili:</span>
-                <strong class="profile-info-val" id="profileCityVal">Jakarta Selatan</strong>
+                <strong class="profile-info-val" id="profileCityVal">-</strong>
               </div>
               <div class="profile-info-item full">
                 <span class="profile-info-lbl">Rekening Utama Penarikan (WD):</span>
                 <div class="saved-bank-badge" id="profileBankBadge">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                  <strong id="profileBankVal">BCA - 8271928374 (a.n ALEX SUTANTO)</strong>
+                  <strong id="profileBankVal">Belum diatur</strong>
                 </div>
               </div>
             </div>
@@ -974,6 +1037,56 @@
                   <span>Aplikasi Android</span>
                 </div>
               </button>
+
+              <button class="profile-action-btn" id="profileThemeToggleBtn" onclick="App.toggleTheme()">
+                <div class="action-btn-icon" id="profileThemeIconWrap" style="background: rgba(99, 102, 241, 0.15); color: #6366F1;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                  </svg>
+                </div>
+                <div class="action-btn-text">
+                  <strong id="profileThemeLabel">Mode Gelap</strong>
+                  <span id="profileThemeStatus">Aktifkan tema gelap</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Social Media & Official Community Box (Requirement 2) -->
+          <div class="profile-social-card" style="background: #FFFFFF; border-radius: 18px; padding: 14px 12px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0; margin-bottom: 12px;">
+            <div class="flex-between mb-2">
+              <span style="font-weight: 800; font-size: 13.5px; color: #0F172A; display: flex; align-items: center; gap: 6px;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                  <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                  <line x1="6" y1="1" x2="6" y2="4"></line>
+                  <line x1="10" y1="1" x2="10" y2="4"></line>
+                  <line x1="14" y1="1" x2="14" y2="4"></line>
+                </svg>
+                Media Sosial & Komunitas Resmi
+              </span>
+              <span class="badge-status approved" style="font-size: 9.5px; padding: 3px 8px;">Official</span>
+            </div>
+            <p style="font-size: 10.5px; color: #64748B; margin-bottom: 10px; line-height: 1.35;">
+              Bergabunglah dengan kanal & komunitas resmi kami untuk info sinyal harian, edukasi, dan update promo:
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+              <a id="socLinkTelegram" href="https://t.me/autotrading_channel" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 10px; background: #F0F9FF; border: 1px solid #BAE6FD; text-decoration: none; color: #0369A1; font-weight: 700; font-size: 11.5px; transition: transform 0.15s ease;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#0284C7"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+                <span>Telegram</span>
+              </a>
+              <a id="socLinkYoutube" href="https://youtube.com/@autotrading" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA; text-decoration: none; color: #DC2626; font-weight: 700; font-size: 11.5px; transition: transform 0.15s ease;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#DC2626"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                <span>YouTube</span>
+              </a>
+              <a id="socLinkInstagram" href="https://instagram.com/autotrading" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 10px; background: #FDF2F8; border: 1px solid #FBCFE8; text-decoration: none; color: #BE185D; font-weight: 700; font-size: 11.5px; transition: transform 0.15s ease;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#DB2777"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                <span>Instagram</span>
+              </a>
+              <a id="socLinkTiktok" href="https://tiktok.com/@autotrading" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 10px; background: #F8FAFC; border: 1px solid #CBD5E1; text-decoration: none; color: #0F172A; font-weight: 700; font-size: 11.5px; transition: transform 0.15s ease;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="#0F172A"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.85.12V9.4a6.33 6.33 0 0 0-.85-.06A6.34 6.34 0 0 0 3 15.68a6.34 6.34 0 0 0 8.79 5.86c3.27-1.49 4.35-4.66 4.35-7.87V7.81c1.21.84 2.66 1.34 4.22 1.41V5.77c-.26 0-.52-.03-.77-.08z"/></svg>
+                <span>TikTok</span>
+              </a>
             </div>
           </div>
 
@@ -981,7 +1094,7 @@
           <div style="background: #FFFFFF; border-radius: 18px; padding: 14px 12px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0;">
             <div class="flex-between mb-2">
               <span style="font-weight: 800; font-size: 14px;">Link Referral Anda</span>
-              <span style="font-weight: 800; color: #C89338;" id="profileRefCode">ALEX88</span>
+              <span style="font-weight: 800; color: #C89338;" id="profileRefCode">-</span>
             </div>
             <div style="display: flex; gap: 8px;">
               <input type="text" class="form-input" id="profileRefLinkInput" readonly style="font-size: 11px;">
@@ -999,12 +1112,15 @@
             
             <!-- Rekapan Bonus Masing-Masing Level (Requirement 2 & 3) -->
             <div class="network-bonus-card">
-              <div class="network-bonus-header">
+              <div class="network-bonus-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                 <span class="network-bonus-title">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FDE68A" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   Rekapan Akumulasi Bonus Tim
                 </span>
-                <span class="network-bonus-total" id="affTotalBonusVal">IDR 0</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="network-bonus-total" id="affTotalBonusVal">IDR 0</span>
+                  <button type="button" class="tier-btn btn-topup" style="padding: 4px 9px; font-size: 10.5px; border-radius: 8px;" onclick="App.openTransferModal()">Transfer Saldo</button>
+                </div>
               </div>
 
               <div class="network-level-grid">
@@ -1037,6 +1153,33 @@
             <div class="flex-between mb-3" style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 10px 12px; border-radius: 12px;">
               <span style="font-size: 12px; font-weight: 700; color: #166534;">Total Omset Keseluruhan Tim:</span>
               <span style="font-size: 14px; font-weight: 800; color: #15803D;" id="affTotalTurnover">IDR 0</span>
+            </div>
+
+            <!-- Leader Milestone / Ranking Card -->
+            <div class="leader-rank-card" id="affLeaderRankCard">
+              <div class="leader-rank-header">
+                <div class="leader-rank-badge-wrap">
+                  <div class="leader-rank-icon" id="affLeaderRankIcon">🥉</div>
+                  <div>
+                    <div class="leader-rank-title" id="affLeaderRankTitle">Bronze Leader</div>
+                    <div class="leader-rank-sub" id="affLeaderRankSub">Peringkat Kepemimpinan Tim</div>
+                  </div>
+                </div>
+                <div class="leader-rank-bonus-tag" id="affLeaderRewardTag">Bonus: IDR 0</div>
+              </div>
+              <div class="leader-progress-wrap">
+                <div class="leader-progress-labels">
+                  <span id="affLeaderProgCur">Omset: IDR 0</span>
+                  <span id="affLeaderProgTarget">Target: IDR 50.000.000</span>
+                </div>
+                <div class="leader-progress-bar-bg">
+                  <div class="leader-progress-bar-fill" id="affLeaderProgressBar" style="width: 0%;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; color:#94A3B8;">
+                  <span id="affLeaderNextRankLabel">Menuju: Silver Director</span>
+                  <span id="affLeaderProgPercent" style="font-weight:700; color:#38BDF8;">0%</span>
+                </div>
+              </div>
             </div>
 
             <!-- Tab Pengelompokkan Level 1, 2, 3 (Requirement 2) -->
@@ -1156,26 +1299,54 @@
   <div class="modal-backdrop" id="authModal">
     <div class="modal-sheet">
       <div class="modal-handle"></div>
-      <div class="modal-header">
+      
+      <!-- Security Status Badge (Investrade Style) -->
+      <div style="text-align: center; margin-bottom: 4px;">
+        <div class="auth-security-header-badge">
+          <span class="auth-ssl-pulse"></span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>256-Bit SSL Enkripsi • Proteksi Data Finansial Aktif</span>
+        </div>
+      </div>
+
+      <div class="modal-header" style="margin-bottom: 12px;">
         <h3 class="modal-title">Akses Akun AUTOTRADING</h3>
         <button class="modal-close-btn">&times;</button>
       </div>
 
+      <!-- SSL Security Banner -->
+      <div class="auth-security-banner">
+        <div class="auth-security-banner-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <div class="auth-security-banner-content">
+          <div class="auth-security-banner-title">🔐 Koneksi Terenkripsi SSL 256-Bit</div>
+          <div class="auth-security-banner-desc">Sistem terproteksi sertifikat SSL TLS 1.3 tingkat perbankan. Seluruh kata sandi, transaksi, dan data saldo Anda 100% aman dan terenkripsi end-to-end.</div>
+        </div>
+      </div>
+
       <!-- Switch Tabs -->
-      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-        <button id="authTabLogin" class="btn-cta-gold" style="flex: 1; padding: 10px;">Login</button>
-        <button id="authTabRegister" class="tier-btn" style="flex: 1; padding: 10px; background: #F1F5F9; color: #475569;">Daftar Akun</button>
+      <div class="auth-tab-bar" style="display: flex; background: #F1F5F9; padding: 4px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #E2E8F0; gap: 4px;">
+        <button type="button" id="authTabLogin" class="auth-tab-btn active" style="flex: 1; padding: 9px 12px; border: none; border-radius: 9px; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; background: #FFFFFF; color: #0F172A; box-shadow: 0 2px 6px rgba(0,0,0,0.08); font-family: inherit;">Login</button>
+        <button type="button" id="authTabRegister" class="auth-tab-btn" style="flex: 1; padding: 9px 12px; border: none; border-radius: 9px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; background: transparent; color: #64748B; font-family: inherit;">Daftar Akun</button>
       </div>
 
       <!-- Login Form -->
       <div id="loginForm">
         <div class="form-group">
           <label class="form-label">Username / Email / No. HP</label>
-          <input type="text" class="form-input" id="loginIdentifier" placeholder="Username, email, atau no. HP">
+          <div class="form-input-with-icon">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" class="form-input" id="loginIdentifier" placeholder="Username, email, atau no. HP">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
-          <div style="position: relative;">
+          <div class="form-input-with-icon" style="position: relative;">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password Anda" style="padding-right: 42px;">
             <button type="button" onclick="App.togglePasswordVisibility('loginPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Password">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1189,17 +1360,23 @@
           <span>Masuk Sekarang</span>
         </button>
 
-        <!-- Quick Login Selection (User & Admin) -->
-        <div class="quick-demo-login">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <button type="button" class="btn-demo-pill" onclick="App.quickLogin('user')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <span>Login User Demo</span>
-            </button>
-            <button type="button" class="btn-demo-pill admin-pill" onclick="App.quickLogin('admin')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>Login Admin Demo</span>
-            </button>
+        <!-- Trust Badges Strip (Investrade Style) -->
+        <div class="auth-trust-badges">
+          <div class="auth-trust-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>SSL 256-Bit TLS</span>
+          </div>
+          <div class="auth-trust-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Proteksi Modal</span>
+          </div>
+          <div class="auth-trust-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span>Anti-Fraud 24/7</span>
+          </div>
+          <div class="auth-trust-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Aman Terenkripsi</span>
           </div>
         </div>
       </div>
@@ -1208,23 +1385,36 @@
       <div id="registerForm" style="display: none;">
         <div class="form-group">
           <label class="form-label">Username <span style="color: #EF4444;">*</span></label>
-          <input type="text" class="form-input" id="regUsername" placeholder="Contoh: investor_pro (3-20 karakter)">
+          <div class="form-input-with-icon">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" class="form-input" id="regUsername" placeholder="Contoh: investor_pro (3-20 karakter)">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Nama Lengkap</label>
-          <input type="text" class="form-input" id="regFullName" placeholder="Nama lengkap sesuai identitas">
+          <div class="form-input-with-icon">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            <input type="text" class="form-input" id="regFullName" placeholder="Nama lengkap sesuai identitas">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Email <span style="color: #EF4444;">*</span></label>
-          <input type="email" class="form-input" id="regEmail" placeholder="nama@email.com">
+          <div class="form-input-with-icon">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <input type="email" class="form-input" id="regEmail" placeholder="nama@email.com">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">No. WhatsApp / HP</label>
-          <input type="tel" class="form-input" id="regPhone" placeholder="0812xxxxxxxx">
+          <div class="form-input-with-icon">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <input type="tel" class="form-input" id="regPhone" placeholder="0812xxxxxxxx">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Password <span style="color: #EF4444;">*</span></label>
-          <div style="position: relative;">
+          <div class="form-input-with-icon" style="position: relative;">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <input type="password" class="form-input" id="regPassword" placeholder="Minimal 6 karakter" style="padding-right: 42px;">
             <button type="button" onclick="App.togglePasswordVisibility('regPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Password">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1233,7 +1423,8 @@
         </div>
         <div class="form-group">
           <label class="form-label">Konfirmasi Password <span style="color: #EF4444;">*</span></label>
-          <div style="position: relative;">
+          <div class="form-input-with-icon" style="position: relative;">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <input type="password" class="form-input" id="regConfirmPassword" placeholder="Ketik ulang password" style="padding-right: 42px;">
             <button type="button" onclick="App.togglePasswordVisibility('regConfirmPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748B; padding: 4px; display: flex; align-items: center;" aria-label="Lihat Konfirmasi Password">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1242,7 +1433,10 @@
         </div>
         <div class="form-group">
           <label class="form-label">Kode Referral (Opsional)</label>
-          <input type="text" class="form-input" id="regReferral" placeholder="KODE SPONSOR" style="text-transform: uppercase;">
+          <div class="form-input-with-icon">
+            <svg class="input-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            <input type="text" class="form-input" id="regReferral" placeholder="KODE SPONSOR" style="text-transform: uppercase;">
+          </div>
         </div>
 
         <!-- Checkbox Persetujuan Resiko Investasi -->
@@ -1256,8 +1450,151 @@
         <button class="btn-cta-gold" onclick="App.submitRegister()">
           <span>Buat Akun & Mulai</span>
         </button>
+
+        <!-- Trust Badges Strip (Investrade Style) -->
+        <div class="auth-trust-badges">
+          <div class="auth-trust-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>SSL 256-Bit TLS</span>
+          </div>
+          <div class="auth-trust-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Anti-Akun Ganda</span>
+          </div>
+          <div class="auth-trust-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span>Proteksi Saldo</span>
+          </div>
+          <div class="auth-trust-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Data Terenkripsi</span>
+          </div>
+        </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: KLAIM PROFIT CELEBRATION (ANIMASI TEROMPET MERIAH & UCAPAN SELAMAT)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="claimCelebrationModal">
+    <div class="modal-sheet celebration-sheet">
+      <div id="celebrationConfettiContainer"></div>
+      
+      <!-- Trumpet Celebration Animation -->
+      <div class="celebration-trumpet-wrap">
+        <div class="trumpet-icon-left">🎺</div>
+        <div class="celebration-center-badge">
+          <div class="celebration-sparkle sparkle-1">✨</div>
+          <div class="celebration-sparkle sparkle-2">🌟</div>
+          <div class="celebration-sparkle sparkle-3">✨</div>
+          <div class="celebration-coin-icon">💰</div>
+        </div>
+        <div class="trumpet-icon-right">🎺</div>
+      </div>
+
+      <div class="celebration-content">
+        <span class="celebration-tag">🎉 SELAMAT PROFIT CAIR! 🎉</span>
+        <h3 class="celebration-title">Klaim Profit Berhasil!</h3>
+        <p class="celebration-subtitle">Dividen harian Anda telah sukses dicairkan ke Saldo Utama:</p>
+        
+        <div class="celebration-amount-box">
+          <span class="celebration-amount-prefix">+</span>
+          <span class="celebration-amount-val" id="celebrationProfitAmount">Rp 0</span>
+        </div>
+
+        <div class="celebration-info-card">
+          <div class="celebration-info-row">
+            <span style="color: #64748B;">Status Dividen:</span>
+            <strong style="color: #10B981;">✓ 100% Berhasil Masuk Saldo</strong>
+          </div>
+          <div class="celebration-info-row">
+            <span style="color: #64748B;">Tujuan Dompet:</span>
+            <strong style="color: #0F172A;">Saldo Utama (Siap WD / Re-Invest)</strong>
+          </div>
+        </div>
+
+        <button class="btn-cta-gold" onclick="App.closeCelebrationModal()" style="margin-top: 6px;">
+          <span>Selesai & Lihat Saldo</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: ABSENSI HARIAN 7 HARI (BONUS LOGIN Rp 1.000 / HARI)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="dailyCheckInModal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">📅 Absensi Harian 7 Hari</h3>
+          <p class="modal-subtitle">Bonus login gratis masuk langsung ke Saldo Utama Anda</p>
+        </div>
+        <button class="modal-close-btn" onclick="App.closeModal('dailyCheckInModal')">&times;</button>
+      </div>
+
+      <div style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border: 1.5px solid #FCD34D; border-radius: 14px; padding: 12px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 32px;">🎁</span>
+        <div>
+          <div style="font-size: 13px; font-weight: 800; color: #B45309;" id="checkInBonusTitle">Bonus <span id="checkInBonusAmountText">Rp 1.000</span> / Hari</div>
+          <div style="font-size: 10.5px; color: #92400E; margin-top: 2px;">Cukup login dan klik absen setiap hari untuk mengumpulkan saldo gratis!</div>
+        </div>
+      </div>
+
+      <!-- 7-Day Streak Grid -->
+      <div class="checkin-streak-grid" id="checkInStreakGrid">
+        <!-- Rendered dynamically by App.renderDailyCheckInUI() -->
+      </div>
+
+      <div id="checkInStatusNotice" style="margin-bottom: 14px; font-size: 11.5px; text-align: center; color: #475569; font-weight: 600;">
+        <!-- Status note -->
+      </div>
+
+      <button class="btn-cta-gold" id="btnClaimDailyCheckIn" onclick="App.claimDailyCheckIn()">
+        <span>📅 Klaim Absen Hari Ini</span>
+      </button>
+
+      <button class="tier-btn" style="width: 100%; margin-top: 8px; padding: 9px; background: #F1F5F9; color: #475569;" onclick="App.closeModal('dailyCheckInModal')">
+        <span>Tutup</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: PERINGATAN KEAMANAN / AKUN & REKENING GANDA DITOLAK
+       ====================================================================== -->
+  <div class="modal-backdrop" id="securityWarningModal">
+    <div class="modal-sheet security-warning-sheet">
+      <div class="modal-handle"></div>
+      
+      <div class="security-warning-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 14px;">
+        <h3 class="modal-title" id="securityWarningTitle" style="color: #DC2626; font-size: 16px;">⚠️ Terdeteksi Akun Ganda</h3>
+        <p class="modal-subtitle" style="color: #64748B;">Kebijakan Keamanan & Anti-Fraud Sistem</p>
+      </div>
+
+      <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;">
+        <p id="securityWarningMessage" style="font-size: 11.5px; color: #991B1B; line-height: 1.5; margin: 0;"></p>
+      </div>
+
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 10px 12px; margin-bottom: 16px; font-size: 10.5px; color: #475569; line-height: 1.4;">
+        <strong>Aturan Ketat Sistem:</strong>
+        <ul style="margin: 4px 0 0 16px; padding: 0;">
+          <li>1 Investor hanya diperbolehkan memiliki 1 akun aktif.</li>
+          <li>Nomor rekening bank & nomor HP yang sama tidak boleh didaftarkan pada lebih dari satu akun.</li>
+          <li>Pelanggaran multi-akun dapat menyebabkan pembekuan akun oleh Administrator.</li>
+        </ul>
+      </div>
+
+      <button class="btn-cta-gold" style="background: #0F172A;" onclick="App.closeModal('securityWarningModal')">
+        <span>Saya Mengerti & Patuhi Aturan</span>
+      </button>
     </div>
   </div>
 
@@ -1377,6 +1714,140 @@
   </div>
 
   <!-- ======================================================================
+       MODAL: TRANSFER SALDO (KOMISI AFILIASI & P2P ANTAR MEMBER)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="transferModal">
+    <div class="modal-sheet transfer-modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="transfer-header-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3">
+              <path d="M17 1l4 4-4 4"/>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <path d="M7 23l-4-4 4-4"/>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" id="transferModalMainTitle">Transfer Saldo</h3>
+            <p class="modal-subtitle" id="transferModalSubTitle">Pindahkan saldo komisi atau transfer instan antar member</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="App.closeModal('transferModal')">&times;</button>
+      </div>
+
+      <!-- Segmented Control Tabs -->
+      <div class="transfer-type-tabs">
+        <button type="button" class="transfer-type-btn active" id="btnTransferTypeAffiliate" onclick="App.setTransferType('affiliate')">
+          <span>🔄 Komisi ke Utama</span>
+        </button>
+        <button type="button" class="transfer-type-btn" id="btnTransferTypeMember" onclick="App.setTransferType('member')">
+          <span>👥 Antar Member (P2P)</span>
+        </button>
+      </div>
+
+      <!-- Flow Card (Dynamic for Affiliate or P2P) -->
+      <div class="transfer-flow-card">
+        <div class="transfer-wallet-box source">
+          <div class="transfer-wallet-label">Dari (Sumber):</div>
+          <div class="transfer-wallet-title" id="transferSourceTitleText">Wallet Tambah Teman</div>
+          <div class="transfer-wallet-bal" id="transferSourceBalText">IDR 0</div>
+          <span class="transfer-wallet-tag" id="transferSourceTagText">Komisi Afiliasi</span>
+        </div>
+
+        <div class="transfer-flow-arrow">
+          <div class="transfer-arrow-circle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.5">
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="transfer-wallet-box dest">
+          <div class="transfer-wallet-label">Ke (Tujuan):</div>
+          <div class="transfer-wallet-title" id="transferDestTitleText">Wallet Utama (Saldo Bebas)</div>
+          <div class="transfer-wallet-bal" id="transferDestBalText">IDR 0</div>
+          <span class="transfer-wallet-tag dest" id="transferDestTagText">Siap Tarik (WD) / Investasi</span>
+        </div>
+      </div>
+
+      <!-- Input Member Tujuan (Only visible for P2P mode) -->
+      <div class="form-group" id="transferTargetUserGroup" style="display: none; margin-top: 12px;">
+        <label class="form-label" style="font-weight: 700; color: #0F172A;">
+          <span>Username atau Kode Referral Member Tujuan:</span>
+        </label>
+        <div class="transfer-amount-input-wrap">
+          <span class="currency-prefix" style="color: #64748B;">@</span>
+          <input type="text" class="form-input" id="transferTargetUserInput" placeholder="Masukkan username/kode referral tujuan" oninput="App.onTransferTargetInput()" style="text-transform: lowercase;">
+        </div>
+        <div id="transferRecipientBadge" class="transfer-recipient-badge neutral" style="display: none;">
+          <span id="transferRecipientBadgeText">Ketik username member tujuan</span>
+        </div>
+      </div>
+
+      <!-- Transfer Amount Input -->
+      <div class="form-group" style="margin-top: 14px;">
+        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Nominal yang Ingin Ditransfer:</span>
+          <span style="font-size: 11px; color: #C89338; font-weight: 700; cursor: pointer;" onclick="App.setTransferPercentage(100)">
+            Transfer Semua (100%)
+          </span>
+        </label>
+        <div class="transfer-amount-input-wrap">
+          <span class="currency-prefix">IDR</span>
+          <input type="number" class="form-input transfer-number-input" id="transferAmountInput" placeholder="0" min="10000" oninput="App.updateTransferPreview()">
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 10.5px; color: #64748B;">
+          <span>Minimal transfer: <strong>Rp 10.000</strong></span>
+          <span id="transferMaxNotice">Maksimal: IDR 0</span>
+        </div>
+      </div>
+
+      <!-- Quick Percentage Chips -->
+      <div class="transfer-chips-grid">
+        <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(25)">25%</button>
+        <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(50)">50%</button>
+        <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(75)">75%</button>
+        <button type="button" class="transfer-chip-btn active" onclick="App.setTransferPercentage(100)">100% (Semua)</button>
+      </div>
+
+      <!-- Live Calculation Breakdown Summary -->
+      <div class="transfer-preview-card" id="transferPreviewCard">
+        <div class="transfer-preview-row">
+          <span class="preview-lbl" id="transferPreviewLabelLeft">Sisa Saldo Komisi:</span>
+          <strong class="preview-val" id="transferRemAffBal">IDR 0</strong>
+        </div>
+        <div class="transfer-preview-row">
+          <span class="preview-lbl" id="transferPreviewLabelRight">Estimasi Saldo Baru:</span>
+          <strong class="preview-val highlight" id="transferNewMainBal">IDR 0</strong>
+        </div>
+      </div>
+
+      <!-- Security / Info Notice -->
+      <div class="transfer-info-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" style="flex-shrink:0;">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span id="transferInfoBannerText">Saldo yang dipindahkan ke Wallet Utama akan langsung bertambah secara realtime dan siap ditarik (WD) ke rekening bank atau digunakan untuk membeli paket investasi.</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 10px; margin-top: 18px;">
+        <button type="button" class="btn-cta-gold" style="background: #334155; flex: 1; margin: 0; padding: 12px;" onclick="App.closeModal('transferModal')">
+          <span>Batal</span>
+        </button>
+        <button type="button" class="btn-cta-gold" style="flex: 2; margin: 0; padding: 12px;" id="btnConfirmTransfer" onclick="App.submitTransferModal()">
+          <span>⚡ Konfirmasi Transfer Sekarang</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
        MODAL 3: WITHDRAWAL
        ====================================================================== -->
   <div class="modal-backdrop" id="withdrawModal">
@@ -1449,8 +1920,27 @@
 
       <div class="form-group">
         <label class="form-label">Nominal Penarikan (IDR):</label>
-        <input type="number" class="form-input" id="wdAmountInput" value="500000" placeholder="Minimal Rp 50.000">
-        <div style="font-size: 11px; color: #64748B; margin-top: 4px;">Biaya admin penarikan 1.0% dipotong otomatis.</div>
+        <input type="number" class="form-input" id="wdAmountInput" value="50000" placeholder="Minimal Rp 50.000" oninput="App.updateWithdrawBreakdownCalc()">
+      </div>
+
+      <!-- Realtime WD Breakdown Box (Rincian Bersih Diterima) -->
+      <div id="wdCalcBreakdownCard" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;">
+        <div style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+          <span>Rincian Penerimaan Bersih:</span>
+          <span style="color: #E11D48; font-weight: 800; font-size: 10px; background: #FFE4E6; padding: 2px 6px; border-radius: 4px;">Potongan 10%</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #64748B; margin-bottom: 4px;">
+          <span>Jumlah Penarikan (Kotor):</span>
+          <strong id="wdCalcGross" style="font-family: var(--font-mono); color: #0F172A;">Rp 50.000</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #E11D48; margin-bottom: 6px;">
+          <span>Biaya Admin (10%):</span>
+          <strong id="wdCalcFee" style="font-family: var(--font-mono);">-Rp 5.000</strong>
+        </div>
+        <div style="border-top: 1px dashed #CBD5E1; padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 800; font-size: 12.5px; color: #0F172A;">Diterima Bersih ke Rekening:</span>
+          <strong id="wdCalcNet" style="font-family: var(--font-mono); font-size: 15px; color: #16A34A; font-weight: 800;">Rp 45.000</strong>
+        </div>
       </div>
 
       <!-- Info Ketentuan & Jadwal Penarikan Dana (WD) -->
@@ -1465,7 +1955,7 @@
         </div>
         <ul class="wd-terms-list" id="withdrawTermsList">
           <li><strong>Minimal Penarikan:</strong> Rp 50.000 per transaksi.</li>
-          <li><strong>Biaya Admin:</strong> 1.0% dari nominal penarikan dana.</li>
+          <li><strong>Biaya Admin:</strong> 10% dari nominal penarikan dana.</li>
           <li><strong>Jam Operasional WD:</strong> Buka setiap hari pukul <strong>09:00 - 21:00 WIB</strong>. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.</li>
           <li><strong>Waktu Proses:</strong> Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).</li>
           <li><strong>Proteksi Modal Terkunci:</strong> Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode.</li>
@@ -1560,22 +2050,49 @@
   <!-- ======================================================================
        MODAL 6: NOTIFICATIONS & ANNOUNCEMENTS
        ====================================================================== -->
+  <!-- ======================================================================
+       MODAL 6: REALTIME NOTIFICATIONS & ACTIVITY CENTER
+       ====================================================================== -->
   <div class="modal-backdrop" id="notifModal">
-    <div class="modal-sheet">
+    <div class="modal-sheet notif-modal-sheet">
       <div class="modal-handle"></div>
-      <div class="modal-header">
-        <h3 class="modal-title">Pemberitahuan Sistem</h3>
-        <button class="modal-close-btn">&times;</button>
+      
+      <!-- Notification Header with Mark Read Button -->
+      <div class="modal-header notif-modal-header">
+        <div>
+          <h3 class="modal-title" style="margin: 0; font-size: 16px;">Pusat Notifikasi</h3>
+          <p class="notif-modal-subtitle" id="notifSubtitle">Pemberitahuan aktivitas &amp; transaksi realtime</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn-mark-all-read" id="btnMarkAllRead" onclick="App.markAllNotificationsRead()" title="Tandai semua sudah dibaca">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Tandai Dibaca</span>
+          </button>
+          <button class="modal-close-btn" aria-label="Tutup">&times;</button>
+        </div>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; border-left: 4px solid #22C55E;">
-          <div style="font-weight: 700; font-size: 13px;">Dividen Profit Harian Berhasil!</div>
-          <div style="font-size: 11px; color: #64748B; margin-top: 2px;">Profit acak harian telah dihitung untuk semua paket aktif. Klik tombol klaim untuk mencairkannya.</div>
-        </div>
-        <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; border-left: 4px solid #C89338;">
-          <div style="font-weight: 700; font-size: 13px;">Bonus Sponsor Masuk</div>
-          <div style="font-size: 11px; color: #64748B; margin-top: 2px;">Selamat! Anda mendapatkan komisi sponsor 10% dari deposit anggota tim Anda.</div>
-        </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="notif-filter-tabs">
+        <button type="button" class="notif-tab active" data-filter="all" onclick="App.setNotifFilter('all')">
+          <span>Semua</span>
+          <span class="notif-tab-badge" id="notifBadgeAll">0</span>
+        </button>
+        <button type="button" class="notif-tab" data-filter="finance" onclick="App.setNotifFilter('finance')">
+          <span>Keuangan</span>
+          <span class="notif-tab-badge" id="notifBadgeFinance">0</span>
+        </button>
+        <button type="button" class="notif-tab" data-filter="system" onclick="App.setNotifFilter('system')">
+          <span>Sistem &amp; Sinyal</span>
+          <span class="notif-tab-badge" id="notifBadgeSystem">0</span>
+        </button>
+      </div>
+
+      <!-- Realtime Notification List Container -->
+      <div class="notif-list-wrap" id="notifListContainer">
+        <!-- Rendered dynamically via App.renderNotificationsUI() -->
       </div>
     </div>
   </div>
@@ -1733,7 +2250,7 @@
       <!-- Trust Bar Metrics -->
       <div class="testi-trust-bar">
         <div class="testi-trust-col">
-          <div class="testi-trust-val" id="testiTotalWdCount">1,420+</div>
+          <div class="testi-trust-val" id="testiTotalWdCount">0</div>
           <div class="testi-trust-lbl">Penarikan Sukses</div>
         </div>
         <div class="testi-trust-col">
@@ -1895,8 +2412,8 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
           <div>
             <div style="font-size: 11px; color: #94A3B8;">Data Pengguna:</div>
-            <div style="font-size: 17px; font-weight: 800; color: #FDE89C;" id="statMemberName">Alex Investor</div>
-            <div style="font-size: 11px; color: #CBD5E1;" id="statMemberEmail">alex@gmail.com</div>
+            <div style="font-size: 17px; font-weight: 800; color: #FDE89C;" id="statMemberName">Member AUTOTRADING</div>
+            <div style="font-size: 11px; color: #CBD5E1;" id="statMemberEmail">-</div>
           </div>
           <span id="statMemberStatusBadge" class="badge-member-active">🟢 Member Aktif</span>
         </div>
@@ -2305,8 +2822,11 @@
       <div class="modal-handle"></div>
       <div class="modal-header">
         <div>
-          <h3 class="modal-title">📲 Unduh Aplikasi AUTOTRADING</h3>
-          <p class="modal-subtitle">Aplikasi Android Resmi untuk Trading & Investasi</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3 class="modal-title">📲 Unduh Aplikasi WebView Android</h3>
+            <span style="font-size: 10px; font-weight: 800; background: #16A34A; color: #FFFFFF; padding: 2px 8px; border-radius: 12px;">SIAP ON</span>
+          </div>
+          <p class="modal-subtitle">Aplikasi Android WebView Resmi - Ringan, Cepat & Terenkripsi</p>
         </div>
         <button class="modal-close-btn">&times;</button>
       </div>
@@ -2318,8 +2838,8 @@
             <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9996.4482.9996.9993.0001.5511-.4485.9997-.9996.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4116 13.8533 8.1 12 8.1s-3.5902.3116-5.1367.8497L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9974 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3435-4.1021-2.6892-7.5743-6.1185-9.4396"/>
           </svg>
         </div>
-        <div class="apk-app-title">AUTOTRADING Mobile App</div>
-        <div class="apk-app-sub">AI Trading Engine & Fast Withdrawal Experience</div>
+        <div class="apk-app-title">AUTOTRADING WebView Mobile App</div>
+        <div class="apk-app-sub">AI Trading Engine, Fast Deposit & Withdrawal - Siap ON</div>
 
         <div class="apk-spec-grid">
           <div class="apk-spec-item">

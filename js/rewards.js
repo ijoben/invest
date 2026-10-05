@@ -23,7 +23,7 @@ export const Rewards = {
   },
 
   // Redeem a reward for a user using their accumulated points
-  redeemReward(userId, rewardId, { targetContact, deliveryAddress, note = '' }) {
+  async redeemReward(userId, rewardId, { targetContact, deliveryAddress, note = '' }) {
     const db = DB.get();
     
     // 1. Validate User
@@ -85,8 +85,22 @@ export const Rewards = {
     };
     db.redemptions.unshift(newRedemption);
 
+    // 7. Record Transaction Log for Audit & MySQL sync
+    db.transactions = db.transactions || [];
+    db.transactions.unshift({
+      id: 'TRX-RDM-' + Math.floor(100000 + Math.random() * 900000),
+      userId: user.id,
+      username: user.username,
+      type: 'reward',
+      amount: pointsCost,
+      status: 'pending',
+      note: `Penukaran hadiah reward: ${reward.title} (${pointsCost} Poin)`,
+      destinationAccount: targetContact.trim(),
+      createdAt: new Date().toISOString()
+    });
+
     // Save DB
-    DB.save(db);
+    await DB.save(db);
 
     return {
       success: true,

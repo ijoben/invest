@@ -29,7 +29,7 @@ const defaultDB = {
     usdIdrRate: 16250,
     minDeposit: 50000,
     minWithdraw: 50000,
-    withdrawFeePercent: 1.0, // 1% admin fee
+    withdrawFeePercent: 10.0, // 10% admin fee
     withdrawSchedule: {
       enabled: true,
       startHour: 9, // 09:00 WIB
@@ -38,7 +38,7 @@ const defaultDB = {
     },
     withdrawTerms: [
       "Minimal Penarikan: Rp 50.000 per transaksi.",
-      "Biaya Admin: 1.0% dari nominal penarikan dana.",
+      "Biaya Admin: 10% dari nominal penarikan dana.",
       "Jam Operasional WD: Buka setiap hari pukul 09:00 - 21:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
       "Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).",
       "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
@@ -87,10 +87,22 @@ const defaultDB = {
       { dayName: 'Sabtu', date: 'Sabtu', rate: null, isLoss: false, isWeekend: true },
       { dayName: 'Minggu', date: 'Minggu', rate: null, isLoss: false, isWeekend: true }
     ],
+    depositPointsReward: 5,
+    dailyCheckIn: {
+      enabled: true,
+      rewardAmount: 1000,
+      totalDays: 7
+    },
     cs: {
       whatsapp: '6281234567890',
       telegram: 'https://t.me/autotrading_cs',
       waMessage: 'Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform...'
+    },
+    social: {
+      telegram: 'https://t.me/autotrading_channel',
+      instagram: 'https://instagram.com/autotradingofficial',
+      tiktok: 'https://tiktok.com/@autotradingofficial',
+      youtube: 'https://youtube.com/@autotrading'
     },
     kelasTrading: {
       whatsapp: 'https://wa.me/6281234567890?text=Halo%20Mentor%20AUTOTRADING,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi',
@@ -142,7 +154,7 @@ const defaultDB = {
       maxDailyProfit: 2.2, // 2.2%
       durationDays: 15,
       description: 'Paket Pemula & Edukasi Trading Algoritma AUTOTRADING',
-      activeCount: 1420
+      activeCount: 0
     },
     {
       id: 'plan-rookie',
@@ -154,7 +166,7 @@ const defaultDB = {
       maxDailyProfit: 3.5, // 3.5%
       durationDays: 30,
       description: 'Paket Standard Otomasi Profit dengan Proteksi Modal',
-      activeCount: 890
+      activeCount: 0
     },
     {
       id: 'plan-sophomore',
@@ -166,7 +178,7 @@ const defaultDB = {
       maxDailyProfit: 5.0, // 5.0%
       durationDays: 45,
       description: 'Paket Menengah High Frequency AI Trading Signal',
-      activeCount: 420
+      activeCount: 0
     },
     {
       id: 'plan-vip',
@@ -178,7 +190,7 @@ const defaultDB = {
       maxDailyProfit: 7.5, // 7.5%
       durationDays: 60,
       description: 'Paket Eksklusif Prof GPT Institutional Hedge Fund',
-      activeCount: 180
+      activeCount: 0
     }
   ],
 
@@ -192,9 +204,9 @@ const defaultDB = {
       phone: '081299990000',
       password: 'admin',
       role: 'admin',
-      walletBalance: 150000000,
-      affiliateBalance: 25000000,
-      points: 1500,
+      walletBalance: 0,
+      affiliateBalance: 0,
+      points: 0,
       referralCode: 'ADMINVIP',
       referredBy: null,
       kycStatus: 'verified',
@@ -203,312 +215,14 @@ const defaultDB = {
       blockedAt: null,
       blockHistory: [],
       registeredAt: '2026-01-01T00:00:00.000Z'
-    },
-    {
-      id: 'usr-demo',
-      username: 'alex_investor',
-      fullName: 'Alex Sutanto',
-      email: 'alex@gmail.com',
-      phone: '081234567890',
-      password: 'user123',
-      role: 'user',
-      walletBalance: 684000, // Real balance: 2.5jt dep - 2jt inv + 184rb claimed profit
-      affiliateBalance: 102600, // Real commission: 100rb sponsor + 2.6rb rabat
-      points: 20,
-      city: 'Jakarta Selatan',
-      bankAccount: {
-        bankName: 'BCA',
-        accountNumber: '8271928374',
-        accountHolder: 'ALEX SUTANTO'
-      },
-      referralCode: 'ALEX88',
-      referredBy: 'ADMINVIP',
-      kycStatus: 'verified',
-      isBlocked: false,
-      blockedReason: '',
-      blockedAt: null,
-      blockHistory: [],
-      registeredAt: '2026-02-15T08:30:00.000Z'
-    },
-    {
-      id: 'usr-downline-1',
-      username: 'sarah_trader',
-      fullName: 'Sarah Olivia',
-      email: 'sarah@gmail.com',
-      phone: '081233344455',
-      password: 'user123',
-      role: 'user',
-      walletBalance: 52000, // Real balance: 1jt dep - 1jt inv + 52rb claimed profit
-      affiliateBalance: 0,
-      points: 10,
-      referralCode: 'SARAH77',
-      referredBy: 'ALEX88',
-      kycStatus: 'verified',
-      isBlocked: false,
-      blockedReason: '',
-      blockedAt: null,
-      blockHistory: [],
-      registeredAt: '2026-02-20T10:00:00.000Z'
-    },
-    {
-      id: 'usr-downline-2',
-      username: 'budi_crypto',
-      fullName: 'Budi Hartono',
-      email: 'budi@gmail.com',
-      phone: '081277788899',
-      password: 'user123',
-      role: 'user',
-      walletBalance: 0, // Waiting for pending deposit approval
-      affiliateBalance: 0,
-      points: 10,
-      referralCode: 'BUDI99',
-      referredBy: 'ALEX88',
-      kycStatus: 'verified',
-      isBlocked: false,
-      blockedReason: '',
-      blockedAt: null,
-      blockHistory: [],
-      registeredAt: '2026-03-01T12:00:00.000Z'
-    },
-    {
-      id: 'usr-downline-3',
-      username: 'rendy_fx',
-      fullName: 'Rendy Pratama',
-      email: 'rendy@gmail.com',
-      phone: '081399887766',
-      password: 'user123',
-      role: 'user',
-      walletBalance: 0,
-      affiliateBalance: 0,
-      points: 10,
-      referralCode: 'RENDY01',
-      referredBy: 'SARAH77', // Level 2 for Alex
-      kycStatus: 'verified',
-      isBlocked: false,
-      blockedReason: '',
-      blockedAt: null,
-      blockHistory: [],
-      registeredAt: '2026-03-05T14:30:00.000Z'
     }
   ],
 
   // Active User Investments
-  investments: [
-    {
-      id: 'inv-001',
-      userId: 'usr-demo',
-      planId: 'plan-rookie',
-      planName: 'Rookie',
-      capital: 2000000,
-      minRate: 2.0,
-      maxRate: 3.5,
-      totalProfitEarned: 184000,
-      daysElapsed: 3,
-      durationDays: 30,
-      status: 'active',
-      startDate: new Date(Date.now() - 3 * 86400000).toISOString(),
-      lastProfitYieldDate: new Date(Date.now() - 3600000).toISOString(),
-      pendingProfitClaim: 52000, // Today's pending claimable profit
-      capitalReturned: false,
-      history: [
-        { day: 1, date: '13/09/2026', rate: 2.8, amount: 56000, status: 'claimed' },
-        { day: 2, date: '14/09/2026', rate: 3.2, amount: 64000, status: 'claimed' },
-        { day: 3, date: '15/09/2026', rate: 3.2, amount: 64000, status: 'claimed' }
-      ]
-    },
-    {
-      id: 'inv-002',
-      userId: 'usr-downline-1',
-      planId: 'plan-learn',
-      planName: 'Learn',
-      capital: 1000000,
-      minRate: 1.2,
-      maxRate: 2.2,
-      totalProfitEarned: 52000,
-      daysElapsed: 3,
-      durationDays: 15,
-      status: 'active',
-      startDate: new Date(Date.now() - 3 * 86400000).toISOString(),
-      lastProfitYieldDate: new Date(Date.now() - 3600000).toISOString(),
-      pendingProfitClaim: 18000,
-      capitalReturned: false,
-      history: [
-        { day: 1, date: '13/09/2026', rate: 1.6, amount: 16000, status: 'claimed' },
-        { day: 2, date: '14/09/2026', rate: 1.8, amount: 18000, status: 'claimed' },
-        { day: 3, date: '15/09/2026', rate: 1.8, amount: 18000, status: 'claimed' }
-      ]
-    }
-  ],
+  investments: [],
 
   // Transactions (Deposit, Withdraw, Profit, Sponsor, Rabat, Capital Return)
-  transactions: [
-    {
-      id: 'TRX-1015',
-      userId: 'usr-downline-2',
-      username: 'budi_crypto',
-      type: 'deposit',
-      paymentMethod: 'USDT TRC20',
-      amountUsdt: 300,
-      amount: 4875000, // 300 * 16250
-      txid: '9f8e7d6c5b4a3210fedcba9876543210abcdef1234567890',
-      proofImage: createReceiptBase64({
-        bank: 'USDT Binance Pay',
-        name: 'budi_crypto',
-        amount: 4875000,
-        timeAgo: 'Hari ini',
-        refNo: 'TXID-9F8E7D6C'
-      }),
-      status: 'pending',
-      createdAt: '2026-09-16T07:30:00.000Z'
-    },
-    {
-      id: 'TRX-1014',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'rabat_bonus',
-      level: 1,
-      amount: 900,
-      note: 'Bonus Rabat Level 1 (5%) dari profit sarah_trader (Rp 18.000)',
-      status: 'approved',
-      createdAt: '2026-09-15T15:00:00.000Z'
-    },
-    {
-      id: 'TRX-1013',
-      userId: 'usr-downline-1',
-      username: 'sarah_trader',
-      type: 'profit_claim',
-      amount: 18000,
-      note: 'Klaim profit harian Hari ke-3 paket Learn',
-      status: 'approved',
-      createdAt: '2026-09-15T15:00:00.000Z'
-    },
-    {
-      id: 'TRX-1012',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'profit_claim',
-      amount: 64000,
-      note: 'Klaim profit harian Hari ke-3 paket Rookie',
-      status: 'approved',
-      createdAt: '2026-09-15T14:30:00.000Z'
-    },
-    {
-      id: 'TRX-1011',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'rabat_bonus',
-      level: 1,
-      amount: 900,
-      note: 'Bonus Rabat Level 1 (5%) dari profit sarah_trader (Rp 18.000)',
-      status: 'approved',
-      createdAt: '2026-09-14T15:00:00.000Z'
-    },
-    {
-      id: 'TRX-1010',
-      userId: 'usr-downline-1',
-      username: 'sarah_trader',
-      type: 'profit_claim',
-      amount: 18000,
-      note: 'Klaim profit harian Hari ke-2 paket Learn',
-      status: 'approved',
-      createdAt: '2026-09-14T15:00:00.000Z'
-    },
-    {
-      id: 'TRX-1009',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'profit_claim',
-      amount: 64000,
-      note: 'Klaim profit harian Hari ke-2 paket Rookie',
-      status: 'approved',
-      createdAt: '2026-09-14T14:30:00.000Z'
-    },
-    {
-      id: 'TRX-1008',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'rabat_bonus',
-      level: 1,
-      amount: 800,
-      note: 'Bonus Rabat Level 1 (5%) dari profit sarah_trader (Rp 16.000)',
-      status: 'approved',
-      createdAt: '2026-09-13T15:00:00.000Z'
-    },
-    {
-      id: 'TRX-1007',
-      userId: 'usr-downline-1',
-      username: 'sarah_trader',
-      type: 'profit_claim',
-      amount: 16000,
-      note: 'Klaim profit harian Hari ke-1 paket Learn',
-      status: 'approved',
-      createdAt: '2026-09-13T15:00:00.000Z'
-    },
-    {
-      id: 'TRX-1006',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'profit_claim',
-      amount: 56000,
-      note: 'Klaim profit harian Hari ke-1 paket Rookie',
-      status: 'approved',
-      createdAt: '2026-09-13T14:30:00.000Z'
-    },
-    {
-      id: 'TRX-1005',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'sponsor_bonus',
-      amount: 100000,
-      note: 'Bonus Sponsor 10% dari aktivasi paket sarah_trader (Rp 1.000.000)',
-      status: 'approved',
-      createdAt: '2026-09-12T09:20:00.000Z'
-    },
-    {
-      id: 'TRX-1004',
-      userId: 'usr-downline-1',
-      username: 'sarah_trader',
-      type: 'invest_plan',
-      planName: 'Learn',
-      amount: 1000000,
-      note: 'Aktivasi paket investasi Learn',
-      status: 'approved',
-      createdAt: '2026-09-12T09:20:00.000Z'
-    },
-    {
-      id: 'TRX-1003',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'invest_plan',
-      planName: 'Rookie',
-      amount: 2000000,
-      note: 'Aktivasi paket investasi Rookie',
-      status: 'approved',
-      createdAt: '2026-09-11T10:00:00.000Z'
-    },
-    {
-      id: 'TRX-1002',
-      userId: 'usr-downline-1',
-      username: 'sarah_trader',
-      type: 'deposit',
-      paymentMethod: 'QRIS Instant',
-      amount: 1000000,
-      uniqueCode: 382,
-      status: 'approved',
-      createdAt: '2026-09-12T09:15:00.000Z'
-    },
-    {
-      id: 'TRX-1001',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      type: 'deposit',
-      paymentMethod: 'BCA Transfer',
-      amount: 2500000,
-      uniqueCode: 124,
-      status: 'approved',
-      createdAt: '2026-09-10T14:20:00.000Z'
-    }
-  ],
+  transactions: [],
 
   // Prof GPT AI Signals
   signals: [
@@ -706,22 +420,7 @@ const defaultDB = {
   ],
 
   // User Point Redemptions Log (Riwayat Klaim Hadiah)
-  redemptions: [
-    {
-      id: 'RDM-8001',
-      userId: 'usr-demo',
-      username: 'alex_investor',
-      rewardId: 'rew-1',
-      rewardTitle: 'Saldo E-Wallet Rp 50.000 (DANA / OVO / GoPay)',
-      pointsSpent: 50,
-      targetContact: 'DANA / 081298765432 / Alex',
-      deliveryAddress: 'Jl. Sudirman Kav 25, Jakarta Selatan',
-      status: 'completed',
-      adminNote: 'Saldo telah ditransfer via DANA',
-      createdAt: '2026-09-14T10:00:00.000Z',
-      updatedAt: '2026-09-14T10:30:00.000Z'
-    }
-  ],
+  redemptions: [],
 
   // Active Session
   currentSession: null // null indicates Guest mode
@@ -801,256 +500,157 @@ export function createReceiptBase64({ bank = 'BCA Mobile', name = 'Member AUTOTR
 }
 
 // User Withdrawal Testimonials (Bukti Penarikan Dana Member & M-Banking)
-const defaultTestimonials = [
-  {
-    id: 'testi-1',
-    name: 'Budi Santoso',
-    city: 'Surabaya, Jawa Timur',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-    bank: 'BCA Mobile',
-    amount: 15750000,
-    rating: 5,
-    comment: 'Awalnya ragu coba deposit 2jt, sekarang udah wd 15.750.000 dalam 2 minggu! Masuk rekening BCA cuma 3 menit tanpa potongan aneh-aneh. Mantap banget min, auto langganan!',
-    receiptImage: createReceiptBase64({
-      bank: 'BCA Mobile',
-      name: 'BUDI SANTOSO (8291****02)',
-      amount: 15750000,
-      timeAgo: '16 Sep 2026, 08:12:45 WIB',
-      refNo: 'BCA20260916-88291039'
-    }),
-    timeAgo: '12 menit yang lalu',
-    active: true,
-    createdAt: '2026-09-16T08:12:45.000Z'
-  },
-  {
-    id: 'testi-2',
-    name: 'Siti Rahmawati',
-    city: 'Jakarta Selatan, DKI',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    bank: 'Livin Mandiri',
-    amount: 28500000,
-    rating: 5,
-    comment: 'Sinyal VIP Prof GPT gila sih akurasinya! WD 28.5jt langsung landing ke Livin Mandiri hitungan menit tanpa drama. Platform AI trading paling jos tahun 2026!',
-    receiptImage: createReceiptBase64({
-      bank: 'Livin by Mandiri',
-      name: 'SITI RAHMAWATI (13700****9281)',
-      amount: 28500000,
-      timeAgo: '16 Sep 2026, 07:45:10 WIB',
-      refNo: 'MDR-20260916-99218274'
-    }),
-    timeAgo: '35 menit yang lalu',
-    active: true,
-    createdAt: '2026-09-16T07:45:10.000Z'
-  },
-  {
-    id: 'testi-3',
-    name: 'Rian Hidayat',
-    city: 'Medan, Sumatera Utara',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    bank: 'BRImo',
-    amount: 7300000,
-    rating: 5,
-    comment: 'Profit harian konsisten tiap hari tinggal klik klaim profit. WD 7.3jt ke rekening BRI masuk cepet banget. Bukti m-banking nyata no rekayasa! Sukses selalu AUTOTRADING.',
-    receiptImage: createReceiptBase64({
-      bank: 'BRImo (Bank BRI)',
-      name: 'RIAN HIDAYAT (03410****8531)',
-      amount: 7300000,
-      timeAgo: '16 Sep 2026, 06:30:22 WIB',
-      refNo: 'BRI-20260916-00492817'
-    }),
-    timeAgo: '1 jam yang lalu',
-    active: true,
-    createdAt: '2026-09-16T06:30:22.000Z'
-  },
-  {
-    id: 'testi-4',
-    name: 'Agus Setiawan',
-    city: 'Bandung, Jawa Barat',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    bank: 'DANA',
-    amount: 5200000,
-    rating: 5,
-    comment: 'Modal 1jt udah balik modal plus profit 5.2jt dalam seminggu. Penarikan via DANA cepet banget hitungan detik langsung notif saldo masuk. Recomended pol!',
-    receiptImage: createReceiptBase64({
-      bank: 'DANA Indonesia',
-      name: 'AGUS SETIAWAN (0812****8901)',
-      amount: 5200000,
-      timeAgo: '16 Sep 2026, 05:15:40 WIB',
-      refNo: 'DANA-20260916-77391024'
-    }),
-    timeAgo: '3 jam yang lalu',
-    active: true,
-    createdAt: '2026-09-16T05:15:40.000Z'
-  },
-  {
-    id: 'testi-5',
-    name: 'Dewi Lestari',
-    city: 'Denpasar, Bali',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    bank: 'BNI Mobile',
-    amount: 12000000,
-    rating: 5,
-    comment: 'Bonus rabat referral tim cair terus tiap hari. Sekarang WD 12jt ke BNI langsung masuk. Temen-temen yang saya ajak juga udah pada cuan semua. Terimakasih AUTOTRADING!',
-    receiptImage: createReceiptBase64({
-      bank: 'BNI Mobile Banking',
-      name: 'DEWI LESTARI (09827****102)',
-      amount: 12000000,
-      timeAgo: '15 Sep 2026, 21:10:05 WIB',
-      refNo: 'BNI-20260915-44918230'
-    }),
-    timeAgo: 'Kemarin, 21:10 WIB',
-    active: true,
-    createdAt: '2026-09-15T21:10:05.000Z'
-  },
-  {
-    id: 'testi-6',
-    name: 'Hendra Wijaya',
-    city: 'Surabaya, Jawa Timur',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
-    bank: 'QRIS & Multi-Bank',
-    amount: 50000000,
-    rating: 5,
-    comment: 'Paket VIP Master beneran sultan hasilnya. Sekali tarik 50jt langsung di-approve admin dalam hitungan menit. CS ramah dan fast respons 24 jam!',
-    receiptImage: createReceiptBase64({
-      bank: 'VIP INSTANT CLEARING',
-      name: 'HENDRA WIJAYA (VIP-MEMBER)',
-      amount: 50000000,
-      timeAgo: '15 Sep 2026, 17:00:00 WIB',
-      refNo: 'VIP-20260915-00928192'
-    }),
-    timeAgo: 'Kemarin, 17:00 WIB',
-    active: true,
-    createdAt: '2026-09-15T17:00:00.000Z'
-  }
-];
-
-defaultDB.testimonials = defaultTestimonials;
+const defaultTestimonials = [];
+defaultDB.testimonials = [];
 
 // Database Service Helper Object
 export const DB = {
+  getApiUrl(action) {
+    if (typeof window !== 'undefined' && window.location) {
+      const origin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : '';
+      if (origin) {
+        return `${origin}/api/index.php?action=${action}`;
+      }
+    }
+    return `https://autotrading.my.id/api/index.php?action=${action}`;
+  },
+
+  // Reliable WIB (Asia/Jakarta UTC+7) Date string YYYY-MM-DD
+  getWibDateStr(dateInput = new Date()) {
+    try {
+      const d = (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput))
+        ? new Date(dateInput.replace(' ', 'T'))
+        : new Date(dateInput);
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(d);
+    } catch(e) {
+      return new Date().toISOString().slice(0, 10);
+    }
+  },
+
+  // Upload Image File or Base64 or Blob URL to Server uploads/ directory
+  async uploadImage(fileOrBase64) {
+    try {
+      const url = this.getApiUrl('upload_image');
+      if (typeof fileOrBase64 === 'string' && fileOrBase64.startsWith('blob:')) {
+        try {
+          const blobRes = await fetch(fileOrBase64);
+          fileOrBase64 = await blobRes.blob();
+        } catch(e) {
+          console.warn('Failed to convert blob URL to Blob object:', e);
+        }
+      }
+      if (typeof window !== 'undefined' && (fileOrBase64 instanceof File || fileOrBase64 instanceof Blob)) {
+        const formData = new FormData();
+        formData.append('image', fileOrBase64);
+        const res = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } else if (typeof fileOrBase64 === 'string') {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: fileOrBase64 })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Image upload to server error:', e);
+      return { success: false, message: e.message };
+    }
+    return { success: false, message: 'Format file tidak valid' };
+  },
+
+  // Compress image to small JPEG dataURL (< 50KB) to prevent localStorage quota issues
+  async compressImageFile(file, maxDimension = 800, quality = 0.7) {
+    if (typeof window === 'undefined') return '';
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  },
+
+  // Format any Date or ISO string into exact Asia/Jakarta (WIB) time string
+  formatWibDateTime(dateInput) {
+    if (!dateInput) return '-';
+    try {
+      const d = new Date(dateInput);
+      if (isNaN(d.getTime())) return String(dateInput);
+      return new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(d);
+    } catch(e) {
+      return String(dateInput);
+    }
+  },
+
   get() {
     try {
       if (!_activeDB) {
-        _activeDB = JSON.parse(JSON.stringify(defaultDB));
+        if (typeof localStorage !== 'undefined') {
+          try {
+            const local = localStorage.getItem('autotrading_db');
+            if (local) {
+              _activeDB = JSON.parse(local);
+            }
+          } catch (e) {}
+        }
+        if (!_activeDB) {
+          _activeDB = JSON.parse(JSON.stringify(defaultDB));
+        }
       }
       const parsed = _activeDB;
-      if (!parsed.announcements) {
-        parsed.announcements = defaultDB.announcements;
-      }
-      if (!parsed.banners) {
-        parsed.banners = defaultDB.banners;
-      }
-      if (!parsed.rewards) {
-        parsed.rewards = defaultDB.rewards;
-      }
-      if (!parsed.settings) {
-        parsed.settings = defaultDB.settings;
-      } else {
-        if (!parsed.settings.paymentGateways) {
-          parsed.settings.paymentGateways = defaultDB.settings.paymentGateways;
-        } else {
-          if (!parsed.settings.paymentGateways.banks || !Array.isArray(parsed.settings.paymentGateways.banks) || parsed.settings.paymentGateways.banks.length === 0) {
-            parsed.settings.paymentGateways.banks = defaultDB.settings.paymentGateways.banks;
-          } else {
-            parsed.settings.paymentGateways.banks = parsed.settings.paymentGateways.banks.map(b => {
-              if (b.active === undefined) b.active = true;
-              return b;
-            });
-          }
-          if (!parsed.settings.paymentGateways.qris) {
-            parsed.settings.paymentGateways.qris = defaultDB.settings.paymentGateways.qris;
-          } else if (parsed.settings.paymentGateways.qris.active === undefined) {
-            parsed.settings.paymentGateways.qris.active = true;
-          }
-          if (!parsed.settings.paymentGateways.usdt) {
-            parsed.settings.paymentGateways.usdt = defaultDB.settings.paymentGateways.usdt;
-          }
-        }
-        if (!parsed.settings.withdrawSchedule) {
-          parsed.settings.withdrawSchedule = defaultDB.settings.withdrawSchedule;
-        }
-        if (!parsed.settings.withdrawTerms || !Array.isArray(parsed.settings.withdrawTerms) || parsed.settings.withdrawTerms.length === 0) {
-          parsed.settings.withdrawTerms = defaultDB.settings.withdrawTerms;
-        }
-        if (!parsed.settings.apkDownload) {
-          parsed.settings.apkDownload = defaultDB.settings.apkDownload;
-        }
-        if (!parsed.settings.weekendProfit) {
-          parsed.settings.weekendProfit = defaultDB.settings.weekendProfit || {
-            enabled: true,
-            offMessage: 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.'
-          };
-        }
-        if (parsed.settings.weekendProfitEnabled === undefined) {
-          parsed.settings.weekendProfitEnabled = parsed.settings.weekendProfit.enabled !== undefined ? parsed.settings.weekendProfit.enabled : true;
-        }
-        if (!parsed.settings.todayProfitLossMode) {
-          parsed.settings.todayProfitLossMode = defaultDB.settings.todayProfitLossMode;
-        }
-        if (!parsed.settings.weeklyProfitHistory || !Array.isArray(parsed.settings.weeklyProfitHistory) || parsed.settings.weeklyProfitHistory.length === 0) {
-          parsed.settings.weeklyProfitHistory = defaultDB.settings.weeklyProfitHistory;
-        }
-        // Ensure weekend entries in weeklyProfitHistory are flagged as isWeekend: true and rate: null
-        if (Array.isArray(parsed.settings.weeklyProfitHistory)) {
-          parsed.settings.weeklyProfitHistory.forEach(item => {
-            if (item.dayName && (item.dayName.includes('Sabtu') || item.dayName.includes('Minggu'))) {
-              item.isWeekend = true;
-              item.rate = null;
-            }
-          });
-        }
-        if (!parsed.settings.cs) {
-          parsed.settings.cs = defaultDB.settings.cs;
-        }
-        if (!parsed.settings.kelasTrading) {
-          parsed.settings.kelasTrading = defaultDB.settings.kelasTrading;
-        }
-        if (!parsed.settings.email) {
-          parsed.settings.email = defaultDB.settings.email;
-        }
-      }
-      if (!parsed.testimonials || !Array.isArray(parsed.testimonials) || parsed.testimonials.length === 0) {
-        parsed.testimonials = defaultDB.testimonials;
-      } else {
-        // Auto-heal any unencoded SVGs or broken format from previous sessions
-        parsed.testimonials = parsed.testimonials.map(t => {
-          if (!t.status) t.status = 'approved';
-          if (!t.receiptImage || t.receiptImage.startsWith('data:image/svg+xml;utf8,<') || t.receiptImage.includes('<svg') || !t.receiptImage.startsWith('data:') && !t.receiptImage.startsWith('http')) {
-            const defMatch = defaultDB.testimonials.find(d => d.id === t.id);
-            if (defMatch) {
-              t.receiptImage = defMatch.receiptImage;
-            } else {
-              t.receiptImage = createReceiptBase64({
-                bank: t.bank,
-                name: t.name,
-                amount: t.amount,
-                timeAgo: t.timeAgo,
-                refNo: t.id
-              });
-            }
-          }
-          return t;
-        });
-      }
-      if (parsed.transactions && Array.isArray(parsed.transactions)) {
-        parsed.transactions.forEach(t => {
-          if (!t.proofImage && t.type === 'deposit') {
-            const defTrx = defaultDB.transactions.find(d => d.id === t.id);
-            if (defTrx && defTrx.proofImage) {
-              t.proofImage = defTrx.proofImage;
-            }
-          }
-        });
-      }
-      if (Array.isArray(parsed.users)) {
-        parsed.users.forEach(u => {
-          if (u.isBlocked === undefined) u.isBlocked = false;
-          if (u.blockedReason === undefined) u.blockedReason = '';
-          if (u.blockedAt === undefined) u.blockedAt = null;
-          if (!Array.isArray(u.blockHistory)) u.blockHistory = [];
-        });
-      }
-      _activeDB = parsed;
+      if (!parsed.plans) parsed.plans = defaultDB.plans;
+      if (!parsed.users) parsed.users = defaultDB.users;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.investments) parsed.investments = [];
+      if (!parsed.signals) parsed.signals = defaultDB.signals;
+      if (!parsed.marketTickers) parsed.marketTickers = defaultDB.marketTickers;
+      if (!parsed.announcements) parsed.announcements = defaultDB.announcements;
+      if (!parsed.banners) parsed.banners = defaultDB.banners;
+      if (!parsed.rewards) parsed.rewards = defaultDB.rewards;
+      if (!parsed.redemptions) parsed.redemptions = [];
+      if (!parsed.testimonials) parsed.testimonials = [];
+      if (!parsed.settings) parsed.settings = defaultDB.settings;
+
       return parsed;
     } catch (e) {
       console.error('Error loading DB state:', e);
@@ -1058,46 +658,213 @@ export const DB = {
     }
   },
 
-  save(data) {
+  // Remove password / OTP / reset-code fields from a state snapshot before it is
+  // persisted to localStorage or transmitted to the API. Secrets stay in memory only.
+  stripSensitiveFields(data) {
+    if (!data || !Array.isArray(data.users)) return data;
+    try {
+      const clone = { ...data };
+      clone.users = data.users.map((u) => {
+        if (!u || typeof u !== 'object') return u;
+        const rest = { ...u };
+        delete rest.password;
+        delete rest.password_hash;
+        delete rest.passwordHash;
+        delete rest.verificationOtp;
+        delete rest.passwordResetRequest;
+        return rest;
+      });
+      return clone;
+    } catch (e) {
+      return data;
+    }
+  },
+
+  // Establish the httpOnly server session (api/index.php?action=login) using the
+  // locally cached credentials of the currently signed-in user. Needed once after
+  // deploy so previously logged-in browsers can keep syncing to the server.
+  _lastSessionAttempt: 0,
+  async ensureServerSession() {
+    if (typeof fetch !== 'function') return false;
+    const now = Date.now();
+    if (now - (this._lastSessionAttempt || 0) < 45000) return false;
+    this._lastSessionAttempt = now;
+    try {
+      let userId = null;
+      if (typeof sessionStorage !== 'undefined') {
+        try {
+          userId = sessionStorage.getItem('autotrading_session_user_id') ||
+                   (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_user_id') : null);
+        } catch (e) {}
+      }
+      if (!userId) return false;
+      const user = (this.get().users || []).find(u => u.id === userId);
+      if (!user || !user.password) return false;
+      const res = await fetch(this.getApiUrl('login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: user.username || user.email || user.id,
+          password: user.password
+        })
+      });
+      if (!res.ok) return false;
+      const json = await res.json();
+      return !!(json && json.success);
+    } catch (e) {
+      return false;
+    }
+  },
+
+  // Server-validated transaction creation (deposit / withdrawal).
+  // Returns { success, transaction, ... }, { success:false, message } on rejection,
+  // or null when the server is unreachable (caller falls back to local flow).
+  async createTransactionServer(payload) {
+    if (typeof fetch !== 'function') return null;
+    try {
+      const res = await fetch(this.getApiUrl('create_transaction'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json().catch(() => null);
+      if (json && json.success) return json;
+      return {
+        success: false,
+        status: res.status,
+        message: (json && json.message) || `Server menolak transaksi (HTTP ${res.status}).`
+      };
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async save(data) {
     try {
       _activeDB = data;
-      // Immediately sync with phpMyAdmin MySQL database
-      if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
-        this.syncToCloud(data);
+      const safeData = this.stripSensitiveFields(data);
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('autotrading_db', JSON.stringify(safeData));
+        } catch (err) {
+          console.warn('LocalStorage quota or save warning:', err);
+        }
       }
+      return await this.syncToCloud(safeData);
     } catch (e) {
       console.error('Error saving DB state:', e);
+      return { success: false, error: e.message };
     }
   },
 
   // Asynchronous Cloud Sync Engine (cPanel MySQL via api/index.php)
   async syncToCloud(data) {
     try {
-      if (typeof window === 'undefined' || typeof window.fetch !== 'function') return;
-      await fetch('api/index.php?action=save', {
+      if (typeof fetch !== 'function') return { success: true };
+      const url = this.getApiUrl('save');
+      const doFetch = () => fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
+      let res = await doFetch();
+      if (res.status === 401) {
+        // Session cookie missing/expired: try to silently re-login, then retry once
+        const relogged = await this.ensureServerSession();
+        if (relogged) res = await doFetch();
+      }
+      if (!res.ok) {
+        if (res.status === 401) {
+          // Guests are read-only by design: stay silent for them.
+          let hasLocalSession = false;
+          try {
+            hasLocalSession = !!(typeof sessionStorage !== 'undefined' &&
+              (sessionStorage.getItem('autotrading_session_user_id') ||
+               (typeof localStorage !== 'undefined' && localStorage.getItem('autotrading_session_user_id'))));
+          } catch (e) {}
+          if (hasLocalSession) {
+            const now401 = Date.now();
+            if (now401 - (this._last401Warn || 0) > 60000) {
+              this._last401Warn = now401;
+              console.warn('Cloud save requires login: silakan login kembali untuk menyinkronkan data.');
+              try {
+                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                  window.dispatchEvent(new CustomEvent('autotrading:auth-required'));
+                }
+              } catch (e) {}
+            }
+          }
+        } else {
+          console.error('Cloud save failed with HTTP', res.status);
+        }
+        return { success: false, status: res.status };
+      }
+      return await res.json();
     } catch (e) {
-      // Offline / API not yet configured; silently proceed with memory state
+      console.error('Cloud sync error:', e);
+      return { success: false, error: e.message };
     }
   },
 
   async syncFromCloud() {
     try {
-      if (typeof window === 'undefined' || typeof window.fetch !== 'function') return null;
-      const res = await fetch('api/index.php?action=get');
+      if (typeof fetch !== 'function') return null;
+      // Migration hook: reconnect the browser session before pulling fresh state
+      await this.ensureServerSession();
+      const url = this.getApiUrl('get');
+      const res = await fetch(url);
       if (!res.ok) return null;
       const json = await res.json();
       if (json && json.success && json.data) {
         _activeDB = json.data;
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(json.data)));
+          } catch (e) {}
+        }
         return json.data;
       }
     } catch (e) {
-      // Offline / API not yet configured; silently proceed with memory state
+      console.warn('Cloud sync get error:', e);
     }
     return null;
+  },
+
+  // Live background polling mechanism for realtime frontend-admin-database synchronization
+  _pollingInterval: null,
+  _syncListeners: [],
+
+  addSyncListener(fn) {
+    if (typeof fn === 'function' && !this._syncListeners.includes(fn)) {
+      this._syncListeners.push(fn);
+    }
+  },
+
+  removeSyncListener(fn) {
+    this._syncListeners = this._syncListeners.filter(f => f !== fn);
+  },
+
+  startLivePolling(callback, intervalMs = 7000) {
+    if (callback) this.addSyncListener(callback);
+    if (this._pollingInterval) return;
+
+    this._pollingInterval = setInterval(async () => {
+      try {
+        const fresh = await this.syncFromCloud();
+        if (fresh) {
+          for (const listener of this._syncListeners) {
+            try { listener(fresh); } catch(err) { console.error('Sync listener error:', err); }
+          }
+        }
+      } catch(e) {}
+    }, intervalMs);
+  },
+
+  stopLivePolling() {
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval);
+      this._pollingInterval = null;
+    }
   },
 
   async initCloudSync(callback) {
@@ -1107,26 +874,53 @@ export const DB = {
     }
   },
 
+  async clearDemoData() {
+    try {
+      if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        const url = this.getApiUrl('clear_demo');
+        await fetch(url, { method: 'POST' }).catch(() => {});
+      }
+    } catch(e) {}
+    const db = this.get();
+    db.users = (db.users || []).filter(u => u.role === 'admin' || u.id === 'usr-admin');
+    if (db.users.length === 0) {
+      db.users = JSON.parse(JSON.stringify(defaultDB.users));
+    } else {
+      const admin = db.users[0];
+      admin.walletBalance = 0;
+      admin.affiliateBalance = 0;
+      admin.points = 0;
+    }
+    db.investments = [];
+    db.transactions = [];
+    db.redemptions = [];
+    db.testimonials = [];
+    if (Array.isArray(db.plans)) {
+      db.plans.forEach(p => { p.activeCount = 0; });
+    }
+    await this.save(db);
+    return { success: true, message: 'Semua simulasi dan data demo telah berhasil dikosongkan!' };
+  },
+
   resetToDefault() {
     this.save(defaultDB);
     return defaultDB;
   },
 
-  // Auth & Session (Session-scoped in memory / sessionStorage for active browser tab)
+  // Auth & Session (Session-scoped in memory / storage for active browser tab)
   getCurrentUser() {
     const db = this.get();
     let userId = null;
     if (typeof sessionStorage !== 'undefined') {
       try {
-        userId = sessionStorage.getItem('autotrading_session_user_id') || sessionStorage.getItem('fgt_session_user_id'); // fallback legacy
+        userId = sessionStorage.getItem('autotrading_session_user_id') || 
+                 (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_user_id') : null) ||
+                 sessionStorage.getItem('fgt_session_user_id');
       } catch (e) {}
     }
-    if (!userId && db.currentSession) {
-      userId = db.currentSession.userId;
-    }
     if (!userId) return null;
-    const user = db.users.find(u => u.id === userId) || null;
-    if (user && user.isBlocked) {
+    const user = (db.users || []).find(u => u.id === userId) || null;
+    if (user && (user.isBlocked || user.status === 'blocked')) {
       this.clearSession();
       return null;
     }
@@ -1138,10 +932,15 @@ export const DB = {
       try {
         if (user && user.id) {
           sessionStorage.setItem('autotrading_session_user_id', user.id);
-          // Legacy key kept for backward compat
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('autotrading_session_user_id', user.id);
+          }
           sessionStorage.setItem('fgt_session_user_id', user.id);
         } else {
           sessionStorage.removeItem('autotrading_session_user_id');
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('autotrading_session_user_id');
+          }
           sessionStorage.removeItem('fgt_session_user_id');
         }
       } catch (e) {}
@@ -1153,19 +952,20 @@ export const DB = {
       role: user.role,
       loginAt: new Date().toISOString()
     } : null;
-    this.save(db);
   },
 
   clearSession() {
     if (typeof sessionStorage !== 'undefined') {
       try {
         sessionStorage.removeItem('autotrading_session_user_id');
-        sessionStorage.removeItem('fgt_session_user_id'); // legacy cleanup
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('autotrading_session_user_id');
+        }
+        sessionStorage.removeItem('fgt_session_user_id');
       } catch (e) {}
     }
     const db = this.get();
     db.currentSession = null;
-    this.save(db);
   },
 
   // Users
@@ -1203,10 +1003,10 @@ export const DB = {
     return db.users.find(u => u.referralCode.toUpperCase() === code.toUpperCase());
   },
 
-  addUser(userData) {
+  async addUser(userData) {
     const db = this.get();
     const isVerifyRequired = !!(db.settings && db.settings.email && db.settings.email.verificationRequired);
-    const newUser = {
+    let newUser = {
       id: 'usr-' + Date.now(),
       walletBalance: 0,
       affiliateBalance: 0,
@@ -1217,14 +1017,50 @@ export const DB = {
       verificationOtp: null,
       registeredAt: new Date().toISOString(),
       role: 'user',
+      status: 'active',
       isBlocked: false,
       blockedReason: '',
       blockedAt: null,
       blockHistory: [],
       ...userData
     };
-    db.users.push(newUser);
-    this.save(db);
+
+    // Try direct registration via API for immediate MySQL table commitment
+    try {
+      if (typeof fetch === 'function') {
+        const url = this.getApiUrl('register');
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: newUser.username,
+            fullName: newUser.fullName,
+            email: newUser.email,
+            phone: newUser.phone,
+            password: newUser.password,
+            referralCode: newUser.referralCode,
+            referredBy: newUser.referredBy
+          })
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json && json.success && json.user) {
+            newUser = { ...newUser, ...json.user };
+          }
+        }
+      }
+    } catch(err) {
+      console.warn('Direct API register note:', err);
+    }
+
+    db.users = db.users || [];
+    const existingIdx = db.users.findIndex(u => u.id === newUser.id || u.username === newUser.username);
+    if (existingIdx !== -1) {
+      db.users[existingIdx] = newUser;
+    } else {
+      db.users.push(newUser);
+    }
+    await this.save(db);
     return newUser;
   },
 
@@ -1294,8 +1130,8 @@ export const DB = {
     return { success: true, user, bankAccount: user.bankAccount, message: 'Rekening penarikan (WD) berhasil disimpan!' };
   },
 
-  // Change user password
-  changeUserPassword(userId, oldPassword, newPassword) {
+  // Change user password (server-side verification + bcrypt, local fallback offline)
+  async changeUserPassword(userId, oldPassword, newPassword) {
     const db = this.get();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan!' };
@@ -1304,61 +1140,74 @@ export const DB = {
       return { success: false, message: 'Password lama dan password baru wajib diisi!' };
     }
 
-    if (user.password !== oldPassword) {
-      return { success: false, message: 'Password lama tidak sesuai!' };
-    }
-
     if (newPassword.length < 6) {
       return { success: false, message: 'Password baru minimal harus 6 karakter!' };
+    }
+
+    if (typeof fetch === 'function') {
+      try {
+        const res = await fetch(this.getApiUrl('change_password'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ oldPassword, newPassword })
+        });
+        const json = await res.json().catch(() => null);
+        if (res.ok && json && json.success) {
+          user.password = newPassword; // in-memory only, never persisted to storage
+          user.passwordUpdatedAt = new Date().toISOString();
+          return { success: true, message: (json.message || 'Password berhasil diubah! Gunakan password baru untuk login berikutnya.') };
+        }
+        return { success: false, message: (json && json.message) || `Gagal mengubah password (HTTP ${res.status}).` };
+      } catch (e) {
+        // Server unreachable -> local fallback below
+      }
+    }
+
+    if (user.password !== oldPassword) {
+      return { success: false, message: 'Password lama tidak sesuai!' };
     }
 
     user.password = newPassword;
     user.passwordUpdatedAt = new Date().toISOString();
 
     this.save(db);
-    return { success: true, message: 'Password berhasil diubah! Gunakan password baru untuk login berikutnya.' };
+    return { success: true, message: 'Password berhasil diubah (mode offline)! Gunakan password baru untuk login berikutnya.' };
   },
 
-  // Request Password Reset (simulates email dispatch)
-  requestPasswordReset(emailOrPhone) {
-    const db = this.get();
+  // Request Password Reset (simulates email dispatch)  // Request password reset code (server generates & emails it - never returned here)
+  async requestPasswordReset(emailOrPhone) {
     const identifier = String(emailOrPhone || '').trim().toLowerCase();
     if (!identifier) {
       return { success: false, message: 'Harap masukkan alamat email akun Anda!' };
     }
 
-    const user = db.users.find(u => 
-      (u.email && u.email.toLowerCase() === identifier) || 
-      (u.username && u.username.toLowerCase() === identifier) ||
-      (u.phone && u.phone === identifier)
-    );
-
-    if (!user) {
-      return { success: false, message: 'Akun dengan email / username tersebut tidak ditemukan di sistem AUTOTRADING!' };
+    if (typeof fetch !== 'function') {
+      return { success: false, message: 'Fitur reset password memerlukan koneksi ke server.' };
     }
 
-    // Generate 6-digit verification code
-    const resetCode = 'AT-' + Math.floor(100000 + Math.random() * 900000);
-    user.passwordResetRequest = {
-      code: resetCode,
-      requestedAt: new Date().toISOString(),
-      emailTarget: user.email || identifier,
-      status: 'pending'
-    };
-
-    this.save(db);
-    return {
-      success: true,
-      email: user.email || identifier,
-      username: user.username,
-      code: resetCode,
-      message: `Instruksi & kode reset password (${resetCode}) telah dikirimkan ke email ${user.email || identifier}.`
-    };
+    try {
+      const res = await fetch(this.getApiUrl('request_reset'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier })
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json && json.success) {
+        return {
+          success: true,
+          email: json.email || '',
+          username: json.username || '',
+          message: json.message || 'Kode verifikasi telah dikirimkan ke email Anda.'
+        };
+      }
+      return { success: false, message: (json && json.message) || `Gagal memproses permintaan (HTTP ${res.status}).` };
+    } catch (e) {
+      return { success: false, message: 'Tidak dapat terhubung ke server. Pastikan Anda online untuk mereset password.' };
+    }
   },
 
-  // Reset password using verification code
-  resetPasswordWithCode(identifier, code, newPassword) {
-    const db = this.get();
+  // Reset password using verification code (validated server-side)
+  async resetPasswordWithCode(identifier, code, newPassword) {
     const cleanId = String(identifier || '').trim().toLowerCase();
     const cleanCode = String(code || '').trim().toUpperCase();
     const cleanPass = String(newPassword || '').trim();
@@ -1371,34 +1220,40 @@ export const DB = {
       return { success: false, message: 'Password baru minimal harus 6 karakter!' };
     }
 
-    const user = db.users.find(u => 
-      (u.email && u.email.toLowerCase() === cleanId) || 
-      (u.username && u.username.toLowerCase() === cleanId)
-    );
-
-    if (!user) {
-      return { success: false, message: 'Akun pengguna tidak ditemukan!' };
+    if (typeof fetch !== 'function') {
+      return { success: false, message: 'Fitur reset password memerlukan koneksi ke server.' };
     }
 
-    if (!user.passwordResetRequest || user.passwordResetRequest.status !== 'pending') {
-      return { success: false, message: 'Tidak ada permintaan reset password yang aktif untuk akun ini. Silakan buat permintaan baru.' };
+    try {
+      const res = await fetch(this.getApiUrl('reset_password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: cleanId, code: cleanCode, newPassword: cleanPass })
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json && json.success) {
+        // Drop any locally cached password of this account
+        const db = this.get();
+        const user = db.users.find(u =>
+          (u.email && u.email.toLowerCase() === cleanId) ||
+          (u.username && u.username.toLowerCase() === cleanId)
+        );
+        if (user) {
+          delete user.password;
+          user.passwordUpdatedAt = new Date().toISOString();
+          if (user.passwordResetRequest) user.passwordResetRequest.status = 'completed';
+          this.save(db);
+        }
+        return { success: true, message: json.message || 'Password Anda berhasil diperbarui! Silakan masuk menggunakan password baru.' };
+      }
+      return { success: false, message: (json && json.message) || `Gagal mereset password (HTTP ${res.status}).` };
+    } catch (e) {
+      return { success: false, message: 'Tidak dapat terhubung ke server. Pastikan Anda online untuk mereset password.' };
     }
-
-    if (user.passwordResetRequest.code.toUpperCase() !== cleanCode) {
-      return { success: false, message: 'Kode reset yang Anda masukkan salah atau sudah tidak valid!' };
-    }
-
-    user.password = cleanPass;
-    user.passwordResetRequest.status = 'completed';
-    user.passwordResetRequest.completedAt = new Date().toISOString();
-    user.passwordUpdatedAt = new Date().toISOString();
-
-    this.save(db);
-    return { success: true, message: 'Password Anda berhasil diperbarui! Silakan masuk menggunakan password baru.' };
   },
 
-  // Admin Direct Reset User Password
-  adminResetUserPassword(userId, newPassword) {
+  // Admin Direct Reset User Password (server-side bcrypt)
+  async adminResetUserPassword(userId, newPassword) {
     const db = this.get();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan!' };
@@ -1406,6 +1261,27 @@ export const DB = {
     const cleanPass = String(newPassword || '').trim();
     if (!cleanPass || cleanPass.length < 6) {
       return { success: false, message: 'Password baru minimal harus 6 karakter!' };
+    }
+
+    if (typeof fetch === 'function') {
+      try {
+        const res = await fetch(this.getApiUrl('admin_reset_password'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, newPassword: cleanPass })
+        });
+        const json = await res.json().catch(() => null);
+        if (res.ok && json && json.success) {
+          delete user.password; // never keep plaintext copies around
+          user.passwordUpdatedAt = new Date().toISOString();
+          return { success: true, message: `Password member ${user.username} berhasil direset oleh Administrator.` };
+        }
+        if (res.status !== 404 && res.status !== 503) {
+          return { success: false, message: (json && json.message) || `Gagal mereset password (HTTP ${res.status}).` };
+        }
+      } catch (e) {
+        // Server unreachable -> local fallback
+      }
     }
 
     user.password = cleanPass;
@@ -1416,24 +1292,47 @@ export const DB = {
     }
 
     this.save(db);
-    return { success: true, message: `Password member ${user.username} berhasil direset menjadi: ${cleanPass}` };
+    return { success: true, message: `Password member ${user.username} berhasil direset (mode offline).` };
   },
 
   // Admin Toggle Block / Unblock User
-  toggleBlockUser(userId, reason = '') {
+  async toggleBlockUser(userId, reason = '') {
     const db = this.get();
-    const user = db.users.find(u => u.id === userId);
+    const user = (db.users || []).find(u => u.id === userId);
     if (!user) return { success: false, message: 'Member tidak ditemukan!' };
 
     if (user.role === 'admin') {
       return { success: false, message: 'Akun Administrator tidak dapat diblokir demi keamanan sistem!' };
     }
 
+    const willBlock = !user.isBlocked;
+    const cleanReason = String(reason || '').trim() || (willBlock ? 'Diblokir oleh Administrator karena indikasi pelanggaran aturan sistem' : '');
+
+    // 1. Direct API update for immediate MySQL table commitment
+    try {
+      if (typeof fetch === 'function') {
+        const url = this.getApiUrl('update_user_status');
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            isBlocked: willBlock,
+            blockedReason: cleanReason,
+            status: willBlock ? 'blocked' : 'active'
+          })
+        });
+      }
+    } catch(e) {
+      console.warn('Direct update_user_status API error:', e);
+    }
+
     user.blockHistory = user.blockHistory || [];
 
-    if (user.isBlocked) {
+    if (!willBlock) {
       // Unblock member
       user.isBlocked = false;
+      user.status = 'active';
       user.blockedReason = '';
       user.unblockedAt = new Date().toISOString();
       user.blockHistory.push({
@@ -1442,7 +1341,7 @@ export const DB = {
         note: 'Blokir dibuka oleh Administrator'
       });
 
-      this.save(db);
+      await this.save(db);
       return {
         success: true,
         isBlocked: false,
@@ -1451,8 +1350,8 @@ export const DB = {
       };
     } else {
       // Block member
-      const cleanReason = String(reason || '').trim() || 'Diblokir oleh Administrator karena indikasi pelanggaran aturan sistem';
       user.isBlocked = true;
+      user.status = 'blocked';
       user.blockedReason = cleanReason;
       user.blockedAt = new Date().toISOString();
       user.blockHistory.push({
@@ -1466,7 +1365,7 @@ export const DB = {
         db.currentSession = null;
       }
 
-      this.save(db);
+      await this.save(db);
       return {
         success: true,
         isBlocked: true,
@@ -1479,12 +1378,42 @@ export const DB = {
   // --------------------------------------------------------------------------
   // EMAIL OTP & REGISTRATION VERIFICATION
   // --------------------------------------------------------------------------
-  generateUserEmailOtp(userId) {
+  // Generate + email a registration OTP (server-side; code is never returned to the client).
+  // Falls back to local generation only when the server is unreachable (offline dev).
+  async generateUserEmailOtp(userId) {
     const db = this.get();
     const user = db.users.find(u => u.id === userId || (u.email && u.email.toLowerCase() === String(userId).toLowerCase()) || (u.username && u.username.toLowerCase() === String(userId).toLowerCase()));
     if (!user) return null;
 
-    // Generate secure 6-digit numeric OTP code
+    if (typeof fetch === 'function') {
+      try {
+        const res = await fetch(this.getApiUrl('resend_otp'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: user.email || user.username || userId })
+        });
+        const json = await res.json().catch(() => null);
+        if (json && json.success) {
+          user.emailVerified = false;
+          user.isPendingVerification = true;
+          delete user.password;
+          return {
+            serverManaged: true,
+            email: user.email,
+            username: user.username,
+            fullName: user.fullName || user.username,
+            message: json.message
+          };
+        }
+        if (json && json.success === false) {
+          return { serverManaged: true, failed: true, message: json.message || 'Gagal mengirim kode OTP.' };
+        }
+      } catch (e) {
+        // Server unreachable -> local fallback below
+      }
+    }
+
+    // Local fallback (offline development only)
     const code = String(Math.floor(100000 + Math.random() * 900000));
     user.verificationOtp = {
       code,
@@ -1494,11 +1423,11 @@ export const DB = {
     };
     user.emailVerified = false;
     user.isPendingVerification = true;
-    this.save(db);
-    return { code, email: user.email, username: user.username, fullName: user.fullName || user.username };
+    await this.save(db);
+    return { code, serverManaged: false, email: user.email, username: user.username, fullName: user.fullName || user.username };
   },
 
-  verifyUserEmailOtp(identifier, code) {
+  async verifyUserEmailOtp(identifier, code) {
     const db = this.get();
     const cleanId = String(identifier || '').trim().toLowerCase();
     const cleanCode = String(code || '').trim();
@@ -1507,11 +1436,42 @@ export const DB = {
       return { success: false, message: 'Harap masukkan kode OTP 6-digit verifikasi email!' };
     }
 
-    const user = db.users.find(u => 
+    const findUser = () => db.users.find(u =>
       u.id === identifier || 
       (u.email && u.email.toLowerCase() === cleanId) || 
       (u.username && u.username.toLowerCase() === cleanId)
     );
+
+    // Server-side verification (authoritative)
+    if (typeof fetch === 'function') {
+      try {
+        const res = await fetch(this.getApiUrl('verify_otp'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, code: cleanCode })
+        });
+        const json = await res.json().catch(() => null);
+        if (json && typeof json.success === 'boolean') {
+          if (json.success) {
+            const user = findUser();
+            if (user) {
+              user.emailVerified = true;
+              user.isPendingVerification = false;
+              if (user.verificationOtp) user.verificationOtp.verifiedAt = new Date().toISOString();
+              if (user.status === 'pending') user.status = 'active';
+              this.setSession(user);
+              return { success: true, user, message: json.message || 'Selamat! Email akun Anda berhasil diverifikasi dan akun telah aktif.' };
+            }
+            return { success: true, user: json.user || null, message: json.message || 'Verifikasi berhasil.' };
+          }
+          return { success: false, message: json.message || 'Kode OTP salah. Silakan periksa kembali email Anda.' };
+        }
+      } catch (e) {
+        // Server unreachable -> local fallback below
+      }
+    }
+
+    const user = findUser();
 
     if (!user) {
       return { success: false, message: 'Akun member tidak ditemukan.' };
@@ -1640,6 +1600,203 @@ export const DB = {
     return true;
   },
 
+  // Daily Check-In / Absensi Harian (Point 6 & Bug 12 Fix)
+  getDailyCheckInStatus(userId) {
+    const db = this.get();
+    const user = (db.users || []).find(u => u.id === userId);
+    if (!user) return null;
+
+    const cfg = (db.settings && db.settings.dailyCheckIn) || {
+      enabled: true,
+      rewardAmount: 1000,
+      totalDays: 7
+    };
+
+    const checkInRecord = user.dailyCheckIn || {
+      currentStreak: 0,
+      lastCheckInDate: null,
+      history: []
+    };
+
+    const todayWib = this.getWibDateStr();
+
+    // Check if user has already checked in today via record, history, or transactions
+    const hasHistoryToday = Array.isArray(checkInRecord.history) && checkInRecord.history.some(h => {
+      const hDate = (h.date || h.claimedAt || '').slice(0, 10);
+      return hDate === todayWib;
+    });
+
+    const hasTrxCheckInToday = (db.transactions || []).some(t => {
+      if (t.userId !== userId) return false;
+      const isCheckInTrx = (t.id && t.id.startsWith('TX-CHK-')) || 
+                           (t.paymentMethod && t.paymentMethod.includes('Absensi')) ||
+                           (t.note && t.note.toLowerCase().includes('absen'));
+      if (!isCheckInTrx) return false;
+      const trxDateStr = (t.createdAt || '').slice(0, 10);
+      return trxDateStr === todayWib;
+    });
+
+    const hasCheckedInToday = checkInRecord.lastCheckInDate === todayWib || hasHistoryToday || hasTrxCheckInToday;
+
+    let streak = checkInRecord.currentStreak || 0;
+    if (checkInRecord.lastCheckInDate && !hasCheckedInToday) {
+      try {
+        const last = new Date(checkInRecord.lastCheckInDate);
+        const now = new Date(todayWib);
+        const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
+        if (diffDays > 1) {
+          streak = 0;
+        }
+      } catch(e) {}
+    }
+
+    return {
+      enabled: cfg.enabled !== false,
+      rewardAmount: Number(cfg.rewardAmount) || 1000,
+      totalDays: Number(cfg.totalDays) || 7,
+      currentStreak: streak,
+      hasCheckedInToday,
+      lastCheckInDate: checkInRecord.lastCheckInDate
+    };
+  },
+
+  async claimDailyCheckIn(userId) {
+    const db = this.get();
+    const user = (db.users || []).find(u => u.id === userId);
+    if (!user) {
+      return { success: false, message: 'User tidak ditemukan.' };
+    }
+
+    const cfg = (db.settings && db.settings.dailyCheckIn) || {
+      enabled: true,
+      rewardAmount: 1000,
+      totalDays: 7
+    };
+
+    if (cfg.enabled === false) {
+      return { success: false, message: 'Fitur absensi harian sedang dinonaktifkan oleh Administrator.' };
+    }
+
+    // Local pre-guard before network request
+    const status = this.getDailyCheckInStatus(userId);
+    if (status && status.hasCheckedInToday) {
+      return { success: false, message: 'Anda sudah mengklaim bonus absen hari ini! Silakan kembali besok.' };
+    }
+
+    // Attempt direct server claim for strict atomic database validation
+    try {
+      if (typeof fetch === 'function') {
+        const url = this.getApiUrl('claim_daily_checkin');
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            // Synchronize local active DB with server response
+            user.walletBalance = json.walletBalance;
+            user.dailyCheckIn = user.dailyCheckIn || {};
+            user.dailyCheckIn.currentStreak = json.currentStreak;
+            user.dailyCheckIn.lastCheckInDate = this.getWibDateStr();
+            user.dailyCheckIn.history = user.dailyCheckIn.history || [];
+            user.dailyCheckIn.history.push({
+              date: this.getWibDateStr(),
+              day: json.currentStreak,
+              amount: json.rewardAmount,
+              claimedAt: new Date().toISOString()
+            });
+            if (json.transaction) {
+              db.transactions = db.transactions || [];
+              const exists = db.transactions.some(t => t.id === json.transaction.id);
+              if (!exists) {
+                db.transactions.unshift(json.transaction);
+              }
+            }
+            if (typeof localStorage !== 'undefined') {
+              try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch(e) {}
+            }
+            return json;
+          } else {
+            if (json.alreadyClaimed) {
+              user.dailyCheckIn = user.dailyCheckIn || {};
+              user.dailyCheckIn.lastCheckInDate = this.getWibDateStr();
+              if (typeof localStorage !== 'undefined') {
+                try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch(e) {}
+              }
+            }
+            return json;
+          }
+        }
+      }
+    } catch(err) {
+      console.warn('Direct server claim check-in error, using local fallback:', err);
+    }
+
+    // Local fallback when server is unreachable
+    const todayWib = this.getWibDateStr();
+    user.dailyCheckIn = user.dailyCheckIn || {
+      currentStreak: 0,
+      lastCheckInDate: null,
+      history: []
+    };
+
+    let newStreak = (user.dailyCheckIn.currentStreak || 0) + 1;
+    if (user.dailyCheckIn.lastCheckInDate) {
+      try {
+        const last = new Date(user.dailyCheckIn.lastCheckInDate);
+        const now = new Date(todayWib);
+        const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
+        if (diffDays > 1) {
+          newStreak = 1;
+        }
+      } catch(e) {}
+    } else {
+      newStreak = 1;
+    }
+
+    if (newStreak > (cfg.totalDays || 7)) {
+      newStreak = 1;
+    }
+
+    const rewardAmount = Number(cfg.rewardAmount) || 1000;
+
+    user.walletBalance = (user.walletBalance || 0) + rewardAmount;
+    user.dailyCheckIn.currentStreak = newStreak;
+    user.dailyCheckIn.lastCheckInDate = todayWib;
+    user.dailyCheckIn.history = user.dailyCheckIn.history || [];
+    user.dailyCheckIn.history.push({
+      date: todayWib,
+      day: newStreak,
+      amount: rewardAmount,
+      claimedAt: new Date().toISOString()
+    });
+
+    const txId = 'TX-CHK-' + Date.now().toString().slice(-6);
+    db.transactions = db.transactions || [];
+    db.transactions.unshift({
+      id: txId,
+      userId: user.id,
+      username: user.username,
+      type: 'bonus',
+      amount: rewardAmount,
+      status: 'approved',
+      paymentMethod: 'Absensi Harian (Check-in H-' + newStreak + ')',
+      note: `Bonus absensi harian hari ke-${newStreak}/7 (+Rp ${rewardAmount.toLocaleString('id-ID')})`,
+      createdAt: new Date().toISOString()
+    });
+
+    await this.save(db);
+
+    return {
+      success: true,
+      rewardAmount,
+      currentStreak: newStreak,
+      message: `Selamat! Absensi hari ke-${newStreak} berhasil. Bonus Rp ${rewardAmount.toLocaleString('id-ID')} masuk ke Saldo Utama Anda!`
+    };
+  },
+
   // Banner Slides Carousel CRUD
   getBanners() {
     const db = this.get();
@@ -1651,40 +1808,80 @@ export const DB = {
     return (db.banners || []).filter(b => b.active);
   },
 
-  addBanner({ title, subtitle, badge, imageUrl, actionUrl, active = true }) {
+  async addBanner({ title, subtitle, badge, imageUrl, actionUrl, active = true }) {
     const db = this.get();
     db.banners = db.banners || [];
     const newBanner = {
       id: 'ban-' + Date.now(),
       title: (title || '').trim(),
       subtitle: (subtitle || '').trim(),
-      badge: (badge || 'PROMO').trim(),
+      badge: (badge || 'PROMO UNGGULAN').trim(),
       imageUrl: (imageUrl || '').trim(),
       actionUrl: actionUrl || 'plans',
       active: Boolean(active),
       createdAt: new Date().toISOString()
     };
     db.banners.unshift(newBanner);
-    this.save(db);
+
+    // Direct server save to MySQL table
+    try {
+      if (typeof fetch === 'function') {
+        const url = this.getApiUrl('save_banner');
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ banner: newBanner })
+        }).catch(() => {});
+      }
+    } catch(e) {}
+
+    await this.save(db);
     return newBanner;
   },
 
-  updateBanner(id, updates) {
+  async updateBanner(id, updates) {
     const db = this.get();
     db.banners = db.banners || [];
     const idx = db.banners.findIndex(b => b.id === id);
     if (idx !== -1) {
       db.banners[idx] = { ...db.banners[idx], ...updates };
-      this.save(db);
-      return db.banners[idx];
+      const updated = db.banners[idx];
+
+      // Direct server save to MySQL table
+      try {
+        if (typeof fetch === 'function') {
+          const url = this.getApiUrl('save_banner');
+          await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ banner: updated })
+          }).catch(() => {});
+        }
+      } catch(e) {}
+
+      await this.save(db);
+      return updated;
     }
     return null;
   },
 
-  deleteBanner(id) {
+  async deleteBanner(id) {
     const db = this.get();
     db.banners = (db.banners || []).filter(b => b.id !== id);
-    this.save(db);
+
+    // Direct server delete from MySQL table
+    try {
+      if (typeof fetch === 'function') {
+        const url = this.getApiUrl('delete_banner');
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        }).catch(() => {});
+      }
+    } catch(e) {}
+
+    await this.save(db);
     return true;
   },
 

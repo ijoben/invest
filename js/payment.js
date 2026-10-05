@@ -8,7 +8,7 @@ import { DB } from './db.js';
 
 export const Payment = {
   // Submit Deposit Request (Bank, QRIS, USDT)
-  createDepositRequest({ userId, method, bankId, amount, amountUsdt, txid, proofImage }) {
+  async createDepositRequest({ userId, method, bankId, amount, amountUsdt, txid, proofImage }) {
     const db = DB.get();
     const user = DB.getUserById(userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
@@ -35,13 +35,23 @@ export const Payment = {
       }
     }
 
-    let bankDisplay = '';
-    if (method === 'bank' && bankId && db.settings.paymentGateways && db.settings.paymentGateways.banks) {
-      const bankObj = db.settings.paymentGateways.banks.find(b => b.id === bankId);
-      bankDisplay = bankObj ? ` (${bankObj.name})` : ` (${bankId.toUpperCase()})`;
+    let methodDisplay = 'Transfer Bank';
+    if (method === 'bank' && bankId) {
+      const bankObj = db.settings.paymentGateways && db.settings.paymentGateways.banks ? db.settings.paymentGateways.banks.find(b => b.id === bankId) : null;
+      let bCode = (bankId || 'BCA').toUpperCase();
+      if (bankObj && bankObj.name) {
+        const m = bankObj.name.match(/\(([^)]+)\)/);
+        if (m) {
+          bCode = m[1];
+        } else {
+          bCode = bankObj.name.replace(/Bank /i, '').trim();
+        }
+      }
+      methodDisplay = `Transfer Bank ${bCode}`;
     } else if (method === 'qris') {
-      const qrisObj = db.settings.paymentGateways && db.settings.paymentGateways.qris;
-      bankDisplay = qrisObj && qrisObj.merchantName ? ` (${qrisObj.merchantName})` : '';
+      methodDisplay = 'QRIS Instant';
+    } else if (method === 'usdt') {
+      methodDisplay = 'USDT TRC20';
     }
 
     const transactionId = 'TRX-DEP-' + Math.floor(100000 + Math.random() * 900000);
@@ -50,7 +60,7 @@ export const Payment = {
       userId: user.id,
       username: user.username,
       type: 'deposit',
-      paymentMethod: (method === 'qris' ? 'QRIS Instant' : (method === 'usdt' ? 'USDT TRC20' : 'Bank Transfer')) + bankDisplay,
+      paymentMethod: methodDisplay,
       amount: finalAmount,
       amountUsdt: amountUsdt ? Number(amountUsdt) : null,
       uniqueCode: uniqueCode,
@@ -60,8 +70,27 @@ export const Payment = {
       createdAt: new Date().toISOString()
     };
 
+    // Server-side validation & persistence (min amount, sane limits, pending status).
+    // Falls back to the local flow when the server is unreachable.
+    const serverRes = await DB.createTransactionServer({
+      id: transactionId,
+      type: 'deposit',
+      amount: finalAmount,
+      paymentMethod: methodDisplay,
+      uniqueCode,
+      txid: txid || null,
+      proofImage: proofImage || null,
+      amountUsdt: amountUsdt ? Number(amountUsdt) : null
+    });
+    if (serverRes && serverRes.success === false) {
+      return { success: false, message: serverRes.message };
+    }
+    if (serverRes && serverRes.success && serverRes.transaction) {
+      Object.assign(newTrx, serverRes.transaction);
+    }
+
     db.transactions.unshift(newTrx);
-    DB.save(db);
+    await DB.save(db);
 
     return {
       success: true,
@@ -79,13 +108,18 @@ export const Payment = {
     if (sched.enabled === false) {
       return {
         isOpen: false,
-        message: sched.offMessage || 'Layanan penarikan saldo (WD) saat ini sedang dinonaktifkan sementara oleh Admin.'
+        schedule: sched,
+        message: sched.offMessage || 'Layanan penarikan saldo (WD) saat ini sedang dinonaktifkan sementara (OFF) oleh Administrator.'
       };
     }
 
-    // Check WIB hour (UTC+7)
+    // Check WIB hour (Asia/Jakarta)
     const now = new Date();
-    const wibHours = (now.getUTCHours() + 7) % 24;
+    let wibHours = (now.getUTCHours() + 7) % 24;
+    try {
+      const wibHourStr = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }).format(now);
+      wibHours = parseInt(wibHourStr, 10);
+    } catch(e) {}
     const startHour = Number(sched.startHour !== undefined ? sched.startHour : 9);
     const endHour = Number(sched.endHour !== undefined ? sched.endHour : 21);
 
@@ -93,11 +127,12 @@ export const Payment = {
       const formatH = (h) => String(h).padStart(2, '0') + ':00';
       return {
         isOpen: false,
+        schedule: sched,
         message: `Layanan penarikan dana (WD) buka setiap hari pukul ${formatH(startHour)} - ${formatH(endHour)} WIB. Saat ini jam operasional sedang tutup.`
       };
     }
 
-    return { isOpen: true, message: 'Layanan penarikan dana (WD) sedang buka.' };
+    return { isOpen: true, schedule: sched, message: 'Layanan penarikan dana (WD) sedang buka.' };
   },
 
   // Get breakdown of locked invested capital vs free withdrawable balance
@@ -119,7 +154,7 @@ export const Payment = {
   },
 
   // Submit Withdrawal Request
-  createWithdrawRequest({ userId, walletType, method, bankName, accountNumber, accountHolder, amount }) {
+  async createWithdrawRequest({ userId, walletType, method, bankName, accountNumber, accountHolder, amount }) {
     const db = DB.get();
     const user = DB.getUserById(userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
@@ -151,8 +186,23 @@ export const Payment = {
       return { success: false, message: 'Harap lengkapi nomor rekening/wallet dan nama pemilik!' };
     }
 
-    // Calculate admin fee
-    const feePercent = db.settings.withdrawFeePercent || 1.0;
+    // Anti-Multi-Account Guard: Rekening Bank Ganda
+    const cleanDstAcc = String(accountNumber || '').trim().replace(/[^0-9a-zA-Z]/g, '');
+    const dupBankUser = (db.users || []).find(u =>
+      u.id !== userId &&
+      u.bankAccount &&
+      String(u.bankAccount.accountNumber || '').trim().replace(/[^0-9a-zA-Z]/g, '') === cleanDstAcc
+    );
+    if (dupBankUser) {
+      return {
+        success: false,
+        isDuplicateBank: true,
+        message: `⚠️ PENARIKAN DITOLAK (REKENING GANDA): Nomor rekening tujuan (${accountNumber}) sudah terdaftar pada akun lain (${dupBankUser.username}). Demi kepatuhan anti-fraud, 1 nomor rekening bank hanya berlaku untuk 1 akun!`
+      };
+    }
+
+    // Calculate admin fee (10% standard admin fee)
+    const feePercent = db.settings.withdrawFeePercent !== undefined ? Number(db.settings.withdrawFeePercent) : 10.0;
     const feeAmount = Math.floor((parsedAmount * feePercent) / 100);
     const netAmount = parsedAmount - feeAmount;
 
@@ -163,14 +213,15 @@ export const Payment = {
       user.walletBalance -= parsedAmount;
     }
 
-    const transactionId = 'TRX-WD-' + Math.floor(100000 + Math.random() * 900000);
+    let cleanBank = (bankName || 'Bank').replace(/\s*\([^)]*\)/g, '').trim();
+    const transactionId = 'TRX-WDR-' + Math.floor(100000 + Math.random() * 900000);
     const newTrx = {
       id: transactionId,
       userId: user.id,
       username: user.username,
       type: 'withdraw',
       walletSource: isAffiliate ? 'Wallet Tambah Teman' : 'Wallet Balance',
-      paymentMethod: method === 'usdt' ? 'USDT Withdrawal' : `${bankName} (${accountNumber})`,
+      paymentMethod: method === 'usdt' ? 'USDT Withdrawal' : `${cleanBank} (${accountNumber})`,
       destinationAccount: `${accountHolder} - ${accountNumber}`,
       amount: parsedAmount,
       fee: feeAmount,
@@ -179,8 +230,35 @@ export const Payment = {
       createdAt: new Date().toISOString()
     };
 
+    // Server-side validation (min WD, schedule, fee, balance, duplicate bank) and
+    // authoritative balance deduction. Falls back to local flow when offline.
+    const serverRes = await DB.createTransactionServer({
+      id: transactionId,
+      type: 'withdraw',
+      walletType: isAffiliate ? 'affiliate' : 'main',
+      method: method || 'bank',
+      bankName: bankName || '',
+      accountNumber: accountNumber || '',
+      accountHolder: accountHolder || '',
+      amount: parsedAmount
+    });
+    if (serverRes && serverRes.success === false) {
+      // Roll back the optimistic local deduction
+      if (isAffiliate) {
+        user.affiliateBalance += parsedAmount;
+      } else {
+        user.walletBalance += parsedAmount;
+      }
+      return { success: false, message: serverRes.message };
+    }
+    if (serverRes && serverRes.success && serverRes.transaction) {
+      Object.assign(newTrx, serverRes.transaction);
+      if (typeof serverRes.walletBalance === 'number') user.walletBalance = serverRes.walletBalance;
+      if (typeof serverRes.affiliateBalance === 'number') user.affiliateBalance = serverRes.affiliateBalance;
+    }
+
     db.transactions.unshift(newTrx);
-    DB.save(db);
+    await DB.save(db);
 
     return {
       success: true,
@@ -202,58 +280,53 @@ export const Payment = {
   // Get live member deposits for running text ticker
   getLiveMemberDeposits() {
     const db = DB.get();
-    const realDeposits = (db.transactions || [])
+    return (db.transactions || [])
       .filter(t => t.type === 'deposit')
-      .map(t => ({
-        username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
-        amount: t.amount,
-        method: t.paymentMethod || 'Bank Transfer',
-        status: t.status === 'approved' ? 'Sukses' : 'Diproses',
-        timeAgo: 'Baru saja'
-      }));
-
-    const simulatedDeposits = [
-      { username: 'Bud***', amount: 2500000, method: 'BCA Mobile', status: 'Sukses', timeAgo: '1 menit lalu' },
-      { username: 'Sit***', amount: 5000000, method: 'QRIS Instant', status: 'Sukses', timeAgo: '3 menit lalu' },
-      { username: 'Hen***', amount: 25000000, method: 'VIP USDT TRC20', status: 'Sukses', timeAgo: '5 menit lalu' },
-      { username: 'Kev***', amount: 1000000, method: 'Livin Mandiri', status: 'Sukses', timeAgo: '7 menit lalu' },
-      { username: 'Ria***', amount: 10000000, method: 'BRImo', status: 'Sukses', timeAgo: '11 menit lalu' },
-      { username: 'Dew***', amount: 7500000, method: 'QRIS Instant', status: 'Sukses', timeAgo: '14 menit lalu' },
-      { username: 'Agu***', amount: 15000000, method: 'BNI Mobile', status: 'Sukses', timeAgo: '18 menit lalu' },
-      { username: 'May***', amount: 3000000, method: 'DANA E-Wallet', status: 'Sukses', timeAgo: '22 menit lalu' },
-      { username: 'Den***', amount: 50000000, method: 'VIP USDT BEP20', status: 'Sukses', timeAgo: '27 menit lalu' },
-      { username: 'Rez***', amount: 2000000, method: 'BCA Mobile', status: 'Sukses', timeAgo: '31 menit lalu' }
-    ];
-
-    return [...realDeposits, ...simulatedDeposits];
+      .map(t => {
+        let status = 'Diproses';
+        if (t.status === 'approved') status = 'Sukses';
+        else if (t.status === 'rejected') status = 'Ditolak';
+        let cleanMethod = (t.paymentMethod || 'Bank Transfer').trim();
+        cleanMethod = cleanMethod.replace(/\)+/g, ')').replace(/\(+/g, '(');
+        if (/BCA/i.test(cleanMethod)) cleanMethod = 'Transfer BCA';
+        else if (/BRI/i.test(cleanMethod)) cleanMethod = 'Transfer BRI';
+        else if (/BNI/i.test(cleanMethod)) cleanMethod = 'Transfer BNI';
+        else if (/Mandiri/i.test(cleanMethod)) cleanMethod = 'Transfer Mandiri';
+        else if (/QRIS/i.test(cleanMethod)) cleanMethod = 'QRIS Instant';
+        else if (/USDT/i.test(cleanMethod)) cleanMethod = 'USDT TRC20';
+        return {
+          username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
+          amount: t.amount,
+          method: cleanMethod,
+          status,
+          timeAgo: 'Baru saja'
+        };
+      });
   },
 
   // Get live member withdrawals for running text ticker
   getLiveMemberWithdrawals() {
     const db = DB.get();
-    const realWds = (db.transactions || [])
+    return (db.transactions || [])
       .filter(t => t.type === 'withdraw')
-      .map(t => ({
-        username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
-        amount: t.amount,
-        method: t.paymentMethod || 'Bank Transfer',
-        status: t.status === 'approved' ? 'Sukses Masuk' : 'Diproses Bank',
-        timeAgo: 'Baru saja'
-      }));
-
-    const simulatedWds = [
-      { username: 'Ale***', amount: 1500000, method: 'BCA', status: 'Sukses Masuk', timeAgo: '2 menit lalu' },
-      { username: 'Dew***', amount: 3750000, method: 'DANA', status: 'Sukses Masuk', timeAgo: '4 menit lalu' },
-      { username: 'Rud***', amount: 12000000, method: 'Mandiri', status: 'Sukses Masuk', timeAgo: '8 menit lalu' },
-      { username: 'May***', amount: 850000, method: 'BRI', status: 'Sukses Masuk', timeAgo: '12 menit lalu' },
-      { username: 'Fir***', amount: 6400000, method: 'USDT TRC20', status: 'Sukses Masuk', timeAgo: '15 menit lalu' },
-      { username: 'Sit***', amount: 2100000, method: 'BCA', status: 'Sukses Masuk', timeAgo: '19 menit lalu' },
-      { username: 'Wah***', amount: 18500000, method: 'BNI', status: 'Sukses Masuk', timeAgo: '24 menit lalu' },
-      { username: 'Ind***', amount: 4200000, method: 'GoPay', status: 'Sukses Masuk', timeAgo: '29 menit lalu' },
-      { username: 'Cit***', amount: 9500000, method: 'Mandiri', status: 'Sukses Masuk', timeAgo: '35 menit lalu' },
-      { username: 'Tau***', amount: 5000000, method: 'BCA', status: 'Sukses Masuk', timeAgo: '41 menit lalu' }
-    ];
-
-    return [...realWds, ...simulatedWds];
+      .map(t => {
+        let status = 'Diproses';
+        if (t.status === 'approved') status = 'Sukses Masuk';
+        else if (t.status === 'rejected') status = 'Ditolak';
+        let cleanMethod = (t.paymentMethod || 'Bank Transfer').trim();
+        cleanMethod = cleanMethod.replace(/\)+/g, ')').replace(/\(+/g, '(');
+        if (/BCA/i.test(cleanMethod)) cleanMethod = 'Bank BCA';
+        else if (/BRI/i.test(cleanMethod)) cleanMethod = 'Bank BRI';
+        else if (/BNI/i.test(cleanMethod)) cleanMethod = 'Bank BNI';
+        else if (/Mandiri/i.test(cleanMethod)) cleanMethod = 'Bank Mandiri';
+        else if (/USDT/i.test(cleanMethod)) cleanMethod = 'USDT TRC20';
+        return {
+          username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
+          amount: t.amount,
+          method: cleanMethod,
+          status,
+          timeAgo: 'Baru saja'
+        };
+      });
   }
 };

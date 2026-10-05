@@ -5,9 +5,9 @@
  */
 
 header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: *');
+// CORS whitelist is enforced by config.php (no wildcard origins)
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -179,6 +179,12 @@ function getEmailWrapper($title, $innerContent) {
 HTML;
 }
 
+// When required as a library (OTP / password-reset mails from index.php),
+// only the functions above are needed - skip request routing.
+if (defined('MAIL_LIB_ONLY')) {
+    return;
+}
+
 // Receive POST JSON or GET query
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true) ?: $_POST;
@@ -251,7 +257,9 @@ HTML;
         'success' => true,
         'sent' => $sent,
         'email' => $email,
-        'message' => $sent ? "Kode OTP verifikasi berhasil dikirimkan ke {$email}!" : "Kode OTP diproses ({$otp})."
+        'message' => $sent
+            ? "Kode OTP verifikasi berhasil dikirimkan ke {$email}!"
+            : "Permintaan OTP diproses. Pastikan konfigurasi email server (PHP mail / SMTP) aktif."
     ]);
     exit();
 }

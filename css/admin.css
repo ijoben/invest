@@ -28,11 +28,11 @@ body.admin-body.sidebar-open {
    1. STICKY TOPBAR HEADER WITH HAMBURGER BUTTON
    ========================================================================== */
 .admin-topbar {
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 12px 18px;
+  padding: 10px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -45,7 +45,7 @@ body.admin-body.sidebar-open {
 .admin-topbar-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 /* Hamburger Trigger Button */
@@ -62,6 +62,7 @@ body.admin-body.sidebar-open {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .admin-hamburger-btn:hover {
@@ -82,15 +83,22 @@ body.admin-body.sidebar-open {
 }
 
 .admin-brand-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   background: rgba(200, 147, 56, 0.15);
   border: 1px solid rgba(200, 147, 56, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 12px rgba(200, 147, 56, 0.2);
+  flex-shrink: 0;
+}
+
+.admin-topbar-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .admin-topbar-title {
@@ -101,25 +109,196 @@ body.admin-body.sidebar-open {
   line-height: 1.2;
 }
 
-.admin-topbar-subtitle {
-  font-size: 11px;
-  font-weight: 600;
-  color: #94A3B8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.admin-topbar-subtitle::before {
-  content: '›';
-  color: #C89338;
+.admin-title-badge {
+  font-size: 10px;
   font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #C89338 0%, #E5A83B 100%);
+  color: #0F172A;
+  letter-spacing: 0.5px;
+  display: inline-block;
 }
 
 .admin-topbar-right {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+/* Quick Master WD Button in Topbar */
+.topbar-wd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.12);
+  color: #34D399;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.topbar-wd-btn:hover {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #10B981;
+  transform: translateY(-1px);
+}
+
+.topbar-wd-btn.locked {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #F87171;
+}
+
+.topbar-wd-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  display: inline-block;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+  flex-shrink: 0;
+}
+
+.topbar-wd-text {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.topbar-admin-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+.topbar-admin-name {
+  color: #F8FAFC;
+  font-weight: 600;
+}
+
+.topbar-portal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  background: rgba(200, 147, 56, 0.1);
+  border: 1px solid rgba(200, 147, 56, 0.25);
+  color: #E5A83B;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.topbar-portal-btn:hover {
+  background: rgba(200, 147, 56, 0.2);
+  border-color: #C89338;
+  color: #FDE89C;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   DEDICATED SLEEK BREADCRUMB BAR (DESKTOP & MOBILE)
+   ========================================================================== */
+.admin-breadcrumb-bar {
+  background: #0B111E;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 18px;
+  position: sticky;
+  top: 57px;
+  z-index: 79;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.admin-breadcrumb-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.admin-breadcrumb-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-breadcrumb-path::-webkit-scrollbar {
+  display: none;
+}
+
+.breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #94A3B8;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb-home {
+  cursor: pointer;
+  color: #64748B;
+}
+
+.breadcrumb-home:hover {
+  color: #C89338;
+}
+
+.breadcrumb-separator {
+  color: #475569;
+  font-size: 12px;
+  user-select: none;
+}
+
+.breadcrumb-item.active {
+  color: #FDE89C;
+  font-weight: 700;
+  background: rgba(200, 147, 56, 0.12);
+  border: 1px solid rgba(200, 147, 56, 0.25);
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+.admin-breadcrumb-status {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.breadcrumb-engine-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #4ADE80;
 }
 
 /* Online Live Status Badge */
@@ -741,11 +920,148 @@ body.admin-body.sidebar-open {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  transition: transform 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(200, 147, 56, 0.25);
+}
+
+.admin-btn-action-primary:hover {
+  background: linear-gradient(135deg, #DF9E30 0%, #F5B041 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(200, 147, 56, 0.35);
+  color: #0B0F19;
 }
 
 .admin-btn-action-primary:active {
   transform: scale(0.97);
+}
+
+.admin-btn-action-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #E2E8F0;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.admin-btn-action-secondary:hover {
+  background: rgba(200, 147, 56, 0.15);
+  border-color: rgba(200, 147, 56, 0.45);
+  color: #FDE89C;
+  transform: translateY(-1px);
+}
+
+.admin-btn-action-secondary:active {
+  transform: scale(0.97);
+}
+
+/* Member Detail Modal & Assistive Boxes */
+.admin-member-detail-sheet {
+  max-width: 760px !important;
+  width: 95% !important;
+}
+
+.admin-detail-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #1F2937;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.admin-detail-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-detail-tab-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94A3B8;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.admin-detail-tab-btn:hover {
+  color: #F8FAFC;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-detail-tab-btn.active {
+  background: rgba(200, 147, 56, 0.18);
+  border-color: rgba(200, 147, 56, 0.45);
+  color: #FDE89C;
+}
+
+.admin-reset-pw-box {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.admin-block-control-box {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.admin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.btn-demo-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: rgba(200, 147, 56, 0.15);
+  color: #E5A83B;
+  transition: all 0.2s ease;
+}
+
+.btn-demo-pill:hover {
+  background: rgba(200, 147, 56, 0.3);
+  color: #FDE89C;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mb-2 {
+  margin-bottom: 8px;
+}
+
+.modal-subtitle {
+  font-size: 12px;
+  color: #94A3B8;
+  margin-top: 2px;
 }
 
 /* ==========================================================================
@@ -1015,10 +1331,11 @@ body.admin-body.sidebar-open {
   }
 }
 
-/* Extra Small Phones (max-width: 480px) */
-@media (max-width: 480px) {
+/* Extra Small Phones (max-width: 768px) */
+@media (max-width: 768px) {
   .admin-topbar {
-    padding: 8px 10px;
+    padding: 8px 12px;
+    gap: 8px;
   }
 
   .admin-topbar-left {
@@ -1046,17 +1363,83 @@ body.admin-body.sidebar-open {
     font-size: 13px;
   }
 
-  .admin-topbar-subtitle {
+  .admin-title-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+  }
+
+  .admin-topbar-right {
+    gap: 6px;
+  }
+
+  /* Hide verbose admin username badge on mobile to eliminate clutter */
+  .topbar-admin-badge {
+    display: none !important;
+  }
+
+  /* Compact WD button on mobile */
+  .topbar-wd-btn {
+    padding: 5px 8px;
     font-size: 10px;
+    border-radius: 14px;
+    gap: 4px;
+  }
+
+  /* Icon-only buttons for portal and logout on mobile */
+  .topbar-portal-btn {
+    padding: 6px 8px;
+    border-radius: 8px;
+  }
+  .portal-btn-text {
+    display: none !important;
   }
 
   .admin-logout-btn {
-    padding: 7px 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
     font-size: 11px;
   }
+  .logout-btn-text {
+    display: none !important;
+  }
 
-  .admin-logout-btn span {
-    display: none;
+  /* Dedicated Breadcrumb Bar on Mobile */
+  .admin-breadcrumb-bar {
+    padding: 6px 12px;
+    top: 50px;
+  }
+
+  .admin-breadcrumb-inner {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .admin-breadcrumb-path {
+    font-size: 11.5px;
+    gap: 6px;
+    max-width: 82%;
+  }
+
+  .breadcrumb-home-text {
+    display: none !important; /* Icon only on mobile */
+  }
+
+  .breadcrumb-item.active {
+    font-size: 11px;
+    padding: 2px 8px;
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .engine-text {
+    display: none !important;
+  }
+
+  .breadcrumb-engine-badge {
+    padding: 3px 6px;
   }
 
   .admin-sidebar {
@@ -1075,13 +1458,65 @@ body.admin-body.sidebar-open {
   }
 }
 
+/* Micro Screens (max-width: 480px) */
+@media (max-width: 480px) {
+  .admin-topbar {
+    padding: 6px 8px;
+  }
+
+  .admin-topbar-title {
+    font-size: 12px;
+  }
+
+  .admin-title-badge {
+    display: none; /* Hide badge on super narrow phones to save space */
+  }
+
+  .topbar-wd-btn {
+    font-size: 9.5px;
+    padding: 4px 7px;
+  }
+
+  .admin-breadcrumb-bar {
+    padding: 5px 8px;
+    top: 46px;
+  }
+
+  .breadcrumb-item.active {
+    max-width: 135px;
+    font-size: 10.5px;
+  }
+
+  .admin-card {
+    padding: 14px 12px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+  }
+
+  .admin-card-title {
+    font-size: 13.5px;
+  }
+
+  .admin-btn-action-primary,
+  .admin-btn-action-secondary {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+}
+
 /* Micro Screens (max-width: 360px) */
 @media (max-width: 360px) {
   .admin-stats-grid {
     grid-template-columns: 1fr;
   }
   .admin-topbar-title {
-    font-size: 12px;
+    font-size: 11px;
+  }
+  .breadcrumb-item.active {
+    max-width: 100px;
+    font-size: 10px;
   }
 }
 

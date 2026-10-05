@@ -20,8 +20,9 @@ export const Auth = {
     return DB.getCurrentUser();
   },
 
-  // Login handler
-  login(identifier, password) {
+  // Login handler: verified server-side first (bcrypt + rate limiting),
+  // with a local state fallback when the server is unreachable (offline dev).
+  async login(identifier, password) {
     const cleanId = String(identifier || '').trim();
     const cleanPass = String(password || '');
 
@@ -29,6 +30,61 @@ export const Auth = {
       return { success: false, message: 'Harap isi username/email/no.hp dan password!' };
     }
 
+    // ---- 1. Authoritative server-side login ----
+    if (typeof fetch === 'function') {
+      try {
+        const res = await fetch(DB.getApiUrl('login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: cleanId, password: cleanPass })
+        });
+        const json = await res.json().catch(() => null);
+        if (json && typeof json.success === 'boolean') {
+          if (!json.success) {
+            const failure = {
+              success: false,
+              isBlocked: !!json.isBlocked,
+              requiresVerification: !!json.requiresVerification,
+              message: json.message || 'Login gagal! Periksa kembali username/email dan password Anda.'
+            };
+            if (failure.requiresVerification) {
+              const pendingUser = DB.getUserByUsername(cleanId);
+              if (pendingUser) failure.user = pendingUser;
+            }
+            return failure;
+          }
+
+          const db = DB.get();
+          db.users = db.users || [];
+          let local = db.users.find(u => u.id === json.user.id);
+          if (!local) {
+            // Server knows this account but our cache does not yet
+            local = { ...json.user, walletBalance: 0, affiliateBalance: 0, points: 10, role: json.user.role || 'user', status: 'active', isBlocked: false };
+            db.users.push(local);
+          } else {
+            Object.assign(local, json.user);
+            if (local.isBlocked || local.status === 'blocked') {
+              return { success: false, isBlocked: true, message: 'Akun Anda telah DIBLOKIR oleh Administrator. Silakan hubungi Layanan Pelanggan (CS) untuk bantuan.' };
+            }
+          }
+          // Keep the password in memory only (never persisted) so the browser
+          // session can be silently re-established on the next visit.
+          local.password = cleanPass;
+          DB.setSession(local);
+          return {
+            success: true,
+            user: local,
+            rotatedSeed: !!json.rotatedSeed,
+            message: json.message || `Selamat datang kembali, ${local.fullName || local.username}!`
+          };
+        }
+        // Unexpected/non-JSON response -> fall back to local verification
+      } catch (e) {
+        // Network error -> local fallback below
+      }
+    }
+
+    // ---- 2. Local fallback (offline development) ----
     const user = DB.getUserByUsername(cleanId);
     if (!user) {
       return { success: false, message: 'Akun tidak ditemukan. Silakan periksa kembali atau daftar!' };
@@ -93,32 +149,13 @@ export const Auth = {
     return { success: true, user, message: `Selamat datang kembali, ${user.fullName || user.username}!` };
   },
 
-  // Quick Demo Login helper
-  quickLogin(role = 'user') {
-    const db = DB.get();
-    let user;
-    if (role === 'admin') {
-      user = db.users.find(u => u.role === 'admin') || db.users[0];
-    } else {
-      user = db.users.find(u => u.username === 'alex_investor') || db.users[1];
-    }
-
-    if (user) {
-      if (user.isBlocked) {
-        return {
-          success: false,
-          isBlocked: true,
-          message: `Akun demo ${user.username} saat ini sedang DIBLOKIR oleh Administrator. Silakan buka blokir melalui panel Admin.`
-        };
-      }
-      DB.setSession(user);
-      return { success: true, user, message: `Login sebagai ${user.fullName} (${user.role.toUpperCase()}) berhasil!` };
-    }
-    return { success: false, message: 'Akun demo tidak ditemukan.' };
+  // Quick Demo Login helper (Disabled in Production)
+  quickLogin() {
+    return { success: false, message: 'Fitur quick demo login dinonaktifkan. Silakan gunakan form login resmi.' };
   },
 
   // Register handler
-  register({ username, fullName, email, phone, password, confirmPassword, referralCode }) {
+  async register({ username, fullName, email, phone, password, confirmPassword, referralCode }) {
     const cleanUsername = String(username || '').trim().toLowerCase();
     const cleanFullName = String(fullName || '').trim();
     const cleanEmail = String(email || '').trim().toLowerCase();
@@ -165,20 +202,40 @@ export const Auth = {
       return { success: false, message: 'Konfirmasi password tidak cocok dengan password yang dimasukkan!' };
     }
 
-    // Check duplicate username or email
-    const existingUser = DB.getUserByUsername(cleanUsername) || DB.getUserByUsername(cleanEmail);
-    if (existingUser) {
-      if (existingUser.username && existingUser.username.toLowerCase() === cleanUsername) {
-        return { success: false, message: 'Username sudah digunakan oleh akun lain! Silakan pilih username lain.' };
-      }
-      return { success: false, message: 'Alamat email sudah terdaftar di sistem! Silakan gunakan email lain atau login.' };
+    // Anti-XSS: display names must never carry HTML/script markup
+    if (/[<>]/.test(cleanFullName)) {
+      return { success: false, message: 'Nama lengkap tidak boleh mengandung karakter khusus (< atau >)! Silakan perbaiki nama Anda.' };
+    }
+
+    // Anti-Multi-Account Guard: Check duplicate username, email, or phone
+    const dbUsers = DB.get().users || [];
+    const dupUsername = dbUsers.find(u => u.username && u.username.toLowerCase() === cleanUsername);
+    if (dupUsername) {
+      return { success: false, isDuplicateAccount: true, message: 'Username sudah digunakan oleh akun lain! Silakan pilih username lain.' };
+    }
+
+    const dupEmail = dbUsers.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+    if (dupEmail) {
+      return {
+        success: false,
+        isDuplicateAccount: true,
+        message: `⚠️ PERINGATAN SISTEM: Terdeteksi Akun Ganda! Alamat email "${cleanEmail}" sudah terdaftar pada sistem (Akun: ${dupEmail.username}). Kebijakan keamanan melarang keras kepemilikan multi-akun (akun ganda) demi perlindungan dana & pencegahan kecurangan!`
+      };
     }
 
     // Check duplicate phone if provided
     if (cleanPhone) {
-      const existingPhone = DB.getUserByPhone ? DB.getUserByPhone(cleanPhone) : null;
-      if (existingPhone) {
-        return { success: false, message: 'Nomor WhatsApp / HP sudah terdaftar di sistem AUTOTRADING!' };
+      const cleanP = cleanPhone.replace(/[^0-9]/g, '');
+      const dupPhone = dbUsers.find(u => {
+        if (!u.phone) return false;
+        return String(u.phone).replace(/[^0-9]/g, '') === cleanP;
+      });
+      if (dupPhone) {
+        return {
+          success: false,
+          isDuplicateAccount: true,
+          message: `⚠️ PERINGATAN SISTEM: Terdeteksi Akun Ganda! Nomor WhatsApp/HP "${cleanPhone}" sudah terdaftar pada akun lain (${dupPhone.username}). Satu nomor kontak hanya dapat digunakan untuk 1 akun member!`
+        };
       }
     }
 
@@ -198,7 +255,7 @@ export const Auth = {
     const db = DB.get();
     const isVerifyRequired = !!(db.settings && db.settings.email && db.settings.email.verificationRequired);
 
-    const newUser = DB.addUser({
+    const newUser = await DB.addUser({
       username: cleanUsername,
       fullName: cleanFullName || cleanUsername,
       email: cleanEmail,
@@ -224,21 +281,46 @@ export const Auth = {
       });
     }
 
-    // If verification is required, send OTP to member email
+    // If verification is required, request a server-generated OTP (emailed, never returned)
     if (isVerifyRequired) {
-      const otpData = DB.generateUserEmailOtp(newUser.id);
-      DB.dispatchMailApi('send_otp', {
-        email: newUser.email,
-        name: newUser.fullName || newUser.username,
-        code: otpData.code
-      });
+      const otpData = await DB.generateUserEmailOtp(newUser.id);
+      if (otpData && otpData.serverManaged && !otpData.failed) {
+        return {
+          success: true,
+          requiresVerification: true,
+          user: newUser,
+          message: `Registrasi berhasil! Kode OTP 6-digit telah dikirimkan ke email ${newUser.email}. Silakan cek kotak masuk (dan folder Spam) lalu masukkan kode untuk mengaktifkan akun.`
+        };
+      }
+      if (otpData && otpData.failed) {
+        return {
+          success: true,
+          requiresVerification: true,
+          user: newUser,
+          message: otpData.message || 'Registrasi berhasil, namun pengiriman kode OTP gagal. Silakan klik Kirim Ulang Kode.'
+        };
+      }
+      // Offline fallback: dispatch the locally generated code through the mail API
+      if (otpData) {
+        DB.dispatchMailApi('send_otp', {
+          email: newUser.email,
+          name: newUser.fullName || newUser.username,
+          code: otpData.code
+        });
 
+        return {
+          success: true,
+          requiresVerification: true,
+          user: newUser,
+          otpCode: otpData.code,
+          message: `Registrasi berhasil! Kode OTP 6-digit telah dikirimkan ke email ${newUser.email}. Silakan verifikasi untuk mengaktifkan akun.`
+        };
+      }
       return {
         success: true,
         requiresVerification: true,
         user: newUser,
-        otpCode: otpData.code,
-        message: `Registrasi berhasil! Kode OTP 6-digit telah dikirimkan ke email ${newUser.email}. Silakan verifikasi untuk mengaktifkan akun.`
+        message: 'Registrasi berhasil! Verifikasi email diperlukan, tetapi kode OTP belum dapat dikirimkan. Silakan klik Kirim Ulang Kode.'
       };
     }
 
@@ -247,36 +329,45 @@ export const Auth = {
     return { success: true, requiresVerification: false, user: newUser, message: 'Registrasi berhasil! Selamat bergabung di AUTOTRADING.' };
   },
 
-  // Verify Registration OTP
+  // Verify Registration OTP (server-side validation)
   verifyRegistrationOtp(identifier, code) {
     return DB.verifyUserEmailOtp(identifier, code);
   },
 
   // Resend Registration OTP
   resendRegistrationOtp(identifier) {
-    const res = DB.generateUserEmailOtp(identifier);
-    if (!res) return { success: false, message: 'Akun member tidak ditemukan.' };
-    DB.dispatchMailApi('send_otp', {
-      email: res.email,
-      name: res.fullName || res.username,
-      code: res.code
+    return DB.generateUserEmailOtp(identifier).then((res) => {
+      if (!res) return { success: false, message: 'Akun member tidak ditemukan.' };
+      if (res.serverManaged && !res.failed) {
+        return {
+          success: true,
+          email: res.email,
+          message: res.message || `Kode OTP baru telah dikirimkan ke email ${res.email}.`
+        };
+      }
+      if (res.failed) {
+        return { success: false, message: res.message || 'Gagal mengirim kode OTP. Coba lagi nanti.' };
+      }
+      if (res.code) {
+        DB.dispatchMailApi('send_otp', {
+          email: res.email,
+          name: res.fullName || res.username,
+          code: res.code
+        });
+        return { success: true, code: res.code, email: res.email, message: `Kode OTP baru telah dikirimkan ke email ${res.email}.` };
+      }
+      return { success: false, message: 'Gagal membuat kode OTP. Coba lagi nanti.' };
     });
-    return { success: true, code: res.code, email: res.email, message: `Kode OTP baru telah dikirimkan ke email ${res.email}.` };
   },
 
-  // Forgot Password Simulation
+  // Deprecated: unverified password reset is disabled (it was an account-takeover hole).
+  // Passwords can only be reset through the OTP flow:
+  // requestPasswordReset() -> server emails a code -> resetPasswordWithCode().
   resetPassword(identifier, newPassword) {
-    if (!identifier || !newPassword) {
-      return { success: false, message: 'Harap isi kontak dan password baru!' };
-    }
-
-    const user = DB.getUserByUsername(identifier);
-    if (!user) {
-      return { success: false, message: 'Akun dengan kontak tersebut tidak ditemukan!' };
-    }
-
-    DB.updateUser(user.id, { password: newPassword });
-    return { success: true, message: 'Password berhasil direset! Silakan login kembali.' };
+    return {
+      success: false,
+      message: 'Fitur reset tanpa verifikasi dinonaktifkan demi keamanan. Gunakan alur "Lupa Password" dengan kode OTP yang dikirimkan ke email Anda.'
+    };
   },
 
   // Change Password handler for logged-in user
@@ -294,9 +385,14 @@ export const Auth = {
     return DB.resetPasswordWithCode(identifier, code, newPassword);
   },
 
-  // Logout handler
+  // Logout handler (clears local session + server session cookie)
   logout() {
     DB.clearSession();
+    try {
+      if (typeof fetch === 'function') {
+        fetch(DB.getApiUrl('logout'), { method: 'POST' }).catch(() => {});
+      }
+    } catch (e) {}
     return { success: true, message: 'Anda telah berhasil logout.' };
   }
 };

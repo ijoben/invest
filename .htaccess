@@ -5,8 +5,8 @@
 # 1. Prevent Directory Browsing (Folder Listing) Everywhere
 Options -Indexes
 
-# 2. Block Direct Download of Sensitive Files (SQL, ENV, GIT, Configs)
-<FilesMatch "^(database\.sql|\.env|\.git.*|.*\.sql|composer\..*|package.*\.json)$">
+# 2. Block Direct Download of Sensitive Files (SQL, ENV, GIT, Configs, Dev Scripts)
+<FilesMatch "^(database\.sql|\.env|\.git.*|.*\.sql|composer\..*|package.*\.json|.*\.mjs|.*\.cjs|.*\.md|.*\.log)$">
     <IfModule !mod_authz_core.c>
         Order deny,allow
         Deny from all
@@ -20,6 +20,10 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
+
+    # 3.0 Deny public access to development-only directories
+    # (scripts/ and scratch/ contain deployment credentials & ad-hoc tooling)
+    RewriteRule ^(scripts|scratch|node_modules|\.freebuff|uploads/backups)(/|$) - [F,L]
 
     # 3.1 Force HTTPS
     RewriteCond %{HTTPS} !=on

@@ -4,13 +4,34 @@
  * Premium Fintech Edition: Vector SVG Icons & Polished UI.
  */
 
-import { DB, createReceiptBase64 } from './db.js';
+import { DB, createReceiptBase64, escapeHtml } from './db.js';
 import { Auth } from './auth.js';
 import { Plans } from './plans.js';
 import { Affiliate } from './affiliate.js';
 import { Payment } from './payment.js';
 import { Signals } from './signals.js';
 import { Rewards } from './rewards.js';
+
+// Helper: Clean up nested or duplicate parentheses from bank/method descriptions
+export function cleanParentheses(str) {
+  if (!str) return '';
+  let s = String(str).trim();
+  s = s.replace(/Bank Transfer\s*\(\s*Bank Central Asia\s*\(\s*BCA\s*\)\s*\)/gi, 'Transfer Bank BCA');
+  s = s.replace(/Bank Transfer\s*\(\s*BCA\s*\)/gi, 'Transfer Bank BCA');
+  s = s.replace(/Bank Central Asia\s*\(\s*BCA\s*\)/gi, 'Bank BCA');
+  s = s.replace(/Bank Rakyat Indonesia\s*\(\s*BRI\s*\)/gi, 'Bank BRI');
+  s = s.replace(/Bank Negara Indonesia\s*\(\s*BNI\s*\)/gi, 'Bank BNI');
+  s = s.replace(/Bank Syariah Indonesia\s*\(\s*BSI\s*\)/gi, 'Bank BSI');
+  s = s.replace(/\s*\)\s*\)+/g, ')');
+  s = s.replace(/\s*\(\s*\(+/g, ' (');
+  // If string has unmatched trailing parenthesis, remove excess
+  const openCount = (s.match(/\(/g) || []).length;
+  const closeCount = (s.match(/\)/g) || []).length;
+  if (closeCount > openCount) {
+    s = s.replace(/\)+$/, '');
+  }
+  return s.trim();
+}
 
 // Application State
 const App = {
@@ -30,6 +51,24 @@ const App = {
     1.1555, 1.1551, 1.1558, 1.1554, 1.1560, 1.1557, 1.1563, 1.1561, 1.1565
   ],
 
+  // Best-effort server session verification on boot: silently re-login with cached
+  // credentials, otherwise warn once that sync requires a fresh login.
+  async verifyServerSession() {
+    if (typeof fetch !== 'function') return;
+    if (!this.isLoggedIn()) return;
+    try {
+      const relogged = await DB.ensureServerSession();
+      if (relogged) return;
+      const res = await fetch(DB.getApiUrl('session'));
+      const json = await res.json().catch(() => null);
+      if (json && json.success && json.loggedIn === false) {
+        this.showToast('Sesi server Anda telah berakhir. Silakan login kembali agar perubahan dapat tersinkronisasi.', 'info');
+      }
+    } catch (e) {
+      // Offline mode: keep using the local session
+    }
+  },
+
   init() {
     // Check URL parameters (e.g. ?ref=KODE)
     const urlParams = new URLSearchParams(window.location.search);
@@ -41,15 +80,59 @@ const App = {
       if (refInput) refInput.value = refParam;
     }
 
-    // Render Initial State
-    this.renderAll();
+    // Restore active tab from hash or storage if logged in
+    let initialTab = 'home';
+    if (this.isLoggedIn()) {
+      const hashTab = (window.location.hash || '').replace('#', '').trim();
+      const validTabs = ['home', 'markets', 'trade', 'wallet', 'profile'];
+      if (hashTab && validTabs.includes(hashTab)) {
+        initialTab = hashTab;
+      } else {
+        const storedTab = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('autotrading_member_tab')) ||
+                          (typeof localStorage !== 'undefined' && localStorage.getItem('autotrading_member_tab'));
+        if (storedTab && validTabs.includes(storedTab)) {
+          initialTab = storedTab;
+        }
+      }
+    }
+    this.currentTab = initialTab;
+
+    // Bind events FIRST so user clicks and navigation are never blocked
     this.bindEvents();
+
+    // Render Initial State safely
+    try {
+      this.renderAll();
+    } catch (err) {
+      console.error('Error in App.renderAll():', err);
+    }
+
+    if (initialTab !== 'home') {
+      this.switchTab(initialTab);
+    }
     this.startMarketTicker();
     this.startProfitCountdownLoop();
     this.initAiTradingChart();
+    this.verifyServerSession();
+
+    // Warn the signed-in member (once per minute) when the server rejects a sync
+    try {
+      if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && !this._authRequiredBound) {
+        this._authRequiredBound = true;
+        window.addEventListener('autotrading:auth-required', () => {
+          this.showToast('Sesi server berakhir. Silakan login kembali agar perubahan Anda tersinkronisasi.', 'info');
+        });
+      }
+    } catch (e) {}
+
+    // Initialize Theme (Dark / Light Mode)
+    this.initTheme();
 
     // Background sync with MySQL (if cPanel API is active)
     DB.initCloudSync(() => this.renderAll());
+
+    // Live background polling (every 7 seconds) for immediate synchronization with Database & Admin actions
+    DB.startLivePolling((freshDb) => this.onLiveDbSync(freshDb), 7000);
 
     // Show quick welcome toast
     setTimeout(() => {
@@ -74,6 +157,133 @@ const App = {
       Signals.tickMarkets();
       this.renderMarketTickers();
     }, 2000);
+  },
+
+
+  // Live Background Synchronization Listener (Sync from Admin & MySQL Database)
+  onLiveDbSync(freshDb) {
+    if (!Auth.isLoggedIn()) {
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+      const activeModal = document.querySelector('.modal.active, .modal[style*="display: flex"], .modal[style*="display: block"]');
+      if (!isTyping && !activeModal && this.currentTab === 'home') {
+        this.renderBannerCarousel();
+        this.renderTierCarousel(null, freshDb || DB.get());
+        this.renderRunningText();
+      }
+      return;
+    }
+    const current = Auth.getUser();
+    if (!current) return;
+
+    // Strict status & existence check against fresh database
+    const freshUser = (freshDb.users || []).find(u => u.id === current.id || (u.username && u.username.toLowerCase() === current.username.toLowerCase()));
+    if (!freshUser) {
+      Auth.logout();
+      this.renderAll();
+      this.showToast('Sesi akun Anda telah berakhir atau akun telah dihapus dari server.', 'error');
+      return;
+    }
+
+    // Check if account status has been blocked / suspended in database
+    const isBlocked = freshUser.isBlocked || freshUser.is_blocked || freshUser.status === 'blocked';
+    if (isBlocked) {
+      alert('PERINGATAN SISTEM: Akun Anda telah dinonaktifkan / dibekukan oleh Administrator.\nAlasan: ' + (freshUser.blockedReason || 'Suspensi administratif') + '\nSilakan hubungi Customer Service untuk informasi lebih lanjut.');
+      Auth.logout();
+      this.renderAll();
+      return;
+    }
+
+    // Balance update notification
+    const oldBal = Number(current.walletBalance || 0);
+    const newBal = Number(freshUser.walletBalance || 0);
+    const oldAff = Number(current.affiliateBalance || 0);
+    const newAff = Number(freshUser.affiliateBalance || 0);
+
+    if (newBal > oldBal) {
+      this.showToast(`Saldo akun bertambah: +${DB.formatIDR(newBal - oldBal)} (Tersinkron dari database)`, 'success');
+    }
+    if (newAff > oldAff) {
+      this.showToast(`Komisi afiliasi bertambah: +${DB.formatIDR(newAff - oldAff)}`, 'info');
+    }
+
+    // Render updates if user is not actively typing in an input field
+    const activeEl = document.activeElement;
+    const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+    const activeModal = document.querySelector('.modal.active, .modal[style*="display: flex"], .modal[style*="display: block"]');
+
+    if (!isTyping && !activeModal) {
+      this.renderAll();
+    } else {
+      this.renderHeader(freshUser);
+    }
+    this.updateHeaderNotifBadge(freshUser);
+    const notifModalEl = document.getElementById('notifModal');
+    if (notifModalEl && notifModalEl.classList.contains('show')) {
+      this.renderNotificationsUI();
+    }
+  },
+
+  // Dark / Light Theme Management
+  initTheme() {
+    let savedTheme = 'dark';
+    try {
+      savedTheme = localStorage.getItem('autotrading_theme') || 'dark';
+    } catch (e) {
+      savedTheme = 'dark';
+    }
+    this.applyTheme(savedTheme, false);
+  },
+
+  applyTheme(theme, showNotification = true) {
+    const isDark = theme === 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.toggle('theme-dark', isDark);
+    if (document.body) {
+      document.body.classList.toggle('theme-dark', isDark);
+    }
+
+    try {
+      localStorage.setItem('autotrading_theme', theme);
+    } catch (e) {}
+
+    // Update Header Theme Toggle Button
+    const headerBtn = document.getElementById('headerThemeToggleBtn');
+    if (headerBtn) {
+      const darkIcon = headerBtn.querySelector('.theme-icon-dark');
+      const lightIcon = headerBtn.querySelector('.theme-icon-light');
+      if (darkIcon && lightIcon) {
+        darkIcon.style.display = isDark ? 'none' : 'inline-flex';
+        lightIcon.style.display = isDark ? 'inline-flex' : 'none';
+      }
+      headerBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap');
+    }
+
+    // Update Profile Action Theme Button
+    const profileLabel = document.getElementById('profileThemeLabel');
+    const profileStatus = document.getElementById('profileThemeStatus');
+    const profileIcon = document.getElementById('profileThemeIconWrap');
+    if (profileLabel) {
+      profileLabel.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+    }
+    if (profileStatus) {
+      profileStatus.textContent = isDark ? 'Tema gelap aktif' : 'Tema terang aktif';
+    }
+    if (profileIcon) {
+      profileIcon.innerHTML = isDark
+        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+    }
+
+    if (showNotification) {
+      this.showToast(isDark ? '🌙 Mode Gelap (Dark Mode) aktif' : '☀️ Mode Terang (Light Mode) aktif', 'info');
+    }
+  },
+
+  toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    this.applyTheme(newTheme, true);
   },
 
   // Main UI Synchronizer
@@ -133,6 +343,12 @@ const App = {
     // 6.5 Render Rewards Points Carousel (Under Signals Section)
     this.renderRewardsCarousel(user);
 
+    // 6.6 Render Daily Check-in Streak Strip
+    this.renderDailyCheckInUI();
+
+    // 6.7 Update Realtime Header Notifications Badge
+    this.updateHeaderNotifBadge(user);
+
     // 7. Render Other Views if active
     if (this.currentTab === 'wallet') this.renderWalletView(user);
     if (this.currentTab === 'trade') this.renderTradeView(user);
@@ -154,15 +370,17 @@ const App = {
         : `<span class="badge-member-inactive-mini">⚪ Belum Aktif</span>`;
 
       greetingEl.innerHTML = `
-        <div class="greeting-user-name">Hi, <span class="user-name">${user.fullName || user.username}</span></div>
+        <div class="greeting-user-name">Hi, <span class="user-name">${escapeHtml(user.fullName || user.username)}</span></div>
         <div class="greeting-meta-row">
           ${statusBadge}
-          <span style="color: #94A3B8; font-size: 8px;">•</span>
-          <span class="greeting-sponsor-text">Sponsor: <strong>${sponsorName}</strong></span>
+          <span class="greeting-sponsor-wrap" style="display: inline-flex; align-items: center; gap: 4px;">
+            <span style="color: #94A3B8; font-size: 8px;">•</span>
+            <span class="greeting-sponsor-text">Sponsor: <strong>${escapeHtml(sponsorName)}</strong></span>
+          </span>
         </div>
       `;
       avatarEl.classList.add('logged-in');
-      avatarEl.innerHTML = `<span>${(user.username || 'U')[0].toUpperCase()}</span><span class="online-dot"></span>`;
+      avatarEl.innerHTML = `<span>${escapeHtml((user.username || 'U')[0].toUpperCase())}</span><span class="online-dot"></span>`;
     } else {
       greetingEl.innerHTML = `
         <div class="greeting-guest-name">Hi guest,</div>
@@ -176,6 +394,9 @@ const App = {
         </svg>
       `;
     }
+
+    // Always update notification badge in header
+    this.updateHeaderNotifBadge(user);
   },
 
   // 1.5 Announcement Ticker / Running Text
@@ -223,24 +444,23 @@ const App = {
       
       const userInvs = Plans.getUserInvestments(user.id);
       const hasActivePlan = Array.isArray(userInvs) && userInvs.some(i => i.status === 'active');
-      const rate = hasActivePlan ? Plans.getUserTodayProfitRate(user.id) : 0;
+      const rate = hasActivePlan ? Plans.getUserTodayProfitRate(user.id) : null;
       if (profitEl) {
-        if (isLossMode) {
-          profitEl.textContent = '0.00% (Loss)';
-          profitEl.style.color = '#EF4444';
+        if (!hasActivePlan) {
+          // Requirement 1: yang gak aktif tampilan profit berjalan kosong
+          profitEl.innerHTML = '<span style="color: #94A3B8; font-weight: 700; font-size: 16px;">-</span>';
+          profitEl.title = 'Belum ada paket investasi aktif (Kosong). Aktifkan paket untuk mulai menerima profit harian.';
+        } else if (isLossMode) {
+          profitEl.innerHTML = '<span style="color: #EF4444; font-weight: 800; font-size: 13px;">0.00%</span><span style="font-size: 9px; color: #EF4444; display: block; font-weight: 700;">(Loss)</span>';
           profitEl.title = 'Mode Loss aktif hari ini (Dividen 0.00%, modal pokok 100% aman)';
         } else if (!marketStatus.isOpen) {
-          profitEl.textContent = '0.00% (OFF)';
-          profitEl.style.color = '#EF4444';
+          profitEl.innerHTML = '<span style="color: #EF4444; font-weight: 800; font-size: 13px;">0.00%</span><span style="font-size: 9px; color: #EF4444; display: block; font-weight: 700;">(OFF)</span>';
           profitEl.title = 'Pasar sedang libur / OFF. Dividen profit akan berjalan aktif saat pasar ON.';
-        } else if (!hasActivePlan) {
-          profitEl.textContent = '0.00%';
-          profitEl.style.color = '#64748B';
-          profitEl.title = 'Belum ada paket investasi aktif. Aktifkan paket untuk mulai mendapatkan profit harian.';
         } else {
-          profitEl.textContent = rate > 0 ? `+${rate.toFixed(2)}%` : '+0.00%';
-          profitEl.style.color = rate > 0 ? '#16A34A' : '#0F172A';
-          profitEl.title = 'Profit dividen harian AI berjalan realtime';
+          // Requirement 1 & 5: Tampilan profit berjalan sesuai paket aktif dan nilai unik member
+          const formatted = (rate !== null && rate > 0) ? `+${rate.toFixed(2)}%` : '+0.00%';
+          profitEl.innerHTML = `<span style="color: #16A34A; font-weight: 800; font-size: 14px;">${formatted}</span>`;
+          profitEl.title = 'Profit dividen harian AI berjalan realtime sesuai paket aktif Anda';
         }
       }
     } else {
@@ -248,17 +468,9 @@ const App = {
       affBalEl.textContent = 'IDR 0';
       pointEl.textContent = '0';
       if (profitEl) {
-        if (isLossMode) {
-          profitEl.textContent = '0.00% (Loss)';
-          profitEl.style.color = '#EF4444';
-        } else if (!marketStatus.isOpen) {
-          profitEl.textContent = '0.00% (OFF)';
-          profitEl.style.color = '#EF4444';
-        } else {
-          profitEl.textContent = '0.00%';
-          profitEl.style.color = '#64748B';
-          profitEl.title = 'Silakan login untuk melihat profit berjalan paket Anda.';
-        }
+        // Requirement 1: Bagian luar tulisan kata khusus member ( member )
+        profitEl.innerHTML = '<span style="color: #64748B; font-weight: 800; font-size: 11px; line-height: 1.2; display: block;">Khusus Member</span><span style="font-size: 9.5px; font-weight: 700; color: #94A3B8; display: block;">(Member)</span>';
+        profitEl.title = 'Fitur profit berjalan khusus member. Silakan login atau daftar akun.';
       }
     }
   },
@@ -341,28 +553,22 @@ const App = {
 
     const weekly = Plans.getWeeklyProfitHistory(user ? user.id : null);
 
+    // Requirement 1: Tampilan profit berjalan hanya di member area, bagian luar "Khusus Member", tidak aktif kosong (-)
     if (weekly.isGuest) {
-      // Requirement 3: Guest view - rincian mingguan kosong (hanya untuk member saat login)
+      if (totalRateEl) totalRateEl.innerHTML = '<span style="font-size: 12px; font-weight: 800; color: #64748B;">Khusus Member</span>';
+      if (avgRateEl) avgRateEl.innerHTML = '<span style="font-size: 11px; font-weight: 700; color: #94A3B8;">(Member)</span>';
+      if (statusPillEl) {
+        statusPillEl.textContent = '🔒 Khusus Member (Member)';
+        statusPillEl.className = 'badge-status-pill neutral';
+      }
+    } else if (!weekly.hasActivePackage) {
       if (totalRateEl) totalRateEl.textContent = '-';
       if (avgRateEl) avgRateEl.textContent = '-';
       if (statusPillEl) {
-        statusPillEl.textContent = '🔒 Khusus Member';
-        statusPillEl.className = 'badge-status-pill';
-        statusPillEl.style.background = '#F1F5F9';
-        statusPillEl.style.color = '#64748B';
-      }
-    } else if (!weekly.hasActivePackage) {
-      // User Revision: User baru/belum aktif paket -> rincian kosong
-      if (totalRateEl) totalRateEl.textContent = '0.00%';
-      if (avgRateEl) avgRateEl.textContent = '0.00% / hari';
-      if (statusPillEl) {
-        statusPillEl.textContent = '⚪ Belum Ada Paket Aktif';
+        statusPillEl.textContent = '○ Belum Ada Paket Aktif';
         statusPillEl.className = 'badge-status-pill neutral';
-        statusPillEl.style.background = '#F1F5F9';
-        statusPillEl.style.color = '#64748B';
       }
     } else {
-      // Member logged in with active package:
       if (totalRateEl) totalRateEl.textContent = `+${weekly.totalRate.toFixed(2)}%`;
       if (avgRateEl) avgRateEl.textContent = `+${weekly.avgRate.toFixed(2)}% / hari`;
 
@@ -378,8 +584,8 @@ const App = {
         } else {
           const todayRec = (weekly.records || []).find(r => r.isToday);
           const todayRate = todayRec && typeof todayRec.rate === 'number' ? todayRec.rate : 0;
-          statusPillEl.textContent = `🟢 Normal (+${todayRate.toFixed(2)}%)`;
-          statusPillEl.className = 'badge-status-pill approved';
+          statusPillEl.textContent = `🟡 Hari Ini: +${todayRate.toFixed(2)}% (Progress)`;
+          statusPillEl.className = 'badge-status-pill in-progress';
         }
       }
     }
@@ -390,8 +596,10 @@ const App = {
         if (rec.isToday) cardClass += ' today';
         if (rec.isLoss) cardClass += ' loss';
         if (rec.isWeekend) cardClass += ' weekend-off';
-        if (weekly.isGuest) cardClass += ' guest-locked';
-        if (!weekly.isGuest && !weekly.hasActivePackage) cardClass += ' no-plan';
+        if (rec.isPast) cardClass += ' past-done';
+        if (rec.isFuture) cardClass += ' future-day';
+        if (rec.isGuest) cardClass += ' guest-day';
+        if (!rec.isGuest && !rec.hasActivePackage) cardClass += ' empty-day';
 
         const dayLabel = rec.isToday ? 'Hari Ini' : rec.dayName.substring(0, 3);
         const displayRate = rec.displayRate;
@@ -402,7 +610,7 @@ const App = {
             <span class="weekly-day-name">${dayLabel}</span>
             <span class="weekly-day-date">${rec.date}</span>
             <div class="weekly-day-rate">${displayRate}</div>
-            <span class="weekly-day-pill">${pillText}</span>
+            <span class="weekly-day-pill ${rec.pillClass || ''}">${pillText}</span>
           </div>
         `;
       }).join('');
@@ -411,12 +619,12 @@ const App = {
       if (weekly.isGuest) {
         bannerNoticeHtml = `
           <div class="weekly-guest-lock-banner" onclick="App.openAuthModalWithTab('login')">
-            <span style="font-size: 16px;">🔒</span>
+            <span style="font-size: 16px;">⚡</span>
             <div style="flex: 1;">
-              <strong style="color: #92400E; font-size: 11.5px; display: block;">Rincian Profit Khusus Member</strong>
-              <p style="color: #B45309; font-size: 10px; margin: 2px 0 0 0; line-height: 1.3;">Rincian profit harian selama seminggu hanya bisa dicek saat login. Klik untuk <strong>Login atau Daftar</strong>.</p>
+              <strong style="color: #92400E; font-size: 11.5px; display: block;">Algoritma Auto Trading Aktif</strong>
+              <p style="color: #B45309; font-size: 10px; margin: 2px 0 0 0; line-height: 1.3;">Bergabung & aktifkan paket investasi untuk mulai menikmati profit otomatis harian. Klik untuk <strong>Login / Daftar</strong>.</p>
             </div>
-            <span style="font-size: 11px; font-weight: 800; color: #C89338;">Buka ›</span>
+            <span style="font-size: 11px; font-weight: 800; color: #C89338;">Mulai Sekarang ›</span>
           </div>
         `;
       } else if (!weekly.hasActivePackage) {
@@ -426,7 +634,7 @@ const App = {
             <div style="flex: 1;">
               <strong style="color: #0F172A; font-size: 11.5px; display: block;">Paket Investasi Belum Aktif</strong>
               <p style="color: #64748B; font-size: 10px; margin: 2px 0 0 0; line-height: 1.3;">
-                Rincian profit harian berjalan akan aktif otomatis setelah paket Anda aktif. Klik untuk <strong>Pilih & Aktifkan Paket</strong>.
+                Aktifkan salah satu paket investasi di bawah untuk mulai menerima bagi hasil harian otomatis setiap hari bursa.
               </p>
             </div>
             <span style="font-size: 11px; font-weight: 800; color: #C89338;">Pilih Paket ›</span>
@@ -1358,6 +1566,11 @@ const App = {
   // TESTIMONI PENARIKAN MEMBER (SOCIAL PROOF & M-BANKING SCREENSHOTS)
   // ====================================================================
   openTestimonialModal() {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Fitur testimoni khusus untuk member terdaftar. Silakan login atau daftar akun terlebih dahulu!', 'info');
+      this.openAuthModalWithTab('login');
+      return;
+    }
     this.renderTestimonials(this.currentTestimonialFilter || 'all');
     this.openModal('testimonialModal');
   },
@@ -1386,8 +1599,10 @@ const App = {
     const allTestimonials = DB.getActiveTestimonials();
     this.testimonialsData = allTestimonials;
 
+    const db = DB.get();
+    const realApprovedWd = (db.transactions || []).filter(t => t.type === 'withdraw' && t.status === 'approved').length;
     if (totalCountBadge) {
-      totalCountBadge.textContent = `${allTestimonials.length + 1420}+`;
+      totalCountBadge.textContent = realApprovedWd > 0 ? `${realApprovedWd}` : '0';
     }
 
     let filtered = allTestimonials;
@@ -1621,6 +1836,19 @@ const App = {
     document.getElementById('walletPageMainBal').textContent = DB.formatIDR(user.walletBalance);
     document.getElementById('walletPageAffBal').textContent = DB.formatIDR(user.affiliateBalance);
 
+    // Update WD Button Status on Wallet Page (Point 7)
+    const wdStatus = Payment.isWithdrawOpen();
+    const btnWdEl = document.getElementById('walletPageBtnWithdraw');
+    if (btnWdEl) {
+      if (!wdStatus.isOpen) {
+        btnWdEl.innerHTML = '<span>🔒 Tarik Dana (OFF)</span>';
+        btnWdEl.style.opacity = '0.75';
+      } else {
+        btnWdEl.innerHTML = '<span>Tarik Dana</span>';
+        btnWdEl.style.opacity = '1';
+      }
+    }
+
     const txs = Payment.getUserTransactions(user.id);
     this.cachedWalletTransactions = txs;
     this.renderWalletTransactionList(this.activeTxFilter || 'all');
@@ -1668,7 +1896,7 @@ const App = {
     txListEl.innerHTML = txs.map(t => {
       let title = t.paymentMethod || t.type;
       let badgeHtml = '';
-      let isPlus = t.type === 'deposit' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
+      let isPlus = t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
       let amountColor = isPlus ? '#16A34A' : '#DC2626';
       let sign = isPlus ? '+' : '-';
       let noteText = t.note || '';
@@ -1684,14 +1912,39 @@ const App = {
       } else if (t.type === 'sponsor_bonus') {
         title = 'Bonus Sponsor Langsung (Level 1)';
         badgeHtml = '<span class="tx-detail-badge tx-badge-sponsor">SPONSOR L1</span>';
+      } else if (t.type === 'bonus' || t.type === 'reward') {
+        const rawBonus = t.paymentMethod || 'Bonus';
+        const cleanBonus = cleanParentheses(rawBonus);
+        if (cleanBonus.includes('Absensi') || (t.id && t.id.startsWith('TX-CHK'))) {
+          title = 'Bonus Absensi Harian';
+          badgeHtml = '<span class="tx-detail-badge tx-badge-profit">BONUS ABSEN</span>';
+        } else {
+          title = 'Bonus Saldo';
+          badgeHtml = '<span class="tx-detail-badge tx-badge-profit">BONUS</span>';
+        }
+        if (!noteText) noteText = `${cleanBonus} · ID: ${t.id}`;
       } else if (t.type === 'deposit') {
-        title = `Deposit Saldo (${t.paymentMethod || 'Manual'})`;
-        badgeHtml = '<span class="tx-detail-badge tx-badge-dep">DEPOSIT</span>';
-        if (!noteText) noteText = `Metode: ${t.paymentMethod || 'Transfer'} · ID: ${t.id}`;
+        const rawMethod = t.paymentMethod || 'Transfer';
+        const cleanMethod = cleanParentheses(rawMethod);
+        if (cleanMethod.includes('Absensi') || (t.id && t.id.startsWith('TX-CHK'))) {
+          title = 'Bonus Absensi Harian';
+          badgeHtml = '<span class="tx-detail-badge tx-badge-profit">BONUS ABSEN</span>';
+          if (!noteText) noteText = `${cleanMethod} · ID: ${t.id}`;
+        } else if (cleanMethod.includes('Learn') || cleanMethod.includes('Hari')) {
+          title = `Investasi ${cleanMethod}`;
+          badgeHtml = '<span class="tx-detail-badge tx-badge-dep">INVESTASI</span>';
+          if (!noteText) noteText = `Paket: ${cleanMethod} · ID: ${t.id}`;
+        } else {
+          title = `Deposit Saldo - ${cleanMethod}`;
+          badgeHtml = '<span class="tx-detail-badge tx-badge-dep">DEPOSIT</span>';
+          if (!noteText) noteText = `Metode: ${cleanMethod} · ID: ${t.id}`;
+        }
       } else if (t.type === 'withdraw') {
         title = 'Penarikan Dana (WD)';
         badgeHtml = '<span class="tx-detail-badge tx-badge-wd">WITHDRAW</span>';
-        if (!noteText) noteText = `Bank: ${t.bankName || 'Rekening Member'} (${t.accountNumber || ''}) · ID: ${t.id}`;
+        const cleanBank = cleanParentheses(t.bankName || t.destinationAccount || 'Rekening Member');
+        const accNo = t.accountNumber ? ` · ${t.accountNumber}` : '';
+        if (!noteText) noteText = `Tujuan: ${cleanBank}${accNo} · ID: ${t.id}`;
       } else if (t.type === 'affiliate_transfer') {
         title = 'Transfer Saldo Komisi';
         badgeHtml = '<span class="tx-detail-badge tx-badge-sponsor">TRANSFER</span>';
@@ -1700,13 +1953,9 @@ const App = {
         badgeHtml = '<span class="tx-detail-badge tx-badge-return">MODAL KEMBALI</span>';
       }
 
-      const dateStr = new Date(t.createdAt).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      const dateStr = DB.formatWibDateTime(t.createdAt);
+      let statusClass = t.status === 'approved' ? 'approved' : (t.status === 'rejected' ? 'rejected' : 'pending');
+      let statusLabel = t.status === 'approved' ? 'SUKSES' : (t.status === 'rejected' ? 'DITOLAK' : 'DIPROSES');
 
       return `
         <div style="background:#FFFFFF; border-radius:14px; padding:12px 14px; box-shadow:var(--card-shadow); border:1px solid #F1F5F9; display:flex; align-items:center; justify-content:space-between; gap:10px;">
@@ -1723,7 +1972,7 @@ const App = {
                 ${noteText}
               </div>
               <div style="font-size:9.5px; color:#94A3B8; margin-top:3px;">
-                ${dateStr} WIB · <span class="badge-status ${t.status || 'approved'}" style="font-size:8.5px; padding:1px 6px;">${(t.status || 'approved').toUpperCase()}</span>
+                ${dateStr} WIB · <span class="badge-status ${statusClass}" style="font-size:8.5px; padding:1px 6px;">${statusLabel}</span> ${t.rejectReason ? `<span style="color:#EF4444; font-size:9.5px; margin-left:4px;">(${t.rejectReason})</span>` : ''}
               </div>
             </div>
           </div>
@@ -1802,7 +2051,7 @@ const App = {
             </div>
             <div>
               <div style="font-size:10px; color:#64748B;">Rentang Profit</div>
-              <div style="font-weight:800; font-size:12px; color:#22C55E;">${inv.minRate}% - ${inv.maxRate}%</div>
+              <div style="font-weight:800; font-size:12px; color:#22C55E;">${inv.minRate ?? inv.minDailyProfit ?? '-'}% - ${inv.maxRate ?? inv.maxDailyProfit ?? '-'}%</div>
             </div>
             <div>
               <div style="font-size:10px; color:#64748B;">Total Profit Didapat</div>
@@ -1892,6 +2141,18 @@ const App = {
     const refLink = `${window.location.origin}${window.location.pathname}?ref=${user.referralCode}`;
     document.getElementById('profileRefLinkInput').value = refLink;
 
+    // Requirement 2: Bind Social Media links in Profile
+    const db = DB.get();
+    const soc = (db.settings && db.settings.social) || {};
+    const teleEl = document.getElementById('socLinkTelegram');
+    if (teleEl && soc.telegram) teleEl.href = soc.telegram;
+    const ytEl = document.getElementById('socLinkYoutube');
+    if (ytEl && soc.youtube) ytEl.href = soc.youtube;
+    const igEl = document.getElementById('socLinkInstagram');
+    if (igEl && soc.instagram) igEl.href = soc.instagram;
+    const ttEl = document.getElementById('socLinkTiktok');
+    if (ttEl && soc.tiktok) ttEl.href = soc.tiktok;
+
     // Downline stats & Level Bonus Recap (Requirements 2 & 3)
     const downlines = Affiliate.getDownlines(user.referralCode);
     this.cachedDownlines = downlines;
@@ -1939,8 +2200,29 @@ const App = {
     const totalTurnEl = document.getElementById('affTotalTurnover');
     if (totalTurnEl) totalTurnEl.textContent = DB.formatIDR(downlines.totalTeamTurnover);
 
+    // Leader Milestone / Ranking (Level & Network Progression)
+    const lRank = downlines.leaderRank || (typeof Affiliate !== 'undefined' && Affiliate.getLeaderRank ? Affiliate.getLeaderRank(downlines.totalTeamTurnover) : null);
+    if (lRank) {
+      const lrIcon = document.getElementById('affLeaderRankIcon');
+      const lrTitle = document.getElementById('affLeaderRankTitle');
+      const lrReward = document.getElementById('affLeaderRewardTag');
+      const lrProgCur = document.getElementById('affLeaderProgCur');
+      const lrProgTarget = document.getElementById('affLeaderProgTarget');
+      const lrProgressBar = document.getElementById('affLeaderProgressBar');
+      const lrNextLabel = document.getElementById('affLeaderNextRankLabel');
+      const lrPercent = document.getElementById('affLeaderProgPercent');
+
+      if (lrIcon) lrIcon.textContent = lRank.badge;
+      if (lrTitle) lrTitle.textContent = lRank.currentRank;
+      if (lrReward) lrReward.textContent = lRank.reward > 0 ? `Bonus: ${DB.formatIDR(lRank.reward)}` : 'Target Terbuka';
+      if (lrProgCur) lrProgCur.textContent = `Omset: ${DB.formatIDR(downlines.totalTeamTurnover)}`;
+      if (lrProgTarget) lrProgTarget.textContent = `Target: ${DB.formatIDR(lRank.nextTurnoverRequired)}`;
+      if (lrProgressBar) lrProgressBar.style.width = `${lRank.progressPct}%`;
+      if (lrNextLabel) lrNextLabel.textContent = `Menuju: ${lRank.nextRank}`;
+      if (lrPercent) lrPercent.textContent = `${lRank.progressPct}%`;
+    }
+
     // Update dynamic affiliate commission & rabat level descriptions (Requirement 1)
-    const db = DB.get();
     const cfg = db.settings || {};
     const sponsorPct = cfg.sponsorBonusPercent !== undefined ? cfg.sponsorBonusPercent : 10;
     const rabatLevels = cfg.rabatLevels || [];
@@ -2019,8 +2301,8 @@ const App = {
         <div class="downline-card-header">
           <div class="downline-card-user">
             <span class="network-level-badge lvl-${m.level}">L${m.level}</span>
-            <span>${m.username}</span>
-            <span style="font-size:11px; color:#64748B; font-weight:500;">(${m.fullName || '-'})</span>
+            <span>${escapeHtml(m.username)}</span>
+            <span style="font-size:11px; color:#64748B; font-weight:500;">(${escapeHtml(m.fullName || '-')})</span>
           </div>
           <span class="badge-status ${m.activeInvsCount > 0 ? 'approved' : 'active'}">
             ${m.activeInvsCount > 0 ? `● ${m.activeInvsCount} Paket Aktif` : 'Terdaftar'}
@@ -2182,6 +2464,9 @@ const App = {
       this.showToast(res.message, 'success');
       this.renderAll();
     } else {
+      if (res.isDuplicateBank) {
+        this.openSecurityWarningModal('Peringatan Rekening Ganda Ditolak', res.message);
+      }
       this.showToast(res.message, 'error');
     }
   },
@@ -2206,7 +2491,7 @@ const App = {
     this.openModal('changePasswordModal');
   },
 
-  saveChangePassword() {
+  async saveChangePassword() {
     const user = Auth.getUser();
     if (!user) return;
 
@@ -2235,7 +2520,7 @@ const App = {
       return;
     }
 
-    const res = Auth.changePassword(user.id, oldPass, newPass);
+    const res = await Auth.changePassword(user.id, oldPass, newPass);
     if (res.success) {
       this.closeModal('changePasswordModal');
       this.showToast(res.message, 'success');
@@ -2534,14 +2819,31 @@ const App = {
 
   // Tab Navigation Switching
   switchTab(tabId) {
+    const validTabs = ['home', 'markets', 'trade', 'wallet', 'profile'];
+    if (!validTabs.includes(tabId)) tabId = 'home';
+
     if (tabId !== 'home' && !this.isLoggedIn()) {
-      this.showToast('Silahkan login atau daftar dulu', 'info');
-      this.openModal('authModal');
+      this.showToast('Fitur ini khusus untuk member terdaftar. Silakan login atau daftar akun terlebih dahulu!', 'info');
+      this.openAuthModalWithTab('login');
       return;
     }
 
     this.currentTab = tabId;
-    
+
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        if (window.location.hash !== `#${tabId}`) {
+          history.replaceState(null, '', `#${tabId}`);
+        }
+      }
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('autotrading_member_tab', tabId);
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('autotrading_member_tab', tabId);
+      }
+    } catch (e) {}
+
     // Update bottom navigation bar active class
     document.querySelectorAll('.nav-item').forEach(item => {
       item.classList.toggle('active', item.getAttribute('data-tab') === tabId);
@@ -2558,16 +2860,63 @@ const App = {
 
   // Modals Controller
   openModal(modalId) {
+    const publicModals = ['authModal', 'forgotPasswordModal', 'emailOtpModal', 'imagePreviewModal', 'announcementModal'];
+    if (modalId === 'notifModal' && !this.isLoggedIn()) {
+      this.showToast('Fitur notifikasi khusus untuk member terdaftar. Silakan login atau daftar akun terlebih dahulu!', 'info');
+      this.openAuthModalWithTab('login');
+      return;
+    }
+    if (!publicModals.includes(modalId) && !this.isLoggedIn()) {
+      if (modalId === 'supportModal') {
+        this.showToast('Silahkan login untuk hubungi CS', 'warning');
+      } else {
+        this.showToast('Fitur ini khusus untuk member terdaftar. Silakan login atau daftar akun terlebih dahulu!', 'info');
+      }
+      this.openAuthModalWithTab('login');
+      return;
+    }
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.add('show');
       document.body.style.overflow = 'hidden';
+      if (modalId === 'notifModal') {
+        const user = Auth.getUser();
+        if (user) {
+          const notifs = this.getUserNotifications(user);
+          const allIds = notifs.map(n => n.id);
+          try {
+            localStorage.setItem('autotrading_read_notifs_' + user.id, JSON.stringify(allIds));
+          } catch(e) {}
+          const badgeEl = document.getElementById('headerNotifBadge');
+          if (badgeEl) {
+            badgeEl.style.display = 'none';
+            badgeEl.classList.remove('pulse-anim');
+            badgeEl.textContent = '0';
+          }
+        }
+        this.renderNotificationsUI();
+      }
     }
+  },
+
+  // Open CS modal with guest protection
+  openSupport() {
+    if (!this.isLoggedIn()) {
+      this.showToast('Silahkan login untuk hubungi CS', 'warning');
+      this.openAuthModalWithTab('login');
+      return;
+    }
+    this.openModal('supportModal');
   },
 
   // Open Auth Modal directly to login or register tab (Requirement 2)
   openAuthModalWithTab(tab = 'login') {
-    this.openModal('authModal');
+    // Open authModal directly without triggering redirection loops
+    const modal = document.getElementById('authModal');
+    if (modal) {
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
     if (tab === 'register') {
       const regTab = document.getElementById('authTabRegister');
       if (regTab) regTab.click();
@@ -2579,6 +2928,11 @@ const App = {
 
   // Open CS channel dynamically based on Admin configuration (Requirement 7)
   openCustomerService(channel = 'whatsapp') {
+    if (!this.isLoggedIn()) {
+      this.showToast('Silahkan login untuk hubungi CS', 'warning');
+      this.openAuthModalWithTab('login');
+      return;
+    }
     const db = DB.get();
     const cs = db.settings.cs || {};
     if (channel === 'whatsapp') {
@@ -2602,6 +2956,11 @@ const App = {
 
   // Open Kelas Trading channel dynamically based on Admin configuration (Requirement 6)
   openKelasTrading(channel = 'whatsapp') {
+    if (!this.isLoggedIn()) {
+      this.showToast('Kelas Trading khusus untuk member terdaftar. Silakan login atau daftar akun terlebih dahulu!', 'info');
+      this.openAuthModalWithTab('login');
+      return;
+    }
     const db = DB.get();
     const kt = db.settings.kelasTrading || {};
     if (channel === 'whatsapp') {
@@ -2794,9 +3153,9 @@ const App = {
     const renderDepHtml = deposits.map(d => `
       <span class="autotrading-marquee-item fgt-marquee-item">
         <span class="badge-tag badge-dep">DEPOSIT</span>
-        <span>${d.username}</span>
+        <span>${escapeHtml(d.username)}</span>
         <span class="amount-val">+${DB.formatIDR(d.amount)}</span>
-        <span style="color:#94A3B8; font-size:10px;">(${d.method})</span>
+        <span style="color:#94A3B8; font-size:10px;">• ${cleanParentheses(d.method)}</span>
         <span style="color:#4ADE80; font-size:10px;">· ${d.timeAgo}</span>
       </span>
     `).join('');
@@ -2804,9 +3163,9 @@ const App = {
     const renderWdHtml = wds.map(w => `
       <span class="autotrading-marquee-item fgt-marquee-item">
         <span class="badge-tag badge-wd">WITHDRAW</span>
-        <span>${w.username}</span>
+        <span>${escapeHtml(w.username)}</span>
         <span class="amount-val">-${DB.formatIDR(w.amount)}</span>
-        <span style="color:#94A3B8; font-size:10px;">(${w.method})</span>
+        <span style="color:#94A3B8; font-size:10px;">• ${cleanParentheses(w.method)}</span>
         <span style="color:#FACC15; font-size:10px;">· ${w.status}</span>
       </span>
     `).join('');
@@ -2858,6 +3217,16 @@ const App = {
       const tagText = isDep ? 'DEPOSIT' : 'PENARIKAN (WD)';
       const tagClass = isDep ? 'badge-dep' : 'badge-wd';
 
+      let statusColor = '#10B981';
+      let statusIcon = '✓';
+      if (item.status === 'Ditolak') {
+        statusColor = '#EF4444';
+        statusIcon = '✗';
+      } else if (item.status === 'Diproses') {
+        statusColor = '#F59E0B';
+        statusIcon = '⏳';
+      }
+
       return `
         <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -2866,14 +3235,14 @@ const App = {
             </div>
             <div>
               <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
-                ${item.username} <span class="badge-tag ${tagClass}" style="font-size: 8.5px; margin-left: 4px;">${tagText}</span>
+                ${escapeHtml(item.username)} <span class="badge-tag ${tagClass}" style="font-size: 8.5px; margin-left: 4px;">${tagText}</span>
               </div>
               <div style="font-size: 10.5px; color: #64748B;">${item.method} · ${item.timeAgo}</div>
             </div>
           </div>
           <div style="text-align: right;">
             <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13.5px; color: ${color};">${sign}${DB.formatIDR(item.amount)}</div>
-            <div style="font-size: 10px; color: #10B981; font-weight: 700;">✓ ${item.status}</div>
+            <div style="font-size: 10px; color: ${statusColor}; font-weight: 700;">${statusIcon} ${item.status}</div>
           </div>
         </div>
       `;
@@ -2882,6 +3251,11 @@ const App = {
 
   // 3. Leaderboard Modal Controller (Requirement 5)
   openLeaderboardModal() {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Fitur Leaderboard khusus untuk member terdaftar. Silakan login atau daftar akun terlebih dahulu!', 'info');
+      this.openAuthModalWithTab('login');
+      return;
+    }
     const sponsors = Plans.getTopSponsors(12);
     const profits = Plans.getTopProfits(12);
 
@@ -2891,7 +3265,7 @@ const App = {
       const topSponsorItems = sponsors.slice(0, 5).map((s, idx) => `
         <span class="autotrading-marquee-item fgt-marquee-item">
           <span class="badge-tag badge-lead">TOP ${idx + 1} SPONSOR</span>
-          <span style="font-weight:700;">${s.username}</span>
+          <span style="font-weight:700;">${escapeHtml(s.username)}</span>
           <span class="amount-val">${DB.formatIDR(s.commission)} Komisi</span>
           <span style="color:#C084FC;">(${s.directCount} Member)</span>
         </span>
@@ -2900,7 +3274,7 @@ const App = {
       const topProfitItems = profits.slice(0, 5).map((p, idx) => `
         <span class="autotrading-marquee-item fgt-marquee-item">
           <span class="badge-tag badge-dep">TOP ${idx + 1} PROFIT</span>
-          <span style="font-weight:700;">${p.username}</span>
+          <span style="font-weight:700;">${escapeHtml(p.username)}</span>
           <span class="amount-val">+${DB.formatIDR(p.totalProfit)}</span>
           <span style="color:#4ADE80;">(Win: ${p.winRate}%)</span>
         </span>
@@ -2936,7 +3310,7 @@ const App = {
               <div class="lead-rank-badge ${rankClass}">${medal}</div>
               <div>
                 <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
-                  ${s.username} <span style="font-size: 10px; color: #C89338; font-weight: 700;">[${s.badge}]</span>
+                  ${escapeHtml(s.username)} <span style="font-size: 10px; color: #C89338; font-weight: 700;">[${escapeHtml(s.badge)}]</span>
                 </div>
                 <div style="font-size: 10.5px; color: #64748B;">
                   ${s.directCount} Sponsor Langsung · Total Tim: ${s.totalTeam}
@@ -2965,7 +3339,7 @@ const App = {
               <div class="lead-rank-badge ${rankClass}">${medal}</div>
               <div>
                 <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
-                  ${p.username} <span style="font-size: 10px; color: #22C55E; font-weight: 700;">[${p.activePlan || 'VIP Pro'}]</span>
+                  ${escapeHtml(p.username)} <span style="font-size: 10px; color: #22C55E; font-weight: 700;">[${escapeHtml(p.activePlan || 'VIP Pro')}]</span>
                 </div>
                 <div style="font-size: 10.5px; color: #64748B;">
                   Modal: ${DB.formatIDR(p.totalCapital)} · Win Rate: ${p.winRate}%
@@ -3069,11 +3443,11 @@ const App = {
     this.openModal('refundModal');
   },
 
-  processContractRefund(investmentId) {
+  async processContractRefund(investmentId) {
     const user = Auth.getUser();
     if (!user) return;
 
-    const res = Plans.processContractRefund(investmentId, user.id);
+    const res = await Plans.processContractRefund(investmentId, user.id);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
@@ -3083,11 +3457,11 @@ const App = {
     }
   },
 
-  processContractRefundAll() {
+  async processContractRefundAll() {
     const user = Auth.getUser();
     if (!user) return;
 
-    const res = Plans.processAllContractRefunds(user.id);
+    const res = await Plans.processAllContractRefunds(user.id);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
@@ -3133,7 +3507,8 @@ const App = {
     this.openModal('planModal');
   },
 
-  submitInvestment() {
+  async submitInvestment() {
+    if (this._isSubmittingInvestment) return;
     if (!Auth.isLoggedIn()) {
       this.closeModal('planModal');
       this.openModal('authModal');
@@ -3145,42 +3520,666 @@ const App = {
     const amount = Number(input.value);
     const user = Auth.getUser();
 
-    const res = Plans.invest({
-      userId: user.id,
-      planId,
-      amount
-    });
+    const submitBtn = document.querySelector('#planModal .btn-cta-gold') || document.getElementById('btnSubmitInvest');
+    this._isSubmittingInvestment = true;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳ Memproses Aktivasi Paket...</span>';
+    }
 
-    if (res.success) {
-      this.closeModal('planModal');
-      this.showToast(res.message, 'success');
-      this.renderAll();
-    } else {
-      this.showToast(res.message, 'error');
+    try {
+      const res = await Plans.invest({
+        userId: user.id,
+        planId,
+        amount
+      });
+
+      if (res.success) {
+        this.closeModal('planModal');
+        this.showToast(res.message, 'success');
+        this.renderAll();
+      } else {
+        this.showToast(res.message, 'error');
+      }
+    } finally {
+      this._isSubmittingInvestment = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>🚀 Konfirmasi &amp; Aktifkan Paket</span>';
+      }
     }
   },
 
-  claimProfit() {
+  async claimProfit() {
     const user = Auth.getUser();
     if (!user) return;
 
-    const res = Plans.claimProfit(user.id);
+    const res = await Plans.claimProfit(user.id);
     if (res.success) {
-      this.showToast(res.message, 'success');
+      this.triggerClaimCelebration(res.amount, res.message);
       this.renderAll();
     } else {
       this.showToast(res.message, 'info');
     }
   },
 
+  // Celebration with Animated Trumpets & Confetti (Point 2)
+  triggerClaimCelebration(amount, message) {
+    const amtEl = document.getElementById('celebrationProfitAmount');
+    if (amtEl) amtEl.textContent = DB.formatIDR(amount || 0);
+
+    this.playCelebratoryFanfare();
+    this.spawnConfetti();
+    this.openModal('claimCelebrationModal');
+  },
+
+  closeCelebrationModal() {
+    this.closeModal('claimCelebrationModal');
+    this.renderAll();
+  },
+
+  playCelebratoryFanfare() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      const noteDur = 0.13;
+      const startTime = ctx.currentTime + 0.04;
+
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, startTime + (idx * noteDur));
+
+        gain.gain.setValueAtTime(0.01, startTime + (idx * noteDur));
+        gain.gain.exponentialRampToValueAtTime(0.28, startTime + (idx * noteDur) + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + (idx * noteDur) + (idx === 3 ? 0.38 : noteDur));
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(startTime + (idx * noteDur));
+        osc.stop(startTime + (idx * noteDur) + (idx === 3 ? 0.42 : noteDur));
+      });
+    } catch (e) {
+      // Audio autoplay policy fallback
+    }
+  },
+
+  spawnConfetti() {
+    const container = document.getElementById('celebrationConfettiContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    const colors = ['#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#EC4899', '#8B5CF6', '#FCD34D'];
+
+    for (let i = 0; i < 32; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'celebration-confetti-particle';
+      const left = Math.random() * 100;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const delay = Math.random() * 1.2;
+      const duration = 2.2 + Math.random() * 1.5;
+      const size = 6 + Math.random() * 6;
+
+      particle.style.left = `${left}%`;
+      particle.style.top = '0px';
+      particle.style.background = color;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size * 1.4}px`;
+      particle.style.animationDelay = `${delay}s`;
+      particle.style.animationDuration = `${duration}s`;
+      particle.style.borderRadius = `${Math.random() > 0.5 ? '50%' : '2px'}`;
+      container.appendChild(particle);
+    }
+  },
+
+  // Multi-Account & Duplicate Bank Warning Modal (Point 4)
+  openSecurityWarningModal(title, message) {
+    const titleEl = document.getElementById('securityWarningTitle');
+    const msgEl = document.getElementById('securityWarningMessage');
+    if (titleEl) titleEl.textContent = title || '⚠️ Terdeteksi Akun Ganda';
+    if (msgEl) msgEl.textContent = message || 'Sistem melarang kepemilikan akun ganda.';
+    this.openModal('securityWarningModal');
+  },
+
+  // Daily Check-in / Absensi Harian 7 Hari (Point 6)
+  openDailyCheckInModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
+      this.openModal('authModal');
+      return;
+    }
+    this.renderDailyCheckInUI();
+    this.openModal('dailyCheckInModal');
+  },
+
+  async claimDailyCheckIn() {
+    if (this._isClaimingCheckIn) return;
+    const user = Auth.getUser();
+    if (!user) return;
+
+    this._isClaimingCheckIn = true;
+    const btnEl = document.getElementById('btnClaimDailyCheckIn');
+    if (btnEl) btnEl.disabled = true;
+
+    try {
+      const res = await DB.claimDailyCheckIn(user.id);
+      if (res.success) {
+        this.playCelebratoryFanfare();
+        this.showToast(res.message, 'success');
+        this.renderDailyCheckInUI();
+        this.renderAll();
+      } else {
+        this.showToast(res.message, 'info');
+      }
+    } finally {
+      this._isClaimingCheckIn = false;
+      this.renderDailyCheckInUI();
+    }
+  },
+
+  renderDailyCheckInUI() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const status = DB.getDailyCheckInStatus(user.id);
+    if (!status) return;
+
+    const amtEl = document.getElementById('checkInBonusAmountText');
+    if (amtEl) amtEl.textContent = `Rp ${status.rewardAmount.toLocaleString('id-ID')}`;
+
+    const gridEl = document.getElementById('checkInStreakGrid');
+    if (gridEl) {
+      let html = '';
+      const currentStreak = status.currentStreak;
+      const checkedToday = status.hasCheckedInToday;
+
+      for (let day = 1; day <= 7; day++) {
+        let isDone = false;
+        let isToday = false;
+
+        if (checkedToday) {
+          isDone = day <= currentStreak;
+        } else {
+          isDone = day < (currentStreak + 1);
+          isToday = (day === (currentStreak % 7) + 1);
+        }
+
+        let cls = 'checkin-day-pill';
+        if (isDone) cls += ' completed';
+        if (isToday) cls += ' today-active';
+
+        html += `
+          <div class="${cls}">
+            <span class="checkin-day-num">H-${day}</span>
+            <span class="checkin-day-coin">${isDone ? '✓' : (day === 7 ? '🎁' : '🪙')}</span>
+            <span class="checkin-day-val">+1k</span>
+          </div>
+        `;
+      }
+      gridEl.innerHTML = html;
+    }
+
+    const btnEl = document.getElementById('btnClaimDailyCheckIn');
+    const noticeEl = document.getElementById('checkInStatusNotice');
+    if (btnEl) {
+      if (status.hasCheckedInToday) {
+        btnEl.setAttribute('disabled', 'true');
+        btnEl.style.opacity = '0.6';
+        btnEl.innerHTML = '<span>✓ Sudah Absen Hari Ini (+Rp ' + status.rewardAmount.toLocaleString('id-ID') + ')</span>';
+        if (noticeEl) noticeEl.textContent = `Hebat! Anda sedang di rangkaian hari ke-${status.currentStreak}/7. Silakan kembali besok untuk bonus berikutnya!`;
+      } else {
+        btnEl.removeAttribute('disabled');
+        btnEl.style.opacity = '1';
+        btnEl.innerHTML = '<span>📅 Klaim Absen Hari Ini (+Rp ' + status.rewardAmount.toLocaleString('id-ID') + ')</span>';
+        if (noticeEl) noticeEl.textContent = `Klaim bonus absen login harian Anda sekarang (+Rp ${status.rewardAmount.toLocaleString('id-ID')} masuk Saldo Utama).`;
+      }
+    }
+
+    // Also update Dashboard banner button
+    const dashLabel = document.getElementById('dashboardCheckInStreakLabel');
+    if (dashLabel) {
+      if (status.hasCheckedInToday) {
+        dashLabel.textContent = `Sudah Absen (Hari ke-${status.currentStreak}/7) ✓`;
+        dashLabel.style.color = '#059669';
+      } else {
+        dashLabel.textContent = `Klaim Bonus Login (Hari ke-${(status.currentStreak % 7) + 1}) ›`;
+        dashLabel.style.color = '#B45309';
+      }
+    }
+  },
+
+  checkAutoOpenDailyCheckIn() {
+    const user = Auth.getUser();
+    if (!user) return;
+    const status = DB.getDailyCheckInStatus(user.id);
+    if (status && status.enabled && !status.hasCheckedInToday) {
+      setTimeout(() => {
+        this.openDailyCheckInModal();
+      }, 700);
+    }
+  },
+
+  // ========================================================================
+  // REALTIME USER ACTIVITY NOTIFICATION ENGINE
+  // ========================================================================
+  notifFilter: 'all',
+
+  getUserNotifications(user) {
+    const db = DB.get();
+    const notifs = [];
+
+    if (!user) {
+      // Notifikasi hanya muncul untuk user yang sudah terdaftar / login
+      return [];
+    }
+
+    // 1. Transactions of this user (Deposit, WD, Profit, Sponsor, Rabat, Capital Return)
+    const userTxs = (db.transactions || [])
+      .filter(tx => tx.userId === user.id)
+      .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+
+    userTxs.forEach(tx => {
+      const time = tx.createdAt || tx.date || new Date().toISOString();
+      const amountStr = DB.formatIDR(tx.amount || 0);
+
+      if (tx.type === 'deposit') {
+        if (tx.status === 'approved') {
+          notifs.push({
+            id: 'tx-dep-' + tx.id,
+            type: 'finance',
+            category: 'Deposit',
+            title: `Deposit Berhasil: +${amountStr}`,
+            message: `Saldo utama Anda telah aktif bertambah ${amountStr} melalui ${tx.gateway || 'Bank/QRIS'}.`,
+            time,
+            icon: 'deposit_success',
+            action: () => this.openRiwayatModal('deposit')
+          });
+        } else if (tx.status === 'pending') {
+          notifs.push({
+            id: 'tx-dep-' + tx.id,
+            type: 'finance',
+            category: 'Deposit',
+            title: `Deposit Menunggu Verifikasi: ${amountStr}`,
+            message: `Pengajuan deposit ${amountStr} sedang diproses verifikasi oleh admin/sistem.`,
+            time,
+            icon: 'deposit_pending',
+            action: () => this.openRiwayatModal('deposit')
+          });
+        } else if (tx.status === 'rejected') {
+          notifs.push({
+            id: 'tx-dep-' + tx.id,
+            type: 'finance',
+            category: 'Deposit',
+            title: `Deposit Ditolak / Dibatalkan: ${amountStr}`,
+            message: `Pengajuan deposit ${amountStr} ditolak: ${tx.rejectReason || 'Bukti transfer tidak sesuai'}.`,
+            time,
+            icon: 'deposit_rejected',
+            action: () => this.openRiwayatModal('deposit')
+          });
+        }
+      } else if (tx.type === 'withdraw') {
+        if (tx.status === 'approved') {
+          notifs.push({
+            id: 'tx-wd-' + tx.id,
+            type: 'finance',
+            category: 'Penarikan',
+            title: `Penarikan Berhasil Ditransfer: ${amountStr}`,
+            message: `Dana ${amountStr} telah berhasil ditransfer ke rekening bank ${tx.bankName || ''} (${tx.accountNumber || ''}).`,
+            time,
+            icon: 'withdraw_success',
+            action: () => this.openRiwayatModal('withdraw')
+          });
+        } else if (tx.status === 'pending') {
+          notifs.push({
+            id: 'tx-wd-' + tx.id,
+            type: 'finance',
+            category: 'Penarikan',
+            title: `Pengajuan Penarikan Dana: ${amountStr}`,
+            message: `Permintaan penarikan ${amountStr} sedang dalam antrean verifikasi bagian keuangan.`,
+            time,
+            icon: 'withdraw_pending',
+            action: () => this.openRiwayatModal('withdraw')
+          });
+        } else if (tx.status === 'rejected') {
+          notifs.push({
+            id: 'tx-wd-' + tx.id,
+            type: 'finance',
+            category: 'Penarikan',
+            title: `Penarikan Ditolak: ${amountStr}`,
+            message: `Pengajuan penarikan ${amountStr} ditolak: ${tx.rejectReason || 'Data rekening tidak sesuai'}. Saldo telah dikembalikan.`,
+            time,
+            icon: 'withdraw_rejected',
+            action: () => this.openRiwayatModal('withdraw')
+          });
+        }
+      } else if (tx.type === 'profit') {
+        notifs.push({
+          id: 'tx-prof-' + tx.id,
+          type: 'finance',
+          category: 'Profit Harian',
+          title: `Dividen Profit Masuk: +${amountStr}`,
+          message: `Bagi hasil harian otomatis +${amountStr} dari paket ${tx.planName || 'Investasi'} telah masuk ke saldo akun.`,
+          time,
+          icon: 'profit',
+          action: () => this.switchTab('home')
+        });
+      } else if (tx.type === 'sponsor' || tx.type === 'affiliate') {
+        notifs.push({
+          id: 'tx-spons-' + tx.id,
+          type: 'finance',
+          category: 'Bonus Sponsor',
+          title: `Bonus Sponsor Afiliasi: +${amountStr}`,
+          message: `Selamat! Anda menerima komisi sponsor 10% sebesar +${amountStr} dari deposit downline.`,
+          time,
+          icon: 'sponsor',
+          action: () => this.switchTab('profile')
+        });
+      } else if (tx.type === 'rabat') {
+        notifs.push({
+          id: 'tx-rabat-' + tx.id,
+          type: 'finance',
+          category: 'Rabat ROI',
+          title: `Bonus Rabat ROI Masuk: +${amountStr}`,
+          message: `Komisi rabat bagi hasil matching ROI level ${tx.level || 'tim'} sebesar +${amountStr} telah masuk ke wallet.`,
+          time,
+          icon: 'rabat',
+          action: () => this.switchTab('profile')
+        });
+      } else if (tx.type === 'capital_return') {
+        notifs.push({
+          id: 'tx-cap-' + tx.id,
+          type: 'finance',
+          category: 'Modal Pokok',
+          title: `Pengembalian Modal Kontrak: +${amountStr}`,
+          message: `Masa kontrak investasi selesai. Modal pokok ${amountStr} telah kembali 100% ke saldo utama.`,
+          time,
+          icon: 'capital_return',
+          action: () => this.switchTab('home')
+        });
+      } else if (tx.type === 'checkin' || (tx.description && tx.description.toLowerCase().includes('check-in'))) {
+        notifs.push({
+          id: 'tx-chk-' + tx.id,
+          type: 'finance',
+          category: 'Check-In',
+          title: `Hadiah Check-In Harian: +${amountStr}`,
+          message: `Reward streak check-in harian sebesar +${amountStr} telah berhasil diklaim ke saldo.`,
+          time,
+          icon: 'checkin',
+          action: () => this.switchTab('home')
+        });
+      }
+    });
+
+    // 2. Active investments
+    const activeInvs = Plans.getUserInvestments(user.id);
+    activeInvs.forEach(inv => {
+      notifs.push({
+        id: 'inv-act-' + inv.id,
+        type: 'finance',
+        category: 'Investasi',
+        title: `Paket Investasi Aktif: ${inv.planName}`,
+        message: `Paket modal ${DB.formatIDR(inv.amount)} aktif berjalan (${inv.daysPassed || 0}/${inv.durationDays} hari) dengan dividen harian otomatis.`,
+        time: inv.startDate || new Date().toISOString(),
+        icon: 'investment',
+        action: () => this.switchTab('home')
+      });
+    });
+
+    // 3. User Welcome notification
+    notifs.push({
+      id: 'usr-wel-' + user.id,
+      type: 'system',
+      category: 'Akun Member',
+      title: `Selamat Datang, ${escapeHtml(user.fullName || user.username)}!`,
+      message: `Akun Anda resmi aktif di AUTOTRADING dengan kode referral ${user.referralCode || '-'}. Mulai trading & nikmati bagi hasil harian otomatis.`,
+      time: user.registeredAt || '2026-01-01T00:00:00.000Z',
+      icon: 'welcome',
+      action: () => this.switchTab('profile')
+    });
+
+    // 4. Announcements
+    (db.announcements || []).filter(a => a.active).forEach(a => {
+      notifs.push({
+        id: 'ann-' + a.id,
+        type: 'system',
+        category: 'Pengumuman',
+        title: 'Pengumuman Resmi Platform',
+        message: a.text,
+        time: a.createdAt || '2026-01-01T00:00:00.000Z',
+        icon: 'announcement',
+        action: () => this.openModal('announcementModal')
+      });
+    });
+
+    // 5. Signals
+    (db.signals || []).filter(s => s.status === 'active').slice(0, 3).forEach(s => {
+      notifs.push({
+        id: 'sig-' + s.id,
+        type: 'system',
+        category: 'Sinyal AI',
+        title: `Sinyal ${s.action} ${s.pair} (Akurasi ${s.confidence}%)`,
+        message: `Entry: ${s.entry} · TP: ${s.tp} · SL: ${s.sl}. Rekomendasi Prof GPT AI.`,
+        time: new Date().toISOString(),
+        icon: 'signal',
+        action: () => this.switchTab('trade')
+      });
+    });
+
+    // Sort newest first
+    notifs.sort((a, b) => new Date(b.time) - new Date(a.time));
+    return notifs;
+  },
+
+  getReadNotifIds(userId) {
+    try {
+      const raw = localStorage.getItem('autotrading_read_notifs_' + (userId || 'guest'));
+      return raw ? JSON.parse(raw) : [];
+    } catch(e) {
+      return [];
+    }
+  },
+
+  markAllNotificationsRead() {
+    const user = Auth.getUser();
+    const notifs = this.getUserNotifications(user);
+    const allIds = notifs.map(n => n.id);
+    try {
+      localStorage.setItem('autotrading_read_notifs_' + (user ? user.id : 'guest'), JSON.stringify(allIds));
+    } catch(e) {}
+    this.updateHeaderNotifBadge(user);
+    this.renderNotificationsUI();
+    this.showToast('Semua notifikasi telah ditandai sudah dibaca.', 'success');
+  },
+
+  markSingleNotificationRead(id) {
+    const user = Auth.getUser();
+    const readIds = this.getReadNotifIds(user ? user.id : null);
+    if (!readIds.includes(id)) {
+      readIds.push(id);
+      try {
+        localStorage.setItem('autotrading_read_notifs_' + (user ? user.id : 'guest'), JSON.stringify(readIds));
+      } catch(e) {}
+      this.updateHeaderNotifBadge(user);
+      this.renderNotificationsUI();
+    }
+  },
+
+  updateHeaderNotifBadge(user) {
+    const badgeEl = document.getElementById('headerNotifBadge');
+    if (!badgeEl) return;
+
+    if (!user) {
+      badgeEl.style.display = 'none';
+      badgeEl.classList.remove('pulse-anim');
+      badgeEl.textContent = '0';
+      return;
+    }
+
+    const notifs = this.getUserNotifications(user);
+    const readIds = this.getReadNotifIds(user.id);
+    const unreadCount = notifs.filter(n => !readIds.includes(n.id)).length;
+
+    if (unreadCount > 0) {
+      badgeEl.style.display = 'flex';
+      badgeEl.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      badgeEl.classList.add('pulse-anim');
+    } else {
+      badgeEl.style.display = 'none';
+      badgeEl.classList.remove('pulse-anim');
+      badgeEl.textContent = '0';
+    }
+  },
+
+  renderNotificationsUI() {
+    const listEl = document.getElementById('notifListContainer');
+    if (!listEl) return;
+
+    const user = Auth.getUser();
+    const allNotifs = this.getUserNotifications(user);
+    const readIds = this.getReadNotifIds(user ? user.id : null);
+
+    // Update filter badge counts
+    const badgeAll = document.getElementById('notifBadgeAll');
+    const badgeFinance = document.getElementById('notifBadgeFinance');
+    const badgeSystem = document.getElementById('notifBadgeSystem');
+
+    const financeCount = allNotifs.filter(n => n.type === 'finance').length;
+    const systemCount = allNotifs.filter(n => n.type === 'system').length;
+
+    if (badgeAll) badgeAll.textContent = allNotifs.length;
+    if (badgeFinance) badgeFinance.textContent = financeCount;
+    if (badgeSystem) badgeSystem.textContent = systemCount;
+
+    // Filter list
+    let filtered = allNotifs;
+    if (this.notifFilter === 'finance') {
+      filtered = allNotifs.filter(n => n.type === 'finance');
+    } else if (this.notifFilter === 'system') {
+      filtered = allNotifs.filter(n => n.type === 'system');
+    }
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `
+        <div class="notif-empty-state">
+          <div class="notif-empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </div>
+          <div style="font-weight: 700; font-size: 13.5px; color: inherit; margin-bottom: 4px;">Belum Ada Pemberitahuan</div>
+          <div style="font-size: 11.5px; line-height: 1.5; color: #94A3B8; max-width: 260px; margin: 0 auto;">
+            ${user ? 'Semua aktivitas transaksi, dividen profit harian, dan bonus afiliasi Anda akan muncul di sini secara realtime.' : 'Silakan masuk atau daftar akun untuk melihat seluruh aktivitas keuangan & riwayat profit Anda.'}
+          </div>
+          ${!user ? `
+            <button class="btn-cta-gold" style="width: auto; padding: 8px 20px; margin: 14px auto 0 auto; font-size: 12px;" onclick="App.closeModal('notifModal'); App.openAuthModalWithTab('login');">
+              Masuk ke Akun
+            </button>
+          ` : ''}
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(n => {
+      const isUnread = !readIds.includes(n.id);
+      const relTime = this.formatRelativeTime(n.time);
+
+      let iconColor = 'gold';
+      let iconSvg = '';
+
+      if (n.icon === 'deposit_success' || n.icon === 'withdraw_success' || n.icon === 'profit' || n.icon === 'capital_return') {
+        iconColor = 'green';
+        iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+      } else if (n.icon === 'deposit_pending' || n.icon === 'withdraw_pending') {
+        iconColor = 'gold';
+        iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+      } else if (n.icon === 'deposit_rejected' || n.icon === 'withdraw_rejected') {
+        iconColor = 'red';
+        iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+      } else if (n.icon === 'sponsor' || n.icon === 'rabat') {
+        iconColor = 'purple';
+        iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+      } else if (n.icon === 'signal' || n.icon === 'investment') {
+        iconColor = 'blue';
+        iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+      } else {
+        iconColor = 'gold';
+        iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
+      }
+
+      return `
+        <div class="notif-item ${isUnread ? 'unread' : ''}" onclick="App.onNotifItemClick('${n.id}')">
+          <div class="notif-icon-box ${iconColor}">
+            ${iconSvg}
+          </div>
+          <div class="notif-content">
+            <div class="notif-meta-row">
+              <span class="notif-category-tag ${n.type}">${n.category || 'Info'}</span>
+              <span class="notif-time-text">${relTime}</span>
+            </div>
+            <div class="notif-title-text">${n.title}</div>
+            <div class="notif-desc-text">${n.message}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  setNotifFilter(filter) {
+    this.notifFilter = filter;
+    document.querySelectorAll('.notif-tab').forEach(t => {
+      t.classList.toggle('active', t.getAttribute('data-filter') === filter);
+    });
+    this.renderNotificationsUI();
+  },
+
+  onNotifItemClick(notifId) {
+    const user = Auth.getUser();
+    this.markSingleNotificationRead(notifId);
+    const notifs = this.getUserNotifications(user);
+    const found = notifs.find(n => n.id === notifId);
+    if (found && typeof found.action === 'function') {
+      this.closeModal('notifModal');
+      try {
+        found.action();
+      } catch(e) {
+        console.error('Error executing notif action:', e);
+      }
+    }
+  },
+
+  formatRelativeTime(dateStr) {
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'Baru saja';
+      const now = new Date();
+      const diffSec = Math.floor((now - date) / 1000);
+      if (diffSec < 60) return 'Baru saja';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin} mnt lalu`;
+      const diffHour = Math.floor(diffMin / 60);
+      if (diffHour < 24) return `${diffHour} jam lalu`;
+      const diffDay = Math.floor(diffHour / 24);
+      if (diffDay === 1) return 'Kemarin';
+      if (diffDay < 7) return `${diffDay} hari lalu`;
+      return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    } catch(e) {
+      return 'Baru saja';
+    }
+  },
+
   // Auth Submit Handlers
-  submitLogin() {
+  async submitLogin() {
     const idInput = document.getElementById('loginIdentifier');
     const pwInput = document.getElementById('loginPassword');
     const id = idInput ? idInput.value.trim() : '';
     const pw = pwInput ? pwInput.value.trim() : '';
 
-    const res = Auth.login(id, pw);
+    const res = await Auth.login(id, pw);
     if (res.success) {
       this.closeAllModals();
       if (res.user && res.user.role === 'admin') {
@@ -3189,6 +4188,7 @@ const App = {
       } else {
         this.showToast(res.message, 'success');
         this.renderAll();
+        this.checkAutoOpenDailyCheckIn();
       }
     } else {
       if (res.requiresVerification && res.user) {
@@ -3204,7 +4204,7 @@ const App = {
     }
   },
 
-  submitRegister() {
+  async submitRegister() {
     const riskCheckbox = document.getElementById('regRiskAgreement');
     if (!riskCheckbox || !riskCheckbox.checked) {
       this.showToast('Silakan centang persetujuan resiko investasi sebelum mendaftar!', 'error');
@@ -3220,7 +4220,20 @@ const App = {
     const confirmPassword = document.getElementById('regConfirmPassword') ? document.getElementById('regConfirmPassword').value : '';
     const referralCode = document.getElementById('regReferral') ? document.getElementById('regReferral').value.trim() : '';
 
-    const res = Auth.register({ username, fullName, email, phone, password, confirmPassword, referralCode });
+    const regBtn = document.getElementById('btnSubmitRegister');
+    if (regBtn) {
+      regBtn.disabled = true;
+      regBtn.innerHTML = '<span>⏳ Memproses Pendaftaran ke Database...</span>';
+    }
+    let res;
+    try {
+      res = await Auth.register({ username, fullName, email, phone, password, confirmPassword, referralCode });
+    } finally {
+      if (regBtn) {
+        regBtn.disabled = false;
+        regBtn.innerHTML = '<span>Daftar Sekarang</span>';
+      }
+    }
     if (res.success) {
       if (riskCheckbox) riskCheckbox.checked = false;
       // Clear inputs
@@ -3237,8 +4250,12 @@ const App = {
         this.closeAllModals();
         this.showToast(res.message, 'success');
         this.renderAll();
+        this.checkAutoOpenDailyCheckIn();
       }
     } else {
+      if (res.isDuplicateAccount) {
+        this.openSecurityWarningModal('Peringatan Akun Ganda Ditolak', res.message);
+      }
       this.showToast(res.message, 'error');
     }
   },
@@ -3283,7 +4300,7 @@ const App = {
     }, 1000);
   },
 
-  submitEmailVerificationOtp() {
+  async submitEmailVerificationOtp() {
     const userId = document.getElementById('emailOtpUserId') ? document.getElementById('emailOtpUserId').value : '';
     const code = document.getElementById('emailOtpInput') ? document.getElementById('emailOtpInput').value.trim() : '';
 
@@ -3294,7 +4311,7 @@ const App = {
       return;
     }
 
-    const res = Auth.verifyRegistrationOtp(userId, code);
+    const res = await Auth.verifyRegistrationOtp(userId, code);
     if (res.success) {
       if (this._otpTimer) clearInterval(this._otpTimer);
       this.closeModal('emailOtpModal');
@@ -3305,11 +4322,11 @@ const App = {
     }
   },
 
-  resendEmailOtp() {
+  async resendEmailOtp() {
     const userId = document.getElementById('emailOtpUserId') ? document.getElementById('emailOtpUserId').value : '';
     if (!userId) return;
 
-    const res = Auth.resendRegistrationOtp(userId);
+    const res = await Auth.resendRegistrationOtp(userId);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.startOtpResendTimer(60);
@@ -3335,16 +4352,8 @@ const App = {
     }
   },
 
-  quickLogin(role = 'user') {
-    const res = Auth.quickLogin(role);
-    this.closeAllModals();
-    if (role === 'admin') {
-      this.showToast('Login Admin berhasil! Mengalihkan ke Panel Admin...', 'success');
-      setTimeout(() => { window.location.href = 'admin'; }, 600);
-    } else {
-      this.showToast('Login sebagai Investor (Alex) berhasil!', 'success');
-      this.renderAll();
-    }
+  quickLogin() {
+    this.showToast('Fitur login demo telah dinonaktifkan.', 'info');
   },
 
   // Forgot Password Controller (Requirement 1)
@@ -3370,7 +4379,7 @@ const App = {
     if (step2) step2.style.display = 'none';
   },
 
-  submitForgotPassword() {
+  async submitForgotPassword() {
     const emailInput = document.getElementById('forgotEmail');
     const identifier = emailInput ? emailInput.value.trim() : '';
 
@@ -3380,14 +4389,15 @@ const App = {
       return;
     }
 
-    const res = Auth.requestPasswordReset(identifier);
+    const res = await Auth.requestPasswordReset(identifier);
     if (res.success) {
       this.showToast(res.message, 'success');
       const targetEl = document.getElementById('forgotSentEmailTarget');
       if (targetEl) targetEl.textContent = res.email;
 
+      // The reset code is emailed by the server and deliberately NOT shown here
       const codeInput = document.getElementById('forgotResetCode');
-      if (codeInput) codeInput.value = res.code; // Pre-fill for ease of use
+      if (codeInput) codeInput.value = '';
 
       const step1 = document.getElementById('forgotStepRequest');
       const step2 = document.getElementById('forgotStepVerify');
@@ -3398,7 +4408,7 @@ const App = {
     }
   },
 
-  submitResetPasswordWithCode() {
+  async submitResetPasswordWithCode() {
     const emailInput = document.getElementById('forgotEmail');
     const codeInput = document.getElementById('forgotResetCode');
     const newPassInput = document.getElementById('forgotNewPass');
@@ -3426,7 +4436,7 @@ const App = {
       return;
     }
 
-    const res = Auth.resetPasswordWithCode(identifier, code, newPass);
+    const res = await Auth.resetPasswordWithCode(identifier, code, newPass);
     if (res.success) {
       this.closeModal('forgotPasswordModal');
       this.showToast(res.message, 'success');
@@ -3603,14 +4613,20 @@ const App = {
     if (badgeEl && textEl) {
       if (sched.isOpen) {
         badgeEl.className = 'wd-status-badge open';
-        textEl.textContent = `🟢 Jam Operasional WD Buka (${String(sched.schedule.startHour).padStart(2, '0')}:00 - ${String(sched.schedule.endHour).padStart(2, '0')}:00 WIB)`;
+        textEl.textContent = `🟢 Jam Operasional WD Buka (${String(sched.schedule ? sched.schedule.startHour : 9).padStart(2, '0')}:00 - ${String(sched.schedule ? sched.schedule.endHour : 21).padStart(2, '0')}:00 WIB)`;
         if (submitBtn) {
           submitBtn.removeAttribute('disabled');
           submitBtn.style.opacity = '1';
+          submitBtn.innerHTML = '<span>Tarik Saldo Sekarang</span>';
         }
       } else {
         badgeEl.className = 'wd-status-badge closed';
         textEl.textContent = `🔴 ${sched.message}`;
+        if (submitBtn) {
+          submitBtn.setAttribute('disabled', 'true');
+          submitBtn.style.opacity = '0.55';
+          submitBtn.innerHTML = '<span>🔒 Layanan WD Sedang Dikunci (OFF)</span>';
+        }
       }
     }
 
@@ -3634,8 +4650,9 @@ const App = {
       }).join('');
     }
 
-    // Update balance preview
+    // Update balance preview & breakdown
     this.updateWithdrawBalancePreview();
+    this.updateWithdrawBreakdownCalc();
 
     this.openModal('withdrawModal');
   },
@@ -3654,8 +4671,30 @@ const App = {
     if (affBalEl) affBalEl.textContent = DB.formatIDR(breakdown.affiliateBalance);
   },
 
+  // Calculate realtime net withdrawal breakdown (Gross - 10% Fee = Net)
+  updateWithdrawBreakdownCalc() {
+    const amountInput = document.getElementById('wdAmountInput');
+    const grossEl = document.getElementById('wdCalcGross');
+    const feeEl = document.getElementById('wdCalcFee');
+    const netEl = document.getElementById('wdCalcNet');
+    if (!grossEl || !feeEl || !netEl) return;
+
+    const db = DB.get();
+    const feePercent = (db.settings && typeof db.settings.withdrawFeePercent === 'number') 
+      ? db.settings.withdrawFeePercent 
+      : 10.0;
+    
+    const gross = amountInput ? (parseFloat(amountInput.value) || 0) : 0;
+    const fee = Math.round((gross * feePercent) / 100);
+    const net = Math.max(0, gross - fee);
+
+    grossEl.textContent = DB.formatIDR(gross);
+    feeEl.textContent = `-${DB.formatIDR(fee)}`;
+    netEl.textContent = DB.formatIDR(net);
+  },
+
   // Deposit Proof of Transfer Upload Handlers
-  handleDepositProofSelect(event) {
+  async handleDepositProofSelect(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
 
@@ -3669,19 +4708,46 @@ const App = {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this.uploadedDepositProofBase64 = e.target.result;
-      const previewImg = document.getElementById('depProofPreviewImg');
-      const previewWrap = document.getElementById('depProofPreviewWrap');
-      const placeholder = document.getElementById('depProofPlaceholder');
+    const previewImg = document.getElementById('depProofPreviewImg');
+    const previewWrap = document.getElementById('depProofPreviewWrap');
+    const placeholder = document.getElementById('depProofPlaceholder');
 
-      if (previewImg) previewImg.src = e.target.result;
+    this.showToast('Memproses bukti transfer...', 'info');
+
+    try {
+      // 1. First attempt direct upload to server uploads/ directory
+      const uploadRes = await DB.uploadImage(file);
+      if (uploadRes && uploadRes.success && uploadRes.url) {
+        this.uploadedDepositProofBase64 = uploadRes.url;
+        if (previewImg) previewImg.src = uploadRes.url;
+        if (previewWrap) previewWrap.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        this.showToast('✓ Bukti transfer tersimpan di server!', 'success');
+        return;
+      }
+    } catch (err) {
+      console.warn('Direct upload failed, falling back to local compressed image:', err);
+    }
+
+    // 2. Safe local compression fallback (max 800px, 0.7 quality) to avoid localStorage quota exhaustion
+    try {
+      const compressed = await DB.compressImageFile(file, 800, 0.7);
+      this.uploadedDepositProofBase64 = compressed;
+      if (previewImg) previewImg.src = compressed;
       if (previewWrap) previewWrap.style.display = 'block';
       if (placeholder) placeholder.style.display = 'none';
-      this.showToast('Foto bukti transfer berhasil dimuat.', 'success');
-    };
-    reader.readAsDataURL(file);
+      this.showToast('Foto bukti transfer dimuat (mode kompresi).', 'success');
+    } catch (compErr) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.uploadedDepositProofBase64 = e.target.result;
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewWrap) previewWrap.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        this.showToast('Foto bukti transfer berhasil dimuat.', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
   },
 
   removeDepositProof() {
@@ -3697,7 +4763,7 @@ const App = {
     if (placeholder) placeholder.style.display = 'flex';
   },
 
-  submitDeposit() {
+  async submitDeposit() {
     const user = Auth.getUser();
     if (!user) return;
 
@@ -3713,15 +4779,28 @@ const App = {
       return;
     }
 
-    const res = Payment.createDepositRequest({
-      userId: user.id,
-      method,
-      bankId,
-      amount,
-      amountUsdt: usdtAmt,
-      txid,
-      proofImage
-    });
+    const depSubmitBtn = document.getElementById('btnSubmitDeposit');
+    if (depSubmitBtn) {
+      depSubmitBtn.disabled = true;
+      depSubmitBtn.innerHTML = '<span>⏳ Menyimpan Bukti & Mengirim ke Server...</span>';
+    }
+    let res;
+    try {
+      res = await Payment.createDepositRequest({
+        userId: user.id,
+        method,
+        bankId,
+        amount,
+        amountUsdt: usdtAmt,
+        txid,
+        proofImage
+      });
+    } finally {
+      if (depSubmitBtn) {
+        depSubmitBtn.disabled = false;
+        depSubmitBtn.innerHTML = '<span>🚀 Konfirmasi & Kirim Bukti Transfer</span>';
+      }
+    }
 
     if (res.success) {
       this.removeDepositProof();
@@ -3746,13 +4825,14 @@ const App = {
     const imgEl = document.getElementById('viewProofModalImg');
 
     if (titleEl) titleEl.textContent = `📄 Bukti Transfer (${DB.formatIDR(trx.amount)})`;
-    if (subtitleEl) subtitleEl.textContent = `${trx.paymentMethod || 'Deposit'} · ID: ${trx.id}`;
+    const cleanMethod = cleanParentheses(trx.paymentMethod || 'Deposit');
+    if (subtitleEl) subtitleEl.textContent = `${cleanMethod} · ID: ${trx.id}`;
     if (imgEl) imgEl.src = trx.proofImage;
 
     this.openModal('viewProofModal');
   },
 
-  submitWithdraw() {
+  async submitWithdraw() {
     const user = Auth.getUser();
     if (!user) return;
 
@@ -3769,42 +4849,297 @@ const App = {
     const accountHolder = document.getElementById('wdAccountHolder').value;
     const amount = document.getElementById('wdAmountInput').value;
 
-    const res = Payment.createWithdrawRequest({
-      userId: user.id,
-      walletType,
-      method,
-      bankName,
-      accountNumber,
-      accountHolder,
-      amount
-    });
+    const wdSubmitBtn = document.getElementById('btnSubmitWithdraw');
+    if (wdSubmitBtn) {
+      wdSubmitBtn.disabled = true;
+      wdSubmitBtn.innerHTML = '<span>⏳ Memproses Pengajuan Penarikan...</span>';
+    }
+    let res;
+    try {
+      res = await Payment.createWithdrawRequest({
+        userId: user.id,
+        walletType,
+        method,
+        bankName,
+        accountNumber,
+        accountHolder,
+        amount
+      });
+    } finally {
+      if (wdSubmitBtn) {
+        wdSubmitBtn.disabled = false;
+        wdSubmitBtn.innerHTML = '<span>⚡ Ajukan Penarikan Dana</span>';
+      }
+    }
 
     if (res.success) {
       this.closeModal('withdrawModal');
       this.showToast(res.message, 'success');
       this.renderAll();
     } else {
+      if (res.isDuplicateBank) {
+        this.openSecurityWarningModal('Peringatan Rekening Ganda Ditolak', res.message);
+      }
       this.showToast(res.message, 'error');
     }
   },
 
   transferAffiliateBalance() {
+    this.openTransferModal('affiliate');
+  },
+
+  transferMemberBalance() {
+    this.openTransferModal('member');
+  },
+
+  openTransferModal(initialType = 'affiliate') {
+    const user = Auth.getUser();
+    if (!user) {
+      this.showToast('Silahkan login terlebih dahulu.', 'info');
+      this.openModal('authModal');
+      return;
+    }
+
+    this.currentTransferType = initialType;
+    this.setTransferType(initialType, false);
+    this.openModal('transferModal');
+  },
+
+  setTransferType(type, triggerPreview = true) {
+    this.currentTransferType = type || 'affiliate';
     const user = Auth.getUser();
     if (!user) return;
 
-    const amount = prompt(`Masukkan nominal yang ingin ditransfer ke Wallet Balance (Maksimal: ${DB.formatIDR(user.affiliateBalance)}):`, user.affiliateBalance);
-    if (!amount) return;
+    const btnAff = document.getElementById('btnTransferTypeAffiliate');
+    const btnMem = document.getElementById('btnTransferTypeMember');
+    const mainTitle = document.getElementById('transferModalMainTitle');
+    const subTitle = document.getElementById('transferModalSubTitle');
+    const srcTitle = document.getElementById('transferSourceTitleText');
+    const srcBalEl = document.getElementById('transferSourceBalText');
+    const srcTag = document.getElementById('transferSourceTagText');
+    const destTitle = document.getElementById('transferDestTitleText');
+    const destBalEl = document.getElementById('transferDestBalText');
+    const destTag = document.getElementById('transferDestTagText');
+    const targetGroup = document.getElementById('transferTargetUserGroup');
+    const recipientBadge = document.getElementById('transferRecipientBadge');
+    const infoBanner = document.getElementById('transferInfoBannerText');
+    const lblLeft = document.getElementById('transferPreviewLabelLeft');
+    const lblRight = document.getElementById('transferPreviewLabelRight');
+    const maxNotice = document.getElementById('transferMaxNotice');
+    const inputEl = document.getElementById('transferAmountInput');
 
-    const res = Affiliate.transferToMainBalance(user.id, amount);
-    if (res.success) {
-      this.showToast(res.message, 'success');
-      this.renderAll();
+    const affBal = user.affiliateBalance || 0;
+    const walletBal = user.walletBalance || 0;
+
+    if (btnAff) btnAff.classList.toggle('active', this.currentTransferType === 'affiliate');
+    if (btnMem) btnMem.classList.toggle('active', this.currentTransferType === 'member');
+
+    if (this.currentTransferType === 'member') {
+      if (mainTitle) mainTitle.textContent = 'Transfer Antar Member (P2P)';
+      if (subTitle) subTitle.textContent = 'Kirim saldo utama langsung ke akun member rekan Anda';
+      if (srcTitle) srcTitle.textContent = 'Wallet Utama (Saldo Bebas)';
+      if (srcBalEl) srcBalEl.textContent = DB.formatIDR(walletBal);
+      if (srcTag) srcTag.textContent = 'Saldo Utama';
+      if (destTitle) destTitle.textContent = 'Akun Member Tujuan';
+      if (destBalEl) destBalEl.textContent = 'Transfer Instan';
+      if (destTag) destTag.textContent = 'Penerima P2P';
+      if (targetGroup) targetGroup.style.display = 'block';
+      if (infoBanner) infoBanner.textContent = 'Transfer sesama member diproses realtime & bebas potongan biaya admin.';
+      if (lblLeft) lblLeft.textContent = 'Sisa Saldo Utama:';
+      if (lblRight) lblRight.textContent = 'Estimasi Diterima:';
+      if (maxNotice) maxNotice.textContent = `Maksimal: ${DB.formatIDR(walletBal)}`;
+      if (inputEl) {
+        inputEl.max = walletBal;
+        inputEl.value = walletBal > 0 ? (walletBal <= 100000 ? walletBal : 50000) : 0;
+      }
+      this.onTransferTargetInput();
     } else {
-      this.showToast(res.message, 'error');
+      if (mainTitle) mainTitle.textContent = 'Transfer Saldo Komisi';
+      if (subTitle) subTitle.textContent = 'Pindahkan bonus afiliasi ke saldo utama siap pakai / WD';
+      if (srcTitle) srcTitle.textContent = 'Wallet Tambah Teman';
+      if (srcBalEl) srcBalEl.textContent = DB.formatIDR(affBal);
+      if (srcTag) srcTag.textContent = 'Komisi Afiliasi';
+      if (destTitle) destTitle.textContent = 'Wallet Utama (Saldo Bebas)';
+      if (destBalEl) destBalEl.textContent = DB.formatIDR(walletBal);
+      if (destTag) destTag.textContent = 'Siap Tarik (WD) / Investasi';
+      if (targetGroup) targetGroup.style.display = 'none';
+      if (recipientBadge) recipientBadge.style.display = 'none';
+      if (infoBanner) infoBanner.textContent = 'Saldo yang dipindahkan ke Wallet Utama akan langsung bertambah secara realtime dan siap ditarik (WD) ke rekening bank atau digunakan untuk membeli paket investasi.';
+      if (lblLeft) lblLeft.textContent = 'Sisa Saldo Komisi:';
+      if (lblRight) lblRight.textContent = 'Estimasi Saldo Baru:';
+      if (maxNotice) maxNotice.textContent = `Maksimal: ${DB.formatIDR(affBal)}`;
+      if (inputEl) {
+        inputEl.max = affBal;
+        inputEl.value = affBal > 0 ? (affBal <= 100000 ? affBal : 50000) : 0;
+      }
+    }
+
+    if (triggerPreview) {
+      this.updateTransferPreview();
     }
   },
 
+  onTransferTargetInput() {
+    if (this.currentTransferType !== 'member') return;
+    const user = Auth.getUser();
+    const inputEl = document.getElementById('transferTargetUserInput');
+    const badgeEl = document.getElementById('transferRecipientBadge');
+    const badgeText = document.getElementById('transferRecipientBadgeText');
+    if (!badgeEl || !badgeText) return;
+
+    const val = (inputEl ? inputEl.value : '').trim();
+    if (!val) {
+      badgeEl.style.display = 'none';
+      return;
+    }
+
+    badgeEl.style.display = 'flex';
+    const found = typeof Affiliate !== 'undefined' && Affiliate.lookupMember ? Affiliate.lookupMember(val, user ? user.id : null) : null;
+    if (!found) {
+      badgeEl.className = 'transfer-recipient-badge error';
+      badgeText.textContent = `❌ Member "${val}" tidak ditemukan. Pastikan username/kode sponsor benar.`;
+      return;
+    }
+    if (found.isSelf) {
+      badgeEl.className = 'transfer-recipient-badge error';
+      badgeText.textContent = '⚠️ Tidak dapat mentransfer ke akun Anda sendiri.';
+      return;
+    }
+
+    badgeEl.className = 'transfer-recipient-badge success';
+    badgeText.textContent = `✅ Member Ditemukan: ${found.fullName} (@${found.username})`;
+    const destBalEl = document.getElementById('transferDestBalText');
+    if (destBalEl) destBalEl.textContent = `@${found.username}`;
+  },
+
+  setTransferPercentage(pct) {
+    const user = Auth.getUser();
+    if (!user) return;
+    const isMember = this.currentTransferType === 'member';
+    const baseBal = isMember ? (user.walletBalance || 0) : (user.affiliateBalance || 0);
+    const inputEl = document.getElementById('transferAmountInput');
+    if (!inputEl) return;
+
+    const calcAmount = Math.floor((baseBal * pct) / 100);
+    inputEl.value = calcAmount;
+
+    // Highlight active chip
+    document.querySelectorAll('.transfer-chip-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent.includes(pct + '%'));
+    });
+
+    this.updateTransferPreview();
+  },
+
+  updateTransferPreview() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const isMember = this.currentTransferType === 'member';
+    const affBal = user.affiliateBalance || 0;
+    const walletBal = user.walletBalance || 0;
+    const maxBal = isMember ? walletBal : affBal;
+
+    const inputEl = document.getElementById('transferAmountInput');
+    const amount = Math.max(0, parseInt(inputEl ? inputEl.value : 0) || 0);
+
+    const remAffEl = document.getElementById('transferRemAffBal');
+    const newMainEl = document.getElementById('transferNewMainBal');
+    const btnConfirm = document.getElementById('btnConfirmTransfer');
+
+    if (isMember) {
+      const remMainBal = Math.max(0, walletBal - amount);
+      if (remAffEl) remAffEl.textContent = DB.formatIDR(remMainBal);
+      if (newMainEl) newMainEl.textContent = DB.formatIDR(amount);
+    } else {
+      const remAffBal = Math.max(0, affBal - amount);
+      const newMainBal = walletBal + amount;
+      if (remAffEl) remAffEl.textContent = DB.formatIDR(remAffBal);
+      if (newMainEl) newMainEl.textContent = DB.formatIDR(newMainBal);
+    }
+
+    if (btnConfirm) {
+      if (amount < 10000 || amount > maxBal) {
+        btnConfirm.disabled = true;
+        btnConfirm.style.opacity = '0.6';
+      } else {
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+      }
+    }
+  },
+
+  submitTransferModal() {
+    const user = Auth.getUser();
+    if (!user) return;
+
+    const isMember = this.currentTransferType === 'member';
+    const maxBal = isMember ? (user.walletBalance || 0) : (user.affiliateBalance || 0);
+    const inputEl = document.getElementById('transferAmountInput');
+    const amount = parseInt(inputEl ? inputEl.value : 0) || 0;
+
+    if (amount < 10000) {
+      this.showToast('Minimal nominal transfer adalah Rp 10.000!', 'error');
+      if (inputEl) inputEl.focus();
+      return;
+    }
+
+    if (amount > maxBal) {
+      this.showToast(isMember ? 'Saldo Wallet Utama tidak mencukupi!' : 'Saldo komisi tidak mencukupi!', 'error');
+      return;
+    }
+
+    let targetUser = '';
+    if (isMember) {
+      const targetInput = document.getElementById('transferTargetUserInput');
+      targetUser = (targetInput ? targetInput.value : '').trim();
+      if (!targetUser) {
+        this.showToast('Masukkan username atau kode referral member tujuan!', 'error');
+        if (targetInput) targetInput.focus();
+        return;
+      }
+      const found = typeof Affiliate !== 'undefined' && Affiliate.lookupMember ? Affiliate.lookupMember(targetUser, user.id) : null;
+      if (!found || found.isSelf) {
+        this.showToast(found && found.isSelf ? 'Tidak dapat mentransfer ke akun sendiri!' : 'Member tujuan tidak ditemukan!', 'error');
+        return;
+      }
+    }
+
+    const btnConfirm = document.getElementById('btnConfirmTransfer');
+    if (btnConfirm) {
+      btnConfirm.disabled = true;
+      btnConfirm.innerHTML = '<span>⏳ Memproses Transfer...</span>';
+    }
+
+    setTimeout(async () => {
+      let res;
+      if (isMember) {
+        res = await Affiliate.transferToMember(user.id, targetUser, amount);
+      } else {
+        res = await Affiliate.transferToMainBalance(user.id, amount);
+      }
+
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.innerHTML = '<span>⚡ Konfirmasi Transfer Sekarang</span>';
+      }
+
+      if (res.success) {
+        this.closeModal('transferModal');
+        this.showToast(res.message, 'success');
+        this.renderAll();
+      } else {
+        this.showToast(res.message || 'Gagal memproses transfer.', 'error');
+      }
+    }, 400);
+  },
+
   openSignalDetail(signalId) {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Detail sinyal trading khusus untuk member terdaftar. Silakan login atau daftar akun terlebih dahulu!', 'info');
+      this.openAuthModalWithTab('login');
+      return;
+    }
     const signals = Signals.getSignals();
     const sig = signals.find(s => s.id === signalId);
     if (!sig) return;
@@ -3883,6 +5218,15 @@ const App = {
       });
     });
 
+    // Hash change listener (browser back/forward or manual hash change)
+    window.addEventListener('hashchange', () => {
+      const h = (window.location.hash || '').replace('#', '').trim();
+      const validTabs = ['home', 'markets', 'trade', 'wallet', 'profile'];
+      if (h && validTabs.includes(h) && h !== this.currentTab) {
+        this.switchTab(h);
+      }
+    });
+
     // Auth Switcher between Login & Register tabs
     const authTabLogin = document.getElementById('authTabLogin');
     const authTabRegister = document.getElementById('authTabRegister');
@@ -3891,21 +5235,37 @@ const App = {
 
     if (authTabLogin && authTabRegister) {
       authTabLogin.addEventListener('click', () => {
-        authTabLogin.classList.add('btn-cta-gold');
-        authTabRegister.classList.remove('btn-cta-gold');
-        authTabRegister.style.background = '#F1F5F9';
-        authTabRegister.style.color = '#475569';
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
+        authTabLogin.classList.add('active');
+        authTabLogin.style.background = '#FFFFFF';
+        authTabLogin.style.color = '#0F172A';
+        authTabLogin.style.fontWeight = '700';
+        authTabLogin.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+
+        authTabRegister.classList.remove('active');
+        authTabRegister.style.background = 'transparent';
+        authTabRegister.style.color = '#64748B';
+        authTabRegister.style.fontWeight = '600';
+        authTabRegister.style.boxShadow = 'none';
+
+        if (loginForm) loginForm.style.display = 'block';
+        if (registerForm) registerForm.style.display = 'none';
       });
 
       authTabRegister.addEventListener('click', () => {
-        authTabRegister.classList.add('btn-cta-gold');
-        authTabLogin.classList.remove('btn-cta-gold');
-        authTabLogin.style.background = '#F1F5F9';
-        authTabLogin.style.color = '#475569';
-        registerForm.style.display = 'block';
-        loginForm.style.display = 'none';
+        authTabRegister.classList.add('active');
+        authTabRegister.style.background = '#FFFFFF';
+        authTabRegister.style.color = '#0F172A';
+        authTabRegister.style.fontWeight = '700';
+        authTabRegister.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+
+        authTabLogin.classList.remove('active');
+        authTabLogin.style.background = 'transparent';
+        authTabLogin.style.color = '#64748B';
+        authTabLogin.style.fontWeight = '600';
+        authTabLogin.style.boxShadow = 'none';
+
+        if (registerForm) registerForm.style.display = 'block';
+        if (loginForm) loginForm.style.display = 'none';
       });
     }
 
@@ -3973,6 +5333,14 @@ const App = {
         reader.readAsDataURL(file);
       });
     }
+
+    // Withdrawal amount input realtime net breakdown calculator
+    const wdAmountInput = document.getElementById('wdAmountInput');
+    if (wdAmountInput) {
+      wdAmountInput.addEventListener('input', () => {
+        this.updateWithdrawBreakdownCalc();
+      });
+    }
   },
 
   // Profit percentage info toast/modal helper
@@ -3995,15 +5363,20 @@ const App = {
 
     const user = Auth.getCurrentUser();
     if (!user) {
-      this.showToast('Silakan login untuk melihat persentase profit harian paket investasi Anda.', 'info');
+      this.showToast('Fitur profit harian berjalan khusus member. Silakan login atau daftar akun!', 'info');
+      this.openAuthModalWithTab('login');
       return;
     }
-    const rate = Plans.getUserTodayProfitRate(user.id);
     const userInvs = Plans.getUserInvestments(user.id);
-    if (userInvs.length === 0) {
-      this.showToast('Anda belum memiliki paket investasi aktif. Aktifkan paket di bawah untuk menghasilkan profit harian!', 'info');
+    const activeInvs = (userInvs || []).filter(i => i.status === 'active');
+    if (activeInvs.length === 0) {
+      this.showToast('Tampilan profit berjalan kosong karena belum ada paket investasi yang aktif. Silakan pilih paket di bawah!', 'info');
+      const car = document.getElementById('tierCarouselContainer');
+      if (car) car.scrollIntoView({ behavior: 'smooth' });
     } else {
-      this.showToast(`Persentase profit harian rata-rata berjalan Anda saat ini: +${rate.toFixed(2)}% dari ${userInvs.length} paket aktif.`, 'success');
+      const rate = Plans.getUserTodayProfitRate(user.id);
+      const formattedRate = rate !== null ? `+${rate.toFixed(2)}%` : '+0.00%';
+      this.showToast(`Profit harian berjalan Anda: ${formattedRate} (sesuai ${activeInvs.length} paket aktif).`, 'success');
     }
   },
 
@@ -4032,8 +5405,12 @@ window.Affiliate = Affiliate;
 window.Payment = Payment;
 window.Rewards = Rewards;
 
-// Launch App on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
+// Launch App on DOM ready or immediately if already loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+  });
+} else {
   App.init();
-});
+}
 

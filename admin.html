@@ -65,10 +65,6 @@
           <span>Masuk ke Master Admin</span>
         </button>
 
-        <button type="button" onclick="AdminPage.quickLoginAdmin()" class="btn-demo-pill admin-pill" style="width: 100%; padding: 9px; font-size: 12px; border-radius: 8px; justify-content: center; margin-bottom: 12px; border: 1px dashed #C89338; background: rgba(200, 147, 56, 0.08); color: #E5A83B;">
-          <span>⚡ Demo 1-Klik Login Admin</span>
-        </button>
-
         <div style="text-align: center; margin-top: 10px;">
           <a href="./" style="font-size: 12px; color: #94A3B8; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
             <span>← Kembali ke Website Investor</span>
@@ -177,6 +173,11 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           <span>Kelola Pengguna</span>
         </button>
+        <button class="admin-nav-btn" data-tab="backup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Backup & Cadangan Data</span>
+          <span class="admin-nav-badge" style="background: #0EA5E9;">Cloud</span>
+        </button>
       </nav>
 
       <div class="sidebar-group-title">SISTEM & PENGATURAN</div>
@@ -196,6 +197,11 @@
           <span>Konfigurasi Email & OTP</span>
           <span class="admin-nav-badge" id="badgeEmailStatus" style="background: #10B981;">cPanel</span>
         </button>
+        <button class="admin-nav-btn" data-tab="admin_account">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/><path d="M7 18.5c.8-2 2.8-3.5 5-3.5s4.2 1.5 5 3.5"/></svg>
+          <span>Ganti Username & Password</span>
+          <span class="admin-nav-badge" style="background: #E11D48;">Akun</span>
+        </button>
       </nav>
     </div>
 
@@ -207,7 +213,7 @@
       </a>
       <button class="sidebar-action-btn reset-btn" onclick="AdminPage.resetDemoDatabase()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
-        <span>Reset Database Demo</span>
+        <span>Reset & Bersihkan Cache</span>
       </button>
       <button class="sidebar-action-btn logout-btn" onclick="AdminPage.logout()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
@@ -221,49 +227,76 @@
     <div class="admin-topbar-left">
       <!-- Hamburger Button -->
       <button class="admin-hamburger-btn" id="sidebarToggleBtn" aria-label="Buka Menu Admin" title="Buka Menu Navigasi">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
           <line x1="3" y1="6" x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
           <line x1="3" y1="18" x2="21" y2="18"/>
         </svg>
       </button>
 
-      <!-- Logo & Tulisan Admin with Section Breadcrumb -->
+      <!-- Logo & Tulisan Admin -->
       <div class="admin-topbar-brand">
         <div class="admin-brand-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
-        <div class="admin-topbar-title">AUTOTRADING ADMIN</div>
-        <span style="color: #475569; margin: 0 4px 0 8px; font-size: 13px;">/</span>
-        <span id="currentSectionTitle" style="font-size: 13px; color: #94A3B8; font-weight: 600;">Dashboard Overview</span>
+        <div class="admin-topbar-title-wrap">
+          <span class="admin-topbar-title">AUTOTRADING</span>
+          <span class="admin-title-badge">ADMIN</span>
+        </div>
       </div>
     </div>
 
     <!-- Topbar Actions & User Profile -->
-    <div class="admin-topbar-right" style="display: flex; align-items: center; gap: 10px;">
-      <!-- Active Admin User Badge -->
-      <div id="topbarAdminInfo" style="display: flex; align-items: center; gap: 7px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); padding: 5px 10px; border-radius: 20px; font-size: 11.5px; color: #94A3B8;">
-        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
-        <span id="topbarAdminName" style="color: #F8FAFC; font-weight: 600;">System Administrator</span>
+    <div class="admin-topbar-right">
+      <!-- Quick Master Toggle WD -->
+      <button id="topbarWdQuickBtn" class="topbar-wd-btn" onclick="AdminPage.toggleWithdrawMasterSwitch()" title="Master Switch Penarikan (WD)">
+        <span class="topbar-wd-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+        <span class="topbar-wd-text">WD: BUKA (ON)</span>
+      </button>
+
+      <!-- Active Admin User Badge (desktop only) -->
+      <div id="topbarAdminInfo" class="topbar-admin-badge">
+        <span class="live-dot" style="width: 6px; height: 6px;"></span>
+        <span id="topbarAdminName" class="topbar-admin-name">Administrator</span>
       </div>
 
       <!-- Quick Link to Investor Portal -->
-      <a href="./" class="sidebar-action-btn portal-link" style="padding: 6px 12px; font-size: 11.5px; border-radius: 8px; margin: 0; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: rgba(200, 147, 56, 0.1); border: 1px solid rgba(200, 147, 56, 0.25); color: #E5A83B;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        <span>Portal User</span>
+      <a href="./" class="topbar-portal-btn" title="Lihat Tampilan Portal Investor">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <span class="portal-btn-text">Portal User</span>
       </a>
 
       <!-- Icon Logout Button -->
       <button class="admin-logout-btn" onclick="AdminPage.logout()" title="Logout Admin">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
           <polyline points="16 17 21 12 16 7"></polyline>
           <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
-        <span>Logout</span>
+        <span class="logout-btn-text">Logout</span>
       </button>
     </div>
   </header>
+
+  <!-- Dedicated Sleek Breadcrumb Bar -->
+  <nav class="admin-breadcrumb-bar" aria-label="Breadcrumb Navigasi">
+    <div class="admin-breadcrumb-inner">
+      <div class="admin-breadcrumb-path">
+        <span class="breadcrumb-item breadcrumb-home" onclick="AdminPage.switchTab('dashboard')" title="Kembali ke Dashboard Overview">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span class="breadcrumb-home-text">Master Panel</span>
+        </span>
+        <span class="breadcrumb-separator">/</span>
+        <span class="breadcrumb-item active" id="currentSectionTitle">Dashboard Overview</span>
+      </div>
+      <div class="admin-breadcrumb-status">
+        <span class="breadcrumb-engine-badge">
+          <span class="live-dot" style="width: 6px; height: 6px;"></span>
+          <span class="engine-text">Realtime Engine</span>
+        </span>
+      </div>
+    </div>
+  </nav>
 
   <div class="admin-standalone-container">
 
@@ -716,7 +749,17 @@
             <div class="setting-desc">Potongan biaya admin otomatis saat pengguna melakukan penarikan dana</div>
           </div>
           <div class="setting-input-wrap">
-            <input type="number" class="admin-input" id="gwCfgWdFee" value="1.0" step="0.1">
+            <input type="number" class="admin-input" id="gwCfgWdFee" value="10.0" step="0.1">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Reward Poin per Deposit Sukses</div>
+            <div class="setting-desc">Jumlah poin loyalitas yang otomatis ditambahkan ke akun member saat deposit disetujui admin (default: 5 poin)</div>
+          </div>
+          <div class="setting-input-wrap">
+            <input type="number" class="admin-input" id="gwCfgDepositPoints" value="5" min="0" step="1">
           </div>
         </div>
 
@@ -854,6 +897,45 @@
           </button>
         </div>
       </div>
+
+      <!-- Card Pengaturan Absensi Harian 7 Hari (Point 6) -->
+      <div class="admin-card" style="margin-top: 24px;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🎁 Pengaturan Absensi Harian 7 Hari (Bonus Login)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Atur bonus harian saat member login yang langsung masuk ke Saldo Utama.</p>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Absensi Harian</div>
+            <div class="setting-desc">Aktifkan atau nonaktifkan fitur absensi harian bagi seluruh member</div>
+          </div>
+          <div class="setting-input-wrap">
+            <select class="admin-input" id="checkInCfgEnabled">
+              <option value="true">🟢 AKTIF (Member Bisa Klaim Bonus)</option>
+              <option value="false">🔴 NONAKTIF (Fitur Dimatikan)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Nominal Bonus Absen Per Hari (Rp)</div>
+            <div class="setting-desc">Jumlah saldo yang diberikan per hari absen (default: Rp 1.000, dapat diedit bebas)</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 340px;">
+            <input type="number" class="admin-input" id="checkInCfgReward" min="100" step="100" value="1000">
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.saveDailyCheckInSettings()">
+            <span>💾 Simpan Pengaturan Absensi Harian</span>
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- ====================================================================
@@ -894,6 +976,186 @@
             </thead>
             <tbody id="usersTableBody"></tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         7.5 PANEL BACKUP & EXPORT DATA
+         ==================================================================== -->
+    <section id="pane-backup" class="admin-view-panel">
+      <!-- Database Health & Overview Card -->
+      <div class="admin-card" style="margin-bottom: 20px;">
+        <div class="admin-card-header">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(14, 165, 233, 0.15); color: #0EA5E9; display: flex; align-items: center; justify-content: center;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <div>
+              <h3 class="admin-card-title" style="margin: 0;">Sistem Backup & Cadangan Data Realtime</h3>
+              <p style="font-size: 12px; color: #94A3B8; margin: 2px 0 0 0;">Unduh cadangan data pengguna, transaksi, dan snapshot sistem MySQL secara teratur untuk keamanan platform.</p>
+            </div>
+          </div>
+          <button class="admin-btn-action-primary" onclick="AdminPage.refreshBackupStats()" style="background: #1E293B; border: 1px solid #334155; color: #F8FAFC;">
+            <span>🔄 Perbarui Info Database</span>
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 10px;">
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+            <div style="font-size: 11.5px; color: #94A3B8; font-weight: 600;">Status Sinkronisasi MySQL</div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 6px #22C55E;"></span>
+              <strong style="color: #22C55E; font-size: 14px;">Terkoneksi & Aktif</strong>
+            </div>
+            <div style="font-size: 10.5px; color: #64748B; margin-top: 4px;">Host: autotrading.my.id</div>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+            <div style="font-size: 11.5px; color: #94A3B8; font-weight: 600;">Total Member Terdaftar</div>
+            <div style="font-size: 20px; font-weight: 800; color: #F8FAFC; margin-top: 4px;" id="backupStatUsers">0 Akun</div>
+            <div style="font-size: 10.5px; color: #94A3B8; margin-top: 2px;">Tersimpan di tabel `users`</div>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+            <div style="font-size: 11.5px; color: #94A3B8; font-weight: 600;">Total Riwayat Transaksi</div>
+            <div style="font-size: 20px; font-weight: 800; color: #F59E0B; margin-top: 4px;" id="backupStatTransactions">0 Trx</div>
+            <div style="font-size: 10.5px; color: #94A3B8; margin-top: 2px;">Deposit, Penarikan & Bonus</div>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+            <div style="font-size: 11.5px; color: #94A3B8; font-weight: 600;">Waktu Snapshot Terakhir</div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #38BDF8; margin-top: 8px;" id="backupStatLastDate">-</div>
+            <div style="font-size: 10.5px; color: #94A3B8; margin-top: 2px;">Waktu server cPanel</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Export Action Grid Card -->
+      <div class="admin-card" style="margin-bottom: 20px;">
+        <h3 class="admin-card-title" style="margin-bottom: 14px;">Pilihan Download & Ekspor Cadangan</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <!-- 1. Full JSON Snapshot -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <div style="padding: 6px; border-radius: 6px; background: rgba(59, 130, 246, 0.15); color: #3B82F6;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </div>
+                <div>
+                  <strong style="color: #F8FAFC; font-size: 14px;">Backup Lengkap JSON (.json)</strong>
+                  <div style="font-size: 11px; color: #94A3B8;">Format snapshot terlengkap</div>
+                </div>
+              </div>
+              <p style="font-size: 12px; color: #94A3B8; line-height: 1.45; margin-bottom: 14px;">
+                Mencadangkan seluruh data platform: semua pengguna, riwayat transaksi lengkap, paket investasi aktif, saldo dompet, data affiliasi, serta konfigurasi pengaturan website.
+              </p>
+            </div>
+            <button class="admin-btn-action-primary" onclick="AdminPage.downloadFullBackupJson()" style="width: 100%; justify-content: center; background: #2563EB;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download Full Backup JSON</span>
+            </button>
+          </div>
+
+          <!-- 2. MySQL SQL Dump -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <div style="padding: 6px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #10B981;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                </div>
+                <div>
+                  <strong style="color: #F8FAFC; font-size: 14px;">Cadangan Database SQL (.sql)</strong>
+                  <div style="font-size: 11px; color: #94A3B8;">Siap impor ke phpMyAdmin cPanel</div>
+                </div>
+              </div>
+              <p style="font-size: 12px; color: #94A3B8; line-height: 1.45; margin-bottom: 14px;">
+                Menghasilkan query SQL standar (`INSERT INTO users`, `transactions`, `investments`) yang dapat langsung diimport ke phpMyAdmin MySQL jika Anda berpindah hosting server.
+              </p>
+            </div>
+            <button class="admin-btn-action-primary" onclick="AdminPage.downloadSqlDump()" style="width: 100%; justify-content: center; background: #059669;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download SQL Dump Database</span>
+            </button>
+          </div>
+
+          <!-- 3. Export Users CSV -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <div style="padding: 6px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div>
+                  <strong style="color: #F8FAFC; font-size: 14px;">Ekspor Data Anggota (.csv)</strong>
+                  <div style="font-size: 11px; color: #94A3B8;">Format Spreadsheet / Excel</div>
+                </div>
+              </div>
+              <p style="font-size: 12px; color: #94A3B8; line-height: 1.45; margin-bottom: 14px;">
+                Mengekspor daftar seluruh akun anggota, username, nama lengkap, kontak WhatsApp, email, status blokir, saldo akun, serta sponsor ke format file CSV spreadsheet.
+              </p>
+            </div>
+            <button class="admin-btn-action-primary" onclick="AdminPage.downloadUsersCsv()" style="width: 100%; justify-content: center; background: #D97706;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download CSV Data Users</span>
+            </button>
+          </div>
+
+          <!-- 4. Export Transactions CSV -->
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <div style="padding: 6px; border-radius: 6px; background: rgba(168, 85, 247, 0.15); color: #A855F7;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                </div>
+                <div>
+                  <strong style="color: #F8FAFC; font-size: 14px;">Ekspor Transaksi Finansial (.csv)</strong>
+                  <div style="font-size: 11px; color: #94A3B8;">Laporan Keuangan & Audit</div>
+                </div>
+              </div>
+              <p style="font-size: 12px; color: #94A3B8; line-height: 1.45; margin-bottom: 14px;">
+                Mengekspor seluruh riwayat transaksi deposit, penarikan dana, pembagian profit, bonus sponsor & rabat ROI beserta status approval untuk pembukuan akuntansi platform.
+              </p>
+            </div>
+            <button class="admin-btn-action-primary" onclick="AdminPage.downloadTransactionsCsv()" style="width: 100%; justify-content: center; background: #7C3AED;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download CSV Transaksi</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Restore / Import Backup Card -->
+      <div class="admin-card" style="border-color: rgba(229, 168, 59, 0.35);">
+        <div class="admin-card-header">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(229, 168, 59, 0.15); color: #E5A83B; display: flex; align-items: center; justify-content: center;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div>
+              <h3 class="admin-card-title" style="margin: 0; color: #E5A83B;">Pemulihan Data (Restore Snapshot Cadangan)</h3>
+              <p style="font-size: 12px; color: #94A3B8; margin: 2px 0 0 0;">Pulihkan seluruh data anggota dan transaksi dari file cadangan resmi (.json).</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;">
+          <div style="color: #F87171; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            <span>⚠️ PERHATIAN KEAMANAN</span>
+          </div>
+          <p style="font-size: 12px; color: #CBD5E1; margin: 4px 0 0 0; line-height: 1.45;">
+            Proses pemulihan (*restore*) akan menggabungkan dan memperbarui data akun anggota, saldo, dan riwayat transaksi dengan isi file cadangan. Pastikan file yang diunggah adalah file backup resmi yang valid.
+          </p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <input type="file" id="inputRestoreBackupFile" accept=".json" style="display: none;" onchange="AdminPage.handleRestoreFileSelected(event)">
+          <button class="admin-btn-action-primary" onclick="document.getElementById('inputRestoreBackupFile').click()" style="background: #E5A83B; color: #0B0F19; font-weight: 800;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Pilih File Backup (.json) &amp; Pulihkan</span>
+          </button>
+          <span id="restoreFileNameNotice" style="font-size: 12px; color: #94A3B8;">Belum ada file yang dipilih.</span>
         </div>
       </div>
     </section>
@@ -1890,18 +2152,149 @@
 
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-title" style="color:#EF4444;">💣 Reset Database Demo</div>
-              <div class="setting-desc">Hapus semua data transaksi, user (kecuali admin), investasi, dan kembalikan ke data demo awal.</div>
+              <div class="setting-title" style="color:#EF4444;">💣 Bersihkan Database & Cache Sistem</div>
+              <div class="setting-desc">Hapus seluruh riwayat transaksi, investasi, dan kembalikan ke kondisi sistem bersih siap operasi.</div>
             </div>
             <div class="setting-input-wrap">
               <button class="admin-btn-action-secondary" style="border-color:#EF4444;color:#EF4444;" onclick="AdminPage.resetDemoDatabase()">
-                <span>⚡ Reset Database Demo</span>
+                <span>⚡ Bersihkan Database Sistem</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
+    </section>
+
+    <!-- ====================================================================
+         PANEL KEAMANAN AKUN ADMIN (Ganti Username & Password Admin)
+         ==================================================================== -->
+    <section id="pane-admin_account" class="admin-view-panel">
+      <!-- Card 1: Ganti Username & Data Profil Admin -->
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">👤 Informasi Profil & Username Administrator</h3>
+            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">
+              Perbarui username login dan informasi kontak utama akun Administrator sistem.
+            </p>
+          </div>
+          <span class="badge-status active">SUPER ADMIN</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Username Login Admin Saat Ini</div>
+            <div class="setting-desc">Username yang saat ini aktif digunakan untuk masuk ke Admin Control Panel.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <input type="text" class="admin-input" id="adminAccCurrUsername" readonly style="opacity: 0.7; cursor: not-allowed; font-weight: 700;">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Username Login Admin Baru</div>
+            <div class="setting-desc">Gunakan kombinasi huruf, angka, atau underscore tanpa spasi (contoh: <code>admin_utama</code>).</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <input type="text" class="admin-input" id="adminAccNewUsername" placeholder="Masukkan username baru">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Nama Lengkap Administrator</div>
+            <div class="setting-desc">Nama yang ditampilkan pada topbar dan kop laporan administrasi.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <input type="text" class="admin-input" id="adminAccFullName" placeholder="System Administrator">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Alamat Email Resmi Admin</div>
+            <div class="setting-desc">Email konfirmasi sistem untuk notifikasi keamanan akun administrator.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <input type="email" class="admin-input" id="adminAccEmail" placeholder="admin@autotrading.my.id">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Nomor WhatsApp / HP Admin</div>
+            <div class="setting-desc">Nomor kontak darurat internal untuk verifikasi keamanan sistem.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <input type="text" class="admin-input" id="adminAccPhone" placeholder="081299990000">
+          </div>
+        </div>
+
+        <div style="margin-top: 18px;">
+          <button type="button" class="admin-btn-action-primary" onclick="AdminPage.saveAdminProfileSettings()">
+            <span>💾 Simpan Username & Profil Admin</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 2: Ganti Password / Kata Sandi Admin -->
+      <div class="admin-card" style="margin-top: 24px; border-left: 4px solid #E11D48;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🔐 Ganti Kata Sandi (Password) Admin Area</h3>
+            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">
+              Perbarui kata sandi login Admin Control Panel untuk menjamin keamanan operasional platform.
+            </p>
+          </div>
+          <span class="badge-status pending" style="background: rgba(225, 29, 72, 0.15); color: #FB7185; border: 1px solid rgba(225, 29, 72, 0.4);">SECURITY</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Kata Sandi Lama</div>
+            <div class="setting-desc">Masukkan password admin yang saat ini aktif digunakan untuk verifikasi identitas Anda.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px; position: relative;">
+            <input type="password" class="admin-input" id="adminAccOldPassword" placeholder="Masukkan password lama" style="padding-right: 38px;">
+            <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8;" onclick="AdminPage.toggleInputPasswordVisibility('adminAccOldPassword')">👁️</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Kata Sandi Baru</div>
+            <div class="setting-desc">Gunakan minimal 4-6 karakter kombinasi huruf dan angka yang sulit ditebak.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px; position: relative;">
+            <input type="password" class="admin-input" id="adminAccNewPassword" placeholder="Masukkan password baru" style="padding-right: 38px;">
+            <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8;" onclick="AdminPage.toggleInputPasswordVisibility('adminAccNewPassword')">👁️</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Konfirmasi Kata Sandi Baru</div>
+            <div class="setting-desc">Ulangi pengetikan password baru untuk memastikan tidak ada kesalahan ketik.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px; position: relative;">
+            <input type="password" class="admin-input" id="adminAccConfirmPassword" placeholder="Ulangi password baru" style="padding-right: 38px;">
+            <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8;" onclick="AdminPage.toggleInputPasswordVisibility('adminAccConfirmPassword')">👁️</button>
+          </div>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 14px; margin: 18px 0; font-size: 11.5px; color: #CBD5E1; line-height: 1.5;">
+          <strong style="color: #FBBF24; display: block; margin-bottom: 4px;">⚠️ Perhatian Keamanan:</strong>
+          Setelah berhasil disimpan, password baru akan langsung berlaku untuk login admin berikutnya di perangkat ini serta disinkronkan secara realtime ke database cPanel MySQL.
+        </div>
+
+        <div>
+          <button type="button" class="admin-btn-action-primary" style="background: linear-gradient(135deg, #E11D48, #BE123C);" onclick="AdminPage.saveAdminPasswordSettings()">
+            <span>🔑 Simpan & Perbarui Kata Sandi Admin</span>
+          </button>
+        </div>
+      </div>
     </section>
 
   </div>

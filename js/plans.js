@@ -92,6 +92,36 @@ export const Plans = {
     };
   },
 
+  // Rate range of an investment.
+  // Legacy state stores minRate/maxRate, while rows rebuilt from the MySQL table
+  // only carry minDailyProfit/maxDailyProfit. Without this fallback the contract
+  // screen printed "undefined% - undefined%" and profit yields produced
+  // rate=null history rows (which then duplicated endlessly).
+  getRateRange(inv) {
+    let min = parseFloat(inv.minRate ?? inv.minDailyProfit ?? inv.dailyPercentage ?? inv.dailyProfit);
+    let max = parseFloat(inv.maxRate ?? inv.maxDailyProfit ?? inv.dailyPercentage ?? inv.dailyProfit);
+    if (!isFinite(min) || !isFinite(max)) {
+      const db = DB.get();
+      const plan = (db.plans || []).find(p => p.id === inv.planId || p.name === inv.planName);
+      if (plan) {
+        if (!isFinite(min)) min = parseFloat(plan.minDailyProfit ?? plan.dailyPercentage ?? plan.dailyProfit);
+        if (!isFinite(max)) max = parseFloat(plan.maxDailyProfit ?? plan.dailyPercentage ?? plan.dailyProfit);
+      }
+    }
+    if (!isFinite(min)) min = 0;
+    if (!isFinite(max)) max = min;
+    if (max < min) max = min;
+    return { min, max };
+  },
+
+  // True when this day already has a pending yield, so we never append a second
+  // identical history row for the same contract day.
+  _hasPendingHistoryForDay(inv, dayNo) {
+    if (!Array.isArray(inv.history) || inv.history.length === 0) return false;
+    const last = inv.history[inv.history.length - 1];
+    return !!(last && last.day === dayNo && last.status === 'pending_claim');
+  },
+
   // Synchronize user investments with real timestamps (handles completed cycles)
   syncUserInvestments(userId) {
     if (!userId) return [];
@@ -132,18 +162,25 @@ export const Plans = {
 
       if (elapsedMs >= cycleDurationMs && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
         // Yield exactly 1 day profit for this completed cycle
-        const rate = this.generateRandomDailyRate(inv.minRate, inv.maxRate);
+        const range = this.getRateRange(inv);
+        const rate = this.generateRandomDailyRate(range.min, range.max);
         const profitAmount = Math.floor((inv.capital * rate) / 100);
 
         inv.pendingProfitClaim = profitAmount;
-        inv.history = inv.history || [];
-        inv.history.push({
-          day: (inv.daysElapsed || 0) + 1,
-          date: new Date().toLocaleDateString('id-ID'),
-          rate: rate,
-          amount: profitAmount,
-          status: 'pending_claim'
-        });
+        // Always advance the yield clock, otherwise every render appends another
+        // identical history row for the same day.
+        inv.lastProfitYieldDate = new Date().toISOString();
+        const dayNo = (inv.daysElapsed || 0) + 1;
+        if (!this._hasPendingHistoryForDay(inv, dayNo)) {
+          inv.history = inv.history || [];
+          inv.history.push({
+            day: dayNo,
+            date: new Date().toLocaleDateString('id-ID'),
+            rate: rate,
+            amount: profitAmount,
+            status: 'pending_claim'
+          });
+        }
         modified = true;
       }
     });
@@ -204,7 +241,8 @@ export const Plans = {
         rate = todayHistory.rate;
       } else {
         // Average active range or base daily rate for this plan
-        rate = (inv.minRate + inv.maxRate) / 2;
+        const range = this.getRateRange(inv);
+        rate = (range.min + range.max) / 2;
       }
       totalWeightedRate += (rate * inv.capital);
     });
@@ -386,7 +424,10 @@ export const Plans = {
         }
       } else {
         // Future weekdays: Plan expected rate
-        const avgUserRate = activeInvs.reduce((acc, inv) => acc + (inv.minRate + inv.maxRate) / 2, 0) / activeInvs.length;
+        const avgUserRate = activeInvs.reduce((acc, inv) => {
+          const range = this.getRateRange(inv);
+          return acc + (range.min + range.max) / 2;
+        }, 0) / activeInvs.length;
         rate = parseFloat(avgUserRate.toFixed(2));
       }
 
@@ -440,7 +481,7 @@ export const Plans = {
   },
 
   // Buy / Activate Plan
-  invest({ userId, planId, amount }) {
+  async invest({ userId, planId, amount }) {
     const db = DB.get();
     const user = db.users.find(u => u.id === userId);
     const plan = this.getPlanById(planId);
@@ -460,6 +501,15 @@ export const Plans = {
     if ((user.walletBalance || 0) < parsedAmount) {
       return { success: false, message: `Saldo Wallet Balance tidak mencukupi! Anda memiliki ${DB.formatIDR(user.walletBalance || 0)}, butuh ${DB.formatIDR(parsedAmount)}` };
     }
+
+    // Anti-duplicate protection: prevent double activation within 5 seconds
+    this._recentInvestments = this._recentInvestments || {};
+    const investKey = `${userId}_${planId}`;
+    const lastInvestTime = this._recentInvestments[investKey] || 0;
+    if (Date.now() - lastInvestTime < 5000) {
+      return { success: false, message: 'Permintaan aktivasi paket sedang diproses, harap tunggu beberapa detik...' };
+    }
+    this._recentInvestments[investKey] = Date.now();
 
     // Deduct user balance
     user.walletBalance -= parsedAmount;
@@ -502,12 +552,12 @@ export const Plans = {
       createdAt: new Date().toISOString()
     });
 
-    DB.save(db);
-
-    // Distribute Sponsor Bonus if user was referred by someone
+    // Distribute Sponsor Bonus if user was referred by someone (Atomic in same DB instance)
     if (user.referredBy) {
-      Affiliate.distributeSponsorBonus(user, parsedAmount);
+      Affiliate.applySponsorBonus(db, user, parsedAmount);
     }
+
+    await DB.save(db);
 
     return {
       success: true,
@@ -525,7 +575,7 @@ export const Plans = {
   },
 
   // Trigger Daily Profit Yield (Manual / Scheduled admin maintenance cycle)
-  yieldDailyProfits(force = false) {
+  async yieldDailyProfits(force = false) {
     const db = DB.get();
     const marketStatus = this.isWeekendMarketClosed();
     const isTodayLossMode = db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
@@ -557,20 +607,24 @@ export const Plans = {
     db.investments.forEach(inv => {
       if (inv.status === 'active') {
         if (inv.daysElapsed < inv.durationDays && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
-          const rate = isTodayLossMode ? 0.0 : this.generateRandomDailyRate(inv.minRate, inv.maxRate);
+          const range = this.getRateRange(inv);
+          const rate = isTodayLossMode ? 0.0 : this.generateRandomDailyRate(range.min, range.max);
           const profitAmount = Math.floor((inv.capital * rate) / 100);
 
           inv.pendingProfitClaim = profitAmount;
           inv.lastProfitYieldDate = new Date().toISOString();
 
-          inv.history = inv.history || [];
-          inv.history.push({
-            day: (inv.daysElapsed || 0) + 1,
-            date: new Date().toLocaleDateString('id-ID'),
-            rate: rate,
-            amount: profitAmount,
-            status: 'pending_claim'
-          });
+          const dayNo = (inv.daysElapsed || 0) + 1;
+          if (!this._hasPendingHistoryForDay(inv, dayNo)) {
+            inv.history = inv.history || [];
+            inv.history.push({
+              day: dayNo,
+              date: new Date().toLocaleDateString('id-ID'),
+              rate: rate,
+              amount: profitAmount,
+              status: 'pending_claim'
+            });
+          }
 
           totalYielded += profitAmount;
           updatedCount++;
@@ -578,12 +632,12 @@ export const Plans = {
       }
     });
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, updatedCount, totalYielded };
   },
 
   // Claim pending daily profit for a specific user
-  claimProfit(userId) {
+  async claimProfit(userId) {
     const db = DB.get();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
@@ -640,12 +694,12 @@ export const Plans = {
       createdAt: new Date().toISOString()
     });
 
-    DB.save(db);
-
-    // Distribute Rabat (ROI match) to uplines based on claimed profit
+    // Distribute Rabat (ROI match) to uplines based on claimed profit (Atomic in same DB instance)
     if (user.referredBy) {
-      Affiliate.distributeRabatBonus(user, totalClaimable);
+      Affiliate.applyRabatBonus(db, user, totalClaimable);
     }
+
+    await DB.save(db);
 
     let msg = `Berhasil klaim profit harian sebesar ${DB.formatIDR(totalClaimable)} ke Saldo Utama!`;
     if (completedPlans.length > 0) {
@@ -677,7 +731,7 @@ export const Plans = {
   },
 
   // Process manual refund of completed investment capital to user's wallet balance
-  processContractRefund(investmentId, userId) {
+  async processContractRefund(investmentId, userId) {
     const db = DB.get();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan!' };
@@ -723,7 +777,7 @@ export const Plans = {
       createdAt: new Date().toISOString()
     });
 
-    DB.save(db);
+    await DB.save(db);
 
     return {
       success: true,
@@ -734,19 +788,19 @@ export const Plans = {
   },
 
   // Process all pending refundable contracts for user
-  processAllContractRefunds(userId) {
+  async processAllContractRefunds(userId) {
     const refundables = this.getRefundableInvestments(userId);
     if (refundables.length === 0) {
       return { success: false, message: 'Tidak ada saldo modal kontrak selesai yang perlu direfund saat ini.' };
     }
 
     let totalRefunded = 0;
-    refundables.forEach(inv => {
-      const res = this.processContractRefund(inv.id, userId);
+    for (const inv of refundables) {
+      const res = await this.processContractRefund(inv.id, userId);
       if (res.success) {
         totalRefunded += res.amount;
       }
-    });
+    }
 
     return {
       success: true,
@@ -755,18 +809,41 @@ export const Plans = {
     };
   },
 
-  // Leaderboard: Top Sponsors (Min 10 Members)
+  // Leaderboard: Top Sponsors (Realtime Database Members Only)
+  // Actual sponsor bonus paid to a member (leaderboard source of truth).
+  // Sum of approved sponsor_bonus transactions; affiliateBalance is only a
+  // fallback for accounts whose balance was later transferred out.
+  // The old formula (balance + 10% team turnover) double-counted bonus that
+  // was never paid and inflated the leaderboard values.
+  getSponsorBonusTotal(user) {
+    if (!user) return 0;
+    const db = DB.get();
+    const fromTx = (db.transactions || [])
+      .filter(t => t.userId === user.id && t.type === 'sponsor_bonus' && (t.status || 'approved') === 'approved')
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    if (fromTx > 0) return fromTx;
+    return Number(user.affiliateBalance) || 0;
+  },
+
   getTopSponsors(limit = 10) {
     const db = DB.get();
-    const users = db.users || [];
+    // Every account with sponsor activity takes part (including Admin VIP) -
+    // filtering out role=admin hid the top sponsor from the leaderboard.
+    const realUsers = (db.users || []).filter(u => u.username);
     
-    // Aggregate data from real users or fallback curated list
-    const sponsorStats = users.map(u => {
+    const sponsorStats = realUsers.map(u => {
       const downlines = Affiliate.getDownlines(u.referralCode || '');
-      const directCount = downlines.level1.length;
-      const totalTeam = downlines.totalMembers;
-      const turnover = downlines.totalTeamTurnover;
-      const commission = (u.affiliateBalance || 0) + Math.floor(turnover * 0.10);
+      const directCount = downlines.level1 ? downlines.level1.length : 0;
+      const totalTeam = downlines.totalMembers || 0;
+      const turnover = downlines.totalTeamTurnover || 0;
+      const commission = this.getSponsorBonusTotal(u);
+      let badge = 'Member Aktif';
+      if (turnover >= 500000000) badge = 'Crown Diamond';
+      else if (turnover >= 100000000) badge = 'Gold Master';
+      else if (turnover >= 25000000) badge = 'Silver Pro';
+      else if (directCount >= 5) badge = 'Super Sponsor';
+      else if (directCount >= 1) badge = 'Rising Star';
+
       return {
         id: u.id,
         username: u.username,
@@ -776,93 +853,43 @@ export const Plans = {
         totalTeam,
         turnover,
         commission,
-        badge: 'VIP Leader'
+        badge
       };
     });
 
-    // Default simulated top leaders if database has few affiliates
-    const fallbackLeaders = [
-      { username: 'Hendra_Sultan', fullName: 'Hendra Wijaya', directCount: 48, sponsorCount: 48, totalTeam: 184, turnover: 850000000, commission: 85000000, badge: 'Crown Diamond' },
-      { username: 'Master_Cuan88', fullName: 'Budi Santoso', directCount: 39, sponsorCount: 39, totalTeam: 142, turnover: 620000000, commission: 62000000, badge: 'Super Leader' },
-      { username: 'Rian_FXTrader', fullName: 'Rian Pratama', directCount: 33, sponsorCount: 33, totalTeam: 118, turnover: 490000000, commission: 49000000, badge: 'Gold Master' },
-      { username: 'Dewi_Investor', fullName: 'Dewi Lestari', directCount: 29, sponsorCount: 29, totalTeam: 96, turnover: 380000000, commission: 38000000, badge: 'Gold Master' },
-      { username: 'Kevin_Surabaya', fullName: 'Kevin Ardiansyah', directCount: 26, sponsorCount: 26, totalTeam: 84, turnover: 310000000, commission: 31000000, badge: 'Silver Pro' },
-      { username: 'Siti_Capital', fullName: 'Siti Nurhaliza', directCount: 22, sponsorCount: 22, totalTeam: 72, turnover: 260000000, commission: 26000000, badge: 'Silver Pro' },
-      { username: 'Agus_TraderPro', fullName: 'Agus Gunawan', directCount: 19, sponsorCount: 19, totalTeam: 61, turnover: 215000000, commission: 21500000, badge: 'Silver Pro' },
-      { username: 'Bambang_Cuan', fullName: 'Bambang Sudibyo', directCount: 17, sponsorCount: 17, totalTeam: 54, turnover: 180000000, commission: 18000000, badge: 'Bronze Star' },
-      { username: 'Maya_Invest88', fullName: 'Maya Kusuma', directCount: 15, sponsorCount: 15, totalTeam: 46, turnover: 145000000, commission: 14500000, badge: 'Bronze Star' },
-      { username: 'Fajar_VipTrader', fullName: 'Fajar Nugraha', directCount: 13, sponsorCount: 13, totalTeam: 39, turnover: 120000000, commission: 12000000, badge: 'Bronze Star' },
-      { username: 'Denny_Crypto', fullName: 'Denny Setiawan', directCount: 11, sponsorCount: 11, totalTeam: 32, turnover: 98000000, commission: 9800000, badge: 'Rising Star' },
-      { username: 'Reza_Bandung', fullName: 'Reza Fauzi', directCount: 9, sponsorCount: 9, totalTeam: 27, turnover: 75000000, commission: 7500000, badge: 'Rising Star' }
-    ];
-
-    // Merge and sort descending
-    const combined = [...sponsorStats, ...fallbackLeaders];
-    combined.sort((a, b) => (b.turnover || b.commission) - (a.turnover || a.commission));
-
-    // Ensure unique by username and slice limit
-    const unique = [];
-    const seen = new Set();
-    for (const item of combined) {
-      if (!seen.has(item.username)) {
-        seen.add(item.username);
-        unique.push(item);
-      }
-      if (unique.length >= limit) break;
-    }
-
-    return unique;
+    // Rank by bonus sponsor actually paid, then by team size
+    sponsorStats.sort((a, b) =>
+      (b.commission - a.commission) ||
+      (b.turnover - a.turnover) ||
+      (b.directCount - a.directCount)
+    );
+    return sponsorStats.slice(0, limit);
   },
 
-  // Leaderboard: Top Profit (Min 10 Members)
+  // Leaderboard: Top Profit (Realtime Database Members Only)
   getTopProfits(limit = 10) {
     const db = DB.get();
-    const users = db.users || [];
+    const realUsers = (db.users || []).filter(u => u.role !== 'admin');
     const investments = db.investments || [];
 
-    const userProfits = users.map(u => {
+    const userProfits = realUsers.map(u => {
       const userInvs = investments.filter(i => i.userId === u.id);
       const totalProfit = userInvs.reduce((sum, i) => sum + (i.totalProfitEarned || 0), 0);
       const totalCap = userInvs.reduce((sum, i) => sum + (i.capital || 0), 0);
+      const activePlans = userInvs.filter(i => i.status === 'active');
       return {
         id: u.id,
         username: u.username,
         fullName: u.fullName || u.username,
         totalProfit,
         totalCapital: totalCap,
-        activePlansCount: userInvs.filter(i => i.status === 'active').length,
+        activePlansCount: activePlans.length,
+        activePlan: activePlans.length > 0 ? activePlans[0].planName : (userInvs.length > 0 ? 'Kontrak Selesai' : 'Belum Ada Paket'),
         winRate: 98.4
       };
     });
 
-    const fallbackProfits = [
-      { username: 'Sultan_Crypto', fullName: 'Alexander Pratama', totalProfit: 142850000, totalCapital: 250000000, winRate: 99.2, activePlan: 'VIP Master Pro' },
-      { username: 'Alex_Investor', fullName: 'Alex Sutanto', totalProfit: 98400000, totalCapital: 150000000, winRate: 98.8, activePlan: 'Elite Capital' },
-      { username: 'Wahyu_CuanMax', fullName: 'Wahyu Hidayat', totalProfit: 76500000, totalCapital: 100000000, winRate: 97.9, activePlan: 'Elite Capital' },
-      { username: 'Citra_Trading', fullName: 'Citra Kirana', totalProfit: 63200000, totalCapital: 80000000, winRate: 98.1, activePlan: 'Pro Trader' },
-      { username: 'Doni_Capital', fullName: 'Doni Firmansyah', totalProfit: 54100000, totalCapital: 60000000, winRate: 97.5, activePlan: 'Pro Trader' },
-      { username: 'Indra_Forex', fullName: 'Indra Gunawan', totalProfit: 46800000, totalCapital: 50000000, winRate: 96.9, activePlan: 'Rookie Star' },
-      { username: 'Lestari_AI', fullName: 'Lestari Utami', totalProfit: 39500000, totalCapital: 40000000, winRate: 98.0, activePlan: 'Rookie Star' },
-      { username: 'Taufik_Surabaya', fullName: 'Taufik Rahman', totalProfit: 32400000, totalCapital: 35000000, winRate: 97.2, activePlan: 'Rookie Star' },
-      { username: 'Nadia_Invest', fullName: 'Nadia Saphira', totalProfit: 27900000, totalCapital: 25000000, winRate: 96.5, activePlan: 'Invest Learn' },
-      { username: 'Eko_Jakarta', fullName: 'Eko Prasetyo', totalProfit: 22100000, totalCapital: 20000000, winRate: 97.4, activePlan: 'Invest Learn' },
-      { username: 'Rizki_Medan', fullName: 'Rizki Ananda', totalProfit: 18600000, totalCapital: 15000000, winRate: 96.8, activePlan: 'Invest Learn' },
-      { username: 'Anisa_Trader', fullName: 'Anisa Rahma', totalProfit: 15400000, totalCapital: 10000000, winRate: 97.0, activePlan: 'Invest Learn' }
-    ];
-
-    const combined = [...userProfits, ...fallbackProfits];
-    combined.sort((a, b) => (b.totalProfit || 0) - (a.totalProfit || 0));
-
-    const unique = [];
-    const seen = new Set();
-    for (const item of combined) {
-      if (!seen.has(item.username)) {
-        seen.add(item.username);
-        unique.push(item);
-      }
-      if (unique.length >= limit) break;
-    }
-
-    return unique;
+    userProfits.sort((a, b) => (b.totalProfit || b.totalCapital) - (a.totalProfit || a.totalCapital));
+    return userProfits.slice(0, limit);
   }
 };

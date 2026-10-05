@@ -7,16 +7,15 @@
 import { DB } from './db.js';
 
 export const Affiliate = {
-  // Distribute Direct Sponsor Bonus
-  distributeSponsorBonus(buyerUser, amount) {
-    if (!buyerUser || !buyerUser.referredBy) return;
+  // Apply Direct Sponsor Bonus to db in-memory (Atomic)
+  applySponsorBonus(db, buyerUser, amount) {
+    if (!buyerUser || !buyerUser.referredBy || !amount || amount <= 0) return 0;
 
-    const db = DB.get();
     const upline = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === buyerUser.referredBy.toUpperCase());
     // Security: Prevent self-bonus exploit
-    if (!upline || upline.id === buyerUser.id) return;
+    if (!upline || upline.id === buyerUser.id) return 0;
 
-    const percent = db.settings.sponsorBonusPercent || 10;
+    const percent = (db.settings && db.settings.sponsorBonusPercent) || 10;
     const bonusAmount = Math.floor((amount * percent) / 100);
 
     if (bonusAmount > 0) {
@@ -25,6 +24,7 @@ export const Affiliate = {
       upline.points = (upline.points || 0) + 10; // Extra bonus points
 
       // Record transaction
+      db.transactions = db.transactions || [];
       db.transactions.unshift({
         id: 'TRX-SPS-' + Math.floor(100000 + Math.random() * 900000),
         userId: upline.id,
@@ -35,17 +35,25 @@ export const Affiliate = {
         status: 'approved',
         createdAt: new Date().toISOString()
       });
+      return bonusAmount;
+    }
+    return 0;
+  },
 
-      DB.save(db);
+  // Distribute Direct Sponsor Bonus (Standalone with save)
+  async distributeSponsorBonus(buyerUser, amount) {
+    const db = DB.get();
+    const distributed = this.applySponsorBonus(db, buyerUser, amount);
+    if (distributed > 0) {
+      await DB.save(db);
     }
   },
 
-  // Distribute Rabat (Matching ROI) to uplines L1 - L5
-  distributeRabatBonus(downlineUser, claimedProfitAmount) {
-    if (!downlineUser || !downlineUser.referredBy || claimedProfitAmount <= 0) return;
+  // Apply Rabat (Matching ROI) to uplines L1 - L5 in-memory (Atomic)
+  applyRabatBonus(db, downlineUser, claimedProfitAmount) {
+    if (!downlineUser || !downlineUser.referredBy || claimedProfitAmount <= 0) return 0;
 
-    const db = DB.get();
-    const rabatLevels = db.settings.rabatLevels || [
+    const rabatLevels = (db.settings && db.settings.rabatLevels) || [
       { level: 1, percent: 5.0 },
       { level: 2, percent: 3.0 },
       { level: 3, percent: 1.5 },
@@ -56,6 +64,9 @@ export const Affiliate = {
     let currentRefCode = downlineUser.referredBy;
     let currentLevel = 1;
     const seenUplines = new Set([downlineUser.id]); // Security: Prevent circular loop exploit
+    let totalDistributed = 0;
+
+    db.transactions = db.transactions || [];
 
     while (currentRefCode && currentLevel <= rabatLevels.length) {
       const upline = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === currentRefCode.toUpperCase());
@@ -79,6 +90,7 @@ export const Affiliate = {
             status: 'approved',
             createdAt: new Date().toISOString()
           });
+          totalDistributed += rabatAmount;
         }
       }
 
@@ -86,7 +98,65 @@ export const Affiliate = {
       currentLevel++;
     }
 
-    DB.save(db);
+    return totalDistributed;
+  },
+
+  // Distribute Rabat (Matching ROI) to uplines L1 - L5 (Standalone with save)
+  async distributeRabatBonus(downlineUser, claimedProfitAmount) {
+    const db = DB.get();
+    const distributed = this.applyRabatBonus(db, downlineUser, claimedProfitAmount);
+    if (distributed > 0) {
+      await DB.save(db);
+    }
+  },
+
+  // Calculate Leader Milestone Rank based on total team turnover
+  getLeaderRank(totalTurnover = 0) {
+    const db = DB.get();
+    const turnover = Math.max(0, Number(totalTurnover) || 0);
+    const milestones = (db.settings && db.settings.levelTurnoverMilestones) || [
+      { name: 'Bronze Leader', minTurnover: 25000000, reward: 1500000, badge: '🥉' },
+      { name: 'Silver Director', minTurnover: 100000000, reward: 5000000, badge: '🥈' },
+      { name: 'Gold Ambassador', minTurnover: 500000000, reward: 25000000, badge: '🥇' },
+      { name: 'Crown Diamond', minTurnover: 1500000000, reward: 75000000, badge: '💎' }
+    ];
+
+    let currentRank = 'Member Reguler';
+    let badge = '👤';
+    let reward = 0;
+    let nextMilestone = milestones[0];
+    let progressPct = 0;
+    let nextTurnoverRequired = milestones[0].minTurnover;
+
+    for (let i = 0; i < milestones.length; i++) {
+      if (turnover >= milestones[i].minTurnover) {
+        currentRank = milestones[i].name;
+        badge = milestones[i].badge || '🎖️';
+        reward = milestones[i].reward;
+        nextMilestone = milestones[i + 1] || null;
+      }
+    }
+
+    if (nextMilestone) {
+      progressPct = Math.min(100, Math.floor((turnover / nextMilestone.minTurnover) * 100));
+      nextTurnoverRequired = nextMilestone.minTurnover;
+    } else {
+      progressPct = 100;
+      nextTurnoverRequired = turnover;
+    }
+
+    return {
+      name: currentRank,
+      currentRank: currentRank,
+      badge: badge,
+      reward: reward,
+      nextRank: nextMilestone ? nextMilestone.name : 'Peringkat Tertinggi',
+      nextMilestone: nextMilestone,
+      progress: progressPct,
+      progressPct: progressPct,
+      turnoverNeeded: Math.max(0, nextTurnoverRequired - turnover),
+      nextTurnoverRequired: nextTurnoverRequired
+    };
   },
 
   // Get Downlines for a specific user categorized by levels
@@ -104,17 +174,21 @@ export const Affiliate = {
       level1Bonus: 0,
       level2Bonus: 0,
       level3Bonus: 0,
-      totalBonusAllLevels: 0
+      totalBonusAllLevels: 0,
+      leaderRank: null
     };
 
-    if (!userReferralCode) return result;
+    if (!userReferralCode) {
+      result.leaderRank = this.getLeaderRank(0);
+      return result;
+    }
 
     const uplineUser = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === userReferralCode.toUpperCase());
     const uplineId = uplineUser ? uplineUser.id : null;
 
     // Helper to enrich user with active plans and personal turnover
     const enrichMember = (u, lvl, uplineName) => {
-      const activeInvs = db.investments.filter(inv => inv.userId === u.id && inv.status === 'active');
+      const activeInvs = (db.investments || []).filter(inv => inv.userId === u.id && inv.status === 'active');
       const totalCapital = activeInvs.reduce((sum, inv) => sum + (inv.capital || 0), 0);
       return {
         ...u,
@@ -150,10 +224,11 @@ export const Affiliate = {
     result.level2Turnover = result.level2.reduce((sum, m) => sum + m.personalTurnover, 0);
     result.level3Turnover = result.level3.reduce((sum, m) => sum + m.personalTurnover, 0);
     result.totalTeamTurnover = result.level1Turnover + result.level2Turnover + result.level3Turnover;
+    result.leaderRank = this.getLeaderRank(result.totalTeamTurnover);
 
     // Calculate Bonus Recap per level for this upline user
     if (uplineId) {
-      const uplineTxs = db.transactions.filter(t => t.userId === uplineId);
+      const uplineTxs = (db.transactions || []).filter(t => t.userId === uplineId);
 
       uplineTxs.forEach(t => {
         if (t.type === 'sponsor_bonus') {
@@ -177,23 +252,24 @@ export const Affiliate = {
   },
 
   // Transfer Affiliate Balance ("Wallet Tambah Teman") to Main Wallet Balance
-  transferToMainBalance(userId, amount) {
+  async transferToMainBalance(userId, amount) {
     const db = DB.get();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
 
-    const parsedAmount = Number(amount);
+    const parsedAmount = Math.floor(Number(amount));
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return { success: false, message: 'Jumlah transfer tidak valid!' };
     }
 
-    if (user.affiliateBalance < parsedAmount) {
+    if ((user.affiliateBalance || 0) < parsedAmount) {
       return { success: false, message: 'Saldo Wallet Tambah Teman tidak mencukupi!' };
     }
 
-    user.affiliateBalance -= parsedAmount;
-    user.walletBalance += parsedAmount;
+    user.affiliateBalance = (user.affiliateBalance || 0) - parsedAmount;
+    user.walletBalance = (user.walletBalance || 0) + parsedAmount;
 
+    db.transactions = db.transactions || [];
     db.transactions.unshift({
       id: 'TRX-TRF-' + Math.floor(100000 + Math.random() * 900000),
       userId: user.id,
@@ -205,10 +281,111 @@ export const Affiliate = {
       createdAt: new Date().toISOString()
     });
 
-    DB.save(db);
+    await DB.save(db);
     return {
       success: true,
       message: `Sukses mentransfer ${DB.formatIDR(parsedAmount)} ke Wallet Balance!`
+    };
+  },
+
+  // Lookup member details by username or referral code (for P2P transfer verification)
+  lookupMember(targetIdentifier, excludeUserId = null) {
+    const db = DB.get();
+    const cleanTarget = (targetIdentifier || '').trim().toLowerCase();
+    if (!cleanTarget) return null;
+
+    const found = (db.users || []).find(u => 
+      (u.username && u.username.toLowerCase() === cleanTarget) ||
+      (u.referralCode && u.referralCode.toLowerCase() === cleanTarget)
+    );
+
+    if (!found) return null;
+    if (excludeUserId && found.id === excludeUserId) {
+      return { isSelf: true, username: found.username, fullName: found.fullName || found.username };
+    }
+
+    return {
+      id: found.id,
+      username: found.username,
+      fullName: found.fullName || found.username,
+      referralCode: found.referralCode || ''
+    };
+  },
+
+  // Member-to-Member (P2P) Wallet Transfer
+  async transferToMember(senderUserId, targetIdentifier, amount) {
+    const db = DB.get();
+    const sender = db.users.find(u => u.id === senderUserId);
+    if (!sender) return { success: false, message: 'Akun pengirim tidak ditemukan!' };
+
+    const parsedAmount = Math.floor(Number(amount));
+    if (isNaN(parsedAmount) || parsedAmount < 10000) {
+      return { success: false, message: 'Minimal transfer antar member adalah Rp 10.000!' };
+    }
+
+    if ((sender.walletBalance || 0) < parsedAmount) {
+      return { success: false, message: `Saldo Wallet Utama tidak mencukupi! Saldo Anda: ${DB.formatIDR(sender.walletBalance || 0)}` };
+    }
+
+    const cleanTarget = (targetIdentifier || '').trim().toLowerCase();
+    if (!cleanTarget) {
+      return { success: false, message: 'Masukkan username atau kode referral member tujuan!' };
+    }
+
+    const recipient = db.users.find(u => 
+      (u.username && u.username.toLowerCase() === cleanTarget) ||
+      (u.referralCode && u.referralCode.toLowerCase() === cleanTarget)
+    );
+
+    if (!recipient) {
+      return { success: false, message: `Member tujuan "${targetIdentifier}" tidak ditemukan!` };
+    }
+
+    if (recipient.id === sender.id) {
+      return { success: false, message: 'Anda tidak dapat mentransfer saldo ke akun Anda sendiri!' };
+    }
+
+    // Deduct sender & credit recipient
+    sender.walletBalance = (sender.walletBalance || 0) - parsedAmount;
+    recipient.walletBalance = (recipient.walletBalance || 0) + parsedAmount;
+
+    const trxIdOut = 'TRX-TRFO-' + Math.floor(100000 + Math.random() * 900000);
+    const trxIdIn = 'TRX-TRFI-' + Math.floor(100000 + Math.random() * 900000);
+    const nowIso = new Date().toISOString();
+
+    db.transactions = db.transactions || [];
+
+    // Transaction for sender (debit)
+    db.transactions.unshift({
+      id: trxIdOut,
+      userId: sender.id,
+      username: sender.username,
+      type: 'member_transfer_out',
+      amount: parsedAmount,
+      destinationAccount: recipient.username,
+      note: `Transfer saldo ke member ${recipient.username} (${recipient.fullName || recipient.username})`,
+      status: 'approved',
+      createdAt: nowIso
+    });
+
+    // Transaction for recipient (credit)
+    db.transactions.unshift({
+      id: trxIdIn,
+      userId: recipient.id,
+      username: recipient.username,
+      type: 'member_transfer',
+      amount: parsedAmount,
+      destinationAccount: sender.username,
+      note: `Terima transfer saldo dari member ${sender.username}`,
+      status: 'approved',
+      createdAt: nowIso
+    });
+
+    await DB.save(db);
+    return {
+      success: true,
+      message: `Sukses transfer ${DB.formatIDR(parsedAmount)} ke member ${recipient.username}!`,
+      recipient: recipient.username
     };
   }
 };

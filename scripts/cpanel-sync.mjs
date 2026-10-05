@@ -11,8 +11,7 @@ const FTP_CONFIG = {
   user: 'autotrading@autotrading.my.id',
   password: '0QcK+H6G^NS[yEus',
   port: 21,
-  secure: true,
-  secureOptions: { rejectUnauthorized: false }
+  secure: false
 };
 
 const DEPLOY_DIRECTORIES = ['css', 'js', 'api'];
@@ -34,13 +33,18 @@ function getFilesRecursively(dir, baseDir = '') {
   return results;
 }
 
-async function withRetry(fn, retries = 3, delay = 1200) {
+async function withRetry(fn, onRetry = null, retries = 4, delay = 2000) {
   for (let i = 1; i <= retries; i++) {
     try {
       return await fn();
     } catch (err) {
       if (i === retries) throw err;
-      console.warn(`   (Warning: ${err.message}. Retrying in ${delay}ms... [Attempt ${i + 1}/${retries}])`);
+      console.warn(`\n   (Warning: ${err.message}. Retrying in ${delay}ms... [Attempt ${i + 1}/${retries}])`);
+      if (onRetry) {
+        try {
+          await onRetry();
+        } catch (eRetry) {}
+      }
       await new Promise(res => setTimeout(res, delay));
     }
   }
@@ -52,16 +56,19 @@ export async function deployToCpanel() {
   console.log('Target Server:', FTP_CONFIG.host, '(' + FTP_CONFIG.user + ')');
   console.log('====================================================\n');
 
-  const client = new ftp.Client();
+  let client = new ftp.Client();
   client.ftp.verbose = false;
 
   async function connect() {
+    try { client.close(); } catch (e) {}
+    client = new ftp.Client();
+    client.ftp.verbose = false;
     await client.access(FTP_CONFIG);
   }
 
   try {
     console.log('1. Connecting to cPanel FTP...');
-    await withRetry(() => connect(), 3, 2000);
+    await withRetry(() => connect(), null, 3, 2000);
     console.log('   CONNECTED! Remote root directory verified.\n');
 
     // Clean up any stray nested js/js if created previously
@@ -87,17 +94,29 @@ export async function deployToCpanel() {
 
     console.log(`2. Deploying ${filesToUpload.length} files to cPanel...`);
     for (const item of filesToUpload) {
-      await withRetry(async () => {
-        if (client.closed) await connect();
-        process.stdout.write(`   Uploading: ${item.relPath} ... `);
-        const remoteDir = path.posix.dirname(item.relPath);
-        if (remoteDir && remoteDir !== '.') {
-          await client.ensureDir(remoteDir);
+      await withRetry(
+        async () => {
+          if (client.closed) await connect();
+          process.stdout.write(`   Uploading: ${item.relPath} ... `);
           await client.cd('/');
-        }
-        await client.uploadFrom(item.fullPath, item.relPath);
-        console.log('OK');
-      }, 3, 2000);
+          const remoteDir = path.posix.dirname(item.relPath);
+          if (remoteDir && remoteDir !== '.') {
+            await client.ensureDir(remoteDir);
+            await client.uploadFrom(item.fullPath, path.posix.basename(item.relPath));
+            await client.cd('/');
+          } else {
+            await client.uploadFrom(item.fullPath, item.relPath);
+          }
+          console.log('OK');
+        },
+        async () => {
+          await connect();
+        },
+        4,
+        2500
+      );
+      // Small throttle to avoid server connection drop
+      await new Promise(r => setTimeout(r, 200));
     }
 
     console.log('\n3. Verifying remote deployment...');

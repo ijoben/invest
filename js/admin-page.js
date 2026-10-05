@@ -29,17 +29,107 @@ export const AdminPage = {
     banners: 'Banner Slider Carousel',
     testimonials: 'Kelola Testimoni User',
     users: 'Manajemen Pengguna',
+    backup: 'Backup & Cadangan Data',
     email_settings: 'Konfigurasi Email & OTP',
     kontak_kelas: 'Kontak CS & Kelas Trading',
-    pengaturan: 'Pengaturan Web'
+    pengaturan: 'Pengaturan Web',
+    admin_account: 'Ganti Username & Password Admin'
+  },
+
+  // All admin writes require the httpOnly server session - verify it on boot.
+  // Silent re-login first (cached credentials), then force re-login if impossible.
+  async verifyServerSession() {
+    if (typeof fetch !== 'function') return;
+    try {
+      await DB.ensureServerSession();
+      const res = await fetch(DB.getApiUrl('session'));
+      const json = await res.json().catch(() => null);
+      if (json && json.success && json.loggedIn === false) {
+        Auth.logout();
+        this.checkAdminAuth();
+        this.showToast('Sesi keamanan server telah berakhir. Silakan login kembali Administrator.', 'info');
+      }
+    } catch (e) {
+      // Offline mode: keep the local gate as-is
+    }
   },
 
   init() {
     this.bindEvents();
     if (this.checkAdminAuth()) {
+      let savedTab = 'dashboard';
+      if (typeof window !== 'undefined' && window.location && window.location.hash) {
+        const hashTab = window.location.hash.replace('#', '').trim();
+        if (hashTab && this.tabTitles[hashTab]) {
+          savedTab = hashTab;
+        }
+      }
+      if (savedTab === 'dashboard') {
+        const sTab = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('autotrading_admin_tab')) ||
+                     (typeof localStorage !== 'undefined' && localStorage.getItem('autotrading_admin_tab'));
+        if (sTab && this.tabTitles[sTab]) {
+          savedTab = sTab;
+        }
+      }
+      this.switchTab(savedTab);
       this.renderAll();
-      // Background sync with MySQL (if cPanel API is active)
-      DB.initCloudSync(() => this.renderAll());
+      // Initial Cloud Sync
+      DB.initCloudSync(() => {
+        this.renderAll();
+        if (this.currentTab) {
+          this.switchTab(this.currentTab);
+        }
+      });
+      // Realtime live polling sync every 6 seconds
+      DB.startLivePolling((freshDb) => {
+        this.onLiveDbSync(freshDb);
+      }, 6000);
+      // Verify the authoritative server session (writes are rejected without it)
+      this.verifyServerSession();
+    }
+  },
+
+  onLiveDbSync(freshDb) {
+    if (!this.checkAdminAuth()) return;
+    const db = freshDb || DB.get();
+    const stats = Admin.getStats();
+
+    // Badges & Counters
+    const bDep = document.getElementById('badgePendingDep');
+    if (bDep) bDep.textContent = stats.pendingDepositsCount;
+    const bWd = document.getElementById('badgePendingWd');
+    if (bWd) bWd.textContent = stats.pendingWithdrawalsCount;
+    const bRdm = document.getElementById('badgePendingRdm');
+    if (bRdm) bRdm.textContent = stats.pendingRedemptionsCount;
+
+    const sUsers = document.getElementById('statTotalUsers');
+    if (sUsers) sUsers.textContent = stats.totalUsers;
+    const sDep = document.getElementById('statTotalDeposits');
+    if (sDep) sDep.textContent = DB.formatIDR(stats.totalDeposits);
+    const sWd = document.getElementById('statTotalWithdrawals');
+    if (sWd) sWd.textContent = DB.formatIDR(stats.totalWithdrawals);
+    const sCap = document.getElementById('statActiveCapital');
+    if (sCap) sCap.textContent = DB.formatIDR(stats.activeCapital);
+
+    const activeEl = document.activeElement;
+    const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+    const hasOpenModal = document.querySelector('.admin-modal-backdrop.active, .modal-backdrop.active');
+
+    if (!isTyping && !hasOpenModal) {
+      const curTab = this.currentTab || 'dashboard';
+      if (curTab === 'dashboard') {
+        this.renderPendingTransactions(db);
+      } else if (curTab === 'users') {
+        this.renderUsers(db);
+      } else if (curTab === 'deposits') {
+        this.renderDeposits(db);
+      } else if (curTab === 'withdrawals') {
+        this.renderWithdrawals(db);
+      } else if (curTab === 'investments') {
+        this.renderInvestments(db);
+      } else if (curTab === 'backup') {
+        this.refreshBackupStats(db);
+      }
     }
   },
 
@@ -88,7 +178,7 @@ export const AdminPage = {
     }
   },
 
-  handleAdminLogin() {
+  async handleAdminLogin() {
     const uInput = document.getElementById('adminLoginUsername');
     const pInput = document.getElementById('adminLoginPassword');
     const username = uInput ? uInput.value.trim() : '';
@@ -99,7 +189,7 @@ export const AdminPage = {
       return;
     }
 
-    const res = Auth.login(username, password);
+    const res = await Auth.login(username, password);
     if (!res.success) {
       this.showToast(res.message, 'error');
       return;
@@ -123,15 +213,7 @@ export const AdminPage = {
   },
 
   quickLoginAdmin() {
-    const res = Auth.quickLogin('admin');
-    if (res.success && res.user && res.user.role === 'admin') {
-      this.showToast('Login Admin Demo Berhasil!', 'success');
-      if (this.checkAdminAuth()) {
-        this.renderAll();
-      }
-    } else {
-      this.showToast('Gagal login admin demo', 'error');
-    }
+    this.showToast('Fitur login demo telah dinonaktifkan.', 'info');
   },
 
   toggleAdminPasswordVisibility() {
@@ -143,6 +225,9 @@ export const AdminPage = {
   renderAll() {
     const db = DB.get();
     const stats = Admin.getStats();
+
+    // Render WD quick toggle status
+    this.renderWdQuickToggle(db);
 
     // 0. Synchronize Browser Tab Title & Favicon
     const cfg = db.settings || {};
@@ -221,6 +306,9 @@ export const AdminPage = {
 
     // 16. Kontak CS & Kelas Trading Manual Links
     this.renderCsAndKelasSettings();
+
+    // 17. Keamanan Akun Admin (Username & Password)
+    this.renderAdminAccountSettings();
   },
 
   // 2. Deposit Table
@@ -236,7 +324,7 @@ export const AdminPage = {
     tbody.innerHTML = deposits.map(t => `
       <tr>
         <td><strong>${escapeHtml(t.id)}</strong></td>
-        <td>${new Date(t.createdAt).toLocaleString('id-ID')}</td>
+        <td>${DB.formatWibDateTime(t.createdAt)} WIB</td>
         <td><strong>${escapeHtml(t.username)}</strong></td>
         <td>${escapeHtml(t.paymentMethod)}</td>
         <td><strong style="color:#22C55E;">${DB.formatIDR(t.amount)}</strong></td>
@@ -274,7 +362,7 @@ export const AdminPage = {
     tbody.innerHTML = withdrawals.map(t => `
       <tr>
         <td><strong>${escapeHtml(t.id)}</strong></td>
-        <td>${new Date(t.createdAt).toLocaleString('id-ID')}</td>
+        <td>${DB.formatWibDateTime(t.createdAt)} WIB</td>
         <td><strong>${escapeHtml(t.username)}</strong></td>
         <td>${escapeHtml(t.walletSource || 'Wallet Balance')}</td>
         <td>${escapeHtml(t.destinationAccount || t.paymentMethod)}</td>
@@ -295,19 +383,22 @@ export const AdminPage = {
   // 4. Plans Table
   renderPlans(db) {
     const tbody = document.getElementById('plansTableBody');
-    tbody.innerHTML = db.plans.map(p => `
+    tbody.innerHTML = db.plans.map(p => {
+      const activeInvestorsCount = (db.investments || []).filter(i => i.planId === p.id && i.status === 'active').length;
+      return `
       <tr>
-        <td><strong>${p.name}</strong></td>
+        <td><strong>${escapeHtml(p.name)}</strong></td>
         <td>${DB.formatIDR(p.minDeposit)}</td>
         <td>${DB.formatIDR(p.maxDeposit)}</td>
         <td><span style="color:#22C55E; font-weight:700;">${p.minDailyProfit}% - ${p.maxDailyProfit}% / hari</span></td>
         <td>${p.durationDays} Hari</td>
-        <td>${p.activeCount || 0} Member</td>
+        <td><span class="badge-status ${activeInvestorsCount > 0 ? 'approved' : 'pending'}">${activeInvestorsCount} Investor Aktif</span></td>
         <td>
           <button class="btn-admin-action edit" onclick="AdminPage.openEditPlanModal('${p.id}')">Edit Paket</button>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   },
 
   // 4.0 Master Market Status Settings (ON / OFF)
@@ -358,7 +449,7 @@ export const AdminPage = {
     }
   },
 
-  saveMarketMasterSettings() {
+  async saveMarketMasterSettings() {
     const selectEl = document.getElementById('marketMasterCfgSelect');
     const msgEl = document.getElementById('marketMasterOffMessage');
     if (!selectEl) return;
@@ -366,7 +457,8 @@ export const AdminPage = {
     const isOpen = selectEl.value === 'true';
     const message = msgEl ? msgEl.value.trim() : '';
 
-    const res = Admin.saveMarketMasterSettings({ isOpen, message });
+    this.showToast('Menyimpan status pasar ke database...', 'info');
+    const res = await Admin.saveMarketMasterSettings({ isOpen, message });
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderMarketMasterSettings(DB.get());
@@ -428,7 +520,7 @@ export const AdminPage = {
     }
   },
 
-  saveWeekendProfitSettings() {
+  async saveWeekendProfitSettings() {
     const selectEl = document.getElementById('weekendProfitCfgSelect');
     const msgEl = document.getElementById('weekendProfitOffMessage');
     if (!selectEl) return;
@@ -436,7 +528,8 @@ export const AdminPage = {
     const enabled = selectEl.value === 'true';
     const offMessage = msgEl ? msgEl.value : '';
 
-    const res = Admin.saveWeekendProfitSettings({ enabled, offMessage });
+    this.showToast('Menyimpan pengaturan akhir pekan ke database...', 'info');
+    const res = await Admin.saveWeekendProfitSettings({ enabled, offMessage });
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderWeekendProfitSettings(DB.get());
@@ -513,7 +606,7 @@ export const AdminPage = {
     }
   },
 
-  saveTodayLossModeSettings() {
+  async saveTodayLossModeSettings() {
     const selectEl = document.getElementById('todayLossModeCfgSelect');
     const msgEl = document.getElementById('todayLossModeOffMessage');
     if (!selectEl) return;
@@ -521,7 +614,8 @@ export const AdminPage = {
     const isLoss = selectEl.value === 'true';
     const message = msgEl ? msgEl.value.trim() : '';
 
-    const res = Admin.saveTodayProfitMode({ isLoss, message });
+    this.showToast('Menyimpan pengaturan mode loss ke database...', 'info');
+    const res = await Admin.saveTodayProfitMode({ isLoss, message });
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderTodayLossModeSettings(DB.get());
@@ -631,7 +725,9 @@ export const AdminPage = {
 
     const cfg = db.settings;
     document.getElementById('gwCfgUsdRate').value = cfg.usdIdrRate || 16250;
-    document.getElementById('gwCfgWdFee').value = cfg.withdrawFeePercent || 1.0;
+    document.getElementById('gwCfgWdFee').value = cfg.withdrawFeePercent !== undefined ? cfg.withdrawFeePercent : 10.0;
+    const depPtsEl = document.getElementById('gwCfgDepositPoints');
+    if (depPtsEl) depPtsEl.value = cfg.depositPointsReward !== undefined ? cfg.depositPointsReward : 5;
     if (cfg.paymentGateways && cfg.paymentGateways.usdt) {
       document.getElementById('gwCfgTrc20').value = cfg.paymentGateways.usdt.trc20Address || '';
     }
@@ -663,6 +759,15 @@ export const AdminPage = {
     if (apkVerEl) apkVerEl.value = apk.version || '';
     const apkSizeEl = document.getElementById('apkCfgSize');
     if (apkSizeEl) apkSizeEl.value = apk.size || '';
+
+    // Daily Check-in Settings (Point 6)
+    const checkIn = cfg.dailyCheckIn || { enabled: true, rewardAmount: 1000, totalDays: 7 };
+    const checkInEnabledEl = document.getElementById('checkInCfgEnabled');
+    if (checkInEnabledEl) checkInEnabledEl.value = String(checkIn.enabled !== false);
+    const checkInRewardEl = document.getElementById('checkInCfgReward');
+    if (checkInRewardEl) checkInRewardEl.value = checkIn.rewardAmount || 1000;
+
+    this.renderWdQuickToggle(db);
   },
 
   // 6.2 Email & OTP Configuration
@@ -744,7 +849,7 @@ export const AdminPage = {
     }
   },
 
-  saveEmailSettings() {
+  async saveEmailSettings() {
     const verificationRequired = document.getElementById('emailCfgVerificationRequired').value === 'true';
     const adminNotificationOnRegister = document.getElementById('emailCfgAdminNotification').value === 'true';
     const adminNotificationEmail = document.getElementById('emailCfgAdminEmail').value.trim();
@@ -776,7 +881,7 @@ export const AdminPage = {
       }
     };
 
-    const res = Admin.saveEmailSettings(newCfg);
+    const res = await Admin.saveEmailSettings(newCfg);
     this.showToast(res.message, 'success');
     this.renderEmailSettings(DB.get());
   },
@@ -959,12 +1064,13 @@ export const AdminPage = {
     this.renderUsers(DB.get());
   },
 
-  confirmToggleBlock(userId, username, isCurrentlyBlocked) {
+  async confirmToggleBlock(userId, username, isCurrentlyBlocked) {
     if (isCurrentlyBlocked) {
       if (confirm(`Apakah Anda yakin ingin MEMBUKA BLOKIR akun member "${username}"?\n\nMember akan diizinkan login dan mengakses kembali semua fitur sistem.`)) {
-        const res = Admin.toggleBlockUser(userId);
+        const res = await Admin.toggleBlockUser(userId);
         if (res.success) {
           this.showToast(res.message, 'success');
+          await DB.syncFromCloud();
           this.renderAll();
         } else {
           this.showToast(res.message, 'error');
@@ -973,9 +1079,10 @@ export const AdminPage = {
     } else {
       const reason = prompt(`Masukkan alasan pemblokiran untuk member "${username}" (opsional):\n\nCatatan: Alasan ini akan tampil saat member mencoba login.`, 'Terindikasi pelanggaran ketentuan sistem');
       if (reason !== null) {
-        const res = Admin.toggleBlockUser(userId, reason);
+        const res = await Admin.toggleBlockUser(userId, reason);
         if (res.success) {
           this.showToast(res.message, 'success');
+          await DB.syncFromCloud();
           this.renderAll();
         } else {
           this.showToast(res.message, 'error');
@@ -1155,7 +1262,7 @@ export const AdminPage = {
       return `
         <tr>
           <td><strong style="font-family: var(--font-mono); color: #38BDF8;">${r.id}</strong></td>
-          <td><span style="font-size:11px; color:#94A3B8;">${new Date(r.createdAt).toLocaleString('id-ID')}</span></td>
+          <td><span style="font-size:11px; color:#94A3B8;">${DB.formatWibDateTime(r.createdAt)} WIB</span></td>
           <td><strong style="color: #FFFFFF;">${r.username}</strong></td>
           <td>
             <div style="font-weight: 700; color: #FFFFFF; font-size: 13px;">${r.rewardTitle}</div>
@@ -1260,7 +1367,23 @@ export const AdminPage = {
 
   // Actions
   switchTab(tabId) {
+    if (!tabId || !this.tabTitles[tabId]) return;
     this.currentTab = tabId;
+
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        if (window.location.hash !== `#${tabId}`) {
+          history.replaceState(null, '', `#${tabId}`);
+        }
+      }
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('autotrading_admin_tab', tabId);
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('autotrading_admin_tab', tabId);
+      }
+    } catch (e) {}
+
     document.querySelectorAll('.admin-nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
     });
@@ -1273,6 +1396,10 @@ export const AdminPage = {
       titleEl.textContent = this.tabTitles[tabId];
     }
 
+    if (tabId === 'backup') {
+      this.refreshBackupStats();
+    }
+
     if (tabId === 'pengaturan') {
       this.renderWebSettings();
     }
@@ -1281,16 +1408,21 @@ export const AdminPage = {
       this.renderCsAndKelasSettings();
     }
 
+    if (tabId === 'admin_account') {
+      this.renderAdminAccountSettings();
+    }
+
     // Auto close sliding sidebar drawer on item select
     this.closeSidebar();
   },
 
-  resetDemoDatabase() {
-    if (!confirm('Apakah Anda yakin ingin mereset seluruh database demo ke kondisi awal?')) {
+  async resetDemoDatabase() {
+    if (!confirm('Apakah Anda yakin ingin mengosongkan seluruh database simulasi dan transaksi demo? (Hanya akun Master Admin yang akan dipertahankan)')) {
       return;
     }
-    DB.reset();
-    this.showToast('Database demo berhasil di-reset ke kondisi awal!', 'success');
+    this.showToast('Mengosongkan database demo...', 'info');
+    await DB.clearDemoData();
+    this.showToast('Database transaksi & member demo berhasil dikosongkan 100%!', 'success');
     this.renderAll();
     this.closeSidebar();
   },
@@ -1324,8 +1456,8 @@ export const AdminPage = {
     this.renderAll();
   },
 
-  approveDeposit(id) {
-    const res = Admin.approveDeposit(id);
+  async approveDeposit(id) {
+    const res = await Admin.approveDeposit(id);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
@@ -1334,10 +1466,10 @@ export const AdminPage = {
     }
   },
 
-  rejectDeposit(id) {
+  async rejectDeposit(id) {
     const reason = prompt('Masukkan alasan penolakan deposit:', 'Bukti transfer tidak valid');
     if (reason === null) return;
-    const res = Admin.rejectDeposit(id, reason);
+    const res = await Admin.rejectDeposit(id, reason);
     if (res.success) {
       this.showToast(res.message, 'info');
       this.renderAll();
@@ -1395,31 +1527,32 @@ export const AdminPage = {
     this.rejectDeposit(id);
   },
 
-  approveWithdraw(id) {
-    const res = Admin.approveWithdrawal(id);
+  async approveWithdraw(id) {
+    const res = await Admin.approveWithdrawal(id);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
     }
   },
 
-  rejectWithdraw(id) {
+  async rejectWithdraw(id) {
     const reason = prompt('Masukkan alasan penolakan penarikan (saldo akan di-refund):', 'Data rekening tujuan tidak sesuai');
     if (reason === null) return;
-    const res = Admin.rejectWithdrawal(id, reason);
+    const res = await Admin.rejectWithdrawal(id, reason);
     if (res.success) {
       this.showToast(res.message, 'info');
       this.renderAll();
     }
   },
 
-  saveAffiliateSettings() {
+  async saveAffiliateSettings() {
     const sponsor = Number(document.getElementById('affCfgSponsor').value);
     const l1 = Number(document.getElementById('affCfgL1').value);
     const l2 = Number(document.getElementById('affCfgL2').value);
     const l3 = Number(document.getElementById('affCfgL3').value);
 
-    Admin.updateSettings({
+    this.showToast('Menyimpan pengaturan komisi ke database...', 'info');
+    await Admin.updateSettings({
       sponsorBonusPercent: sponsor,
       rabatLevels: [
         { level: 1, percent: l1 },
@@ -1428,24 +1561,27 @@ export const AdminPage = {
       ]
     });
 
-    this.showToast('Pengaturan komisi sponsor & rabat level berhasil disimpan!', 'success');
+    this.showToast('Pengaturan komisi sponsor & rabat level berhasil disimpan ke database!', 'success');
     this.renderAll();
   },
 
-  saveGatewaySettings() {
+  async saveGatewaySettings() {
     const rate = Number(document.getElementById('gwCfgUsdRate').value);
     const fee = Number(document.getElementById('gwCfgWdFee').value);
     const trc20 = document.getElementById('gwCfgTrc20').value;
+    const depPts = Number(document.getElementById('gwCfgDepositPoints')?.value !== undefined ? document.getElementById('gwCfgDepositPoints').value : 5);
 
     const db = DB.get();
     db.settings.usdIdrRate = rate;
     db.settings.withdrawFeePercent = fee;
+    db.settings.depositPointsReward = isNaN(depPts) ? 5 : depPts;
     if (db.settings.paymentGateways && db.settings.paymentGateways.usdt) {
       db.settings.paymentGateways.usdt.trc20Address = trc20;
     }
 
-    DB.save(db);
-    this.showToast('Pengaturan gateway pembayaran & kurs berhasil disimpan!', 'success');
+    this.showToast('Menyimpan pengaturan gateway ke database...', 'info');
+    await DB.save(db);
+    this.showToast('Pengaturan gateway pembayaran & kurs berhasil disimpan ke database!', 'success');
     this.renderAll();
   },
 
@@ -1474,7 +1610,7 @@ export const AdminPage = {
     this.openModal('adminBankModal');
   },
 
-  saveBankModal() {
+  async saveBankModal() {
     const id = document.getElementById('bankModalId').value.trim();
     const name = document.getElementById('bankModalName').value.trim();
     const accountNo = document.getElementById('bankModalAccountNo').value.trim();
@@ -1494,7 +1630,8 @@ export const AdminPage = {
       return;
     }
 
-    const res = Admin.saveBank({
+    this.showToast('Menyimpan rekening ke database...', 'info');
+    const res = await Admin.saveBank({
       id: id || undefined,
       name,
       accountNo,
@@ -1511,14 +1648,15 @@ export const AdminPage = {
     }
   },
 
-  deleteBankAccount(bankId) {
+  async deleteBankAccount(bankId) {
     const banks = Admin.getBanks();
     const bank = banks.find(b => b.id === bankId);
     const bankName = bank ? bank.name : 'rekening ini';
 
     if (!confirm(`Apakah Anda yakin ingin menghapus rekening ${bankName}?`)) return;
 
-    const res = Admin.deleteBank(bankId);
+    this.showToast('Menghapus rekening dari database...', 'info');
+    const res = await Admin.deleteBank(bankId);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
@@ -1527,8 +1665,9 @@ export const AdminPage = {
     }
   },
 
-  toggleBankStatus(bankId) {
-    const res = Admin.toggleBankStatus(bankId);
+  async toggleBankStatus(bankId) {
+    this.showToast('Memperbarui status rekening...', 'info');
+    const res = await Admin.toggleBankStatus(bankId);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
@@ -1537,13 +1676,14 @@ export const AdminPage = {
     }
   },
 
-  saveQrisSettings() {
+  async saveQrisSettings() {
     const active = document.getElementById('qrisCfgActive').value === 'true';
     const merchantName = document.getElementById('qrisCfgMerchant').value.trim();
     const nmid = document.getElementById('qrisCfgNmid').value.trim();
     const imageUrl = document.getElementById('qrisCfgImageUrl').value.trim();
 
-    const res = Admin.saveQrisSettings({
+    this.showToast('Menyimpan pengaturan QRIS ke database...', 'info');
+    const res = await Admin.saveQrisSettings({
       active,
       merchantName,
       nmid,
@@ -1551,20 +1691,21 @@ export const AdminPage = {
     });
 
     if (res.success) {
-      this.showToast('Pengaturan QRIS berhasil disimpan!', 'success');
+      this.showToast('Pengaturan QRIS berhasil disimpan ke database!', 'success');
       this.renderAll();
     } else {
       this.showToast(res.message, 'error');
     }
   },
 
-  saveWithdrawScheduleSettings() {
+  async saveWithdrawScheduleSettings() {
     const enabled = document.getElementById('wdCfgEnabled').value === 'true';
     const startHour = Number(document.getElementById('wdCfgStartHour').value) || 0;
     const endHour = Number(document.getElementById('wdCfgEndHour').value) || 24;
     const offMessage = document.getElementById('wdCfgOffMessage').value.trim();
 
-    Admin.saveWithdrawSchedule({
+    this.showToast('Menyimpan jadwal WD ke database...', 'info');
+    await Admin.saveWithdrawSchedule({
       enabled,
       startHour,
       endHour,
@@ -1573,33 +1714,98 @@ export const AdminPage = {
 
     const termsInput = document.getElementById('wdCfgTerms');
     if (termsInput) {
-      Admin.saveWithdrawTerms(termsInput.value);
+      await Admin.saveWithdrawTerms(termsInput.value);
     }
 
-    this.showToast('Jadwal operasional & ketentuan WD berhasil disimpan!', 'success');
+    this.showToast('Jadwal operasional & ketentuan WD berhasil disimpan ke database!', 'success');
     this.renderAll();
   },
 
-  saveApkDownloadSettings() {
+  async saveApkDownloadSettings() {
     const enabled = document.getElementById('apkCfgEnabled').value === 'true';
     const url = document.getElementById('apkCfgUrl') ? document.getElementById('apkCfgUrl').value.trim() : '';
     const version = document.getElementById('apkCfgVersion') ? document.getElementById('apkCfgVersion').value.trim() : '';
     const size = document.getElementById('apkCfgSize') ? document.getElementById('apkCfgSize').value.trim() : '';
 
-    Admin.saveApkSettings({
+    this.showToast('Menyimpan pengaturan APK ke database...', 'info');
+    await Admin.saveApkSettings({
       enabled,
       url,
       version,
       size
     });
 
-    this.showToast('Pengaturan unduhan APK Android berhasil disimpan!', 'success');
+    this.showToast('Pengaturan unduhan APK Android berhasil disimpan ke database!', 'success');
     this.renderAll();
   },
 
-  deleteSignal(id) {
+  // Save Daily Check-in Settings (Point 6)
+  async saveDailyCheckInSettings() {
+    const enabled = document.getElementById('checkInCfgEnabled').value === 'true';
+    const reward = parseInt(document.getElementById('checkInCfgReward').value, 10) || 1000;
+
+    const db = DB.get();
+    db.settings.dailyCheckIn = {
+      ...(db.settings.dailyCheckIn || {}),
+      enabled,
+      rewardAmount: reward,
+      totalDays: 7
+    };
+    this.showToast('Menyimpan absensi ke database...', 'info');
+    await DB.save(db);
+    this.showToast(`Pengaturan Absensi Harian disimpan ke database! Bonus: Rp ${reward.toLocaleString('id-ID')} / hari (${enabled ? 'AKTIF' : 'NONAKTIF'})`, 'success');
+    this.renderAll();
+  },
+
+  // 1-Click Quick Toggle for Withdrawal Master Switch (Point 7)
+  renderWdQuickToggle(db = null) {
+    if (!db) db = DB.get();
+    const btn = document.getElementById('topbarWdQuickBtn');
+    if (!btn) return;
+    const sched = (db.settings && db.settings.withdrawSchedule) || { enabled: true };
+    const isWdOn = sched.enabled !== false;
+
+    if (isWdOn) {
+      btn.style.background = 'rgba(16, 185, 129, 0.15)';
+      btn.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+      btn.style.color = '#34D399';
+      btn.innerHTML = `
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10B981; display: inline-block; box-shadow: 0 0 6px #10B981;"></span>
+        <span>WD: BUKA (ON)</span>
+      `;
+      btn.title = 'Layanan WD sedang BUKA (ON). Klik untuk KUNCI (OFF).';
+    } else {
+      btn.style.background = 'rgba(239, 68, 68, 0.18)';
+      btn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+      btn.style.color = '#F87171';
+      btn.innerHTML = `
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: #EF4444; display: inline-block; box-shadow: 0 0 6px #EF4444;"></span>
+        <span>WD: DIKUNCI (OFF)</span>
+      `;
+      btn.title = 'Layanan WD sedang DIKUNCI (OFF). Klik untuk BUKA (ON).';
+    }
+  },
+
+  toggleWithdrawMasterSwitch() {
+    const db = DB.get();
+    if (!db.settings.withdrawSchedule) {
+      db.settings.withdrawSchedule = { enabled: true, startHour: 9, endHour: 21, offMessage: '' };
+    }
+    const current = db.settings.withdrawSchedule.enabled !== false;
+    db.settings.withdrawSchedule.enabled = !current;
+    DB.save(db);
+
+    const newStatus = db.settings.withdrawSchedule.enabled;
+    this.renderWdQuickToggle(db);
+    const enabledEl = document.getElementById('wdCfgEnabled');
+    if (enabledEl) enabledEl.value = String(newStatus);
+
+    this.showToast(newStatus ? '🟢 Layanan WD Berhasil DIBUKA (ON)!' : '🔴 Layanan WD Berhasil DIKUNCI (OFF)!', newStatus ? 'success' : 'info');
+  },
+
+  async deleteSignal(id) {
     if (!confirm('Apakah Anda yakin ingin menghapus sinyal trading ini?')) return;
-    Admin.deleteSignal(id);
+    await Admin.deleteSignal(id);
     this.showToast('Sinyal trading berhasil dihapus!', 'success');
     this.renderAll();
   },
@@ -1634,7 +1840,7 @@ export const AdminPage = {
     this.openModal('adminPlanModal');
   },
 
-  savePlanModal() {
+  async savePlanModal() {
     const id = document.getElementById('planModalId').value;
     const name = document.getElementById('planModalName').value;
     const minDeposit = Number(document.getElementById('planModalMin').value);
@@ -1648,7 +1854,8 @@ export const AdminPage = {
       return;
     }
 
-    Admin.savePlan({
+    this.showToast('Menyimpan paket investasi ke database...', 'info');
+    await Admin.savePlan({
       id: id || undefined,
       name,
       minDeposit,
@@ -1659,7 +1866,7 @@ export const AdminPage = {
     });
 
     this.closeModal('adminPlanModal');
-    this.showToast('Paket investasi berhasil disimpan!', 'success');
+    this.showToast('Paket investasi berhasil disimpan ke database!', 'success');
     this.renderAll();
   },
 
@@ -1677,13 +1884,13 @@ export const AdminPage = {
     this.openModal('adminUserModal');
   },
 
-  saveUserModal() {
+  async saveUserModal() {
     const userId = document.getElementById('adminUserId').value;
     const walletBalance = document.getElementById('adminUserWalletBal').value;
     const affiliateBalance = document.getElementById('adminUserAffBal').value;
     const points = document.getElementById('adminUserPoints').value;
 
-    Admin.adjustUserBalance(userId, { walletBalance, affiliateBalance, points });
+    await Admin.adjustUserBalance(userId, { walletBalance, affiliateBalance, points });
     this.closeModal('adminUserModal');
     this.showToast('Saldo user berhasil diperbarui!', 'success');
     this.renderAll();
@@ -1798,7 +2005,7 @@ export const AdminPage = {
       txBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:#94A3B8;">Belum ada riwayat transaksi.</td></tr>';
     } else {
       txBody.innerHTML = transactions.map(t => {
-        let isPlus = t.type === 'deposit' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
+        let isPlus = t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
         let color = isPlus ? '#16A34A' : '#DC2626';
         let sign = isPlus ? '+' : '-';
         return `
@@ -1808,7 +2015,7 @@ export const AdminPage = {
             <td><strong style="color:${color}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</strong></td>
             <td style="font-size:11px; max-width:220px; line-height:1.3;">${t.note || t.paymentMethod || '-'}</td>
             <td><span class="badge-status ${t.status || 'approved'}">${t.status || 'approved'}</span></td>
-            <td style="font-size:10.5px; color:#64748B;">${new Date(t.createdAt).toLocaleDateString('id-ID')}</td>
+            <td style="font-size:10.5px; color:#64748B;">${DB.formatWibDateTime(t.createdAt)} WIB</td>
           </tr>
         `;
       }).join('');
@@ -1879,7 +2086,7 @@ export const AdminPage = {
     }
   },
 
-  adminSaveNewPassword() {
+  async adminSaveNewPassword() {
     const userId = document.getElementById('admMemDetailUserId').value;
     const newPass = document.getElementById('admMemNewPassword').value.trim();
 
@@ -1895,7 +2102,7 @@ export const AdminPage = {
       return;
     }
 
-    const res = Admin.resetUserPassword(userId, newPass);
+    const res = await Admin.resetUserPassword(userId, newPass);
     if (res.success) {
       this.showToast(res.message, 'success');
       // Update modal reset notice
@@ -1913,7 +2120,7 @@ export const AdminPage = {
     }
   },
 
-  modalToggleBlockUser() {
+  async modalToggleBlockUser() {
     const userId = document.getElementById('admMemDetailUserId').value;
     if (!userId) return;
 
@@ -1923,7 +2130,7 @@ export const AdminPage = {
 
     if (user.isBlocked) {
       if (confirm(`Apakah Anda yakin ingin MEMBUKA BLOKIR akun member "${user.username}"?\n\nMember akan diizinkan login dan mengakses kembali semua fitur sistem.`)) {
-        const res = Admin.toggleBlockUser(userId);
+        const res = await Admin.toggleBlockUser(userId);
         if (res.success) {
           this.showToast(res.message, 'success');
           this.openMemberDetailModal(userId);
@@ -1936,7 +2143,7 @@ export const AdminPage = {
       const reasonInput = document.getElementById('admMemBlockReasonInput');
       const reason = reasonInput ? reasonInput.value.trim() : '';
       if (confirm(`Apakah Anda yakin ingin MEMBLOKIR akun member "${user.username}"?\n\nMember tidak akan bisa login dan sesi aktifnya langsung diputus.`)) {
-        const res = Admin.toggleBlockUser(userId, reason || 'Pelanggaran ketentuan sistem');
+        const res = await Admin.toggleBlockUser(userId, reason || 'Pelanggaran ketentuan sistem');
         if (res.success) {
           this.showToast(res.message, 'success');
           this.openMemberDetailModal(userId);
@@ -2000,7 +2207,7 @@ export const AdminPage = {
     this.openModal('adminAnnouncementModal');
   },
 
-  saveAnnouncementModal() {
+  async saveAnnouncementModal() {
     const id = document.getElementById('announcementModalId').value;
     const text = document.getElementById('announcementModalText').value.trim();
     const active = document.getElementById('announcementModalActive').value === 'true';
@@ -2011,10 +2218,10 @@ export const AdminPage = {
     }
 
     if (id) {
-      DB.updateAnnouncement(id, { text, active });
+      await DB.updateAnnouncement(id, { text, active });
       this.showToast('Teks berjalan berhasil diperbarui!', 'success');
     } else {
-      DB.addAnnouncement(text, active);
+      await DB.addAnnouncement(text, active);
       this.showToast('Teks berjalan baru berhasil ditambahkan!', 'success');
     }
 
@@ -2022,19 +2229,19 @@ export const AdminPage = {
     this.renderAll();
   },
 
-  toggleAnnouncementStatus(id) {
+  async toggleAnnouncementStatus(id) {
     const db = DB.get();
     const ann = (db.announcements || []).find(a => a.id === id);
     if (!ann) return;
 
-    DB.updateAnnouncement(id, { active: !ann.active });
+    await DB.updateAnnouncement(id, { active: !ann.active });
     this.showToast(`Status teks berjalan berhasil diubah menjadi ${!ann.active ? 'Aktif' : 'Nonaktif'}!`, 'info');
     this.renderAll();
   },
 
-  deleteAnnouncement(id) {
+  async deleteAnnouncement(id) {
     if (!confirm('Apakah Anda yakin ingin menghapus teks berjalan pengumuman ini?')) return;
-    DB.deleteAnnouncement(id);
+    await DB.deleteAnnouncement(id);
     this.showToast('Teks berjalan berhasil dihapus.', 'success');
     this.renderAll();
   },
@@ -2090,7 +2297,7 @@ export const AdminPage = {
     this.openModal('adminBannerModal');
   },
 
-  saveBannerModal() {
+  async saveBannerModal() {
     const id = document.getElementById('bannerModalId').value;
     const title = document.getElementById('bannerModalTitle').value.trim();
     const subtitle = document.getElementById('bannerModalSubtitle').value.trim();
@@ -2098,15 +2305,47 @@ export const AdminPage = {
     const actionUrl = document.getElementById('bannerModalActionUrl').value;
     const active = document.getElementById('bannerModalActive').value === 'true';
     
-    // Get image source (preview image src or typed url input)
     const previewImg = document.getElementById('bannerPreviewImg');
     const typedUrl = document.getElementById('bannerModalUrlInput').value.trim();
+    const fileInput = document.getElementById('bannerModalFileInput');
     let imageUrl = '';
     
     if (previewImg && previewImg.src && previewImg.style.display !== 'none' && !previewImg.src.endsWith('/admin.html') && !previewImg.src.endsWith('/admin')) {
       imageUrl = previewImg.src;
     } else if (typedUrl) {
       imageUrl = typedUrl;
+    }
+
+    // If file is selected and imageUrl is still local (blob, data, or not hosted), upload file directly
+    if (fileInput && fileInput.files && fileInput.files[0] && (!imageUrl || imageUrl.startsWith('blob:') || imageUrl.startsWith('data:'))) {
+      this.showToast('Mengupload file gambar ke hosting server...', 'info');
+      try {
+        const up = await DB.uploadImage(fileInput.files[0]);
+        if (up && up.success && up.url) {
+          imageUrl = up.url;
+          if (previewImg) previewImg.src = up.url;
+          const urlInput = document.getElementById('bannerModalUrlInput');
+          if (urlInput) urlInput.value = up.url;
+        }
+      } catch (err) {
+        console.warn('Banner upload on save error:', err);
+      }
+    }
+
+    // Fallback: If imageUrl is still a blob or data URL, upload it via DB.uploadImage
+    if (imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')) {
+      this.showToast('Mengunggah gambar ke hosting server...', 'info');
+      try {
+        const up = await DB.uploadImage(imageUrl);
+        if (up && up.success && up.url) {
+          imageUrl = up.url;
+          if (previewImg) previewImg.src = up.url;
+          const urlInput = document.getElementById('bannerModalUrlInput');
+          if (urlInput) urlInput.value = up.url;
+        }
+      } catch (err) {
+        console.warn('Image upload error:', err);
+      }
     }
 
     if (!imageUrl) {
@@ -2120,10 +2359,10 @@ export const AdminPage = {
     }
 
     if (id) {
-      DB.updateBanner(id, { title, subtitle, badge, imageUrl, actionUrl, active });
+      await DB.updateBanner(id, { title, subtitle, badge, imageUrl, actionUrl, active });
       this.showToast('Banner slide carousel berhasil diperbarui!', 'success');
     } else {
-      DB.addBanner({ title, subtitle, badge, imageUrl, actionUrl, active });
+      await DB.addBanner({ title, subtitle, badge, imageUrl, actionUrl, active });
       this.showToast('Banner slide baru berhasil ditambahkan!', 'success');
     }
 
@@ -2131,26 +2370,26 @@ export const AdminPage = {
     this.renderAll();
   },
 
-  toggleBannerStatus(id) {
+  async toggleBannerStatus(id) {
     const db = DB.get();
     const banner = (db.banners || []).find(b => b.id === id);
     if (!banner) return;
 
-    DB.updateBanner(id, { active: !banner.active });
+    await DB.updateBanner(id, { active: !banner.active });
     this.showToast(`Status banner berhasil diubah menjadi ${!banner.active ? 'Aktif' : 'Nonaktif'}!`, 'info');
     this.renderAll();
   },
 
-  deleteBanner(id) {
+  async deleteBanner(id) {
     if (!confirm('Apakah Anda yakin ingin menghapus banner slide ini?')) return;
-    DB.deleteBanner(id);
+    await DB.deleteBanner(id);
     this.showToast('Banner berhasil dihapus.', 'success');
     this.renderAll();
   },
 
   // Redemption Approval & Rejection Actions
-  approveRedemption(id) {
-    const res = Admin.approveRedemption(id);
+  async approveRedemption(id) {
+    const res = await Admin.approveRedemption(id);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
@@ -2159,8 +2398,8 @@ export const AdminPage = {
     }
   },
 
-  completeRedemption(id) {
-    const res = Admin.completeRedemption(id);
+  async completeRedemption(id) {
+    const res = await Admin.completeRedemption(id);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
@@ -2169,10 +2408,10 @@ export const AdminPage = {
     }
   },
 
-  rejectRedemption(id) {
+  async rejectRedemption(id) {
     const reason = prompt('Masukkan alasan penolakan penukaran hadiah (Poin akan otomatis di-refund ke user):', 'Data kontak / nomor e-wallet tidak valid');
     if (reason === null) return;
-    const res = Admin.rejectRedemption(id, reason);
+    const res = await Admin.rejectRedemption(id, reason);
     if (res.success) {
       this.showToast(res.message, 'info');
       this.renderAll();
@@ -2236,7 +2475,7 @@ export const AdminPage = {
     this.openModal('adminRewardModal');
   },
 
-  saveRewardModal() {
+  async saveRewardModal() {
     const id = document.getElementById('rewardModalId').value;
     const title = document.getElementById('rewardModalTitle').value.trim();
     const category = document.getElementById('rewardModalCategory').value;
@@ -2246,7 +2485,6 @@ export const AdminPage = {
     const description = document.getElementById('rewardModalDescription').value.trim();
     const active = document.getElementById('rewardModalActive').value === 'true';
 
-    // Get image source
     const previewImg = document.getElementById('rewardPreviewImg');
     const typedUrl = document.getElementById('rewardModalUrlInput').value.trim();
     let imageUrl = '';
@@ -2269,13 +2507,18 @@ export const AdminPage = {
 
     if (!imageUrl) {
       imageUrl = 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
+    } else if (imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')) {
+      const up = await DB.uploadImage(imageUrl);
+      if (up && up.success && up.url) {
+        imageUrl = up.url;
+      }
     }
 
     if (id) {
-      DB.updateReward(id, { title, category, badge, pointsCost, stock, description, imageUrl, active });
+      await DB.updateReward(id, { title, category, badge, pointsCost, stock, description, imageUrl, active });
       this.showToast('Data hadiah reward berhasil diperbarui!', 'success');
     } else {
-      DB.addReward({ title, category, badge, pointsCost, stock, description, imageUrl, active });
+      await DB.addReward({ title, category, badge, pointsCost, stock, description, imageUrl, active });
       this.showToast('Hadiah baru berhasil ditambahkan ke katalog!', 'success');
     }
 
@@ -2283,19 +2526,19 @@ export const AdminPage = {
     this.renderAll();
   },
 
-  toggleRewardStatus(id) {
+  async toggleRewardStatus(id) {
     const db = DB.get();
     const reward = (db.rewards || []).find(r => r.id === id);
     if (!reward) return;
 
-    DB.updateReward(id, { active: !reward.active });
+    await DB.updateReward(id, { active: !reward.active });
     this.showToast(`Status hadiah berhasil diubah menjadi ${!reward.active ? 'Aktif' : 'Nonaktif'}!`, 'info');
     this.renderAll();
   },
 
-  deleteReward(id) {
+  async deleteReward(id) {
     if (!confirm('Apakah Anda yakin ingin menghapus hadiah ini dari katalog?')) return;
-    DB.deleteReward(id);
+    await DB.deleteReward(id);
     this.showToast('Hadiah berhasil dihapus dari katalog.', 'success');
     this.renderAll();
   },
@@ -2475,7 +2718,7 @@ export const AdminPage = {
     this.openModal('adminTestimonialModal');
   },
 
-  saveTestimonialModal() {
+  async saveTestimonialModal() {
     const id = document.getElementById('testiModalId').value;
     const name = document.getElementById('testiModalName').value.trim();
     const city = document.getElementById('testiModalCity').value.trim();
@@ -2503,7 +2746,6 @@ export const AdminPage = {
       return;
     }
 
-    // Determine image source
     let receiptImage = '';
     const previewImg = document.getElementById('testiPreviewImg');
     const urlInput = document.getElementById('testiModalUrlInput');
@@ -2514,8 +2756,14 @@ export const AdminPage = {
       receiptImage = urlInput.value.trim();
     }
 
+    if (receiptImage && (receiptImage.startsWith('blob:') || (receiptImage.startsWith('data:image/') && !receiptImage.startsWith('data:image/svg+xml')))) {
+      const up = await DB.uploadImage(receiptImage);
+      if (up && up.success && up.url) {
+        receiptImage = up.url;
+      }
+    }
+
     if (!receiptImage) {
-      // Create a crisp Base64 SVG receipt matching the selected bank
       receiptImage = createReceiptBase64({
         bank,
         name: name.toUpperCase(),
@@ -2526,10 +2774,10 @@ export const AdminPage = {
     }
 
     if (id) {
-      DB.updateTestimonial(id, { name, city, bank, amount, rating, timeAgo, comment, receiptImage, active });
+      await DB.updateTestimonial(id, { name, city, bank, amount, rating, timeAgo, comment, receiptImage, active });
       this.showToast('Testimoni penarikan berhasil diperbarui!', 'success');
     } else {
-      DB.addTestimonial({ name, city, bank, amount, rating, timeAgo, comment, receiptImage, active });
+      await DB.addTestimonial({ name, city, bank, amount, rating, timeAgo, comment, receiptImage, active });
       this.showToast('Testimoni penarikan baru berhasil dipublikasikan!', 'success');
     }
 
@@ -2549,19 +2797,19 @@ export const AdminPage = {
     }
   },
 
-  toggleTestimonialStatus(id) {
+  async toggleTestimonialStatus(id) {
     const db = DB.get();
     const testi = (db.testimonials || []).find(t => t.id === id);
     if (!testi) return;
 
-    DB.updateTestimonial(id, { active: !testi.active });
+    await DB.updateTestimonial(id, { active: !testi.active });
     this.showToast(`Status testimoni berhasil diubah menjadi ${!testi.active ? 'Aktif' : 'Nonaktif'}!`, 'info');
     this.renderAll();
   },
 
-  deleteTestimonial(id) {
+  async deleteTestimonial(id) {
     if (!confirm('Apakah Anda yakin ingin menghapus testimoni ini?')) return;
-    DB.deleteTestimonial(id);
+    await DB.deleteTestimonial(id);
     this.showToast('Testimoni berhasil dihapus.', 'success');
     this.renderAll();
   },
@@ -2660,6 +2908,14 @@ export const AdminPage = {
       });
     });
 
+    // Hash change listener (browser back/forward or manual URL hash change)
+    window.addEventListener('hashchange', () => {
+      const h = window.location.hash.replace('#', '').trim();
+      if (h && this.tabTitles[h] && h !== this.currentTab) {
+        this.switchTab(h);
+      }
+    });
+
     // Pengaturan Web Sub-tabs Navigation
     document.querySelectorAll('.admin-settings-tab').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -2681,10 +2937,10 @@ export const AdminPage = {
       });
     });
 
-    // Banner File Input Upload Listener (FileReader base64 converter)
+    // Banner File Input Upload Listener (Direct Server Upload + Safe Local Compression)
     const bannerFileInput = document.getElementById('bannerModalFileInput');
     if (bannerFileInput) {
-      bannerFileInput.addEventListener('change', (e) => {
+      bannerFileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -2693,17 +2949,32 @@ export const AdminPage = {
           return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const previewImg = document.getElementById('bannerPreviewImg');
-          const placeholder = document.getElementById('bannerPreviewPlaceholder');
-          if (previewImg && placeholder) {
-            previewImg.src = event.target.result;
-            previewImg.style.display = 'block';
-            placeholder.style.display = 'none';
+        const previewImg = document.getElementById('bannerPreviewImg');
+        const placeholder = document.getElementById('bannerPreviewPlaceholder');
+        const urlInput = document.getElementById('bannerModalUrlInput');
+
+        if (previewImg && placeholder) {
+          previewImg.src = URL.createObjectURL(file);
+          previewImg.style.display = 'block';
+          placeholder.style.display = 'none';
+        }
+
+        this.showToast('Mengupload gambar banner ke server...', 'info');
+        try {
+          const res = await DB.uploadImage(file);
+          if (res && res.success && res.url) {
+            if (previewImg) previewImg.src = res.url;
+            if (urlInput) urlInput.value = res.url;
+            this.showToast('✓ Gambar banner berhasil disimpan di server!', 'success');
+          } else {
+            throw new Error(res.message || 'Upload gagal');
           }
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+          const compressed = await DB.compressImageFile(file, 800, 0.7);
+          if (previewImg) previewImg.src = compressed;
+          if (urlInput) urlInput.value = compressed;
+          this.showToast('Gambar banner dimuat (mode kompresi).', 'info');
+        }
       });
     }
 
@@ -2731,10 +3002,10 @@ export const AdminPage = {
       });
     }
 
-    // Reward File Input Upload Listener (FileReader base64 converter)
+    // Reward File Input Upload Listener (Direct Server Upload + Safe Local Compression)
     const rewardFileInput = document.getElementById('rewardModalFileInput');
     if (rewardFileInput) {
-      rewardFileInput.addEventListener('change', (e) => {
+      rewardFileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -2743,17 +3014,32 @@ export const AdminPage = {
           return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const previewImg = document.getElementById('rewardPreviewImg');
-          const placeholder = document.getElementById('rewardPreviewPlaceholder');
-          if (previewImg && placeholder) {
-            previewImg.src = event.target.result;
-            previewImg.style.display = 'block';
-            placeholder.style.display = 'none';
+        const previewImg = document.getElementById('rewardPreviewImg');
+        const placeholder = document.getElementById('rewardPreviewPlaceholder');
+        const urlInput = document.getElementById('rewardModalUrlInput');
+
+        if (previewImg && placeholder) {
+          previewImg.src = URL.createObjectURL(file);
+          previewImg.style.display = 'block';
+          placeholder.style.display = 'none';
+        }
+
+        this.showToast('Mengupload gambar hadiah ke server...', 'info');
+        try {
+          const res = await DB.uploadImage(file);
+          if (res && res.success && res.url) {
+            if (previewImg) previewImg.src = res.url;
+            if (urlInput) urlInput.value = res.url;
+            this.showToast('✓ Gambar hadiah berhasil disimpan di server!', 'success');
+          } else {
+            throw new Error(res.message || 'Upload gagal');
           }
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+          const compressed = await DB.compressImageFile(file, 800, 0.7);
+          if (previewImg) previewImg.src = compressed;
+          if (urlInput) urlInput.value = compressed;
+          this.showToast('Gambar hadiah dimuat (mode kompresi).', 'info');
+        }
       });
     }
 
@@ -2781,10 +3067,10 @@ export const AdminPage = {
       });
     }
 
-    // Testimonial File Input Upload Listener (FileReader base64 converter)
+    // Testimonial File Input Upload Listener (Direct Server Upload + Safe Local Compression)
     const testiFileInput = document.getElementById('testiModalFileInput');
     if (testiFileInput) {
-      testiFileInput.addEventListener('change', (e) => {
+      testiFileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -2793,17 +3079,32 @@ export const AdminPage = {
           return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const previewImg = document.getElementById('testiPreviewImg');
-          const placeholder = document.getElementById('testiPreviewPlaceholder');
-          if (previewImg && placeholder) {
-            previewImg.src = event.target.result;
-            previewImg.style.display = 'block';
-            placeholder.style.display = 'none';
+        const previewImg = document.getElementById('testiPreviewImg');
+        const placeholder = document.getElementById('testiPreviewPlaceholder');
+        const urlInput = document.getElementById('testiModalUrlInput');
+
+        if (previewImg && placeholder) {
+          previewImg.src = URL.createObjectURL(file);
+          previewImg.style.display = 'block';
+          placeholder.style.display = 'none';
+        }
+
+        this.showToast('Mengupload bukti transfer ke server...', 'info');
+        try {
+          const res = await DB.uploadImage(file);
+          if (res && res.success && res.url) {
+            if (previewImg) previewImg.src = res.url;
+            if (urlInput) urlInput.value = res.url;
+            this.showToast('✓ Bukti transfer berhasil disimpan di server!', 'success');
+          } else {
+            throw new Error(res.message || 'Upload gagal');
           }
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+          const compressed = await DB.compressImageFile(file, 800, 0.7);
+          if (previewImg) previewImg.src = compressed;
+          if (urlInput) urlInput.value = compressed;
+          this.showToast('Bukti transfer dimuat (mode kompresi).', 'info');
+        }
       });
     }
 
@@ -2831,10 +3132,10 @@ export const AdminPage = {
       });
     }
 
-    // QRIS File Input Upload Listener (FileReader base64 converter)
+    // QRIS File Input Upload Listener (Direct Server Upload + Safe Local Compression)
     const qrisFileInput = document.getElementById('qrisCfgFileInput');
     if (qrisFileInput) {
-      qrisFileInput.addEventListener('change', (e) => {
+      qrisFileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -2843,13 +3144,21 @@ export const AdminPage = {
           return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const imgUrlEl = document.getElementById('qrisCfgImageUrl');
-          if (imgUrlEl) imgUrlEl.value = event.target.result;
+        const imgUrlEl = document.getElementById('qrisCfgImageUrl');
+        this.showToast('Mengupload barcode QRIS ke server...', 'info');
+        try {
+          const res = await DB.uploadImage(file);
+          if (res && res.success && res.url) {
+            if (imgUrlEl) imgUrlEl.value = res.url;
+            this.showToast('✓ Barcode QRIS berhasil disimpan di server!', 'success');
+          } else {
+            throw new Error(res.message || 'Upload gagal');
+          }
+        } catch (err) {
+          const compressed = await DB.compressImageFile(file, 600, 0.8);
+          if (imgUrlEl) imgUrlEl.value = compressed;
           this.previewQrisSettings();
-        };
-        reader.readAsDataURL(file);
+        }
       });
     }
   },
@@ -2948,7 +3257,7 @@ export const AdminPage = {
   },
 
   /** Save web settings based on section */
-  saveWebSettings(section) {
+  async saveWebSettings(section) {
     const db = DB.get();
     if (!db.settings.webSettings) db.settings.webSettings = {};
     if (!db.settings.seo) db.settings.seo = {};
@@ -3012,8 +3321,9 @@ export const AdminPage = {
       db.settings.maintenance.message = document.getElementById('cfgMaintenanceMessage')?.value.trim() || '';
     }
 
-    DB.save(db);
-    this.showToast('✅ Pengaturan berhasil disimpan!', 'success');
+    this.showToast('Menyimpan ke database cloud...', 'info');
+    await DB.save(db);
+    this.showToast('✅ Pengaturan web berhasil disimpan ke database!', 'success');
   },
 
   /** Preview maintenance badge */
@@ -3077,7 +3387,7 @@ export const AdminPage = {
   },
 
   /** Save Customer Service Settings */
-  saveCsSettings() {
+  async saveCsSettings() {
     const db = DB.get();
     if (!db.settings) db.settings = {};
     if (!db.settings.cs) db.settings.cs = {};
@@ -3090,12 +3400,13 @@ export const AdminPage = {
     db.settings.cs.telegram = tg;
     db.settings.cs.waMessage = msg;
 
-    DB.save(db);
+    this.showToast('Menyimpan kontak CS ke database...', 'info');
+    await DB.save(db);
     this.showToast('✅ Kontak WhatsApp & Telegram CS berhasil disimpan dan aktif!', 'success');
   },
 
   /** Save Kelas Trading Settings */
-  saveKelasTradingSettings() {
+  async saveKelasTradingSettings() {
     const db = DB.get();
     if (!db.settings) db.settings = {};
     if (!db.settings.kelasTrading) db.settings.kelasTrading = {};
@@ -3108,7 +3419,8 @@ export const AdminPage = {
     db.settings.kelasTrading.telegram = tg;
     db.settings.kelasTrading.desc = desc;
 
-    DB.save(db);
+    this.showToast('Menyimpan Kelas Trading ke database...', 'info');
+    await DB.save(db);
     this.showToast('✅ Kontak WhatsApp & Telegram Kelas Trading berhasil disimpan dan aktif!', 'success');
   },
 
@@ -3182,6 +3494,351 @@ export const AdminPage = {
     DB.save(db);
     this.renderWebSettings();
     this.showToast('🔄 Semua pengaturan web direset ke default!', 'success');
+  },
+
+  // ============================================================
+  // KEAMANAN AKUN ADMIN (Username & Password) — Handler Methods
+  // ============================================================
+
+  /** Helper to find the active administrator account */
+  getAdminUser() {
+    const db = DB.get();
+    const currUser = Auth.getUser();
+    if (currUser && currUser.role === 'admin') {
+      const found = (db.users || []).find(u => u.id === currUser.id);
+      if (found) return found;
+    }
+    return (db.users || []).find(u => u.role === 'admin') || null;
+  },
+
+  /** Load current Admin Account details into the form */
+  renderAdminAccountSettings() {
+    const adminUser = this.getAdminUser();
+    if (!adminUser) return;
+
+    this._setVal('adminAccCurrUsername', adminUser.username || '');
+    this._setVal('adminAccNewUsername', adminUser.username || '');
+    this._setVal('adminAccFullName', adminUser.fullName || '');
+    this._setVal('adminAccEmail', adminUser.email || '');
+    this._setVal('adminAccPhone', adminUser.phone || '');
+
+    // Clear password inputs
+    this._setVal('adminAccOldPassword', '');
+    this._setVal('adminAccNewPassword', '');
+    this._setVal('adminAccConfirmPassword', '');
+  },
+
+  /** Save Admin Profile Details & Username */
+  async saveAdminProfileSettings() {
+    const adminUser = this.getAdminUser();
+    if (!adminUser) {
+      this.showToast('Akun Administrator tidak ditemukan!', 'error');
+      return;
+    }
+
+    const newUsername = (document.getElementById('adminAccNewUsername')?.value || '').trim();
+    const fullName = (document.getElementById('adminAccFullName')?.value || '').trim();
+    const email = (document.getElementById('adminAccEmail')?.value || '').trim();
+    const phone = (document.getElementById('adminAccPhone')?.value || '').trim();
+
+    if (!newUsername) {
+      this.showToast('Username admin tidak boleh kosong!', 'error');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
+      this.showToast('Username hanya boleh berupa huruf, angka, dan garis bawah (_)!', 'error');
+      return;
+    }
+
+    const db = DB.get();
+    // Check if newUsername is taken by someone else
+    const existing = (db.users || []).find(u => u.id !== adminUser.id && u.username && u.username.toLowerCase() === newUsername.toLowerCase());
+    if (existing) {
+      this.showToast(`Username @${newUsername} sudah digunakan oleh akun lain! Silakan pilih username lain.`, 'error');
+      return;
+    }
+
+    adminUser.username = newUsername;
+    if (fullName) adminUser.fullName = fullName;
+    if (email) adminUser.email = email;
+    if (phone) adminUser.phone = phone;
+
+    // Update in database and sync
+    await DB.updateUser(adminUser.id, {
+      username: newUsername,
+      fullName: adminUser.fullName,
+      email: adminUser.email,
+      phone: adminUser.phone
+    });
+
+    // Update active session & topbar
+    DB.setSession(adminUser);
+    this.updateAdminTopbar(adminUser);
+    this._setVal('adminAccCurrUsername', newUsername);
+
+    this.showToast(`✅ Username dan profil Admin berhasil diperbarui ke @${newUsername}!`, 'success');
+  },
+
+  /** Save and change Admin Password */
+  async saveAdminPasswordSettings() {
+    const adminUser = this.getAdminUser();
+    if (!adminUser) {
+      this.showToast('Akun Administrator tidak ditemukan!', 'error');
+      return;
+    }
+
+    const oldPass = document.getElementById('adminAccOldPassword')?.value || '';
+    const newPass = document.getElementById('adminAccNewPassword')?.value || '';
+    const confirmPass = document.getElementById('adminAccConfirmPassword')?.value || '';
+
+    if (!oldPass) {
+      this.showToast('Harap masukkan kata sandi lama Anda untuk verifikasi keamanan!', 'error');
+      return;
+    }
+
+    if (!adminUser.password && !oldPass) {
+      this.showToast('Harap masukkan kata sandi lama Anda untuk verifikasi keamanan!', 'error');
+      return;
+    }
+
+    if (!newPass) {
+      this.showToast('Harap masukkan kata sandi baru!', 'error');
+      return;
+    }
+
+    if (newPass.length < 6) {
+      this.showToast('Kata sandi baru minimal 6 karakter!', 'error');
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      this.showToast('Konfirmasi kata sandi baru tidak cocok! Periksa kembali pengetikan Anda.', 'error');
+      return;
+    }
+
+    // Verify the old password and store the new one as a bcrypt hash server-side
+    const res = await DB.changeUserPassword(adminUser.id, oldPass, newPass);
+    if (!res || !res.success) {
+      this.showToast((res && res.message) || 'Gagal mengubah kata sandi!', 'error');
+      return;
+    }
+    DB.setSession(adminUser);
+
+    // Clear password inputs
+    this._setVal('adminAccOldPassword', '');
+    this._setVal('adminAccNewPassword', '');
+    this._setVal('adminAccConfirmPassword', '');
+
+    this.showToast('🔑 Kata sandi Admin berhasil diubah dan disinkronkan ke database!', 'success');
+  },
+
+  /** Toggle password field visibility */
+  toggleInputPasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+  },
+
+
+  // =========================================================================
+  // BACKUP & EXPORT SYSTEM (Realtime MySQL & JSON Snapshot Engine)
+  // =========================================================================
+  async refreshBackupStats(overrideDb) {
+    const db = overrideDb || DB.get();
+    const usersCount = (db.users || []).length;
+    const trxCount = (db.transactions || []).length;
+
+    const elUsers = document.getElementById('backupStatUsers');
+    const elTrx = document.getElementById('backupStatTransactions');
+    const elDate = document.getElementById('backupStatLastDate');
+
+    if (elUsers) elUsers.textContent = `${usersCount} Akun`;
+    if (elTrx) elTrx.textContent = `${trxCount} Transaksi`;
+    if (elDate) {
+      elDate.textContent = new Date().toLocaleString('id-ID', {
+        dateStyle: 'medium',
+        timeStyle: 'medium'
+      });
+    }
+  },
+
+  // 1. Download Full JSON Snapshot
+  downloadFullBackupJson() {
+    this.showToast('Menyiapkan cadangan data lengkap...', 'info');
+    // Direct browser trigger to API with download header
+    const downloadUrl = 'api/index.php?action=backup&download=1';
+    
+    // Also generate immediate client fallback if API is slow
+    try {
+      const db = DB.get();
+      const backupData = {
+        system: 'AUTOTRADING INVESTMENT PLATFORM',
+        version: '2.5.0-PROD',
+        exportDate: new Date().toISOString(),
+        timestamp: Date.now(),
+        counts: {
+          users: (db.users || []).length,
+          transactions: (db.transactions || []).length,
+          investments: (db.investments || []).length
+        },
+        state: db
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const filename = `autotrading_full_backup_${new Date().toISOString().slice(0, 10)}_${Date.now()}.json`;
+      
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      
+      this.showToast('Backup JSON lengkap berhasil diunduh!', 'success');
+    } catch (e) {
+      window.location.href = downloadUrl;
+    }
+  },
+
+  // 2. Download SQL Dump
+  downloadSqlDump() {
+    this.showToast('Menyiapkan file SQL dump database MySQL...', 'info');
+    const sqlUrl = 'api/index.php?action=backup&format=sql';
+    const link = document.createElement('a');
+    link.href = sqlUrl;
+    link.target = '_blank';
+    link.download = `autotrading_db_${new Date().toISOString().slice(0, 10)}.sql`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    this.showToast('Permintaan ekspor SQL telah dikirim ke server cPanel!', 'success');
+  },
+
+  // 3. Export Users CSV
+  downloadUsersCsv() {
+    const db = DB.get();
+    const users = db.users || [];
+    if (users.length === 0) {
+      this.showToast('Tidak ada data anggota untuk diekspor.', 'info');
+      return;
+    }
+
+    const headers = ['User ID', 'Username', 'Nama Lengkap', 'Email', 'No. WhatsApp', 'Saldo Wallet (IDR)', 'Saldo Afiliasi (IDR)', 'Poin', 'Status', 'Sponsor', 'Role', 'Tanggal Daftar'];
+    const rows = users.map(u => [
+      `"${(u.id || '').replace(/"/g, '""')}"`,
+      `"${(u.username || '').replace(/"/g, '""')}"`,
+      `"${(u.fullName || '').replace(/"/g, '""')}"`,
+      `"${(u.email || '').replace(/"/g, '""')}"`,
+      `"${(u.phone || '').replace(/"/g, '""')}"`,
+      u.walletBalance || 0,
+      u.affiliateBalance || 0,
+      u.points || 0,
+      `"${(u.status || (u.isBlocked ? 'blocked' : 'active')).toUpperCase()}"`,
+      `"${(u.referredBy || '-').replace(/"/g, '""')}"`,
+      `"${(u.role || 'user').toUpperCase()}"`,
+      `"${u.registeredAt ? new Date(u.registeredAt).toLocaleString('id-ID') : '-'}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `users_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+
+    this.showToast(`${users.length} Data anggota berhasil diekspor ke CSV!`, 'success');
+  },
+
+  // 4. Export Transactions CSV
+  downloadTransactionsCsv() {
+    const db = DB.get();
+    const txs = db.transactions || [];
+    if (txs.length === 0) {
+      this.showToast('Tidak ada data transaksi untuk diekspor.', 'info');
+      return;
+    }
+
+    const headers = ['ID Transaksi', 'User ID', 'Username', 'Tipe Transaksi', 'Nominal (IDR)', 'Status', 'Metode Pembayaran', 'Catatan / TXID', 'Tanggal Transaksi'];
+    const rows = txs.map(t => [
+      `"${(t.id || '').replace(/"/g, '""')}"`,
+      `"${(t.userId || '').replace(/"/g, '""')}"`,
+      `"${(t.username || '').replace(/"/g, '""')}"`,
+      `"${(t.type || '').toUpperCase()}"`,
+      t.amount || 0,
+      `"${(t.status || '').toUpperCase()}"`,
+      `"${(t.paymentMethod || t.method || '-').replace(/"/g, '""')}"`,
+      `"${(t.txid || t.note || '-').replace(/"/g, '""')}"`,
+      `"${t.createdAt ? new Date(t.createdAt).toLocaleString('id-ID') : '-'}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `transactions_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+
+    this.showToast(`${txs.length} Data transaksi berhasil diekspor ke CSV!`, 'success');
+  },
+
+  // 5. Restore Backup File Handler
+  async handleRestoreFileSelected(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const notice = document.getElementById('restoreFileNameNotice');
+    if (notice) notice.textContent = `File dipilih: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target.result;
+        const parsed = JSON.parse(text);
+
+        // Validate structure
+        const targetState = parsed.state || parsed;
+        if (!targetState || !Array.isArray(targetState.users)) {
+          alert('Format file cadangan tidak valid! File harus memiliki array data pengguna ("users").');
+          return;
+        }
+
+        const userCount = (targetState.users || []).length;
+        const trxCount = (targetState.transactions || []).length;
+
+        const confirmMsg = `PERINGATAN PEMULIHAN SISTEM:\n\nFile cadangan berisi:\n- ${userCount} Akun Anggota\n- ${trxCount} Riwayat Transaksi\n\nApakah Anda yakin ingin memulihkan (*restore*) data ini sekarang? Data yang ada di server akan diperbarui.`;
+        if (!confirm(confirmMsg)) {
+          if (notice) notice.textContent = 'Pemulihan dibatalkan oleh Admin.';
+          return;
+        }
+
+        this.showToast('Memulihkan dan menyinkronkan data ke MySQL server...', 'info');
+        
+        // Preserve admin credentials if not in backup
+        const currentDb = DB.get();
+        const currentAdmin = (currentDb.users || []).find(u => u.role === 'admin' || u.id === 'usr-admin');
+        if (currentAdmin && !targetState.users.some(u => u.id === currentAdmin.id || u.username === currentAdmin.username)) {
+          targetState.users.unshift(currentAdmin);
+        }
+
+        // Save state to MySQL
+        await DB.save(targetState);
+        this.showToast('Data sistem berhasil dipulihkan 100%!', 'success');
+        this.renderAll();
+        this.refreshBackupStats(targetState);
+        if (notice) notice.textContent = `✅ Sukses dipulihkan: ${file.name}`;
+      } catch (err) {
+        alert('Gagal membaca file backup: ' + err.message);
+        if (notice) notice.textContent = 'Gagal memproses file backup.';
+      }
+    };
+    reader.readAsText(file);
   },
 
 };

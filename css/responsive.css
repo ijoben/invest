@@ -156,34 +156,44 @@
 }
 
 /* ==========================================================================
-   MOBILE HEADER PERFECTION (Screens <= 480px and <= 380px)
+   MOBILE HEADER PERFECTION (Screens <= 576px, <= 480px and <= 380px)
    ========================================================================== */
+@media (max-width: 576px) {
+  .header-brand-badge {
+    display: none !important; /* Hide central pill on mobile so user greeting and action buttons have abundant breathing space */
+  }
+}
+
 @media (max-width: 480px) {
   .top-header {
-    padding: 10px 12px;
-    gap: 8px;
+    padding: 8px 12px;
+    gap: 10px;
   }
   .header-user {
     gap: 8px;
+    flex: 1;
+    min-width: 0;
   }
   .user-avatar-badge {
-    width: 38px;
-    height: 38px;
-    font-size: 14px;
+    width: 36px;
+    height: 36px;
+    font-size: 13.5px;
   }
   .greeting-user-name {
     font-size: 13.5px;
+    font-weight: 800;
+    line-height: 1.25;
   }
-  .header-actions {
-    gap: 5px;
-  }
-  .header-brand-badge {
-    padding: 3px 8px;
+  .greeting-meta-row {
+    margin-top: 2px;
     gap: 4px;
   }
-  .header-brand-text {
-    font-size: 10px;
-    letter-spacing: 0.5px;
+  .greeting-sponsor-wrap {
+    display: none !important; /* Keep mobile header uncluttered with just username and status badge */
+  }
+  .header-actions {
+    gap: 6px;
+    flex-shrink: 0;
   }
   .header-btn {
     width: 33px;
@@ -197,42 +207,30 @@
 
 @media (max-width: 380px) {
   .top-header {
-    padding: 8px 10px;
-    gap: 6px;
+    padding: 6px 10px;
+    gap: 8px;
   }
   .header-user {
     gap: 7px;
   }
   .user-avatar-badge {
-    width: 34px;
-    height: 34px;
-    font-size: 13px;
+    width: 33px;
+    height: 33px;
+    font-size: 12.5px;
   }
   .greeting-user-name {
     font-size: 12.5px;
   }
-  .greeting-sponsor-text {
-    font-size: 8.5px;
-    max-width: 80px;
-  }
-  .header-brand-badge {
-    padding: 3px 6px;
-    gap: 3px;
-  }
-  .header-brand-text {
-    font-size: 9px;
-    letter-spacing: 0.3px;
-  }
   .header-actions {
-    gap: 4px;
+    gap: 5px;
   }
   .header-btn {
     width: 30px;
     height: 30px;
   }
   .header-btn svg {
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
   }
 }
 

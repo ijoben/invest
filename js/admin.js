@@ -56,7 +56,7 @@ export const Admin = {
   },
 
   // Approve Deposit Request
-  approveDeposit(transactionId) {
+  async approveDeposit(transactionId) {
     const db = DB.get();
     const trx = db.transactions.find(t => t.id === transactionId);
     if (!trx || trx.status !== 'pending') {
@@ -69,20 +69,28 @@ export const Admin = {
     }
 
     // Credit user's wallet balance
-    user.walletBalance += trx.amount;
+    user.walletBalance = (user.walletBalance || 0) + trx.amount;
+
+    // Credit loyalty points reward for successful deposit (Requirement 8)
+    const pointsReward = Number(db.settings && db.settings.depositPointsReward !== undefined ? db.settings.depositPointsReward : 5);
+    if (pointsReward > 0) {
+      user.points = (user.points || 0) + pointsReward;
+      trx.pointsAwarded = pointsReward;
+    }
+
     trx.status = 'approved';
     trx.updatedAt = new Date().toISOString();
 
-    DB.save(db);
+    await DB.save(db);
 
     return {
       success: true,
-      message: `Deposit ${DB.formatIDR(trx.amount)} untuk ${user.username} berhasil disetujui!`
+      message: `Deposit ${DB.formatIDR(trx.amount)} untuk ${user.username} berhasil disetujui!${pointsReward > 0 ? ` (+${pointsReward} Poin ditambahkan)` : ''}`
     };
   },
 
   // Reject Deposit Request
-  rejectDeposit(transactionId, reason = 'Bukti transfer tidak valid') {
+  async rejectDeposit(transactionId, reason = 'Bukti transfer tidak valid') {
     const db = DB.get();
     const trx = db.transactions.find(t => t.id === transactionId);
     if (!trx || trx.status !== 'pending') {
@@ -93,12 +101,12 @@ export const Admin = {
     trx.rejectReason = reason;
     trx.updatedAt = new Date().toISOString();
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: `Deposit ${trx.id} berhasil ditolak.` };
   },
 
   // Approve Withdrawal Request
-  approveWithdrawal(transactionId) {
+  async approveWithdrawal(transactionId) {
     const db = DB.get();
     const trx = db.transactions.find(t => t.id === transactionId);
     if (!trx || trx.status !== 'pending') {
@@ -108,7 +116,7 @@ export const Admin = {
     trx.status = 'approved';
     trx.updatedAt = new Date().toISOString();
 
-    DB.save(db);
+    await DB.save(db);
     return {
       success: true,
       message: `Penarikan ${DB.formatIDR(trx.amount)} ke ${trx.destinationAccount} berhasil disetujui!`
@@ -116,7 +124,7 @@ export const Admin = {
   },
 
   // Reject Withdrawal Request (Refunds user balance)
-  rejectWithdrawal(transactionId, reason = 'Data rekening tidak sesuai') {
+  async rejectWithdrawal(transactionId, reason = 'Data rekening tidak sesuai') {
     const db = DB.get();
     const trx = db.transactions.find(t => t.id === transactionId);
     if (!trx || trx.status !== 'pending') {
@@ -137,12 +145,12 @@ export const Admin = {
     trx.rejectReason = reason;
     trx.updatedAt = new Date().toISOString();
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: `Penarikan ${trx.id} ditolak dan saldo telah dikembalikan ke user.` };
   },
 
   // Save / Update Plan
-  savePlan(planData) {
+  async savePlan(planData) {
     const db = DB.get();
     const existingIdx = db.plans.findIndex(p => p.id === planData.id);
 
@@ -157,23 +165,23 @@ export const Admin = {
       });
     }
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Paket investasi berhasil disimpan!' };
   },
 
   // Delete Plan
-  deletePlan(planId) {
+  async deletePlan(planId) {
     const db = DB.get();
     db.plans = db.plans.filter(p => p.id !== planId);
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Paket investasi berhasil dihapus.' };
   },
 
   // Update Settings (Affiliate, Rates, Payment Details)
-  updateSettings(newSettings) {
+  async updateSettings(newSettings) {
     const db = DB.get();
     db.settings = { ...db.settings, ...newSettings };
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Pengaturan sistem berhasil diperbarui!' };
   },
 
@@ -183,7 +191,7 @@ export const Admin = {
     return (db.settings.paymentGateways && db.settings.paymentGateways.banks) || [];
   },
 
-  saveBank(bankData) {
+  async saveBank(bankData) {
     const db = DB.get();
     db.settings.paymentGateways = db.settings.paymentGateways || {};
     db.settings.paymentGateways.banks = db.settings.paymentGateways.banks || [];
@@ -209,28 +217,28 @@ export const Admin = {
       banks.push(newBank);
     }
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Rekening bank berhasil disimpan!' };
   },
 
-  deleteBank(bankId) {
+  async deleteBank(bankId) {
     const db = DB.get();
     if (!db.settings.paymentGateways || !db.settings.paymentGateways.banks) {
       return { success: false, message: 'Data bank tidak ditemukan!' };
     }
     db.settings.paymentGateways.banks = db.settings.paymentGateways.banks.filter(b => b.id !== bankId);
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Rekening bank berhasil dihapus.' };
   },
 
-  toggleBankStatus(bankId) {
+  async toggleBankStatus(bankId) {
     const db = DB.get();
     const banks = (db.settings.paymentGateways && db.settings.paymentGateways.banks) || [];
     const bank = banks.find(b => b.id === bankId);
     if (!bank) return { success: false, message: 'Rekening bank tidak ditemukan!' };
 
     bank.active = !bank.active;
-    DB.save(db);
+    await DB.save(db);
     return {
       success: true,
       active: bank.active,
@@ -239,7 +247,7 @@ export const Admin = {
   },
 
   // QRIS Management
-  saveQrisSettings({ active, merchantName, nmid, imageUrl }) {
+  async saveQrisSettings({ active, merchantName, nmid, imageUrl }) {
     const db = DB.get();
     db.settings.paymentGateways = db.settings.paymentGateways || {};
     db.settings.paymentGateways.qris = {
@@ -248,12 +256,12 @@ export const Admin = {
       nmid: nmid ? nmid.trim() : '',
       imageUrl: imageUrl ? imageUrl.trim() : ''
     };
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Pengaturan QRIS berhasil disimpan!' };
   },
 
   // Adjust User Balance directly
-  adjustUserBalance(userId, { walletBalance, affiliateBalance, points }) {
+  async adjustUserBalance(userId, { walletBalance, affiliateBalance, points }) {
     const db = DB.get();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
@@ -262,12 +270,12 @@ export const Admin = {
     if (affiliateBalance !== undefined) user.affiliateBalance = Number(affiliateBalance);
     if (points !== undefined) user.points = Number(points);
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: `Saldo pengguna ${user.username} berhasil diubah!` };
   },
 
   // Process / Approve Redemption (Set to processing)
-  approveRedemption(redemptionId, adminNote = 'Hadiah sedang diproses / dikirim') {
+  async approveRedemption(redemptionId, adminNote = 'Hadiah sedang diproses / dikirim') {
     const db = DB.get();
     const rdm = (db.redemptions || []).find(r => r.id === redemptionId);
     if (!rdm) return { success: false, message: 'Data penukaran tidak ditemukan!' };
@@ -276,12 +284,12 @@ export const Admin = {
     rdm.adminNote = adminNote;
     rdm.updatedAt = new Date().toISOString();
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: `Penukaran ${rdm.id} (${rdm.rewardTitle}) berhasil disetujui dan sedang diproses!` };
   },
 
   // Complete Redemption (Set to completed / delivered)
-  completeRedemption(redemptionId, adminNote = 'Hadiah telah berhasil dikirim / ditransfer ke pengguna') {
+  async completeRedemption(redemptionId, adminNote = 'Hadiah telah berhasil dikirim / ditransfer ke pengguna') {
     const db = DB.get();
     const rdm = (db.redemptions || []).find(r => r.id === redemptionId);
     if (!rdm) return { success: false, message: 'Data penukaran tidak ditemukan!' };
@@ -290,12 +298,12 @@ export const Admin = {
     rdm.adminNote = adminNote;
     rdm.updatedAt = new Date().toISOString();
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: `Penukaran ${rdm.id} telah diselesaikan!` };
   },
 
   // Reject Redemption (Refunds user points & restocks reward)
-  rejectRedemption(redemptionId, reason = 'Data kontak atau alamat tidak valid') {
+  async rejectRedemption(redemptionId, reason = 'Data kontak atau alamat tidak valid') {
     const db = DB.get();
     const rdm = (db.redemptions || []).find(r => r.id === redemptionId);
     if (!rdm) return { success: false, message: 'Data penukaran tidak ditemukan!' };
@@ -320,7 +328,7 @@ export const Admin = {
     rdm.adminNote = reason;
     rdm.updatedAt = new Date().toISOString();
 
-    DB.save(db);
+    await DB.save(db);
     return {
       success: true,
       message: `Penukaran ${rdm.id} ditolak. Poin ${rdm.pointsSpent} telah dikembalikan secara otomatis ke pengguna ${rdm.username}.`
@@ -328,7 +336,7 @@ export const Admin = {
   },
 
   // Approve Testimonial (with 5-Star Automatic Points Bonus)
-  approveTestimonial(testimonialId) {
+  async approveTestimonial(testimonialId) {
     const db = DB.get();
     db.testimonials = db.testimonials || [];
     const testi = db.testimonials.find(t => t.id === testimonialId);
@@ -349,7 +357,7 @@ export const Admin = {
       }
     }
 
-    DB.save(db);
+    await DB.save(db);
     return {
       success: true,
       message: `Testimoni dari ${testi.name} berhasil disetujui${bonusMessage}`
@@ -357,7 +365,7 @@ export const Admin = {
   },
 
   // Reject Testimonial
-  rejectTestimonial(testimonialId, reason = 'Foto bukti atau isi testimoni tidak sesuai ketentuan') {
+  async rejectTestimonial(testimonialId, reason = 'Foto bukti atau isi testimoni tidak sesuai ketentuan') {
     const db = DB.get();
     db.testimonials = db.testimonials || [];
     const testi = db.testimonials.find(t => t.id === testimonialId);
@@ -367,24 +375,24 @@ export const Admin = {
     testi.rejectReason = reason;
     testi.updatedAt = new Date().toISOString();
 
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: `Testimoni dari ${testi.name} telah ditolak.` };
   },
 
   // Delete Testimonial
-  deleteTestimonial(testimonialId) {
-    DB.deleteTestimonial(testimonialId);
+  async deleteTestimonial(testimonialId) {
+    await DB.deleteTestimonial(testimonialId);
     return { success: true, message: 'Testimoni berhasil dihapus.' };
   },
 
   // Save / Update Withdrawal Schedule
-  saveWithdrawSchedule(scheduleConfig) {
+  async saveWithdrawSchedule(scheduleConfig) {
     const db = DB.get();
     db.settings.withdrawSchedule = {
       ...db.settings.withdrawSchedule,
       ...scheduleConfig
     };
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Jadwal dan status jam operasional WD berhasil disimpan!' };
   },
 
@@ -398,7 +406,7 @@ export const Admin = {
   },
 
   // Save Weekend Profit Settings (Sabtu & Minggu)
-  saveWeekendProfitSettings({ enabled, offMessage }) {
+  async saveWeekendProfitSettings({ enabled, offMessage }) {
     const db = DB.get();
     const isEnabled = enabled === true || enabled === 'true' || enabled === 1;
     const message = offMessage ? offMessage.trim() : 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.';
@@ -409,7 +417,7 @@ export const Admin = {
     };
     db.settings.weekendProfitEnabled = isEnabled;
 
-    DB.save(db);
+    await DB.save(db);
     return {
       success: true,
       enabled: isEnabled,
@@ -418,10 +426,10 @@ export const Admin = {
   },
 
   // Delete Signal
-  deleteSignal(signalId) {
+  async deleteSignal(signalId) {
     const db = DB.get();
     db.signals = (db.signals || []).filter(s => s.id !== signalId);
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Sinyal berhasil dihapus.' };
   },
 
@@ -437,7 +445,7 @@ export const Admin = {
   },
 
   // Save Market Master Settings
-  saveMarketMasterSettings({ isOpen, message }) {
+  async saveMarketMasterSettings({ isOpen, message }) {
     const db = DB.get();
     const openVal = isOpen === true || isOpen === 'true' || isOpen === 'open';
     db.settings.marketStatus = openVal ? 'open' : 'closed';
@@ -445,7 +453,7 @@ export const Admin = {
     if (message) {
       db.settings.marketOffMessage = message.trim();
     }
-    DB.save(db);
+    await DB.save(db);
     return {
       success: true,
       isOpen: openVal,
@@ -462,7 +470,7 @@ export const Admin = {
     };
   },
 
-  saveTodayProfitMode({ isLoss, message }) {
+  async saveTodayProfitMode({ isLoss, message }) {
     const db = DB.get();
     const lossVal = isLoss === true || isLoss === 'true';
     db.settings.todayProfitLossMode = {
@@ -484,7 +492,7 @@ export const Admin = {
       }
     }
 
-    DB.save(db);
+    await DB.save(db);
     return {
       success: true,
       isLoss: lossVal,
@@ -493,12 +501,12 @@ export const Admin = {
   },
 
   // Trigger Daily Profit Yield manually from Admin
-  triggerProfitYield(force = false) {
-    return Plans.yieldDailyProfits(force);
+  async triggerProfitYield(force = false) {
+    return await Plans.yieldDailyProfits(force);
   },
 
   // Save Withdrawal Terms
-  saveWithdrawTerms(terms) {
+  async saveWithdrawTerms(terms) {
     const db = DB.get();
     let termsList = [];
     if (Array.isArray(terms)) {
@@ -507,24 +515,24 @@ export const Admin = {
       termsList = terms.split('\n').map(t => t.trim()).filter(Boolean);
     }
     db.settings.withdrawTerms = termsList;
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Ketentuan dan syarat penarikan dana (WD) berhasil disimpan!' };
   },
 
   // Save APK Download Settings
-  saveApkSettings(apkConfig) {
+  async saveApkSettings(apkConfig) {
     const db = DB.get();
     db.settings.apkDownload = {
       ...(db.settings.apkDownload || {}),
       ...apkConfig
     };
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Pengaturan link unduhan APK Android berhasil disimpan!' };
   },
 
   // Admin Reset User Password
-  resetUserPassword(userId, newPassword) {
-    return DB.adminResetUserPassword(userId, newPassword);
+  async resetUserPassword(userId, newPassword) {
+    return await DB.adminResetUserPassword(userId, newPassword);
   },
 
   // Get full member profile for admin support modal
@@ -547,8 +555,8 @@ export const Admin = {
   },
 
   // Admin Toggle Block / Unblock User
-  toggleBlockUser(userId, reason = '') {
-    return DB.toggleBlockUser(userId, reason);
+  async toggleBlockUser(userId, reason = '') {
+    return await DB.toggleBlockUser(userId, reason);
   },
 
   // --------------------------------------------------------------------------
@@ -574,13 +582,13 @@ export const Admin = {
     };
   },
 
-  saveEmailSettings(emailConfig) {
+  async saveEmailSettings(emailConfig) {
     const db = DB.get();
     db.settings.email = {
       ...(db.settings.email || {}),
       ...emailConfig
     };
-    DB.save(db);
+    await DB.save(db);
     return { success: true, message: 'Konfigurasi Email & Sistem OTP Pendaftaran berhasil disimpan!' };
   },
 
@@ -588,8 +596,8 @@ export const Admin = {
     return await DB.dispatchMailApi('test', { targetEmail });
   },
 
-  manuallyVerifyUser(userId) {
-    return DB.adminVerifyUserEmail(userId);
+  async manuallyVerifyUser(userId) {
+    return await DB.adminVerifyUserEmail(userId);
   }
 };
 

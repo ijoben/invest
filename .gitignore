@@ -3,3 +3,8 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Local scratch/agent artifacts (may contain credentials - never commit)
+scratch/
+.freebuff/
+
