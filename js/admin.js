@@ -260,18 +260,24 @@ export const Admin = {
     return { success: true, message: 'Pengaturan QRIS berhasil disimpan!' };
   },
 
-  // Adjust User Balance directly
-  async adjustUserBalance(userId, { walletBalance, affiliateBalance, points }) {
-    const db = DB.get();
-    const user = db.users.find(u => u.id === userId);
-    if (!user) return { success: false, message: 'User tidak ditemukan' };
+  // Adjust User Balance directly (Authoritative via MySQL + Audit Transaction)
+  async adjustUserBalance(userId, { walletBalance, affiliateBalance, points, note }) {
+    const payload = {};
+    if (walletBalance !== undefined) payload.walletBalance = Number(walletBalance);
+    if (affiliateBalance !== undefined) payload.affiliateBalance = Number(affiliateBalance);
+    if (points !== undefined) payload.points = Number(points);
+    if (note !== undefined) payload.note = String(note).trim();
 
-    if (walletBalance !== undefined) user.walletBalance = Number(walletBalance);
-    if (affiliateBalance !== undefined) user.affiliateBalance = Number(affiliateBalance);
-    if (points !== undefined) user.points = Number(points);
+    const res = await DB.adminUpdateUser(userId, payload);
+    if (res && res.success) {
+      return { success: true, message: res.message || 'Saldo pengguna berhasil diperbarui di database!' };
+    }
+    return { success: false, message: (res && res.message) || 'Gagal memperbarui saldo pengguna!' };
+  },
 
-    await DB.save(db);
-    return { success: true, message: `Saldo pengguna ${user.username} berhasil diubah!` };
+  // Authoritative Full Member Profile Update (Balance, info, bank, role, status)
+  async updateUserFull(userId, payload) {
+    return await DB.adminUpdateUser(userId, payload);
   },
 
   // Process / Approve Redemption (Set to processing)
@@ -584,12 +590,22 @@ export const Admin = {
 
   async saveEmailSettings(emailConfig) {
     const db = DB.get();
-    db.settings.email = {
+    const emailMerged = {
       ...(db.settings.email || {}),
       ...emailConfig
     };
+    db.settings.email = emailMerged;
+    const res = await DB.adminSaveSettings({ email: emailMerged });
+    if (res && res.success) {
+      return { success: true, message: 'Konfigurasi Email & Sistem OTP Pendaftaran berhasil disimpan ke database cPanel!' };
+    }
     await DB.save(db);
-    return { success: true, message: 'Konfigurasi Email & Sistem OTP Pendaftaran berhasil disimpan!' };
+    return { success: true, message: 'Konfigurasi Email disimpan (local fallback).' };
+  },
+
+  // Authoritative Web Settings Save (Deep-merge in MySQL settings table)
+  async saveWebSettings(settingsPayload) {
+    return await DB.adminSaveSettings(settingsPayload);
   },
 
   async sendTestEmail(targetEmail) {

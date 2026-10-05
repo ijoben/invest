@@ -59,11 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // ---------------------------------------------------------------------------
 function startAppSession() {
     if (session_status() === PHP_SESSION_ACTIVE) return;
+    @ini_set('session.gc_maxlifetime', (string)(86400 * 30));
     $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    $lifetime = 86400 * 30; // 30 days persistent session
     if (PHP_VERSION_ID >= 70300) {
         session_set_cookie_params([
-            'lifetime' => 0,
+            'lifetime' => $lifetime,
             'path' => '/',
             'domain' => '',
             'secure' => $secure,
@@ -71,7 +73,7 @@ function startAppSession() {
             'samesite' => 'Lax'
         ]);
     } else {
-        session_set_cookie_params(0, '/; samesite=Lax', '', $secure, true);
+        session_set_cookie_params($lifetime, '/; samesite=Lax', '', $secure, true);
     }
     session_name('ATSESSID');
     session_start();
@@ -95,7 +97,25 @@ function currentSessionUserId() {
 }
 
 function currentSessionRole() {
-    return isset($_SESSION['role']) && is_string($_SESSION['role']) ? $_SESSION['role'] : '';
+    if (isset($_SESSION['role']) && is_string($_SESSION['role']) && $_SESSION['role'] !== '') {
+        return $_SESSION['role'];
+    }
+    $uid = currentSessionUserId();
+    if ($uid !== '') {
+        global $pdo;
+        if ($pdo) {
+            try {
+                $stmt = $pdo->prepare("SELECT `role` FROM `users` WHERE `id` = :uid LIMIT 1");
+                $stmt->execute([':uid' => $uid]);
+                $row = $stmt->fetch();
+                if ($row && !empty($row['role'])) {
+                    $_SESSION['role'] = ($row['role'] === 'admin') ? 'admin' : 'user';
+                    return $_SESSION['role'];
+                }
+            } catch (Exception $e) {}
+        }
+    }
+    return '';
 }
 
 function requireLogin() {
@@ -107,7 +127,7 @@ function requireLogin() {
 function requireAdmin() {
     requireLogin();
     if (currentSessionRole() !== 'admin') {
-        jsonResponse(['success' => false, 'message' => 'Akses ditolak: hanya Administrator yang diizinkan.'], 403);
+        jsonResponse(['success' => false, 'admin' => true, 'message' => 'Akses ditolak: hanya Administrator yang diizinkan.'], 403);
     }
 }
 
@@ -298,7 +318,7 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
         }
     }
     $creditTypes = ['profit_claim', 'capital_refund', 'capital_return', 'bonus', 'commission', 'referral_bonus',
-                    'rabat', 'rabat_bonus', 'affiliate_transfer', 'member_transfer', 'reward', 'matching_bonus', 'sponsor_bonus', 'checkin'];
+                    'rabat', 'rabat_bonus', 'affiliate_transfer', 'member_transfer', 'reward', 'matching_bonus', 'sponsor_bonus', 'checkin', 'adjustment', 'manual_adjustment'];
     $creditByUser = [];
     $pointsByUser = [];
     $newTrxCount = [];

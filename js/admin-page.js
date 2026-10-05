@@ -944,14 +944,16 @@ export const AdminPage = {
     }
   },
 
-  adminVerifyUserFromList(userId, username) {
+  async adminVerifyUserFromList(userId, username) {
     if (!confirm(`Verifikasi email dan aktifkan akun @${username} secara manual sekarang?`)) return;
-    const res = Admin.manuallyVerifyUser(userId);
-    if (res.success) {
+    this.showToast('Memverifikasi akun pengguna...', 'info');
+    const res = await Admin.manuallyVerifyUser(userId);
+    if (res && res.success) {
       this.showToast(res.message, 'success');
+      await DB.syncFromCloud();
       this.renderUsers(DB.get());
     } else {
-      this.showToast(res.message, 'error');
+      this.showToast((res && res.message) || 'Gagal memverifikasi user', 'error');
     }
   },
 
@@ -1870,30 +1872,127 @@ export const AdminPage = {
     this.renderAll();
   },
 
-  // Modal Users
+  // Modal Users: Open Full Editor
   openEditUserModal(userId) {
-    const user = DB.getUserById(userId);
-    if (!user) return;
+    const db = DB.get();
+    const user = (db.users || []).find(u => u.id === userId) || (typeof DB.getUserById === 'function' ? DB.getUserById(userId) : null);
+    if (!user) {
+      this.showToast('Data pengguna tidak ditemukan!', 'error');
+      return;
+    }
 
     document.getElementById('adminUserId').value = user.id;
-    document.getElementById('adminUserLabel').textContent = `User: ${user.username} (${user.fullName || '-'})`;
-    document.getElementById('adminUserWalletBal').value = user.walletBalance;
-    document.getElementById('adminUserAffBal').value = user.affiliateBalance;
-    document.getElementById('adminUserPoints').value = user.points || 0;
+    document.getElementById('adminUserLabel').textContent = `@${user.username} (${user.fullName || 'Member'})`;
+    const dispId = document.getElementById('adminUserDisplayId');
+    if (dispId) dispId.textContent = user.id;
+
+    // Saldo & Poin
+    document.getElementById('adminUserWalletBal').value = Number(user.walletBalance || 0);
+    document.getElementById('adminUserAffBal').value = Number(user.affiliateBalance || 0);
+    document.getElementById('adminUserPoints').value = Number(user.points || 0);
+    document.getElementById('adminUserAdjNote').value = '';
+
+    // Profil & Kontak
+    document.getElementById('adminUserFullName').value = user.fullName || '';
+    document.getElementById('adminUserEmail').value = user.email || '';
+    document.getElementById('adminUserPhone').value = user.phone || '';
+    document.getElementById('adminUserCity').value = user.city || '';
+    document.getElementById('adminUserUpline').value = user.referredBy || '';
+
+    // Role & Status
+    document.getElementById('adminUserRole').value = user.role || 'member';
+    const isBlocked = !!user.isBlocked;
+    document.getElementById('adminUserStatus').value = isBlocked ? 'blocked' : 'active';
+    const reasonWrap = document.getElementById('adminUserBlockedReasonWrap');
+    if (reasonWrap) reasonWrap.style.display = isBlocked ? 'block' : 'none';
+    document.getElementById('adminUserBlockedReason').value = user.blockedReason || '';
+
+    // Rekening WD
+    const bank = user.bankAccount || {};
+    document.getElementById('adminUserBankName').value = bank.bankName || '';
+    document.getElementById('adminUserBankAcc').value = bank.accountNumber || '';
+    document.getElementById('adminUserBankHolder').value = bank.accountHolder || '';
 
     this.openModal('adminUserModal');
   },
 
+  openEditUserModalFromDetail() {
+    const userId = document.getElementById('admMemDetailUserId')?.value;
+    if (!userId) return;
+    this.closeModal('adminMemberDetailModal');
+    this.openEditUserModal(userId);
+  },
+
+  async verifyUserFromDetail() {
+    const userId = document.getElementById('admMemDetailUserId')?.value;
+    if (!userId) return;
+    this.showToast('Memverifikasi email pengguna...', 'info');
+    const res = await Admin.manuallyVerifyUser(userId);
+    if (res && res.success) {
+      this.showToast(res.message, 'success');
+      await DB.syncFromCloud();
+      this.openMemberDetailModal(userId);
+      this.renderUsers(DB.get());
+    } else {
+      this.showToast((res && res.message) || 'Gagal memverifikasi email user', 'error');
+    }
+  },
+
   async saveUserModal() {
     const userId = document.getElementById('adminUserId').value;
-    const walletBalance = document.getElementById('adminUserWalletBal').value;
-    const affiliateBalance = document.getElementById('adminUserAffBal').value;
-    const points = document.getElementById('adminUserPoints').value;
+    if (!userId) return;
 
-    await Admin.adjustUserBalance(userId, { walletBalance, affiliateBalance, points });
-    this.closeModal('adminUserModal');
-    this.showToast('Saldo user berhasil diperbarui!', 'success');
-    this.renderAll();
+    const walletBalance = Number(document.getElementById('adminUserWalletBal').value) || 0;
+    const affiliateBalance = Number(document.getElementById('adminUserAffBal').value) || 0;
+    const points = Number(document.getElementById('adminUserPoints').value) || 0;
+    const note = document.getElementById('adminUserAdjNote').value.trim();
+
+    const fullName = document.getElementById('adminUserFullName').value.trim();
+    const email = document.getElementById('adminUserEmail').value.trim();
+    const phone = document.getElementById('adminUserPhone').value.trim();
+    const city = document.getElementById('adminUserCity').value.trim();
+    const referredBy = document.getElementById('adminUserUpline').value.trim();
+
+    const role = document.getElementById('adminUserRole').value;
+    const statusVal = document.getElementById('adminUserStatus').value;
+    const isBlocked = statusVal === 'blocked';
+    const blockedReason = document.getElementById('adminUserBlockedReason').value.trim();
+
+    const bankName = document.getElementById('adminUserBankName').value.trim();
+    const accountNumber = document.getElementById('adminUserBankAcc').value.trim();
+    const accountHolder = document.getElementById('adminUserBankHolder').value.trim();
+
+    const payload = {
+      walletBalance,
+      affiliateBalance,
+      points,
+      note: note || 'Penyesuaian oleh Administrator',
+      fullName,
+      email,
+      phone,
+      city,
+      referredBy,
+      role,
+      status: statusVal,
+      isBlocked,
+      blockedReason,
+      bankAccount: {
+        bankName,
+        accountNumber,
+        accountHolder
+      }
+    };
+
+    this.showToast('Menyimpan perubahan pengguna ke database cPanel...', 'info');
+    const res = await Admin.updateUserFull(userId, payload);
+    if (res && res.success) {
+      this.showToast(res.message || 'Data pengguna berhasil disimpan ke database!', 'success');
+      this.closeModal('adminUserModal');
+      await DB.syncFromCloud();
+      this.renderAll();
+    } else {
+      this.showToast((res && res.message) || 'Gagal menyimpan perubahan pengguna!', 'error');
+    }
   },
 
   // Modal Member Detail & Admin Support (Requirement 6)
@@ -1913,6 +2012,16 @@ export const AdminPage = {
     // Hidden ID & Fields
     document.getElementById('admMemDetailUserId').value = user.id;
     document.getElementById('admMemNewPassword').value = '';
+
+    // Direct Verify Button Toggle
+    const directVerifyBtn = document.getElementById('admMemBtnDirectVerify');
+    if (directVerifyBtn) {
+      if (user.isPendingVerification && !user.emailVerified) {
+        directVerifyBtn.style.display = 'inline-flex';
+      } else {
+        directVerifyBtn.style.display = 'none';
+      }
+    }
 
     // Reset Notice
     const noticeEl = document.getElementById('admMemResetNotice');
@@ -3168,6 +3277,7 @@ export const AdminPage = {
   // ============================================================
 
   /** Switch inner settings tab */
+  /** Switch inner settings tab */
   switchSettingsTab(tab) {
     if (!tab) return;
     // Update tab buttons
@@ -3182,8 +3292,6 @@ export const AdminPage = {
       pane.classList.toggle('active', isActive);
       pane.style.display = isActive ? 'block' : 'none';
     });
-    // Reload form values from DB
-    this.renderWebSettings();
   },
 
   /** Load current settings values into Pengaturan form fields */
@@ -3204,20 +3312,26 @@ export const AdminPage = {
     this._setVal('cfgSiteWhatsapp',     ws.whatsapp     || '');
     this._setVal('cfgSiteCopyright',    ws.copyright    || `© ${new Date().getFullYear()} AUTOTRADING. All rights reserved.`);
 
-    // --- Logo ---
+    // --- Logo & Favicon ---
     this._setVal('cfgLogoUrl',    ws.logoUrl    || '');
     this._setVal('cfgFaviconUrl', ws.faviconUrl || '');
+    const logoImg = document.getElementById('cfgLogoPreview');
+    const logoPh  = document.getElementById('cfgLogoPlaceholder');
     if (ws.logoUrl) {
-      const img = document.getElementById('cfgLogoPreview');
-      const ph  = document.getElementById('cfgLogoPlaceholder');
-      if (img) { img.src = ws.logoUrl; img.style.display = ''; }
-      if (ph)  { ph.style.display = 'none'; }
+      if (logoImg) { logoImg.src = ws.logoUrl; logoImg.style.display = ''; }
+      if (logoPh)  { logoPh.style.display = 'none'; }
+    } else {
+      if (logoImg) { logoImg.src = ''; logoImg.style.display = 'none'; }
+      if (logoPh)  { logoPh.style.display = ''; }
     }
+    const favImg = document.getElementById('cfgFaviconPreview');
+    const favPh  = document.getElementById('cfgFaviconPlaceholder');
     if (ws.faviconUrl) {
-      const img = document.getElementById('cfgFaviconPreview');
-      const ph  = document.getElementById('cfgFaviconPlaceholder');
-      if (img) { img.src = ws.faviconUrl; img.style.display = ''; }
-      if (ph)  { ph.style.display = 'none'; }
+      if (favImg) { favImg.src = ws.faviconUrl; favImg.style.display = ''; }
+      if (favPh)  { favPh.style.display = 'none'; }
+    } else {
+      if (favImg) { favImg.src = ''; favImg.style.display = 'none'; }
+      if (favPh)  { favPh.style.display = ''; }
     }
 
     // --- Appearance ---
@@ -3256,74 +3370,92 @@ export const AdminPage = {
     el.value = val;
   },
 
-  /** Save web settings based on section */
-  async saveWebSettings(section) {
+  /** Collect all settings values across all tabs */
+  collectAllWebSettings() {
     const db = DB.get();
-    if (!db.settings.webSettings) db.settings.webSettings = {};
-    if (!db.settings.seo) db.settings.seo = {};
-    if (!db.settings.social) db.settings.social = {};
-    if (!db.settings.maintenance) db.settings.maintenance = {};
+    const cfg = db.settings || {};
+    const ws = { ...(cfg.webSettings || {}) };
+    const seo = { ...(cfg.seo || {}) };
+    const social = { ...(cfg.social || {}) };
+    const maint = { ...(cfg.maintenance || {}) };
 
-    const ws = db.settings.webSettings;
+    // Tab 1: Identitas
+    const appName = document.getElementById('cfgSiteAppName')?.value.trim() || cfg.appName || 'AUTOTRADING';
+    ws.appName = appName;
+    ws.tagline = document.getElementById('cfgSiteTagline')?.value.trim() || ws.tagline || '';
+    ws.domain = document.getElementById('cfgSiteDomain')?.value.trim() || ws.domain || '';
+    ws.companyName = document.getElementById('cfgSiteCompanyName')?.value.trim() || ws.companyName || '';
+    ws.contactEmail = document.getElementById('cfgSiteContactEmail')?.value.trim() || ws.contactEmail || '';
+    ws.whatsapp = document.getElementById('cfgSiteWhatsapp')?.value.trim() || ws.whatsapp || '';
+    ws.copyright = document.getElementById('cfgSiteCopyright')?.value.trim() || ws.copyright || '';
 
-    if (section === 'general' || section === 'logo') {
-      if (section === 'general') {
-        const appName = document.getElementById('cfgSiteAppName')?.value.trim();
-        if (appName) {
-          db.settings.appName = appName;
-          document.title = `${appName} - Master Admin Control Panel`;
-        }
-        ws.tagline      = document.getElementById('cfgSiteTagline')?.value.trim() || ws.tagline;
-        ws.domain       = document.getElementById('cfgSiteDomain')?.value.trim()  || ws.domain;
-        ws.companyName  = document.getElementById('cfgSiteCompanyName')?.value.trim()  || ws.companyName;
-        ws.contactEmail = document.getElementById('cfgSiteContactEmail')?.value.trim() || ws.contactEmail;
-        ws.whatsapp     = document.getElementById('cfgSiteWhatsapp')?.value.trim()     || ws.whatsapp;
-        ws.copyright    = document.getElementById('cfgSiteCopyright')?.value.trim()    || ws.copyright;
+    // Tab 2: Tampilan & Logo
+    const logoUrl = document.getElementById('cfgLogoUrl')?.value.trim();
+    if (logoUrl !== undefined && logoUrl !== '') ws.logoUrl = logoUrl;
+    const faviconUrl = document.getElementById('cfgFaviconUrl')?.value.trim();
+    if (faviconUrl !== undefined && faviconUrl !== '') ws.faviconUrl = faviconUrl;
+
+    ws.colorPrimary = document.getElementById('cfgColorPrimaryHex')?.value.trim() || document.getElementById('cfgColorPrimary')?.value || ws.colorPrimary || '#C89338';
+    ws.colorBg = document.getElementById('cfgColorBgHex')?.value.trim() || document.getElementById('cfgColorBg')?.value || ws.colorBg || '#0B0F19';
+    ws.fontFamily = document.getElementById('cfgFontFamily')?.value || ws.fontFamily || 'Inter';
+    ws.displayMode = document.getElementById('cfgDisplayMode')?.value || ws.displayMode || 'dark';
+
+    // Tab 3: SEO
+    seo.title = document.getElementById('cfgSeoTitle')?.value.trim() || seo.title || '';
+    seo.description = document.getElementById('cfgSeoDescription')?.value.trim() || seo.description || '';
+    seo.keywords = document.getElementById('cfgSeoKeywords')?.value.trim() || seo.keywords || '';
+    seo.robots = document.getElementById('cfgSeoRobots')?.value || seo.robots || 'index, follow';
+    seo.gaId = document.getElementById('cfgGoogleAnalyticsId')?.value.trim() || seo.gaId || '';
+
+    // Tab 4: Social
+    social.telegram = document.getElementById('cfgSocialTelegram')?.value.trim() || social.telegram || '';
+    social.instagram = document.getElementById('cfgSocialInstagram')?.value.trim() || social.instagram || '';
+    social.tiktok = document.getElementById('cfgSocialTiktok')?.value.trim() || social.tiktok || '';
+    social.youtube = document.getElementById('cfgSocialYoutube')?.value.trim() || social.youtube || '';
+    social.twitter = document.getElementById('cfgSocialTwitter')?.value.trim() || social.twitter || '';
+    social.facebook = document.getElementById('cfgSocialFacebook')?.value.trim() || social.facebook || '';
+
+    // Tab 5: Maintenance
+    maint.enabled = document.getElementById('cfgMaintenanceEnabled')?.value === 'true';
+    maint.message = document.getElementById('cfgMaintenanceMessage')?.value.trim() || maint.message || '';
+
+    return {
+      appName,
+      webSettings: ws,
+      seo,
+      social,
+      maintenance: maint
+    };
+  },
+
+  /** Save web settings based on section or all */
+  async saveWebSettings(section) {
+    return await this.saveAllWebSettings();
+  },
+
+  /** Save all web settings authoritatively to MySQL cPanel and state */
+  async saveAllWebSettings() {
+    this.showToast('Menyimpan pengaturan web ke database MySQL cPanel...', 'info');
+    const payload = this.collectAllWebSettings();
+    const res = await Admin.saveWebSettings(payload);
+
+    if (res && res.success) {
+      this.showToast(res.message || '✅ Pengaturan web berhasil disimpan ke database cPanel!', 'success');
+      // Update tab title and favicon immediately in admin panel
+      if (payload.appName) {
+        document.title = `${payload.appName} - Master Admin Control Panel`;
+        const sidebarBrand = document.querySelector('.sidebar-brand-name');
+        if (sidebarBrand) sidebarBrand.textContent = payload.appName;
       }
-      if (section === 'logo') {
-        const logoUrl    = document.getElementById('cfgLogoUrl')?.value.trim();
-        const faviconUrl = document.getElementById('cfgFaviconUrl')?.value.trim();
-        if (logoUrl)    ws.logoUrl    = logoUrl;
-        if (faviconUrl) {
-          ws.faviconUrl = faviconUrl;
-          const link = document.querySelector("link[rel*='icon']");
-          if (link) link.href = faviconUrl;
-        }
+      if (payload.webSettings?.faviconUrl) {
+        let link = document.querySelector("link[rel*='icon']");
+        if (link) link.href = payload.webSettings.faviconUrl;
       }
+      await DB.syncFromCloud();
+      this.renderWebSettings();
+    } else {
+      this.showToast((res && res.message) || 'Gagal menyimpan pengaturan web ke database!', 'error');
     }
-
-    if (section === 'appearance') {
-      ws.colorPrimary = document.getElementById('cfgColorPrimaryHex')?.value.trim() || '#C89338';
-      ws.colorBg      = document.getElementById('cfgColorBgHex')?.value.trim()     || '#0B0F19';
-      ws.fontFamily   = document.getElementById('cfgFontFamily')?.value   || 'Inter';
-      ws.displayMode  = document.getElementById('cfgDisplayMode')?.value  || 'dark';
-    }
-
-    if (section === 'seo') {
-      db.settings.seo.title       = document.getElementById('cfgSeoTitle')?.value.trim()       || '';
-      db.settings.seo.description = document.getElementById('cfgSeoDescription')?.value.trim() || '';
-      db.settings.seo.keywords    = document.getElementById('cfgSeoKeywords')?.value.trim()    || '';
-      db.settings.seo.robots      = document.getElementById('cfgSeoRobots')?.value             || 'index, follow';
-      db.settings.seo.gaId        = document.getElementById('cfgGoogleAnalyticsId')?.value.trim() || '';
-    }
-
-    if (section === 'social') {
-      db.settings.social.telegram  = document.getElementById('cfgSocialTelegram')?.value.trim()  || '';
-      db.settings.social.instagram = document.getElementById('cfgSocialInstagram')?.value.trim() || '';
-      db.settings.social.tiktok    = document.getElementById('cfgSocialTiktok')?.value.trim()    || '';
-      db.settings.social.youtube   = document.getElementById('cfgSocialYoutube')?.value.trim()   || '';
-      db.settings.social.twitter   = document.getElementById('cfgSocialTwitter')?.value.trim()   || '';
-      db.settings.social.facebook  = document.getElementById('cfgSocialFacebook')?.value.trim()  || '';
-    }
-
-    if (section === 'maintenance') {
-      db.settings.maintenance.enabled = document.getElementById('cfgMaintenanceEnabled')?.value === 'true';
-      db.settings.maintenance.message = document.getElementById('cfgMaintenanceMessage')?.value.trim() || '';
-    }
-
-    this.showToast('Menyimpan ke database cloud...', 'info');
-    await DB.save(db);
-    this.showToast('✅ Pengaturan web berhasil disimpan ke database!', 'success');
   },
 
   /** Preview maintenance badge */
@@ -3338,18 +3470,60 @@ export const AdminPage = {
     badge.style.border = isOn ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(34,197,94,0.3)';
   },
 
-  /** Preview logo/favicon upload */
-  previewLogoUpload(input, previewId, placeholderId, urlInputId) {
-    const file = input.files[0];
+  /** Preview logo/favicon upload with direct server upload to uploads/ directory */
+  async previewLogoUpload(input, previewId, placeholderId, urlInputId, statusId) {
+    const file = input.files && input.files[0];
     if (!file) return;
+
+    const img = document.getElementById(previewId);
+    const ph  = document.getElementById(placeholderId);
+    const urlInput = document.getElementById(urlInputId);
+    const statusEl = statusId ? document.getElementById(statusId) : null;
+
+    // 1. Show immediate preview thumbnail
+    try {
+      const localBlob = URL.createObjectURL(file);
+      if (img) { img.src = localBlob; img.style.display = ''; }
+      if (ph)  { ph.style.display = 'none'; }
+    } catch(e) {}
+
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = '#F59E0B';
+      statusEl.textContent = '⏳ Mengunggah file ke server cPanel...';
+    }
+    this.showToast('Mengunggah gambar ke server cPanel...', 'info');
+
+    // 2. Direct upload to cPanel uploads/ directory via DB.uploadImage
+    try {
+      const uploadRes = await DB.uploadImage(file);
+      if (uploadRes && uploadRes.success && uploadRes.url) {
+        if (urlInput) urlInput.value = uploadRes.url;
+        if (img) img.src = uploadRes.url;
+        if (statusEl) {
+          statusEl.style.color = '#10B981';
+          statusEl.textContent = '✅ Berhasil diunggah ke server cPanel!';
+        }
+        this.showToast('✅ Gambar berhasil diunggah ke server cPanel!', 'success');
+        return;
+      } else {
+        console.warn('Upload image API response error:', uploadRes);
+      }
+    } catch(err) {
+      console.error('Upload image exception:', err);
+    }
+
+    // 3. Fallback to base64 if server upload fails
+    if (statusEl) {
+      statusEl.style.color = '#94A3B8';
+      statusEl.textContent = 'ℹ️ Menggunakan data gambar lokal (offline fallback).';
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
-      const img = document.getElementById(previewId);
-      const ph  = document.getElementById(placeholderId);
-      const url = document.getElementById(urlInputId);
       if (img) { img.src = e.target.result; img.style.display = ''; }
       if (ph)  { ph.style.display = 'none'; }
-      if (url) { url.value = e.target.result; }
+      if (urlInput) { urlInput.value = e.target.result; }
+      this.showToast('Gambar dimuat sebagai data lokal.', 'info');
     };
     reader.readAsDataURL(file);
   },

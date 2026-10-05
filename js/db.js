@@ -806,6 +806,133 @@ export const DB = {
     }
   },
 
+  // Authoritative Admin User Management (Syncs MySQL relational users, transactions, and state)
+  async adminUpdateUser(userId, payload) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_update_user');
+      const body = { userId, ...payload };
+      let res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal memperbarui user (HTTP ${res.status})` };
+      }
+
+      // Update local in-memory DB immediately
+      const db = this.get();
+      if (Array.isArray(db.users)) {
+        const idx = db.users.findIndex(u => u.id === userId);
+        if (idx !== -1) {
+          if (json.user) {
+            db.users[idx] = { ...db.users[idx], ...json.user };
+          }
+          if (payload.role !== undefined) db.users[idx].role = payload.role;
+          if (payload.status !== undefined) db.users[idx].status = payload.status;
+          if (payload.isBlocked !== undefined) db.users[idx].isBlocked = Boolean(payload.isBlocked);
+          if (payload.password) db.users[idx].password = payload.password;
+        }
+      }
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db)));
+        } catch (e) {}
+      }
+
+      return json;
+    } catch (e) {
+      console.error('adminUpdateUser error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Admin Web Settings Save (Deep-merge MySQL settings table and sync state)
+  async adminSaveSettings(settings) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_save_settings');
+      let res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings })
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings })
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menyimpan pengaturan (HTTP ${res.status})` };
+      }
+
+      // Update local memory and storage
+      const db = this.get();
+      db.settings = json.settings || { ...db.settings, ...settings };
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db)));
+        } catch (e) {}
+      }
+
+      // Broadcast settings update event
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('autotrading:settings-updated', { detail: db.settings }));
+      }
+
+      return json;
+    } catch (e) {
+      console.error('adminSaveSettings error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Manually verify user email by Admin
+  async adminVerifyUserEmail(userId) {
+    try {
+      const res = await this.adminUpdateUser(userId, {
+        status: 'active',
+        isPendingVerification: false,
+        emailVerified: true
+      });
+      if (res && res.success) {
+        const db = this.get();
+        const u = (db.users || []).find(user => user.id === userId);
+        if (u) {
+          u.isPendingVerification = false;
+          u.emailVerified = true;
+          u.status = 'active';
+          delete u.verificationOtp;
+          this.save(db);
+        }
+        return { success: true, message: `Akun member ${u ? u.username : userId} berhasil diverifikasi dan diaktifkan!` };
+      }
+      return res;
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  },
+
   async syncFromCloud() {
     try {
       if (typeof fetch !== 'function') return null;

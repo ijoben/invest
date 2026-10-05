@@ -125,6 +125,16 @@ const App = {
       }
     } catch (e) {}
 
+    // Realtime synchronization listener when Admin saves Web Settings
+    try {
+      if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && !this._settingsSyncBound) {
+        this._settingsSyncBound = true;
+        window.addEventListener('autotrading:settings-updated', () => {
+          this.renderAll();
+        });
+      }
+    } catch (e) {}
+
     // Initialize Theme (Dark / Light Mode)
     this.initTheme();
 
@@ -291,16 +301,74 @@ const App = {
     const user = Auth.getUser();
     const db = DB.get();
 
-    // 0. Synchronize Browser Tab Title & Favicon from Settings
+    // 0. Synchronize Web Settings, Branding, Logo, & Favicon
     const cfg = db.settings || {};
     const ws = cfg.webSettings || {};
+    const seo = cfg.seo || {};
+    const social = cfg.social || {};
+    const maint = cfg.maintenance || {};
     const appName = cfg.appName || 'AUTOTRADING';
     const tagline = ws.tagline || 'Platform Investasi & AI Trading Mobile Terpercaya';
-    document.title = `${appName} - ${tagline}`;
+
+    // Title & Favicon
+    document.title = seo.title || `${appName} - ${tagline}`;
     if (ws.faviconUrl) {
-      const link = document.querySelector("link[rel*='icon']");
-      if (link) link.href = ws.faviconUrl;
+      let link = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'shortcut icon';
+        document.head.appendChild(link);
+      }
+      link.href = ws.faviconUrl;
     }
+
+    // Dynamic Header Brand Badge & Logo
+    const brandBadge = document.querySelector('.header-brand-badge');
+    if (brandBadge) {
+      if (ws.logoUrl) {
+        brandBadge.innerHTML = `
+          <img src="${escapeHtml(ws.logoUrl)}" alt="${escapeHtml(appName)}" style="height: 22px; max-width: 100px; object-fit: contain; border-radius: 4px; vertical-align: middle;">
+          <span class="header-brand-text" style="margin-left: 6px;">${escapeHtml(appName)}</span>
+        `;
+      } else {
+        brandBadge.innerHTML = `
+          <span class="header-brand-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </span>
+          <span class="header-brand-text">${escapeHtml(appName)}</span>
+        `;
+      }
+    }
+
+    // Dynamic Theme Primary Color & Typography
+    if (ws.colorPrimary) {
+      document.documentElement.style.setProperty('--color-primary', ws.colorPrimary);
+      document.documentElement.style.setProperty('--gold-primary', ws.colorPrimary);
+    }
+    if (ws.fontFamily && ws.fontFamily !== 'Inter') {
+      document.body.style.fontFamily = `"${ws.fontFamily}", var(--font-main, sans-serif)`;
+    }
+
+    // Dynamic Social Links
+    if (social.telegram) {
+      const el = document.getElementById('socLinkTelegram');
+      if (el) el.href = social.telegram;
+    }
+    if (social.youtube) {
+      const el = document.getElementById('socLinkYoutube');
+      if (el) el.href = social.youtube;
+    }
+    if (social.instagram) {
+      const el = document.getElementById('socLinkInstagram');
+      if (el) el.href = social.instagram;
+    }
+    if (social.tiktok) {
+      const el = document.getElementById('socLinkTiktok');
+      if (el) el.href = social.tiktok;
+    }
+
+    // Maintenance Mode Check
+    this.applyMaintenanceMode(maint, user);
 
     // Guest Protection: Pastikan user belum login tidak berada di tab member
     if (!user && this.currentTab && this.currentTab !== 'home') {
@@ -412,6 +480,35 @@ const App = {
 
     const textJoined = announcements.map(a => a.text).join('   ✦✦✦   ');
     el.textContent = textJoined;
+  },
+
+  // Fullscreen Maintenance Mode Overlay (Allows admin to bypass)
+  applyMaintenanceMode(maint, user) {
+    let overlay = document.getElementById('frontendMaintenanceOverlay');
+    const isMaintenance = maint && maint.enabled === true;
+    const isAdmin = user && user.role === 'admin';
+
+    if (isMaintenance && !isAdmin) {
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'frontendMaintenanceOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:#0B0F19;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;color:#fff;font-family:sans-serif;';
+        document.body.appendChild(overlay);
+      }
+      overlay.innerHTML = `
+        <div style="max-width:440px;background:#131B2E;border:1px solid #334155;border-radius:20px;padding:32px 24px;box-shadow:0 20px 40px rgba(0,0,0,0.5);">
+          <div style="font-size:48px;margin-bottom:12px;">🔧</div>
+          <h2 style="font-size:20px;font-weight:800;color:#F59E0B;margin-bottom:10px;">Mode Pemeliharaan Sistem</h2>
+          <p style="font-size:13.5px;color:#94A3B8;line-height:1.6;margin-bottom:24px;">${escapeHtml(maint.message || 'Sistem sedang dalam pemeliharaan terjadwal. Kami akan kembali online dalam beberapa saat.')}</p>
+          <div style="font-size:11.5px;color:#64748B;border-top:1px solid #1E293B;padding-top:16px;">
+            Administrator? <a href="admin.html" style="color:#C89338;text-decoration:none;font-weight:700;">Masuk ke Admin Panel &rarr;</a>
+          </div>
+        </div>
+      `;
+      overlay.style.display = 'flex';
+    } else if (overlay) {
+      overlay.style.display = 'none';
+    }
   },
 
   // 2. 4-Column Wallet Balance Card
