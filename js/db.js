@@ -1749,8 +1749,8 @@ export const DB = {
 
     // Check if user has already checked in today via record, history, or transactions
     const hasHistoryToday = Array.isArray(checkInRecord.history) && checkInRecord.history.some(h => {
-      const hDate = (h.date || h.claimedAt || '').slice(0, 10);
-      return hDate === todayWib;
+      const rawDate = h.date || h.claimedAt || '';
+      return this.getWibDateStr(rawDate) === todayWib;
     });
 
     const hasTrxCheckInToday = (db.transactions || []).some(t => {
@@ -1759,8 +1759,7 @@ export const DB = {
                            (t.paymentMethod && t.paymentMethod.includes('Absensi')) ||
                            (t.note && t.note.toLowerCase().includes('absen'));
       if (!isCheckInTrx) return false;
-      const trxDateStr = (t.createdAt || '').slice(0, 10);
-      return trxDateStr === todayWib;
+      return this.getWibDateStr(t.createdAt) === todayWib;
     });
 
     const hasCheckedInToday = checkInRecord.lastCheckInDate === todayWib || hasHistoryToday || hasTrxCheckInToday;

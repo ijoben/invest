@@ -52,18 +52,12 @@ const App = {
   ],
 
   // Best-effort server session verification on boot: silently re-login with cached
-  // credentials, otherwise warn once that sync requires a fresh login.
+  // Best-effort server session verification on boot
   async verifyServerSession() {
     if (typeof fetch !== 'function') return;
     if (!this.isLoggedIn()) return;
     try {
-      const relogged = await DB.ensureServerSession();
-      if (relogged) return;
-      const res = await fetch(DB.getApiUrl('session'));
-      const json = await res.json().catch(() => null);
-      if (json && json.success && json.loggedIn === false) {
-        this.showToast('Sesi server Anda telah berakhir. Silakan login kembali agar perubahan dapat tersinkronisasi.', 'info');
-      }
+      await DB.ensureServerSession();
     } catch (e) {
       // Offline mode: keep using the local session
     }
@@ -115,12 +109,12 @@ const App = {
     this.initAiTradingChart();
     this.verifyServerSession();
 
-    // Warn the signed-in member (once per minute) when the server rejects a sync
+    // Auth check listener
     try {
       if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && !this._authRequiredBound) {
         this._authRequiredBound = true;
         window.addEventListener('autotrading:auth-required', () => {
-          this.showToast('Sesi server berakhir. Silakan login kembali agar perubahan Anda tersinkronisasi.', 'info');
+          // Silent: do not disrupt regular member browsing
         });
       }
     } catch (e) {}
@@ -187,21 +181,22 @@ const App = {
     if (!current) return;
 
     // Strict status & existence check against fresh database
-    const freshUser = (freshDb.users || []).find(u => u.id === current.id || (u.username && u.username.toLowerCase() === current.username.toLowerCase()));
-    if (!freshUser) {
-      Auth.logout();
-      this.renderAll();
-      this.showToast('Sesi akun Anda telah berakhir atau akun telah dihapus dari server.', 'error');
-      return;
-    }
+    if (Array.isArray(freshDb.users) && freshDb.users.length > 0) {
+      const freshUser = freshDb.users.find(u => u.id === current.id || (u.username && u.username.toLowerCase() === current.username.toLowerCase()));
+      if (!freshUser) {
+        Auth.logout();
+        this.renderAll();
+        return;
+      }
 
-    // Check if account status has been blocked / suspended in database
-    const isBlocked = freshUser.isBlocked || freshUser.is_blocked || freshUser.status === 'blocked';
-    if (isBlocked) {
-      alert('PERINGATAN SISTEM: Akun Anda telah dinonaktifkan / dibekukan oleh Administrator.\nAlasan: ' + (freshUser.blockedReason || 'Suspensi administratif') + '\nSilakan hubungi Customer Service untuk informasi lebih lanjut.');
-      Auth.logout();
-      this.renderAll();
-      return;
+      // Check if account status has been blocked / suspended in database
+      const isBlocked = freshUser.isBlocked || freshUser.is_blocked || freshUser.status === 'blocked';
+      if (isBlocked) {
+        alert('PERINGATAN SISTEM: Akun Anda telah dinonaktifkan / dibekukan oleh Administrator.\nAlasan: ' + (freshUser.blockedReason || 'Suspensi administratif') + '\nSilakan hubungi Customer Service untuk informasi lebih lanjut.');
+        Auth.logout();
+        this.renderAll();
+        return;
+      }
     }
 
     // Balance update notification
@@ -740,6 +735,16 @@ const App = {
       }
 
       container.innerHTML = cardsHtml + bannerNoticeHtml;
+    }
+
+    // Requirement 7: Weekly AI Algorithm calculation banner update
+    const aiBannerTextEl = document.getElementById('weeklyAiBannerText');
+    if (aiBannerTextEl) {
+      let pctStr = '8,8%';
+      if (weekly.hasActivePackage && typeof weekly.totalRate === 'number' && weekly.totalRate > 0) {
+        pctStr = `${weekly.totalRate.toFixed(1).replace('.', ',')}%`;
+      }
+      aiBannerTextEl.innerHTML = `Algoritma AI aktif menghitung 1 minggu bagi hasil sebesar: <strong class="weekly-ai-rate-highlight">${pctStr}</strong> untuk member aktif saja`;
     }
   },
 
@@ -1976,13 +1981,13 @@ const App = {
 
     let txs = this.cachedWalletTransactions || [];
     if (filterType === 'profit_claim') {
-      txs = txs.filter(t => t.type === 'profit_claim');
+      txs = txs.filter(t => t.type === 'profit_claim' || (t.id && t.id.startsWith('TRX-PRF-')));
     } else if (filterType === 'rabat_bonus') {
-      txs = txs.filter(t => t.type === 'rabat_bonus');
+      txs = txs.filter(t => t.type === 'rabat_bonus' || (t.id && t.id.startsWith('TRX-RBT-')));
     } else if (filterType === 'sponsor_bonus') {
-      txs = txs.filter(t => t.type === 'sponsor_bonus');
+      txs = txs.filter(t => t.type === 'sponsor_bonus' || (t.id && t.id.startsWith('TRX-SPS-')));
     } else if (filterType === 'dep_wd') {
-      txs = txs.filter(t => t.type === 'deposit' || t.type === 'withdraw' || t.type === 'affiliate_transfer');
+      txs = txs.filter(t => t.type === 'deposit' || t.type === 'withdraw' || t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-')) || t.type === 'affiliate_transfer');
     }
 
     if (txs.length === 0) {
@@ -1993,20 +1998,25 @@ const App = {
     txListEl.innerHTML = txs.map(t => {
       let title = t.paymentMethod || t.type;
       let badgeHtml = '';
-      let isPlus = t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
+      let isInvest = t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-'));
+      let isPlus = !isInvest && (t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return');
       let amountColor = isPlus ? '#16A34A' : '#DC2626';
       let sign = isPlus ? '+' : '-';
       let noteText = t.note || '';
 
-      if (t.type === 'profit_claim') {
+      if (isInvest) {
+        title = 'Pembelian Paket Investasi';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-wd" style="background:#FEE2E2; color:#B91C1C; border-color:#FCA5A5;">INVESTASI</span>';
+        if (!noteText) noteText = `Aktivasi paket ${t.planName || ''} · ID: ${t.id}`;
+      } else if (t.type === 'profit_claim' || (t.id && t.id.startsWith('TRX-PRF-'))) {
         title = 'Klaim Profit Harian AI';
         badgeHtml = '<span class="tx-detail-badge tx-badge-profit">KLAIM PROFIT</span>';
         if (!noteText) noteText = `Profit harian trading AI`;
-      } else if (t.type === 'rabat_bonus') {
+      } else if (t.type === 'rabat_bonus' || (t.id && t.id.startsWith('TRX-RBT-'))) {
         const lvl = t.level || 1;
         title = `Bonus Rabat Matching (Level ${lvl})`;
         badgeHtml = `<span class="tx-detail-badge tx-badge-rabat">RABAT L${lvl}</span>`;
-      } else if (t.type === 'sponsor_bonus') {
+      } else if (t.type === 'sponsor_bonus' || (t.id && t.id.startsWith('TRX-SPS-'))) {
         title = 'Bonus Sponsor Langsung (Level 1)';
         badgeHtml = '<span class="tx-detail-badge tx-badge-sponsor">SPONSOR L1</span>';
       } else if (t.type === 'bonus' || t.type === 'reward') {
@@ -3648,15 +3658,35 @@ const App = {
   },
 
   async claimProfit() {
+    if (this._isClaimingProfit) return;
     const user = Auth.getUser();
     if (!user) return;
 
-    const res = await Plans.claimProfit(user.id);
-    if (res.success) {
-      this.triggerClaimCelebration(res.amount, res.message);
-      this.renderAll();
-    } else {
-      this.showToast(res.message, 'info');
+    this._isClaimingProfit = true;
+    const btnList = document.querySelectorAll('button[onclick*="App.claimProfit"]');
+    btnList.forEach(b => {
+      b.disabled = true;
+      b.dataset.origHtml = b.innerHTML;
+      b.innerHTML = '<span>⏳ Memproses klaim...</span>';
+      b.style.opacity = '0.6';
+    });
+
+    try {
+      const res = await Plans.claimProfit(user.id);
+      if (res.success) {
+        this.triggerClaimCelebration(res.amount, res.message);
+        this.renderAll();
+      } else {
+        this.showToast(res.message, res.alreadyClaimed ? 'info' : 'warning');
+        this.renderAll();
+      }
+    } finally {
+      this._isClaimingProfit = false;
+      btnList.forEach(b => {
+        b.disabled = false;
+        b.style.opacity = '1';
+        if (b.dataset.origHtml) b.innerHTML = b.dataset.origHtml;
+      });
     }
   },
 

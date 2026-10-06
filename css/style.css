@@ -4692,6 +4692,111 @@ html, body {
   border: 1px solid #FCA5A5;
 }
 
+/* Dynamic Weekly Day Pills (Requirement 6) */
+.weekly-day-pill.pill-selesai {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: #15803D !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+  font-weight: 700 !important;
+}
+body.dark-mode .weekly-day-pill.pill-selesai {
+  background: rgba(34, 197, 94, 0.22) !important;
+  color: #4ADE80 !important;
+  border-color: rgba(74, 222, 128, 0.35) !important;
+}
+
+.weekly-day-pill.pill-progress {
+  background: rgba(200, 147, 56, 0.16) !important;
+  color: #B45309 !important;
+  border: 1px solid rgba(200, 147, 56, 0.35) !important;
+  font-weight: 800 !important;
+  animation: pulseProgressPill 2s infinite ease-in-out;
+}
+@keyframes pulseProgressPill {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(0.98); }
+}
+body.dark-mode .weekly-day-pill.pill-progress {
+  background: rgba(200, 147, 56, 0.25) !important;
+  color: #FBBF24 !important;
+  border-color: rgba(251, 191, 36, 0.4) !important;
+}
+
+.weekly-day-pill.pill-next {
+  background: rgba(100, 116, 139, 0.1) !important;
+  color: #64748B !important;
+  border: 1px solid rgba(148, 163, 184, 0.25) !important;
+  font-weight: 600 !important;
+}
+body.dark-mode .weekly-day-pill.pill-next {
+  background: rgba(148, 163, 184, 0.14) !important;
+  color: #94A3B8 !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}
+
+.weekly-day-pill.pill-weekend {
+  background: rgba(148, 163, 184, 0.1) !important;
+  color: #64748B !important;
+  border: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
+/* Weekly AI Algorithm Calculation Banner (Requirement 7) */
+.weekly-ai-algorithm-banner {
+  margin: 10px 0 12px 0;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(200, 147, 56, 0.08) 0%, rgba(30, 41, 59, 0.04) 100%);
+  border: 1px solid rgba(200, 147, 56, 0.25);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+body.dark-mode .weekly-ai-algorithm-banner {
+  background: linear-gradient(135deg, rgba(200, 147, 56, 0.14) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border-color: rgba(200, 147, 56, 0.35);
+}
+.weekly-ai-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.weekly-ai-pulse-icon {
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: pulseAiIcon 2s infinite ease-in-out;
+}
+@keyframes pulseAiIcon {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+}
+.weekly-ai-banner-text {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #334155;
+  font-weight: 600;
+  flex: 1;
+}
+body.dark-mode .weekly-ai-banner-text {
+  color: #CBD5E1;
+}
+.weekly-ai-rate-highlight {
+  color: #16A34A;
+  font-weight: 800;
+  font-size: 12px;
+  background: rgba(34, 197, 94, 0.12);
+  padding: 1px 7px;
+  border-radius: 6px;
+  display: inline-block;
+}
+body.dark-mode .weekly-ai-rate-highlight {
+  color: #4ADE80;
+  background: rgba(74, 222, 128, 0.18);
+}
+
 .weekly-profit-footer {
   display: flex;
   justify-content: space-between;

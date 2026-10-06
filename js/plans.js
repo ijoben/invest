@@ -129,9 +129,17 @@ export const Plans = {
     let modified = false;
     const now = Date.now();
     const cycleDurationMs = (db.settings.profitCycleDurationHours || 24) * 3600 * 1000;
+    const todayWib = DB.getWibDateStr();
 
     const user = db.users.find(u => u.id === userId);
     if (!user) return [];
+
+    // Check if user has already claimed profit today
+    const hasClaimedToday = (db.transactions || []).some(t => {
+      if (t.userId !== userId) return false;
+      if (t.type !== 'profit_claim') return false;
+      return DB.getWibDateStr(t.createdAt) === todayWib;
+    });
 
     db.investments = db.investments || [];
     const userInvs = db.investments.filter(inv => inv.userId === userId && inv.status === 'active');
@@ -144,6 +152,7 @@ export const Plans = {
         inv.status = 'completed';
         inv.completedAt = inv.completedAt || new Date().toISOString();
         inv.refundReady = true;
+        inv.pendingProfitClaim = 0;
         if (inv.capitalReturned === undefined) {
           inv.capitalReturned = false;
         }
@@ -151,13 +160,29 @@ export const Plans = {
         return;
       }
 
-      // 2. If market is closed (either weekend or admin toggle), skip generating new profit claim
-      if (!marketStatus.isOpen) {
+      // If user has already claimed profit today, ensure pending claim is cleared
+      if (hasClaimedToday && inv.pendingProfitClaim > 0) {
+        inv.pendingProfitClaim = 0;
+        modified = true;
+      }
+
+      // 2. If market is closed or user already claimed profit today, skip generating new profit claim
+      if (!marketStatus.isOpen || hasClaimedToday) {
         return;
       }
 
       // 3. Check if a real 24-hour cycle has passed and no profit is pending claim
-      const lastYieldTime = new Date(inv.lastProfitYieldDate || inv.startDate || now).getTime();
+      let lastYieldStr = inv.lastProfitYieldDate || inv.startDate;
+      if (typeof lastYieldStr === 'string' && lastYieldStr.includes(' ')) {
+        lastYieldStr = lastYieldStr.replace(' ', 'T');
+      }
+      const lastYieldDateWib = lastYieldStr ? DB.getWibDateStr(lastYieldStr) : null;
+      if (lastYieldDateWib === todayWib) {
+        // Already yielded/claimed for today
+        return;
+      }
+
+      const lastYieldTime = lastYieldStr ? new Date(lastYieldStr).getTime() : now;
       const elapsedMs = now - lastYieldTime;
 
       if (elapsedMs >= cycleDurationMs && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
@@ -167,8 +192,7 @@ export const Plans = {
         const profitAmount = Math.floor((inv.capital * rate) / 100);
 
         inv.pendingProfitClaim = profitAmount;
-        // Always advance the yield clock, otherwise every render appends another
-        // identical history row for the same day.
+        // Advance the yield clock
         inv.lastProfitYieldDate = new Date().toISOString();
         const dayNo = (inv.daysElapsed || 0) + 1;
         if (!this._hasPendingHistoryForDay(inv, dayNo)) {
@@ -434,6 +458,29 @@ export const Plans = {
       rate = parseFloat(Number(rate || 0).toFixed(2));
       isLoss = rate === 0 && (todayLossMode || (isToday && todayLossMode));
 
+      let pillText = 'Progress';
+      let pillClass = 'pill-progress';
+      let statusLabel = `🟢 +${rate.toFixed(2)}%`;
+
+      if (isLoss) {
+        statusLabel = '🔴 Loss 0%';
+        pillText = 'Loss 0%';
+        pillClass = 'pill-loss';
+      } else if (isPast) {
+        statusLabel = `✓ +${rate.toFixed(2)}% (Selesai)`;
+        pillText = 'Selesai';
+        pillClass = 'pill-selesai';
+      } else if (isToday) {
+        statusLabel = `🟡 +${rate.toFixed(2)}% (Progress)`;
+        pillText = 'Progress';
+        pillClass = 'pill-progress';
+      } else {
+        // Future weekdays
+        statusLabel = `⏳ +${rate.toFixed(2)}% (Next)`;
+        pillText = 'Next';
+        pillClass = 'pill-next';
+      }
+
       return {
         dayName: dName,
         date: dateStr,
@@ -443,11 +490,14 @@ export const Plans = {
         isOff: false,
         isLoss,
         isToday,
+        isPast,
+        isFuture: !isPast && !isToday && !isWeekend,
         isGuest: false,
         hasActivePackage: true,
         displayRate: isLoss ? '0.00%' : `+${rate.toFixed(2)}%`,
-        statusLabel: isLoss ? '🔴 Loss 0%' : `🟢 +${rate.toFixed(2)}%`,
-        pillText: isLoss ? 'Loss 0%' : 'Profit'
+        statusLabel,
+        pillText,
+        pillClass
       };
     });
 
@@ -636,12 +686,79 @@ export const Plans = {
     return { success: true, updatedCount, totalYielded };
   },
 
-  // Claim pending daily profit for a specific user
+  // Claim pending daily profit for a specific user (Strictly Once Per Day)
   async claimProfit(userId) {
     const db = DB.get();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
 
+    const todayWib = DB.getWibDateStr();
+
+    // 1. Strict local pre-guard: Check if already claimed profit today
+    const hasClaimedToday = (db.transactions || []).some(t => {
+      if (t.userId !== userId) return false;
+      if (t.type !== 'profit_claim') return false;
+      return DB.getWibDateStr(t.createdAt) === todayWib;
+    });
+
+    if (hasClaimedToday) {
+      return {
+        success: false,
+        alreadyClaimed: true,
+        message: 'Anda sudah mengklaim profit untuk hari ini. Profit berikutnya akan dihitung dalam siklus 24 jam berikutnya.'
+      };
+    }
+
+    // 2. Direct server claim for atomic single-claim database validation
+    try {
+      if (typeof fetch === 'function') {
+        const url = DB.getApiUrl('claim_profit');
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            user.walletBalance = json.walletBalance;
+            (db.investments || []).forEach(inv => {
+              if (inv.userId === userId && inv.status === 'active') {
+                inv.pendingProfitClaim = 0;
+                inv.lastProfitYieldDate = new Date().toISOString();
+                inv.daysElapsed = (inv.daysElapsed || 0) + 1;
+              }
+            });
+            if (json.transaction) {
+              db.transactions = db.transactions || [];
+              if (!db.transactions.some(t => t.id === json.transaction.id)) {
+                db.transactions.unshift(json.transaction);
+              }
+            }
+            if (typeof localStorage !== 'undefined') {
+              try { localStorage.setItem('autotrading_db', JSON.stringify(DB.stripSensitiveFields(db))); } catch(e) {}
+            }
+            return json;
+          } else {
+            if (json.alreadyClaimed) {
+              (db.investments || []).forEach(inv => {
+                if (inv.userId === userId && inv.status === 'active') {
+                  inv.pendingProfitClaim = 0;
+                }
+              });
+              if (typeof localStorage !== 'undefined') {
+                try { localStorage.setItem('autotrading_db', JSON.stringify(DB.stripSensitiveFields(db))); } catch(e) {}
+              }
+            }
+            return json;
+          }
+        }
+      }
+    } catch(err) {
+      console.warn('Direct server claim profit error, fallback to local:', err);
+    }
+
+    // 3. Local fallback (when server is offline)
     const userInvs = (db.investments || []).filter(inv => inv.userId === userId && inv.status === 'active');
     let totalClaimable = 0;
     let completedPlans = [];
@@ -680,21 +797,23 @@ export const Plans = {
 
     // Add to user wallet balance
     user.walletBalance = (user.walletBalance || 0) + totalClaimable;
-    user.points = (user.points || 0) + 2; // Daily loyalty points reward
+    user.points = (user.points || 0) + 2;
 
     // Record Transaction
+    db.transactions = db.transactions || [];
     db.transactions.unshift({
       id: 'TRX-PRF-' + Math.floor(100000 + Math.random() * 900000),
       userId: user.id,
       username: user.username,
       type: 'profit_claim',
       amount: totalClaimable,
+      netAmount: totalClaimable,
       note: `Klaim profit harian investasi AI (${DB.formatIDR(totalClaimable)})`,
       status: 'approved',
       createdAt: new Date().toISOString()
     });
 
-    // Distribute Rabat (ROI match) to uplines based on claimed profit (Atomic in same DB instance)
+    // Distribute Rabat (ROI match) to uplines based on claimed profit
     if (user.referredBy) {
       Affiliate.applyRabatBonus(db, user, totalClaimable);
     }

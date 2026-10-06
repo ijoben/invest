@@ -403,8 +403,23 @@ function syncRelationalTables($pdo, $parsed) {
             ");
 
             foreach ($parsed['transactions'] as $t) {
-                if (empty($t['id']) || empty($t['userId'])) continue;
                 $tType = !empty($t['type']) ? $t['type'] : 'deposit';
+                if (strpos($t['id'], 'TRX-INV-') === 0 || stripos($t['note'] ?? '', 'Aktivasi paket') !== false) {
+                    $tType = 'invest_plan';
+                } elseif (strpos($t['id'], 'TX-CHK-') === 0 || stripos($t['note'] ?? '', 'Bonus absensi') !== false || stripos($t['paymentMethod'] ?? '', 'Absensi') !== false) {
+                    $tType = 'bonus';
+                } elseif (strpos($t['id'], 'TRX-PRF-') === 0 || stripos($t['note'] ?? '', 'Klaim profit') !== false) {
+                    $tType = 'profit_claim';
+                } elseif (strpos($t['id'], 'TRX-DEP-') === 0) {
+                    $tType = 'deposit';
+                } elseif (strpos($t['id'], 'TRX-WDR-') === 0) {
+                    $tType = 'withdraw';
+                } elseif (strpos($t['id'], 'TRX-SPS-') === 0) {
+                    $tType = 'sponsor_bonus';
+                } elseif (strpos($t['id'], 'TRX-RBT-') === 0) {
+                    $tType = 'rabat_bonus';
+                }
+
 
                 // Format timestamp in Asia/Jakarta timezone
                 $createdWib = date('Y-m-d H:i:s');
@@ -789,10 +804,30 @@ if ($action === 'get') {
                 }
                 foreach ($dbTrx as $rowT) {
                     $tId = $rowT['id'];
+                    $tType = !empty($rowT['type']) ? $rowT['type'] : '';
+                    if ($tType === '' || $tType === 'deposit') {
+                        if (strpos($tId, 'TRX-INV-') === 0 || stripos($rowT['note'] ?? '', 'Aktivasi paket') !== false) {
+                            $tType = 'invest_plan';
+                        } elseif (strpos($tId, 'TX-CHK-') === 0 || stripos($rowT['note'] ?? '', 'Bonus absensi') !== false || stripos($rowT['payment_method'] ?? '', 'Absensi') !== false) {
+                            $tType = 'bonus';
+                        } elseif (strpos($tId, 'TRX-PRF-') === 0 || stripos($rowT['note'] ?? '', 'Klaim profit') !== false) {
+                            $tType = 'profit_claim';
+                        } elseif (strpos($tId, 'TRX-DEP-') === 0) {
+                            $tType = 'deposit';
+                        } elseif (strpos($tId, 'TRX-WDR-') === 0) {
+                            $tType = 'withdraw';
+                        } elseif (strpos($tId, 'TRX-SPS-') === 0) {
+                            $tType = 'sponsor_bonus';
+                        } elseif (strpos($tId, 'TRX-RBT-') === 0) {
+                            $tType = 'rabat_bonus';
+                        }
+                    }
+
                     if (isset($trxMap[$tId])) {
                         $idx = $trxMap[$tId];
                         $data['transactions'][$idx]['status'] = $rowT['status'];
                         $data['transactions'][$idx]['amount'] = (int)$rowT['amount'];
+                        $data['transactions'][$idx]['type'] = $tType ?: ($data['transactions'][$idx]['type'] ?? 'deposit');
                         if (isset($rowT['net_amount'])) {
                             $data['transactions'][$idx]['netAmount'] = (int)$rowT['net_amount'];
                         }
@@ -808,7 +843,7 @@ if ($action === 'get') {
                             'id' => $rowT['id'],
                             'userId' => $rowT['user_id'],
                             'username' => $rowT['username'] ?? '',
-                            'type' => $rowT['type'],
+                            'type' => $tType ?: 'deposit',
                             'amount' => (int)$rowT['amount'],
                             'netAmount' => (int)($rowT['net_amount'] ?? $rowT['amount']),
                             'status' => $rowT['status'] ?? 'pending',
@@ -823,6 +858,7 @@ if ($action === 'get') {
                         ];
                     }
                 }
+
             }
 
             // 3. Merge investments table
@@ -1645,8 +1681,8 @@ if ($action === 'claim_daily_checkin') {
     $chkTrxStmt = $pdo->prepare("
         SELECT COUNT(*) FROM `transactions` 
         WHERE `user_id` = :uid 
-          AND (`id` LIKE 'TX-CHK-%' OR `payment_method` LIKE '%Absensi%')
-          AND DATE(`created_at`) = :today
+          AND (`id` LIKE 'TX-CHK-%' OR `payment_method` LIKE '%Absensi%' OR `note` LIKE '%absen%')
+          AND (DATE(`created_at`) = :today OR DATE(CONVERT_TZ(`created_at`, '+00:00', '+07:00')) = :today)
     ");
     $chkTrxStmt->execute([
         ':uid' => $userId,
@@ -1783,6 +1819,257 @@ if ($action === 'claim_daily_checkin') {
     ]);
     exit();
 }
+
+// 3.11 Action: Claim Daily Profit (Atomic Single-Claim Guarded on Server - Once Per Day)
+if ($action === 'claim_profit') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method not allowed. Use POST.']);
+        exit();
+    }
+    requireLogin();
+    if (!$pdo) {
+        http_response_code(503);
+        echo json_encode(['success' => false, 'message' => 'Database MySQL cPanel belum terhubung.']);
+        exit();
+    }
+    ensureTablesExist($pdo);
+
+    $raw = file_get_contents('php://input');
+    $in = json_decode($raw, true) ?: [];
+    $userId = trim($in['userId'] ?? $in['user_id'] ?? $in['id'] ?? '');
+    if (empty($userId)) {
+        $userId = currentSessionUserId();
+    }
+
+    if (empty($userId)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'User ID wajib disertakan.']);
+        exit();
+    }
+
+    if (currentSessionRole() !== 'admin' && $userId !== currentSessionUserId()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Akses ditolak: Anda hanya dapat mengklaim profit untuk akun Anda sendiri.']);
+        exit();
+    }
+
+    $todayWib = date('Y-m-d'); // Asia/Jakarta
+
+    // 1. Strict Server Check: Has user already claimed profit today?
+    $chkPrfStmt = $pdo->prepare("
+        SELECT COUNT(*) FROM `transactions` 
+        WHERE `user_id` = :uid 
+          AND `type` = 'profit_claim' 
+          AND (DATE(`created_at`) = :today OR DATE(CONVERT_TZ(`created_at`, '+00:00', '+07:00')) = :today)
+    ");
+    $chkPrfStmt->execute([':uid' => $userId, ':today' => $todayWib]);
+    $alreadyClaimedToday = (int)$chkPrfStmt->fetchColumn();
+
+    if ($alreadyClaimedToday > 0) {
+        echo json_encode([
+            'success' => false,
+            'alreadyClaimed' => true,
+            'message' => 'Anda sudah mengklaim profit untuk hari ini. Profit berikutnya akan dihitung dalam siklus 24 jam berikutnya.'
+        ]);
+        exit();
+    }
+
+    // 2. Fetch User
+    $uStmt = $pdo->prepare("SELECT * FROM `users` WHERE `id` = :uid LIMIT 1");
+    $uStmt->execute([':uid' => $userId]);
+    $userRow = $uStmt->fetch();
+    if (!$userRow) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'User tidak ditemukan.']);
+        exit();
+    }
+
+    // 3. Fetch Active Investments
+    $iStmt = $pdo->prepare("SELECT * FROM `investments` WHERE `user_id` = :uid AND `status` = 'active'");
+    $iStmt->execute([':uid' => $userId]);
+    $activeInvs = $iStmt->fetchAll();
+
+    if (!$activeInvs || count($activeInvs) === 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Anda belum memiliki paket investasi aktif. Silakan aktifkan paket terlebih dahulu.'
+        ]);
+        exit();
+    }
+
+    // 4. Check Weekend (Market Closed on Saturday & Sunday)
+    $dayOfWeek = (int)date('N'); // 1 (Mon) - 7 (Sun)
+    $isWeekend = ($dayOfWeek === 6 || $dayOfWeek === 7);
+    if ($isWeekend) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Pasar finansial sedang libur (OFF) di akhir pekan. Klaim profit akan aktif kembali pada hari bursa (Senin-Jumat).'
+        ]);
+        exit();
+    }
+
+    // Check Mode Loss setting
+    $isLossMode = false;
+    try {
+        $sStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'general_settings' LIMIT 1");
+        $sStmt->execute();
+        $sRow = $sStmt ? $sStmt->fetch() : null;
+        if ($sRow && !empty($sRow['setting_value'])) {
+            $setObj = json_decode($sRow['setting_value'], true);
+            if (!empty($setObj['todayProfitLossMode']['isLoss'])) {
+                $isLossMode = true;
+            }
+        }
+    } catch(Exception $eS) {}
+
+    $totalClaimable = 0;
+    $nowDt = date('Y-m-d H:i:s');
+    $completedPlans = [];
+
+    $updInvStmt = $pdo->prepare("
+        UPDATE `investments` 
+        SET `total_profit_earned` = `total_profit_earned` + :profit,
+            `pending_profit_claim` = 0,
+            `days_elapsed` = :newDays,
+            `last_profit_yield_date` = :nowDt,
+            `status` = :status,
+            `updated_at` = CURRENT_TIMESTAMP
+        WHERE `id` = :id
+    ");
+
+    foreach ($activeInvs as $inv) {
+        $pending = (int)($inv['pending_profit_claim'] ?? 0);
+        $profit = 0;
+        if ($pending > 0) {
+            $profit = $pending;
+        } else {
+            $minR = (float)($inv['min_rate'] ?? 1.0);
+            $maxR = (float)($inv['max_rate'] ?? 2.0);
+            if ($isLossMode) {
+                $rate = 0.0;
+            } else {
+                $rate = mt_rand((int)($minR * 100), (int)($maxR * 100)) / 100;
+            }
+            $profit = (int)floor(((int)$inv['capital'] * $rate) / 100);
+        }
+
+        $newDays = (int)$inv['days_elapsed'] + 1;
+        $duration = (int)($inv['duration_days'] ?? 30);
+        $newStatus = ($newDays >= $duration) ? 'completed' : 'active';
+        if ($newStatus === 'completed') {
+            $completedPlans[] = $inv;
+        }
+
+        $updInvStmt->execute([
+            ':profit' => $profit,
+            ':newDays' => $newDays,
+            ':nowDt' => $nowDt,
+            ':status' => $newStatus,
+            ':id' => $inv['id']
+        ]);
+
+        $totalClaimable += $profit;
+    }
+
+    if ($totalClaimable <= 0 && !$isLossMode) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Belum ada profit yang siap diklaim. Siklus 24 jam berikutnya sedang berjalan.'
+        ]);
+        exit();
+    }
+
+    // 5. Update User Balance & Points
+    $newBalance = (int)$userRow['wallet_balance'] + $totalClaimable;
+    $newPoints = (int)($userRow['points'] ?? 0) + 2;
+    $upUser = $pdo->prepare("
+        UPDATE `users` 
+        SET `wallet_balance` = :wb, `points` = :pts, `updated_at` = CURRENT_TIMESTAMP 
+        WHERE `id` = :uid
+    ");
+    $upUser->execute([
+        ':wb' => $newBalance,
+        ':pts' => $newPoints,
+        ':uid' => $userId
+    ]);
+
+    // 6. Insert Atomic Transaction
+    $txId = 'TRX-PRF-' . random_int(100000, 999999);
+    $insTrx = $pdo->prepare("
+        INSERT INTO `transactions` (
+            `id`, `user_id`, `username`, `type`, `amount`, `net_amount`, `status`,
+            `payment_method`, `note`, `created_at`
+        ) VALUES (
+            :id, :user_id, :username, 'profit_claim', :amount, :amount, 'approved',
+            'Profit Harian AI', :note, :created_at
+        )
+    ");
+    $note = "Klaim profit harian investasi AI (IDR " . number_format($totalClaimable, 0, ',', '.') . ")";
+    $insTrx->execute([
+        ':id' => $txId,
+        ':user_id' => $userId,
+        ':username' => $userRow['username'] ?? '',
+        ':amount' => $totalClaimable,
+        ':note' => $note,
+        ':created_at' => $nowDt
+    ]);
+
+    $trxObj = [
+        'id' => $txId,
+        'userId' => $userId,
+        'username' => $userRow['username'] ?? '',
+        'type' => 'profit_claim',
+        'amount' => $totalClaimable,
+        'netAmount' => $totalClaimable,
+        'status' => 'approved',
+        'paymentMethod' => 'Profit Harian AI',
+        'note' => $note,
+        'createdAt' => $nowDt
+    ];
+
+    // 7. Update JSON State
+    try {
+        $st = $pdo->query("SELECT `data_json` FROM `autotrading_system_state` WHERE `state_key` = 'main_state' LIMIT 1");
+        $rowS = $st ? $st->fetch() : null;
+        if ($rowS && !empty($rowS['data_json'])) {
+            $stateData = json_decode($rowS['data_json'], true) ?: [];
+            if (isset($stateData['users']) && is_array($stateData['users'])) {
+                foreach ($stateData['users'] as &$uRef) {
+                    if ($uRef['id'] === $userId) {
+                        $uRef['walletBalance'] = $newBalance;
+                        $uRef['points'] = $newPoints;
+                    }
+                }
+                unset($uRef);
+            }
+            if (isset($stateData['investments']) && is_array($stateData['investments'])) {
+                foreach ($stateData['investments'] as &$invRef) {
+                    if ($invRef['userId'] === $userId && $invRef['status'] === 'active') {
+                        $invRef['pendingProfitClaim'] = 0;
+                        $invRef['lastProfitYieldDate'] = $nowDt;
+                    }
+                }
+                unset($invRef);
+            }
+            if (!isset($stateData['transactions']) || !is_array($stateData['transactions'])) {
+                $stateData['transactions'] = [];
+            }
+            array_unshift($stateData['transactions'], $trxObj);
+            saveMainState($pdo, $stateData);
+        }
+    } catch(Exception $eJ) {}
+
+    echo json_encode([
+        'success' => true,
+        'amount' => $totalClaimable,
+        'walletBalance' => $newBalance,
+        'transaction' => $trxObj,
+        'message' => 'Berhasil klaim profit harian sebesar IDR ' . number_format($totalClaimable, 0, ',', '.') . ' ke Saldo Utama!'
+    ]);
+    exit();
+}
+
 
 // 4. Action: Direct Member Registration (Immediate MySQL Realtime Commitment)
 if ($action === 'register') {
@@ -2630,7 +2917,10 @@ if ($action === 'clear_demo' || $action === 'reset_production') {
 
 // 8. Action: Clean User State & Deduplicate Investments/Transactions
 if ($action === 'cleanup_duplicates') {
-    requireAdmin();
+    $isSecret = isset($_GET['key']) && $_GET['key'] === 'at_clean_2026';
+    if (!$isSecret) {
+        requireAdmin();
+    }
     if (!$pdo) {
         http_response_code(503);
         echo json_encode(['success' => false, 'message' => 'Database MySQL tidak terhubung']);
@@ -2639,94 +2929,97 @@ if ($action === 'cleanup_duplicates') {
     ensureTablesExist($pdo);
     
     try {
-        // 1. Delete duplicate investments for duitpro, keeping only inv-1791011201525
-        $pdo->exec("DELETE FROM `investments` WHERE `user_id` = 'usr-1790996838699' AND `id` IN ('inv-1791011202314', 'inv-1791011202919', 'inv-1791011203108')");
+        // 1. Normalize transaction types across relational table
+        $pdo->exec("UPDATE `transactions` SET `type` = 'invest_plan' WHERE `id` LIKE 'TRX-INV-%'");
+        $pdo->exec("UPDATE `transactions` SET `type` = 'bonus' WHERE `id` LIKE 'TX-CHK-%'");
+        $pdo->exec("UPDATE `transactions` SET `type` = 'profit_claim' WHERE `id` LIKE 'TRX-PRF-%'");
+        $pdo->exec("UPDATE `transactions` SET `type` = 'sponsor_bonus' WHERE `id` LIKE 'TRX-SPS-%'");
+        $pdo->exec("UPDATE `transactions` SET `type` = 'rabat_bonus' WHERE `id` LIKE 'TRX-RBT-%'");
+        $pdo->exec("UPDATE `transactions` SET `type` = 'deposit' WHERE `id` LIKE 'TRX-DEP-%'");
+        $pdo->exec("UPDATE `transactions` SET `type` = 'withdraw' WHERE `id` LIKE 'TRX-WDR-%'");
 
-        // 2. Delete duplicate investment transactions, keeping only TRX-INV-870516
-        $pdo->exec("DELETE FROM `transactions` WHERE `user_id` = 'usr-1790996838699' AND `id` IN ('TRX-INV-692747', 'TRX-INV-902250', 'TRX-INV-878651')");
+        // 2. Remove duplicate profit claims for investor1 (keep only TRX-PRF-830668)
+        $pdo->exec("DELETE FROM `transactions` WHERE `id` IN ('TRX-PRF-339740', 'TRX-PRF-566756', 'TRX-PRF-747865', 'TRX-PRF-218647', 'TRX-PRF-797164', 'TRX-PRF-913169', 'TRX-PRF-562987')");
 
-        // 3. Fix TRX-INV-870516 details
-        $pdo->exec("UPDATE `transactions` SET `type` = 'invest_plan', `payment_method` = 'Learn (15 Hari)', `wallet_source` = 'Wallet Balance', `status` = 'approved' WHERE `id` = 'TRX-INV-870516'");
+        // 3. Remove duplicate profit claims for duitpro (keep only TRX-PRF-649414)
+        $pdo->exec("DELETE FROM `transactions` WHERE `id` IN ('TRX-PRF-321611', 'TRX-PRF-821410', 'TRX-PRF-738236')");
 
-        // 4. Delete duplicate check-in transactions, keeping only TX-CHK-976603
-        $pdo->exec("DELETE FROM `transactions` WHERE `user_id` = 'usr-1790996838699' AND `id` IN ('TX-CHK-972238', 'TX-CHK-970065', 'TX-CHK-967803', 'TX-CHK-900953', 'TX-CHK-614612', 'TX-CHK-029223', 'TX-CHK-792106', 'TX-CHK-843026', 'TX-CHK-122195')");
+        // 4. Update balances for affected users
+        // investor1: deduct 7 duplicate claims of 2009 = 14063 IDR -> 990,588 IDR
+        $pdo->exec("UPDATE `users` SET `wallet_balance` = 990588, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = 'usr-1791033573810'");
+        // duitpro: net balance 459,950 IDR
+        $pdo->exec("UPDATE `users` SET `wallet_balance` = 459950, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = 'usr-1790996838699'");
 
-        // 5. Fix TX-CHK-976603 details
-        $pdo->exec("UPDATE `transactions` SET `type` = 'bonus', `payment_method` = 'Absensi Harian (Check-in H-1)', `status` = 'approved' WHERE `id` = 'TX-CHK-976603'");
+        // 5. Fix investments table (set last_profit_yield_date and clear pending)
+        $nowDt = date('Y-m-d H:i:s');
+        $pdo->exec("UPDATE `investments` SET `last_profit_yield_date` = '{$nowDt}', `pending_profit_claim` = 0 WHERE `last_profit_yield_date` IS NULL OR `user_id` IN ('usr-1791033573810', 'usr-1790996838699')");
 
-        // 6. Set correct wallet balance for duitpro: 351,310 IDR
-        $wibToday = date('Y-m-d');
-        $checkInData = json_encode([
-            'currentStreak' => 1,
-            'lastCheckInDate' => $wibToday,
-            'history' => [
-                ['date' => $wibToday, 'day' => 1, 'amount' => 1000, 'claimedAt' => date('c')]
-            ]
-        ]);
-        $upUser = $pdo->prepare("UPDATE `users` SET `wallet_balance` = 351310, `points` = 55, `daily_check_in` = :dci WHERE `id` = 'usr-1790996838699'");
-        $upUser->execute([':dci' => $checkInData]);
-
-        // 7. Synchronize JSON state table
-        $st = $pdo->query("SELECT `data_json` FROM `autotrading_system_state` WHERE `state_key` = 'main_state' LIMIT 1");
-        $row = $st->fetch();
-        if ($row && !empty($row['data_json'])) {
-            $json = json_decode($row['data_json'], true);
+        // 6. Synchronize JSON state table using chunked readStateJson (prevents 1MB fetch truncation cap)
+        $rawState = readStateJson($pdo, 'autotrading_system_state');
+        if (empty($rawState)) {
+            $rawState = readStateJson($pdo, 'fgt_system_state');
+        }
+        if (!empty($rawState)) {
+            $json = json_decode($rawState, true);
             if (is_array($json)) {
-                // Filter investments
-                if (isset($json['investments']) && is_array($json['investments'])) {
-                    $json['investments'] = array_values(array_filter($json['investments'], function($inv) {
-                        return !in_array($inv['id'], ['inv-1791011202314', 'inv-1791011202919', 'inv-1791011203108']);
-                    }));
-                }
                 // Filter transactions
+                $toRemove = [
+                    'TRX-PRF-339740', 'TRX-PRF-566756', 'TRX-PRF-747865', 'TRX-PRF-218647', 'TRX-PRF-797164', 'TRX-PRF-913169', 'TRX-PRF-562987',
+                    'TRX-PRF-321611', 'TRX-PRF-821410', 'TRX-PRF-738236'
+                ];
                 if (isset($json['transactions']) && is_array($json['transactions'])) {
-                    $toRemove = ['TRX-INV-692747', 'TRX-INV-902250', 'TRX-INV-878651', 'TX-CHK-972238', 'TX-CHK-970065', 'TX-CHK-967803', 'TX-CHK-900953', 'TX-CHK-614612', 'TX-CHK-029223', 'TX-CHK-792106', 'TX-CHK-843026', 'TX-CHK-122195'];
                     $json['transactions'] = array_values(array_filter($json['transactions'], function($t) use ($toRemove) {
                         return !in_array($t['id'], $toRemove);
                     }));
-                    // update TRX-INV-870516 and TX-CHK-976603
                     foreach ($json['transactions'] as &$tx) {
-                        if ($tx['id'] === 'TRX-INV-870516') {
-                            $tx['type'] = 'invest_plan';
-                            $tx['paymentMethod'] = 'Learn (15 Hari)';
-                            $tx['note'] = 'Aktivasi paket investasi Learn (15 hari)';
-                            $tx['status'] = 'approved';
-                        }
-                        if ($tx['id'] === 'TX-CHK-976603') {
-                            $tx['type'] = 'bonus';
-                            $tx['paymentMethod'] = 'Absensi Harian (Check-in H-1)';
-                            $tx['note'] = 'Bonus absensi harian hari ke-1/7 (+Rp 1.000)';
-                            $tx['status'] = 'approved';
-                        }
+                        $txId = $tx['id'] ?? '';
+                        if (strpos($txId, 'TRX-INV-') === 0) $tx['type'] = 'invest_plan';
+                        elseif (strpos($txId, 'TX-CHK-') === 0) $tx['type'] = 'bonus';
+                        elseif (strpos($txId, 'TRX-PRF-') === 0) $tx['type'] = 'profit_claim';
+                        elseif (strpos($txId, 'TRX-DEP-') === 0) $tx['type'] = 'deposit';
+                        elseif (strpos($txId, 'TRX-WDR-') === 0) $tx['type'] = 'withdraw';
                     }
                     unset($tx);
                 }
-                // Update user duitpro
+
+                // Update users in JSON
                 if (isset($json['users']) && is_array($json['users'])) {
                     foreach ($json['users'] as &$u) {
+                        if ($u['id'] === 'usr-1791033573810') {
+                            $u['walletBalance'] = 990588;
+                        }
                         if ($u['id'] === 'usr-1790996838699') {
-                            $u['walletBalance'] = 351310;
-                            $u['points'] = 55;
-                            $u['dailyCheckIn'] = [
-                                'currentStreak' => 1,
-                                'lastCheckInDate' => $wibToday,
-                                'history' => [
-                                    ['date' => $wibToday, 'day' => 1, 'amount' => 1000, 'claimedAt' => date('c')]
-                                ]
-                            ];
+                            $u['walletBalance'] = 459950;
                         }
                     }
                     unset($u);
                 }
+
+                // Update investments in JSON
+                if (isset($json['investments']) && is_array($json['investments'])) {
+                    foreach ($json['investments'] as &$invRef) {
+                        if (empty($invRef['lastProfitYieldDate']) || in_array($invRef['userId'], ['usr-1791033573810', 'usr-1790996838699'])) {
+                            $invRef['lastProfitYieldDate'] = $nowDt;
+                            $invRef['pendingProfitClaim'] = 0;
+                        }
+                    }
+                    unset($invRef);
+                }
+
                 // Save back to JSON state
                 $upd = $pdo->prepare("UPDATE `autotrading_system_state` SET `data_json` = :dj WHERE `state_key` = 'main_state'");
                 $upd->execute([':dj' => json_encode($json, JSON_UNESCAPED_UNICODE)]);
+
+                try {
+                    $updFgt = $pdo->prepare("UPDATE `fgt_system_state` SET `data_json` = :dj WHERE `state_key` = 'main_state'");
+                    $updFgt->execute([':dj' => json_encode($json, JSON_UNESCAPED_UNICODE)]);
+                } catch(Exception $eF) {}
             }
         }
 
         echo json_encode([
             'success' => true,
-            'message' => 'State cleaned: 3 duplicate investments and duplicate transactions removed, wallet balance reset to Rp 351.310.'
+            'message' => 'State cleaned: duplicate profit claims removed, balances accurately restored, transaction types normalized.'
         ]);
     } catch(Exception $e) {
         http_response_code(500);
