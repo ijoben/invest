@@ -683,6 +683,24 @@ if ($action === 'ping') {
     exit();
 }
 
+// 1.5 Action: Get Client IP & Device Detection (Requirement 7)
+if ($action === 'get_ip') {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        $ip = trim($_SERVER['HTTP_CF_CONNECTING_IP']);
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $ip = trim($parts[0]);
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => true,
+        'ip' => $ip,
+        'userAgent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+    ]);
+    exit();
+}
+
 // 2. Action: Get Data State (Complete Realtime Bi-Directional Synchronizer)
 if ($action === 'get') {
     if (!$pdo) {
@@ -789,6 +807,9 @@ if ($action === 'get') {
                         ];
                     }
                 }
+                $data['users'] = array_values(array_filter($data['users'], function($u) {
+                    return ($u['id'] ?? '') !== 'usr-1791275394006';
+                }));
             }
 
             // 2. Merge transactions table
@@ -2944,6 +2965,9 @@ if ($action === 'cleanup_duplicates') {
         // 3. Remove duplicate profit claims for duitpro (keep only TRX-PRF-649414)
         $pdo->exec("DELETE FROM `transactions` WHERE `id` IN ('TRX-PRF-321611', 'TRX-PRF-821410', 'TRX-PRF-738236')");
 
+        // 3.5 Remove duplicate duitkaya account (usr-1791275394006)
+        $pdo->exec("DELETE FROM `users` WHERE `id` = 'usr-1791275394006'");
+
         // 4. Update balances for affected users
         // investor1: deduct 7 duplicate claims of 2009 = 14063 IDR -> 990,588 IDR
         $pdo->exec("UPDATE `users` SET `wallet_balance` = 990588, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = 'usr-1791033573810'");
@@ -2984,6 +3008,9 @@ if ($action === 'cleanup_duplicates') {
 
                 // Update users in JSON
                 if (isset($json['users']) && is_array($json['users'])) {
+                    $json['users'] = array_values(array_filter($json['users'], function($u) {
+                        return ($u['id'] ?? '') !== 'usr-1791275394006';
+                    }));
                     foreach ($json['users'] as &$u) {
                         if ($u['id'] === 'usr-1791033573810') {
                             $u['walletBalance'] = 990588;

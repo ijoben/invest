@@ -6406,4 +6406,220 @@ body.theme-dark .notif-empty-icon {
   border: 1px solid #E2E8F0;
 }
 
+/* ==========================================================================
+   PUBLIC WEB STATS BAR & DEVICE IP DETECTION (Requirement 6 & 7)
+   ========================================================================== */
+.public-web-stats-container {
+  padding: 0 16px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+}
+.public-web-stats-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+.dark-mode .public-web-stats-card {
+  background: #1E293B;
+  border-color: #334155;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.public-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 520px) {
+  .public-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+.public-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #F8FAFC;
+  border-radius: 12px;
+  border: 1px solid #F1F5F9;
+}
+.dark-mode .public-stat-item {
+  background: #0F172A;
+  border-color: #1E293B;
+}
+.public-stat-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.public-stat-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.public-stat-lbl {
+  font-size: 10px;
+  color: #64748B;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dark-mode .public-stat-lbl {
+  color: #94A3B8;
+}
+.public-stat-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dark-mode .public-stat-val {
+  color: #F8FAFC;
+}
+.public-device-rule-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #E2E8F0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dark-mode .public-device-rule-footer {
+  border-top-color: #334155;
+}
+.public-rule-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+  letter-spacing: 0.3px;
+}
+.dark-mode .public-rule-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.public-rule-desc {
+  font-size: 10.5px;
+  color: #64748B;
+  line-height: 1.35;
+  flex: 1;
+}
+.dark-mode .public-rule-desc {
+  color: #94A3B8;
+}
+
+/* ==========================================================================
+   ACTIVE MEMBER TRADING LOCK & TODAY'S PROFIT BANNER (Requirement 10 & 11)
+   ========================================================================== */
+.weekly-active-member-banner {
+  background: linear-gradient(135deg, rgba(200, 147, 56, 0.08) 0%, rgba(34, 197, 94, 0.08) 100%);
+  border: 1.5px solid rgba(200, 147, 56, 0.3);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.dark-mode .weekly-active-member-banner {
+  background: linear-gradient(135deg, rgba(200, 147, 56, 0.14) 0%, rgba(34, 197, 94, 0.12) 100%);
+  border-color: rgba(200, 147, 56, 0.45);
+}
+.weekly-active-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.weekly-active-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16A34A;
+  box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7);
+  animation: weeklyActivePulse 1.8s infinite;
+  flex-shrink: 0;
+}
+@keyframes weeklyActivePulse {
+  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+  70% { box-shadow: 0 0 0 7px rgba(22, 163, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+.weekly-active-title {
+  font-size: 11.5px;
+  color: #0F172A;
+  line-height: 1.4;
+}
+.dark-mode .weekly-active-title {
+  color: #F8FAFC;
+}
+.weekly-today-profit-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(200, 147, 56, 0.25);
+}
+.weekly-today-profit-text {
+  font-size: 12px;
+  color: #334155;
+}
+.dark-mode .weekly-today-profit-text {
+  color: #CBD5E1;
+}
+.weekly-today-profit-nominal {
+  font-size: 14px;
+  font-weight: 800;
+  color: #16A34A;
+  font-family: var(--font-mono, monospace);
+}
+.dark-mode .weekly-today-profit-nominal {
+  color: #4ADE80;
+}
+.weekly-today-profit-sub {
+  font-size: 10px;
+  color: #94A3B8;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   QUALIFIED LEADER STATUS BADGE (Requirement 8)
+   ========================================================================== */
+.badge-leader-qualified {
+  background: linear-gradient(135deg, rgba(200, 147, 56, 0.15) 0%, rgba(245, 158, 11, 0.25) 100%) !important;
+  color: #B45309 !important;
+  border: 1px solid rgba(200, 147, 56, 0.4) !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 6px rgba(200, 147, 56, 0.15);
+}
+.dark-mode .badge-leader-qualified {
+  background: linear-gradient(135deg, rgba(200, 147, 56, 0.25) 0%, rgba(245, 158, 11, 0.35) 100%) !important;
+  color: #FDE68A !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}
+.leader-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 800;
+  color: #B45309;
+}
+.dark-mode .leader-chip {
+  color: #FDE68A;
+}
+
+
 

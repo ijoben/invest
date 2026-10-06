@@ -24,7 +24,7 @@ export const AdminPage = {
     plans: 'Plan Investasi & Profit',
     rewards: 'Katalog Hadiah Point',
     affiliate: 'Sponsor & Komisi Rabat',
-    signals: 'Sinyal Prof GPT',
+    signals: 'Autotrading Signal Status',
     announcements: 'Teks Berjalan',
     banners: 'Banner Slider Carousel',
     testimonials: 'Kelola Testimoni User',
@@ -636,6 +636,38 @@ export const AdminPage = {
     if (r1) document.getElementById('affCfgL1').value = r1.percent;
     if (r2) document.getElementById('affCfgL2').value = r2.percent;
     if (r3) document.getElementById('affCfgL3').value = r3.percent;
+
+    this.renderLeaderMilestonesSettings(db);
+  },
+
+  renderLeaderMilestonesSettings(db) {
+    const tbody = document.getElementById('leaderMilestonesTableBody');
+    if (!tbody) return;
+    const milestones = (db.settings && db.settings.levelTurnoverMilestones) || [
+      { name: 'Bronze Leader', minTurnover: 25000000, reward: 1500000, badge: '🥉' },
+      { name: 'Silver Director', minTurnover: 100000000, reward: 5000000, badge: '🥈' },
+      { name: 'Gold Ambassador', minTurnover: 500000000, reward: 25000000, badge: '🥇' },
+      { name: 'Crown Diamond', minTurnover: 1500000000, reward: 75000000, badge: '💎' }
+    ];
+
+    tbody.innerHTML = milestones.map((m, idx) => `
+      <tr>
+        <td>
+          <input type="text" class="admin-input" id="milestoneName_${idx}" value="${escapeHtml(m.name)}" style="font-weight: 700;">
+        </td>
+        <td>
+          <input type="number" class="admin-input" id="milestoneTurnover_${idx}" value="${m.minTurnover}" step="1000000">
+          <div style="font-size: 10px; color: #94A3B8; margin-top: 2px;">${DB.formatIDR(m.minTurnover)}</div>
+        </td>
+        <td>
+          <input type="number" class="admin-input" id="milestoneReward_${idx}" value="${m.reward}" step="100000" style="color: #22C55E; font-weight: 700;">
+          <div style="font-size: 10px; color: #22C55E; margin-top: 2px;">${DB.formatIDR(m.reward)}</div>
+        </td>
+        <td style="text-align: center;">
+          <input type="text" class="admin-input" id="milestoneBadge_${idx}" value="${escapeHtml(m.badge || '🎖️')}" style="width: 50px; text-align: center; font-size: 16px;">
+        </td>
+      </tr>
+    `).join('');
   },
 
   // 6. Gateway, Bank & QRIS Config
@@ -1564,6 +1596,36 @@ export const AdminPage = {
     });
 
     this.showToast('Pengaturan komisi sponsor & rabat level berhasil disimpan ke database!', 'success');
+    this.renderAll();
+  },
+
+  async saveLeaderMilestonesSettings() {
+    const db = DB.get();
+    const current = (db.settings && db.settings.levelTurnoverMilestones) || [
+      { name: 'Bronze Leader', minTurnover: 25000000, reward: 1500000, badge: '🥉' },
+      { name: 'Silver Director', minTurnover: 100000000, reward: 5000000, badge: '🥈' },
+      { name: 'Gold Ambassador', minTurnover: 500000000, reward: 25000000, badge: '🥇' },
+      { name: 'Crown Diamond', minTurnover: 1500000000, reward: 75000000, badge: '💎' }
+    ];
+
+    const updated = current.map((m, idx) => {
+      const nameEl = document.getElementById(`milestoneName_${idx}`);
+      const toEl = document.getElementById(`milestoneTurnover_${idx}`);
+      const rewEl = document.getElementById(`milestoneReward_${idx}`);
+      const bdEl = document.getElementById(`milestoneBadge_${idx}`);
+
+      return {
+        name: nameEl ? nameEl.value.trim() : m.name,
+        minTurnover: toEl ? Number(toEl.value) : m.minTurnover,
+        reward: rewEl ? Number(rewEl.value) : m.reward,
+        badge: bdEl ? bdEl.value.trim() : (m.badge || '🎖️')
+      };
+    });
+
+    db.settings.levelTurnoverMilestones = updated;
+    this.showToast('Menyimpan pengaturan bonus target leader...', 'info');
+    await DB.save(db);
+    this.showToast('Pengaturan bonus target & reward leader berhasil disimpan!', 'success');
     this.renderAll();
   },
 

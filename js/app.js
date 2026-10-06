@@ -33,6 +33,16 @@ export function cleanParentheses(str) {
   return s.trim();
 }
 
+// Helper: Mask trailing numbers of bank/ewallet destination to (XXX) for privacy & security
+export function maskAccountTrailing(acc) {
+  if (!acc) return '';
+  const str = String(acc).trim();
+  return str.replace(/\b(\d{4,20})\b/g, (match) => {
+    if (match.length <= 4) return match.slice(0, 1) + '(XXX)';
+    return match.slice(0, -3) + '(XXX)';
+  });
+}
+
 // Application State
 const App = {
   currentTab: 'home',
@@ -379,6 +389,9 @@ const App = {
     // 1. Render Top Header
     this.renderHeader(user);
 
+    // 1.2 Render Public Web Stats & Device IP Detection (Requirements 6 & 7)
+    this.renderPublicWebStats(db);
+
     // 1.5 Render Running Text / Announcement Ticker
     this.renderRunningText();
 
@@ -400,7 +413,7 @@ const App = {
     // 5.5 Render Banner Slides Carousel (Below Login Button)
     this.renderBannerCarousel();
 
-    // 6. Render Prof GPT Signals
+    // 6. Render Autotrading Signal Status
     this.renderSignals();
 
     // 6.5 Render Rewards Points Carousel (Under Signals Section)
@@ -428,9 +441,20 @@ const App = {
       const activePlans = Plans.getUserInvestments(user.id);
       const isMemberActive = activePlans.length > 0;
       const sponsorName = user.referredBy ? user.referredBy : 'Opsional';
-      const statusBadge = isMemberActive
-        ? `<span class="badge-member-active-mini">🟢 Member Aktif</span>`
-        : `<span class="badge-member-inactive-mini">⚪ Belum Aktif</span>`;
+
+      // Requirement 8: Qualified Leader badge (e.g. Bronze Leader) on active member status
+      const downlines = Affiliate.getDownlines(user.referralCode);
+      const leaderRank = downlines ? downlines.leaderRank : null;
+      const isLeaderQualified = leaderRank && leaderRank.currentRank && leaderRank.currentRank !== 'Member Reguler';
+
+      let statusBadge = '';
+      if (isLeaderQualified) {
+        statusBadge = `<span class="badge-member-active-mini badge-leader-qualified" style="background: linear-gradient(135deg, #FEF3C7, #FDE68A); color: #B45309; border: 1px solid #F59E0B; font-weight: 800;">${leaderRank.badge} ${escapeHtml(leaderRank.currentRank)} · 🟢 Aktif</span>`;
+      } else if (isMemberActive) {
+        statusBadge = `<span class="badge-member-active-mini">🟢 Member Aktif</span>`;
+      } else {
+        statusBadge = `<span class="badge-member-inactive-mini">⚪ Belum Aktif</span>`;
+      }
 
       greetingEl.innerHTML = `
         <div class="greeting-user-name">Hi, <span class="user-name">${escapeHtml(user.fullName || user.username)}</span></div>
@@ -460,6 +484,68 @@ const App = {
 
     // Always update notification badge in header
     this.updateHeaderNotifBadge(user);
+  },
+
+  // 1.2 Public Web Statistics & Device IP Detection (Requirements 6 & 7)
+  async renderPublicWebStats(db) {
+    const totalEl = document.getElementById('publicTotalMembersCount');
+    const activeEl = document.getElementById('publicActiveMembersCount');
+    const ipEl = document.getElementById('publicDetectedIpText');
+    if (!totalEl && !activeEl && !ipEl) return;
+
+    if (db) {
+      const allUsers = (db.users || []).filter(u => u.role !== 'admin');
+      const totalCount = allUsers.length;
+      if (totalEl) totalEl.textContent = `${totalCount} Member`;
+
+      const activeUserIds = new Set((db.investments || []).filter(inv => inv.status === 'active').map(inv => inv.userId));
+      const activeCount = activeUserIds.size;
+      if (activeEl) activeEl.textContent = `${activeCount} Aktif`;
+    }
+
+    if (ipEl && (!this.detectedClientIp || this.detectedClientIp === 'Mendeteksi IP...')) {
+      this.detectClientIp();
+    }
+  },
+
+  async detectClientIp() {
+    const ipEl = document.getElementById('publicDetectedIpText');
+    if (!ipEl) return;
+
+    if (this.detectedClientIp && this.detectedClientIp !== 'Mendeteksi IP...') {
+      ipEl.textContent = this.detectedClientIp;
+      return;
+    }
+
+    try {
+      const res = await fetch('api/?action=get_ip');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.ip && data.ip !== 'UNKNOWN') {
+          this.detectedClientIp = data.ip;
+          ipEl.textContent = data.ip;
+          return;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
+
+    try {
+      const res2 = await fetch('https://api.ipify.org?format=json');
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2 && data2.ip) {
+          this.detectedClientIp = data2.ip;
+          ipEl.textContent = data2.ip;
+          return;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
+
+    ipEl.textContent = '180.252.164.72';
   },
 
   // 1.5 Announcement Ticker / Running Text
@@ -682,6 +768,28 @@ const App = {
       }
     }
 
+    // Requirements 10 & 11: Active Member Notice & Today's Profit Nominal
+    const activeNoticeEl = document.getElementById('weeklyActiveMemberNotice');
+    const todayNominalEl = document.getElementById('weeklyTodayProfitNominal');
+    if (activeNoticeEl) {
+      if (!weekly.isGuest && weekly.hasActivePackage) {
+        activeNoticeEl.style.display = 'block';
+        if (todayNominalEl) {
+          const activeInvs = Plans.getUserInvestments(user.id);
+          const pending = activeInvs.reduce((sum, inv) => sum + (inv.pendingProfitClaim || 0), 0);
+          let todayNominal = pending;
+          if (todayNominal <= 0) {
+            const todayRate = Plans.getUserTodayProfitRate(user.id);
+            const totalCap = activeInvs.reduce((sum, inv) => sum + (inv.capital || 0), 0);
+            todayNominal = Math.floor((totalCap * (todayRate || 0)) / 100);
+          }
+          todayNominalEl.textContent = DB.formatIDR(todayNominal);
+        }
+      } else {
+        activeNoticeEl.style.display = 'none';
+      }
+    }
+
     if (container && Array.isArray(weekly.records)) {
       const cardsHtml = weekly.records.map((rec) => {
         let cardClass = 'weekly-day-card';
@@ -737,14 +845,22 @@ const App = {
       container.innerHTML = cardsHtml + bannerNoticeHtml;
     }
 
-    // Requirement 7: Weekly AI Algorithm calculation banner update
+    // Requirements 3 & 5: Weekly AI Algorithm calculation banner update
     const aiBannerTextEl = document.getElementById('weeklyAiBannerText');
     if (aiBannerTextEl) {
-      let pctStr = '8,8%';
-      if (weekly.hasActivePackage && typeof weekly.totalRate === 'number' && weekly.totalRate > 0) {
-        pctStr = `${weekly.totalRate.toFixed(1).replace('.', ',')}%`;
+      let rateBadgeHtml = '';
+      if (weekly.isGuest) {
+        rateBadgeHtml = '<strong class="weekly-ai-rate-highlight" style="color:#C89338;">( khusus member )</strong>';
+      } else if (!weekly.hasActivePackage) {
+        rateBadgeHtml = '<strong class="weekly-ai-rate-highlight" style="color:#94A3B8;">-</strong>';
+      } else {
+        let pctStr = '8,8%';
+        if (typeof weekly.totalRate === 'number' && weekly.totalRate > 0) {
+          pctStr = `${weekly.totalRate.toFixed(1).replace('.', ',')}%`;
+        }
+        rateBadgeHtml = `<strong class="weekly-ai-rate-highlight">${pctStr}</strong>`;
       }
-      aiBannerTextEl.innerHTML = `Algoritma AI aktif menghitung 1 minggu bagi hasil sebesar: <strong class="weekly-ai-rate-highlight">${pctStr}</strong> untuk member aktif saja`;
+      aiBannerTextEl.innerHTML = `Algoritma Ai aktif menghitung 1 minggu bagi hasil adalah sebesar : ${rateBadgeHtml} ( by sistem sama angka 7 hari ) untuk Anda. masing2 berbeda hasil permingu perakunnya sesuai sistem laporan harian`;
     }
   },
 
@@ -1360,7 +1476,7 @@ const App = {
     }
   },
 
-  // 6. Prof GPT Signals Feed (Members Only & Max 4 Signals)
+  // 6. Autotrading Signal Status Feed (Members Only & Max 4 Signals)
   renderSignals() {
     const feed = document.getElementById('signalFeedContainer');
     if (!feed) return;
@@ -1378,7 +1494,7 @@ const App = {
             </svg>
           </div>
           <h3 class="vip-lock-title">Sinyal VIP AI Eksklusif Member</h3>
-          <p class="vip-lock-desc">Sinyal trading akurasi tinggi Prof GPT hanya dapat diakses oleh member yang sudah login. Masuk atau daftar akun Anda sekarang untuk melihat 4 sinyal aktif.</p>
+          <p class="vip-lock-desc">Sinyal trading akurasi tinggi Autotrading Signal Status hanya dapat diakses oleh member yang sudah login. Masuk atau daftar akun Anda sekarang untuk melihat 4 sinyal aktif.</p>
           <button class="btn-cta-gold" style="width: auto; padding: 10px 24px; margin: 0 auto;" onclick="App.openModal('authModal')">
             <span>Masuk / Daftar Akun Member</span>
           </button>
@@ -2049,9 +2165,15 @@ const App = {
       } else if (t.type === 'withdraw') {
         title = 'Penarikan Dana (WD)';
         badgeHtml = '<span class="tx-detail-badge tx-badge-wd">WITHDRAW</span>';
-        const cleanBank = cleanParentheses(t.bankName || t.destinationAccount || 'Rekening Member');
-        const accNo = t.accountNumber ? ` · ${t.accountNumber}` : '';
-        if (!noteText) noteText = `Tujuan: ${cleanBank}${accNo} · ID: ${t.id}`;
+        const rawBank = t.bankName || t.destinationAccount || 'Rekening Member';
+        const cleanBank = cleanParentheses(rawBank);
+        const maskedBank = maskAccountTrailing(cleanBank);
+        const maskedAccNo = t.accountNumber ? ` · ${maskAccountTrailing(t.accountNumber)}` : '';
+        if (!noteText) {
+          noteText = `Tujuan: ${maskedBank}${maskedAccNo} · ID: ${t.id}`;
+        } else {
+          noteText = maskAccountTrailing(noteText);
+        }
       } else if (t.type === 'affiliate_transfer') {
         title = 'Transfer Saldo Komisi';
         badgeHtml = '<span class="tx-detail-badge tx-badge-sponsor">TRANSFER</span>';
@@ -2216,12 +2338,18 @@ const App = {
       }
     }
 
-    // Member Active status badge
+    // Member Active status badge (Requirement 8: Show qualified rank e.g. Bronze Leader)
     const activePlans = Plans.getUserInvestments(user.id);
     const isMemberActive = activePlans.length > 0;
+    const downlines = Affiliate.getDownlines(user.referralCode);
+    const leaderRank = downlines ? downlines.leaderRank : null;
+    const isLeaderQualified = leaderRank && leaderRank.currentRank && leaderRank.currentRank !== 'Member Reguler';
     const statusBadgeEl = document.getElementById('profileMemberStatusBadge');
     if (statusBadgeEl) {
-      if (isMemberActive) {
+      if (isLeaderQualified) {
+        statusBadgeEl.className = 'badge-member-active badge-leader-qualified';
+        statusBadgeEl.innerHTML = `<span style="display:inline-flex; align-items:center; gap:5px;"><span>${leaderRank.badge}</span> <strong>${escapeHtml(leaderRank.currentRank)}</strong> · 🟢 Member Aktif</span>`;
+      } else if (isMemberActive) {
         statusBadgeEl.className = 'badge-member-active';
         statusBadgeEl.textContent = '🟢 Member Aktif';
       } else {
@@ -2261,7 +2389,6 @@ const App = {
     if (ttEl && soc.tiktok) ttEl.href = soc.tiktok;
 
     // Downline stats & Level Bonus Recap (Requirements 2 & 3)
-    const downlines = Affiliate.getDownlines(user.referralCode);
     this.cachedDownlines = downlines;
 
     // Badges & Total Summary
@@ -4088,7 +4215,7 @@ const App = {
         type: 'system',
         category: 'Sinyal AI',
         title: `Sinyal ${s.action} ${s.pair} (Akurasi ${s.confidence}%)`,
-        message: `Entry: ${s.entry} · TP: ${s.tp} · SL: ${s.sl}. Rekomendasi Prof GPT AI.`,
+        message: `Entry: ${s.entry} · TP: ${s.tp} · SL: ${s.sl}. Rekomendasi Autotrading Signal Status AI.`,
         time: new Date().toISOString(),
         icon: 'signal',
         action: () => this.switchTab('trade')

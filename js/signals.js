@@ -1,6 +1,6 @@
 /**
  * AUTOTRADING - SIGNALS & LIVE MARKET SIMULATOR
- * Simulates real-time price changes on market tickers and manages Prof GPT AI Signals.
+ * Simulates real-time price changes on market tickers and manages Autotrading Signal Status.
  */
 
 import { DB } from './db.js';

@@ -189,7 +189,7 @@ const defaultDB = {
       minDailyProfit: 5.0, // 5.0%
       maxDailyProfit: 7.5, // 7.5%
       durationDays: 60,
-      description: 'Paket Eksklusif Prof GPT Institutional Hedge Fund',
+      description: 'Paket Eksklusif Autotrading Institutional Hedge Fund',
       activeCount: 0
     }
   ],
@@ -224,7 +224,7 @@ const defaultDB = {
   // Transactions (Deposit, Withdraw, Profit, Sponsor, Rabat, Capital Return)
   transactions: [],
 
-  // Prof GPT AI Signals
+  // Autotrading Signal Status
   signals: [
     {
       id: 'sig-001',
@@ -303,7 +303,7 @@ const defaultDB = {
     },
     {
       id: 'ann-3',
-      text: 'Sinyal akurasi tinggi Prof GPT telah diperbarui. Cek menu Signal untuk eksekusi order trading dengan akurasi 94%+.',
+      text: 'Sinyal akurasi tinggi Autotrading Signal Status telah diperbarui. Cek menu Signal untuk eksekusi order trading dengan akurasi 94%+.',
       active: true,
       createdAt: '2026-09-15T02:00:00.000Z'
     }
