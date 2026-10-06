@@ -196,41 +196,35 @@
           </div>
         </section>
 
-        <!-- 1.8 PUBLIC WEB STATS & DEVICE IP DETECTION BAR (Requirement 6 & 7) -->
+        <!-- 1.8 PUBLIC WEB STATS (Rapih & Compact 2-Kolom) -->
         <section class="public-web-stats-container" id="publicWebStatsSection">
-          <div class="public-web-stats-card">
-            <div class="public-stats-grid">
-              <div class="public-stat-item">
-                <div class="public-stat-icon-wrap" style="background: rgba(59, 130, 246, 0.12); color: #3B82F6;">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </div>
-                <div class="public-stat-meta">
-                  <span class="public-stat-lbl">Pendaftar Keseluruhan</span>
-                  <strong class="public-stat-val" id="publicTotalMembersCount">0 Member</strong>
-                </div>
+          <div class="public-stats-grid-two">
+            <!-- Card 1: Total Pendaftar Keseluruhan -->
+            <div class="public-stat-box stat-box-total">
+              <div class="stat-box-icon" style="background: rgba(59, 130, 246, 0.12); color: #2563EB;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
-              <div class="public-stat-item">
-                <div class="public-stat-icon-wrap" style="background: rgba(34, 197, 94, 0.12); color: #22C55E;">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                </div>
-                <div class="public-stat-meta">
-                  <span class="public-stat-lbl">Member Sudah Aktif</span>
-                  <strong class="public-stat-val" id="publicActiveMembersCount" style="color: #16A34A;">0 Aktif</strong>
-                </div>
-              </div>
-              <div class="public-stat-item public-ip-item">
-                <div class="public-stat-icon-wrap" style="background: rgba(234, 179, 8, 0.12); color: #EAB308;">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                </div>
-                <div class="public-stat-meta">
-                  <span class="public-stat-lbl">IP Anda Terdeteksi</span>
-                  <strong class="public-stat-val" id="publicDetectedIpText" style="color: #D97706; font-family: var(--font-mono); font-size: 11px;">Mendeteksi IP...</strong>
+              <div class="stat-box-content">
+                <span class="stat-box-label">Pendaftar Keseluruhan</span>
+                <div class="stat-box-value-row">
+                  <strong class="stat-box-value" id="publicTotalMembersCount">0 Member</strong>
+                  <span class="stat-box-chip">Komunitas</span>
                 </div>
               </div>
             </div>
-            <div class="public-device-rule-footer">
-              <span class="public-rule-badge">🛡️ KEAMANAN 1 DEVICE</span>
-              <span class="public-rule-desc">Tidak boleh multi-akun dalam 1 device. Sistem AI mendeteksi IP Anda untuk proteksi dana & sistem bagi hasil.</span>
+
+            <!-- Card 2: Member Sudah Aktif -->
+            <div class="public-stat-box stat-box-active">
+              <div class="stat-box-icon" style="background: rgba(34, 197, 94, 0.12); color: #16A34A;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <div class="stat-box-content">
+                <span class="stat-box-label">Member Sudah Aktif</span>
+                <div class="stat-box-value-row">
+                  <strong class="stat-box-value text-green" id="publicActiveMembersCount">0 Aktif</strong>
+                  <span class="stat-box-chip-active">Trading AI</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -763,6 +757,21 @@
             <button class="rewards-history-link" onclick="App.openMyRedemptionsModal()">Riwayat Tukar Poin ›</button>
           </div>
         </section>
+
+        <!-- FOOTER INFO DETEKSI IP (Paling Bawah Kecil & Rapi) -->
+        <footer class="public-ip-footer-container">
+          <div class="public-ip-footer-badge">
+            <span class="public-ip-dot"></span>
+            <span class="public-ip-text">
+              IP Terdeteksi: <strong id="publicDetectedIpText" class="public-ip-number">Mendeteksi IP...</strong>
+            </span>
+            <span class="public-ip-divider">•</span>
+            <span class="public-ip-rule">1 Device 1 Akun (Anti Multi-Akun)</span>
+          </div>
+          <div class="public-ip-copyright">
+            Platform Autotrading AI Resmi © 2026 · Proteksi Keamanan Algoritma Trading
+          </div>
+        </footer>
 
       </main>
 
