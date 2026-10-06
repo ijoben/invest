@@ -33,13 +33,19 @@ export function cleanParentheses(str) {
   return s.trim();
 }
 
-// Helper: Mask trailing numbers of bank/ewallet destination to (XXX) for privacy & security
+// Helper: Mask 3 trailing digits of bank/ewallet destination with xxx for privacy & security
 export function maskAccountTrailing(acc) {
   if (!acc) return '';
-  const str = String(acc).trim();
-  return str.replace(/\b(\d{4,20})\b/g, (match) => {
-    if (match.length <= 4) return match.slice(0, 1) + '(XXX)';
-    return match.slice(0, -3) + '(XXX)';
+  let str = String(acc).trim();
+  str = str.replace(/\s*\((?:XXX|xxx)\)/gi, 'xxx');
+  return str.replace(/(?:(TRX-[A-Z0-9-]+)|ID:\s*(\d+)|(\b\d{4,24}\b))/gi, (full, trx, idNum, accNum) => {
+    if (trx) return trx;
+    if (idNum) return 'ID: ' + idNum;
+    if (accNum) {
+      if (accNum.length <= 3) return 'xxx';
+      return accNum.slice(0, -3) + 'xxx';
+    }
+    return full;
   });
 }
 
@@ -2165,12 +2171,16 @@ const App = {
       } else if (t.type === 'withdraw') {
         title = 'Penarikan Dana (WD)';
         badgeHtml = '<span class="tx-detail-badge tx-badge-wd">WITHDRAW</span>';
-        const rawBank = t.bankName || t.destinationAccount || 'Rekening Member';
+        const rawBank = t.destinationAccount || t.bankName || t.paymentMethod || 'Rekening Member';
         const cleanBank = cleanParentheses(rawBank);
         const maskedBank = maskAccountTrailing(cleanBank);
         const maskedAccNo = t.accountNumber ? ` · ${maskAccountTrailing(t.accountNumber)}` : '';
+        let wdDest = maskedBank;
+        if (maskedAccNo && !maskedBank.includes('xxx') && !/\d{4,}/.test(cleanBank)) {
+          wdDest += maskedAccNo;
+        }
         if (!noteText) {
-          noteText = `Tujuan: ${maskedBank}${maskedAccNo} · ID: ${t.id}`;
+          noteText = `Tujuan: ${wdDest} · ID: ${t.id}`;
         } else {
           noteText = maskAccountTrailing(noteText);
         }
@@ -3399,7 +3409,7 @@ const App = {
         <span class="badge-tag badge-wd">WITHDRAW</span>
         <span>${escapeHtml(w.username)}</span>
         <span class="amount-val">-${DB.formatIDR(w.amount)}</span>
-        <span style="color:#94A3B8; font-size:10px;">• ${cleanParentheses(w.method)}</span>
+        <span style="color:#94A3B8; font-size:10px;">• ${maskAccountTrailing(cleanParentheses(w.method))}</span>
         <span style="color:#FACC15; font-size:10px;">· ${w.status}</span>
       </span>
     `).join('');
@@ -3471,7 +3481,7 @@ const App = {
               <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
                 ${escapeHtml(item.username)} <span class="badge-tag ${tagClass}" style="font-size: 8.5px; margin-left: 4px;">${tagText}</span>
               </div>
-              <div style="font-size: 10.5px; color: #64748B;">${item.method} · ${item.timeAgo}</div>
+              <div style="font-size: 10.5px; color: #64748B;">${maskAccountTrailing(item.method)} · ${item.timeAgo}</div>
             </div>
           </div>
           <div style="text-align: right;">
@@ -4081,7 +4091,7 @@ const App = {
             type: 'finance',
             category: 'Penarikan',
             title: `Penarikan Berhasil Ditransfer: ${amountStr}`,
-            message: `Dana ${amountStr} telah berhasil ditransfer ke rekening bank ${tx.bankName || ''} (${tx.accountNumber || ''}).`,
+            message: `Dana ${amountStr} telah berhasil ditransfer ke rekening ${tx.bankName ? tx.bankName + ' ' : ''}(${maskAccountTrailing(tx.accountNumber || tx.destinationAccount || '')}).`,
             time,
             icon: 'withdraw_success',
             action: () => this.openRiwayatModal('withdraw')

@@ -313,13 +313,26 @@ export const Payment = {
         let status = 'Diproses';
         if (t.status === 'approved') status = 'Sukses Masuk';
         else if (t.status === 'rejected') status = 'Ditolak';
-        let cleanMethod = (t.paymentMethod || 'Bank Transfer').trim();
+        let cleanMethod = (t.paymentMethod || t.destinationAccount || 'Bank Transfer').trim();
         cleanMethod = cleanMethod.replace(/\)+/g, ')').replace(/\(+/g, '(');
-        if (/BCA/i.test(cleanMethod)) cleanMethod = 'Bank BCA';
-        else if (/BRI/i.test(cleanMethod)) cleanMethod = 'Bank BRI';
-        else if (/BNI/i.test(cleanMethod)) cleanMethod = 'Bank BNI';
-        else if (/Mandiri/i.test(cleanMethod)) cleanMethod = 'Bank Mandiri';
+        if (/BCA/i.test(cleanMethod) && !/\d{4,}/.test(cleanMethod)) cleanMethod = 'Bank BCA';
+        else if (/BRI/i.test(cleanMethod) && !/\d{4,}/.test(cleanMethod)) cleanMethod = 'Bank BRI';
+        else if (/BNI/i.test(cleanMethod) && !/\d{4,}/.test(cleanMethod)) cleanMethod = 'Bank BNI';
+        else if (/Mandiri/i.test(cleanMethod) && !/\d{4,}/.test(cleanMethod)) cleanMethod = 'Bank Mandiri';
         else if (/USDT/i.test(cleanMethod)) cleanMethod = 'USDT TRC20';
+
+        // Clean up legacy (XXX) and mask 3 trailing digits with xxx for privacy
+        cleanMethod = cleanMethod.replace(/\s*\((?:XXX|xxx)\)/gi, 'xxx');
+        cleanMethod = cleanMethod.replace(/(?:(TRX-[A-Z0-9-]+)|ID:\s*(\d+)|(\b\d{4,24}\b))/gi, (full, trx, idNum, accNum) => {
+          if (trx) return trx;
+          if (idNum) return 'ID: ' + idNum;
+          if (accNum) {
+            if (accNum.length <= 3) return 'xxx';
+            return accNum.slice(0, -3) + 'xxx';
+          }
+          return full;
+        });
+
         return {
           username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
           amount: t.amount,
