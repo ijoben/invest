@@ -240,7 +240,13 @@ export const AdminPage = {
     }
 
     // 1. Dashboard Stats
-    document.getElementById('statTotalUsers').textContent = stats.totalUsers;
+    const sUsersEl = document.getElementById('statTotalUsers');
+    if (sUsersEl) sUsersEl.textContent = stats.totalUsers;
+    const sUsersCard = sUsersEl ? sUsersEl.closest('.admin-stat-card') : null;
+    if (sUsersCard) {
+      const changeEl = sUsersCard.querySelector('.admin-stat-change');
+      if (changeEl) changeEl.textContent = `✓ ${stats.activeUsers || 0} Member Aktif (Trading AI)`;
+    }
     document.getElementById('statTotalDeposits').textContent = DB.formatIDR(stats.totalDeposits);
     document.getElementById('statTotalWithdrawals').textContent = DB.formatIDR(stats.totalWithdrawals);
     document.getElementById('statActiveCapital').textContent = DB.formatIDR(stats.activeCapital);
@@ -994,10 +1000,10 @@ export const AdminPage = {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    const allUsers = db.users || [];
+    const allUsers = (db.users || []).filter(u => u.role !== 'admin');
     const totalCount = allUsers.length;
-    const activeCount = allUsers.filter(u => !u.isBlocked).length;
-    const blockedCount = allUsers.filter(u => u.isBlocked).length;
+    const activeCount = allUsers.filter(u => !u.isBlocked && u.status !== 'blocked').length;
+    const blockedCount = allUsers.filter(u => u.isBlocked || u.status === 'blocked').length;
 
     const cAll = document.getElementById('userCountAll');
     const cAct = document.getElementById('userCountActive');

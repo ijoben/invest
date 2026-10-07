@@ -701,6 +701,45 @@ if ($action === 'get_ip') {
     exit();
 }
 
+// 1.6 Action: Public Member Stats (Realtime Sync MySQL & Frontend)
+if ($action === 'public_stats' || $action === 'get_member_stats') {
+    header('Content-Type: application/json; charset=utf-8');
+    if (!$pdo) {
+        http_response_code(503);
+        echo json_encode(['success' => false, 'message' => 'Database belum terhubung.']);
+        exit();
+    }
+    ensureTablesExist($pdo);
+    try {
+        // Total registered non-admin members
+        $stmtTot = $pdo->query("SELECT COUNT(*) AS total FROM `users` WHERE `role` != 'admin'");
+        $totalMembers = (int)($stmtTot->fetch()['total'] ?? 0);
+
+        // Members with active trading investments
+        $stmtAct = $pdo->query("SELECT COUNT(DISTINCT `user_id`) AS active FROM `investments` WHERE `status` = 'active'");
+        $activeTradingMembers = (int)($stmtAct->fetch()['active'] ?? 0);
+
+        // Unblocked members count
+        $stmtUnb = $pdo->query("SELECT COUNT(*) AS unblocked FROM `users` WHERE `role` != 'admin' AND (`is_blocked` = 0 OR `is_blocked` IS NULL) AND (`status` != 'blocked' OR `status` IS NULL)");
+        $unblockedMembers = (int)($stmtUnb->fetch()['unblocked'] ?? 0);
+
+        // Active count: users with active trading contracts, or non-blocked fallback
+        $activeCount = $activeTradingMembers > 0 ? $activeTradingMembers : $unblockedMembers;
+
+        echo json_encode([
+            'success' => true,
+            'totalMembers' => $totalMembers,
+            'activeMembers' => $activeCount,
+            'activeTradingMembers' => $activeTradingMembers,
+            'unblockedMembers' => $unblockedMembers
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit();
+}
+
 // 2. Action: Get Data State (Complete Realtime Bi-Directional Synchronizer)
 if ($action === 'get') {
     if (!$pdo) {

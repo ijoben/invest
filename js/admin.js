@@ -13,7 +13,10 @@ export const Admin = {
   getStats() {
     const db = DB.get();
     
-    const totalUsers = db.users.length;
+    const nonAdminUsers = (db.users || []).filter(u => u.role !== 'admin');
+    const totalUsers = nonAdminUsers.length;
+    const activeInvUsers = new Set((db.investments || []).filter(i => i.status === 'active').map(i => i.userId));
+    const activeUsers = activeInvUsers.size > 0 ? activeInvUsers.size : nonAdminUsers.filter(u => !u.isBlocked && u.status !== 'blocked').length;
     
     const totalDeposits = db.transactions
       .filter(t => t.type === 'deposit' && t.status === 'approved')
@@ -44,6 +47,7 @@ export const Admin = {
 
     return {
       totalUsers,
+      activeUsers,
       totalDeposits,
       totalWithdrawals,
       activeCapital,

@@ -182,13 +182,17 @@ const App = {
 
   // Live Background Synchronization Listener (Sync from Admin & MySQL Database)
   onLiveDbSync(freshDb) {
+    const dbData = freshDb || DB.get();
+    // Realtime update public member & active statistics on every sync cycle
+    this.renderPublicWebStats(dbData);
+
     if (!Auth.isLoggedIn()) {
       const activeEl = document.activeElement;
       const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
       const activeModal = document.querySelector('.modal.active, .modal[style*="display: flex"], .modal[style*="display: block"]');
       if (!isTyping && !activeModal && this.currentTab === 'home') {
         this.renderBannerCarousel();
-        this.renderTierCarousel(null, freshDb || DB.get());
+        this.renderTierCarousel(null, dbData);
         this.renderRunningText();
       }
       return;
@@ -505,9 +509,25 @@ const App = {
       if (totalEl) totalEl.textContent = `${totalCount} Member`;
 
       const activeUserIds = new Set((db.investments || []).filter(inv => inv.status === 'active').map(inv => inv.userId));
-      const activeCount = activeUserIds.size;
+      const activeCount = activeUserIds.size > 0 ? activeUserIds.size : allUsers.filter(u => !u.isBlocked && u.status !== 'blocked').length;
       if (activeEl) activeEl.textContent = `${activeCount} Aktif`;
     }
+
+    // Direct Realtime Synchronizer with MySQL Database
+    try {
+      const res = await fetch('api/?action=public_stats');
+      if (res.ok) {
+        const sData = await res.json();
+        if (sData && sData.success) {
+          if (totalEl && typeof sData.totalMembers === 'number') {
+            totalEl.textContent = `${sData.totalMembers} Member`;
+          }
+          if (activeEl && typeof sData.activeMembers === 'number') {
+            activeEl.textContent = `${sData.activeMembers} Aktif`;
+          }
+        }
+      }
+    } catch (e) {}
 
     if (ipEl && (!this.detectedClientIp || this.detectedClientIp === 'Mendeteksi IP...')) {
       this.detectClientIp();
