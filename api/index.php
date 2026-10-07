@@ -1768,11 +1768,12 @@ if ($action === 'claim_daily_checkin') {
     $chkTrxStmt = $pdo->prepare("
         SELECT COUNT(*) FROM `transactions` 
         WHERE `user_id` = :uid 
-          AND (`id` LIKE 'TX-CHK-%' OR `payment_method` LIKE '%Absensi%' OR `note` LIKE '%absen%')
-          AND (DATE(`created_at`) = :today OR DATE(CONVERT_TZ(`created_at`, '+00:00', '+07:00')) = :today)
+          AND (`id` LIKE 'TX-CHK-%' OR `type` = 'bonus' OR `payment_method` LIKE '%Absensi%' OR `note` LIKE '%absen%')
+          AND (`created_at` LIKE :todayPat OR DATE(`created_at`) = :today)
     ");
     $chkTrxStmt->execute([
         ':uid' => $userId,
+        ':todayPat' => $todayWib . '%',
         ':today' => $todayWib
     ]);
     $alreadyClaimedTrxCount = (int)$chkTrxStmt->fetchColumn();
@@ -1967,16 +1968,30 @@ if ($action === 'claim_profit') {
     }
 
     $todayWib = date('Y-m-d'); // Asia/Jakarta
+    $todayPat = $todayWib . '%';
 
     // 1. Strict Server Check: Has user already claimed profit today?
     $chkPrfStmt = $pdo->prepare("
         SELECT COUNT(*) FROM `transactions` 
         WHERE `user_id` = :uid 
-          AND `type` = 'profit_claim' 
-          AND (DATE(`created_at`) = :today OR DATE(CONVERT_TZ(`created_at`, '+00:00', '+07:00')) = :today)
+          AND (`type` = 'profit_claim' OR `id` LIKE 'TRX-PRF-%') 
+          AND (`created_at` LIKE :todayPat OR DATE(`created_at`) = :today)
     ");
-    $chkPrfStmt->execute([':uid' => $userId, ':today' => $todayWib]);
+    $chkPrfStmt->execute([':uid' => $userId, ':todayPat' => $todayPat, ':today' => $todayWib]);
     $alreadyClaimedToday = (int)$chkPrfStmt->fetchColumn();
+
+    // Also check if any active investment already recorded a profit yield today
+    if ($alreadyClaimedToday === 0) {
+        $chkInvStmt = $pdo->prepare("
+            SELECT COUNT(*) FROM `investments`
+            WHERE `user_id` = :uid
+              AND (`last_profit_yield_date` LIKE :todayPat OR DATE(`last_profit_yield_date`) = :today)
+        ");
+        $chkInvStmt->execute([':uid' => $userId, ':todayPat' => $todayPat, ':today' => $todayWib]);
+        if ((int)$chkInvStmt->fetchColumn() > 0) {
+            $alreadyClaimedToday = 1;
+        }
+    }
 
     // 2. Fetch User from MySQL
     $uStmt = $pdo->prepare("SELECT * FROM `users` WHERE `id` = :uid LIMIT 1");
@@ -3136,15 +3151,17 @@ if ($action === 'cleanup_duplicates') {
         $pdo->exec("UPDATE `users` SET `wallet_balance` = 1000, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = 'usr-1791277725245'");
         // pendekar: 28,500,846 + checkins(2000) + profit(87500) = 28,590,346 IDR
         $pdo->exec("UPDATE `users` SET `wallet_balance` = 28590346, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = 'usr-1791247049424'");
-        // deduplicate pendekar duplicate profit claim
-        $pdo->exec("DELETE FROM `transactions` WHERE `id` = 'TRX-PRF-610051'");
+        // bonuskoe: 2,455,792 + checkin(1000) + profit(23000) = 2,478,792 IDR (deduplicate duplicate claim)
+        $pdo->exec("UPDATE `users` SET `wallet_balance` = 2478792, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = 'usr-1791224078093' OR `username` = 'bonuskoe'");
+        // deduplicate pendekar & bonuskoe duplicate profit claims
+        $pdo->exec("DELETE FROM `transactions` WHERE `id` IN ('TRX-PRF-610051', 'TRX-PRF-134863')");
 
         // 5. Fix investments table (set last_profit_yield_date, clear pending, and synchronize total_profit_earned)
         $nowDt = date('Y-m-d H:i:s');
-        $pdo->exec("UPDATE `investments` SET `last_profit_yield_date` = '{$nowDt}', `pending_profit_claim` = 0 WHERE `last_profit_yield_date` IS NULL OR `user_id` IN ('usr-1791033573810', 'usr-1790996838699')");
+        $pdo->exec("UPDATE `investments` SET `last_profit_yield_date` = '{$nowDt}', `pending_profit_claim` = 0 WHERE `last_profit_yield_date` IS NULL OR `user_id` IN ('usr-1790996838699')");
         // Ensure total_profit_earned matches approved profit claim transactions
         $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 87500 WHERE `id` = 'inv-1791248064000'");
-        $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 46000 WHERE `id` = 'inv-1791246898036'");
+        $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 23000 WHERE `id` = 'inv-1791246898036'");
         $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 9150 WHERE `id` = 'inv-1791242756249'");
         $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 2009 WHERE `id` = 'inv-1791082184354'");
         $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 1640 WHERE `id` = 'inv-1791143221090'");
@@ -3161,7 +3178,7 @@ if ($action === 'cleanup_duplicates') {
                 // Filter transactions
                 $toRemove = [
                     'TRX-PRF-339740', 'TRX-PRF-566756', 'TRX-PRF-747865', 'TRX-PRF-218647', 'TRX-PRF-797164', 'TRX-PRF-913169', 'TRX-PRF-562987',
-                    'TRX-PRF-321611', 'TRX-PRF-821410', 'TRX-PRF-738236', 'TRX-PRF-610051'
+                    'TRX-PRF-321611', 'TRX-PRF-821410', 'TRX-PRF-738236', 'TRX-PRF-610051', 'TRX-PRF-134863'
                 ];
                 if (isset($json['transactions']) && is_array($json['transactions'])) {
                     $json['transactions'] = array_values(array_filter($json['transactions'], function($t) use ($toRemove) {
@@ -3192,6 +3209,7 @@ if ($action === 'cleanup_duplicates') {
                         if ($u['id'] === 'usr-1791275402661') $u['walletBalance'] = 1000;
                         if ($u['id'] === 'usr-1791277725245') $u['walletBalance'] = 1000;
                         if ($u['id'] === 'usr-1791247049424') $u['walletBalance'] = 28590346;
+                        if ($u['id'] === 'usr-1791224078093' || ($u['username'] ?? '') === 'bonuskoe') $u['walletBalance'] = 2478792;
                     }
                     unset($u);
                 }
@@ -3200,7 +3218,7 @@ if ($action === 'cleanup_duplicates') {
                 if (isset($json['investments']) && is_array($json['investments'])) {
                     foreach ($json['investments'] as &$invRef) {
                         if (($invRef['id'] ?? '') === 'inv-1791248064000') $invRef['totalProfitEarned'] = 87500;
-                        if (($invRef['id'] ?? '') === 'inv-1791246898036') $invRef['totalProfitEarned'] = 46000;
+                        if (($invRef['id'] ?? '') === 'inv-1791246898036') $invRef['totalProfitEarned'] = 23000;
                         if (($invRef['id'] ?? '') === 'inv-1791242756249') $invRef['totalProfitEarned'] = 9150;
                         if (($invRef['id'] ?? '') === 'inv-1791082184354') $invRef['totalProfitEarned'] = 2009;
                         if (($invRef['id'] ?? '') === 'inv-1791143221090') $invRef['totalProfitEarned'] = 1640;
@@ -3230,6 +3248,50 @@ if ($action === 'cleanup_duplicates') {
         ]);
     } catch(Exception $e) {
         http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit();
+}
+
+if ($action === 'audit_summary') {
+    header('Content-Type: application/json; charset=UTF-8');
+    try {
+        ensureTablesExist($pdo);
+        // 1. Users
+        $users = $pdo->query("SELECT `id`, `username`, `role`, `wallet_balance`, `affiliate_balance`, `points` FROM `users` ORDER BY `wallet_balance` DESC")->fetchAll();
+        
+        // 2. Claims transactions (without heavy proof images)
+        $claims = $pdo->query("SELECT `id`, `user_id`, `username`, `type`, `amount`, `status`, `created_at` FROM `transactions` WHERE `type` IN ('profit_claim', 'bonus') OR `id` LIKE 'TRX-PRF-%' OR `id` LIKE 'TX-CHK-%' ORDER BY `created_at` DESC")->fetchAll();
+        
+        // Group by user, type, and date to detect any duplicate
+        $byUserDate = [];
+        $duplicates = [];
+        foreach ($claims as $c) {
+            $date = substr($c['created_at'], 0, 10);
+            $type = ($c['type'] === 'profit_claim' || strpos($c['id'], 'TRX-PRF-') === 0) ? 'profit_claim' : 'daily_checkin';
+            $key = $c['username'] . '|' . $type . '|' . $date;
+            if (!isset($byUserDate[$key])) $byUserDate[$key] = [];
+            $byUserDate[$key][] = $c;
+        }
+        foreach ($byUserDate as $k => $txs) {
+            if (count($txs) > 1) {
+                $duplicates[$k] = $txs;
+            }
+        }
+        
+        // 3. Investments
+        $invs = $pdo->query("SELECT `id`, `user_id`, `plan_name`, `capital`, `total_profit_earned`, `pending_profit_claim`, `days_elapsed`, `duration_days`, `status`, `last_profit_yield_date` FROM `investments` ORDER BY `capital` DESC")->fetchAll();
+
+        echo json_encode([
+            'success' => true,
+            'totalUsers' => count($users),
+            'duplicateCount' => count($duplicates),
+            'duplicates' => $duplicates,
+            'totalClaims' => count($claims),
+            'users' => $users,
+            'investments' => $invs
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    } catch(Exception $e) {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit();

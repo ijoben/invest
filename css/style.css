@@ -744,9 +744,29 @@ html, body {
 .quick-actions-card {
   background: var(--card-bg);
   border-radius: var(--radius-lg);
-  padding: 14px 6px;
+  padding: 12px 8px 14px 8px;
   box-shadow: var(--card-shadow);
   border: 1px solid var(--card-border);
+}
+
+.quick-actions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px 10px 6px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed var(--border-color, rgba(0,0,0,0.08));
+}
+
+.quick-actions-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748B);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .quick-grid {

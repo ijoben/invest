@@ -687,27 +687,38 @@ export const Plans = {
   },
 
   // Claim pending daily profit for a specific user (Strictly Once Per Day)
+  _claimLocks: {},
   async claimProfit(userId) {
-    const db = DB.get();
-    const user = db.users.find(u => u.id === userId);
-    if (!user) return { success: false, message: 'User tidak ditemukan' };
-
-    const todayWib = DB.getWibDateStr();
-
-    // 1. Strict local pre-guard: Check if already claimed profit today
-    const hasClaimedToday = (db.transactions || []).some(t => {
-      if (t.userId !== userId) return false;
-      if (t.type !== 'profit_claim') return false;
-      return DB.getWibDateStr(t.createdAt) === todayWib;
-    });
-
-    if (hasClaimedToday) {
-      return {
-        success: false,
-        alreadyClaimed: true,
-        message: 'Anda sudah mengklaim profit untuk hari ini. Profit berikutnya akan dihitung dalam siklus 24 jam berikutnya.'
-      };
+    if (this._claimLocks[userId]) {
+      return { success: false, message: 'Proses klaim sedang berlangsung, mohon tunggu sebentar...' };
     }
+    this._claimLocks[userId] = true;
+
+    try {
+      const db = DB.get();
+      const user = db.users.find(u => u.id === userId);
+      if (!user) return { success: false, message: 'User tidak ditemukan' };
+
+      const todayWib = DB.getWibDateStr();
+
+      // 1. Strict local pre-guard: Check if already claimed profit today in transactions OR investments
+      const hasClaimedToday = (db.transactions || []).some(t => {
+        if (t.userId !== userId) return false;
+        const isPrf = t.type === 'profit_claim' || (t.id && String(t.id).startsWith('TRX-PRF-'));
+        if (!isPrf) return false;
+        return DB.getWibDateStr(t.createdAt) === todayWib;
+      }) || (db.investments || []).some(inv => {
+        if (inv.userId !== userId) return false;
+        return inv.lastProfitYieldDate && DB.getWibDateStr(inv.lastProfitYieldDate) === todayWib;
+      });
+
+      if (hasClaimedToday) {
+        return {
+          success: false,
+          alreadyClaimed: true,
+          message: 'Anda sudah mengklaim profit untuk hari ini. Profit berikutnya akan dihitung dalam siklus 24 jam berikutnya.'
+        };
+      }
 
     // 2. Direct server claim for atomic single-claim database validation
     try {
@@ -781,7 +792,10 @@ export const Plans = {
       return { success: false, message: 'Gagal terhubung ke server database. Periksa koneksi internet Anda.' };
     }
 
-    return { success: false, message: 'Gagal memproses klaim profit pada server.' };
+      return { success: false, message: 'Gagal memproses klaim profit pada server.' };
+    } finally {
+      this._claimLocks[userId] = false;
+    }
   },
 
   // Get completed investments that are pending capital refund
@@ -895,6 +909,13 @@ export const Plans = {
     return Number(user.affiliateBalance) || 0;
   },
 
+  maskUsername(username) {
+    if (!username || typeof username !== 'string') return 'memxxx';
+    const clean = username.trim();
+    if (clean.length <= 3) return clean.slice(0, 1) + 'xxx';
+    return clean.slice(0, 3) + 'xxx';
+  },
+
   getTopSponsors(limit = 10) {
     const db = DB.get();
     // Every account with sponsor activity takes part (including Admin VIP) -
@@ -917,6 +938,7 @@ export const Plans = {
       return {
         id: u.id,
         username: u.username,
+        maskedUsername: this.maskUsername(u.username),
         fullName: u.fullName || u.username,
         directCount,
         sponsorCount: directCount,
@@ -962,6 +984,7 @@ export const Plans = {
       return {
         id: u.id,
         username: u.username,
+        maskedUsername: this.maskUsername(u.username),
         fullName: u.fullName || u.username,
         totalProfit,
         totalCapital: totalCap,

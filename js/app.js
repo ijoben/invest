@@ -3529,7 +3529,7 @@ const App = {
       const topSponsorItems = sponsors.slice(0, 5).map((s, idx) => `
         <span class="autotrading-marquee-item fgt-marquee-item">
           <span class="badge-tag badge-lead">TOP ${idx + 1} SPONSOR</span>
-          <span style="font-weight:700;">${escapeHtml(s.username)}</span>
+          <span style="font-weight:700;">${escapeHtml(s.maskedUsername || s.username)}</span>
           <span class="amount-val">${DB.formatIDR(s.commission)} Komisi</span>
           <span style="color:#C084FC;">(${s.directCount} Member)</span>
         </span>
@@ -3540,7 +3540,7 @@ const App = {
       const topProfitItems = profitMarqueeList.slice(0, 5).map((p, idx) => `
         <span class="autotrading-marquee-item fgt-marquee-item">
           <span class="badge-tag badge-dep">TOP ${idx + 1} PROFIT</span>
-          <span style="font-weight:700;">${escapeHtml(p.username)}</span>
+          <span style="font-weight:700;">${escapeHtml(p.maskedUsername || p.username)}</span>
           <span class="amount-val">+${DB.formatIDR(p.totalProfit)}</span>
           <span style="color:#4ADE80;">(Win: ${p.winRate}%)</span>
         </span>
@@ -3576,7 +3576,7 @@ const App = {
               <div class="lead-rank-badge ${rankClass}">${medal}</div>
               <div>
                 <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
-                  ${escapeHtml(s.username)} <span style="font-size: 10px; color: #C89338; font-weight: 700;">[${escapeHtml(s.badge)}]</span>
+                  ${escapeHtml(s.maskedUsername || s.username)} <span style="font-size: 10px; color: #C89338; font-weight: 700;">[${escapeHtml(s.badge)}]</span>
                 </div>
                 <div style="font-size: 10.5px; color: #64748B;">
                   ${s.directCount} Sponsor Langsung · Total Tim: ${s.totalTeam}
@@ -3616,7 +3616,7 @@ const App = {
               <div class="lead-rank-badge ${rankClass}">${medal}</div>
               <div>
                 <div style="font-weight: 800; font-size: 13px; color: #0F172A;">
-                  ${escapeHtml(p.username)} <span style="font-size: 10px; color: #22C55E; font-weight: 700;">[${escapeHtml(p.activePlan || 'VIP Pro')}]</span>
+                  ${escapeHtml(p.maskedUsername || p.username)} <span style="font-size: 10px; color: #22C55E; font-weight: 700;">[${escapeHtml(p.activePlan || 'VIP Pro')}]</span>
                 </div>
                 <div style="font-size: 10.5px; color: #64748B;">
                   Modal: ${DB.formatIDR(p.totalCapital)} · Win Rate: ${p.winRate}%

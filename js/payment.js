@@ -334,7 +334,7 @@ export const Payment = {
         });
 
         return {
-          username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
+          username: t.username ? (t.username.substring(0, 3) + 'xxx') : 'memxxx',
           amount: t.amount,
           method: cleanMethod,
           status,

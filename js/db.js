@@ -1788,97 +1788,107 @@ export const DB = {
     };
   },
 
+  _claimCheckInLocks: {},
   async claimDailyCheckIn(userId) {
-    const db = this.get();
-    const user = (db.users || []).find(u => u.id === userId);
-    if (!user) {
-      return { success: false, message: 'User tidak ditemukan.' };
+    if (this._claimCheckInLocks[userId]) {
+      return { success: false, message: 'Proses absensi sedang berlangsung, mohon tunggu sebentar...' };
     }
+    this._claimCheckInLocks[userId] = true;
 
-    const cfg = (db.settings && db.settings.dailyCheckIn) || {
-      enabled: true,
-      rewardAmount: 1000,
-      totalDays: 7
-    };
-
-    if (cfg.enabled === false) {
-      return { success: false, message: 'Fitur absensi harian sedang dinonaktifkan oleh Administrator.' };
-    }
-
-    // Local pre-guard before network request
-    const status = this.getDailyCheckInStatus(userId);
-    if (status && status.hasCheckedInToday) {
-      return { success: false, message: 'Anda sudah mengklaim bonus absen hari ini! Silakan kembali besok.' };
-    }
-
-    // Attempt direct server claim for strict atomic database validation
     try {
-      if (typeof fetch === 'function') {
-        const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : '') ||
-                      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : '') || '';
-        const url = this.getApiUrl('claim_daily_checkin');
-        const res = await fetch(url, {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token, 'X-Session-Token': token } : {})
-          },
-          body: JSON.stringify({ userId, token })
-        });
-        const json = await res.json().catch(() => null);
-        if (json) {
-          if (json.sessionToken) {
-            try {
-              if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
-              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
-            } catch(e) {}
-          }
-          if (json.success) {
-            // Authoritative synchronization with MySQL database response
-            user.walletBalance = json.walletBalance;
-            user.dailyCheckIn = user.dailyCheckIn || {};
-            user.dailyCheckIn.currentStreak = json.currentStreak;
-            user.dailyCheckIn.lastCheckInDate = this.getWibDateStr();
-            user.dailyCheckIn.history = user.dailyCheckIn.history || [];
-            user.dailyCheckIn.history.push({
-              date: this.getWibDateStr(),
-              day: json.currentStreak,
-              amount: json.rewardAmount,
-              claimedAt: new Date().toISOString()
-            });
-            if (json.transaction) {
-              db.transactions = db.transactions || [];
-              const exists = db.transactions.some(t => t.id === json.transaction.id);
-              if (!exists) {
-                db.transactions.unshift(json.transaction);
-              }
+      const db = this.get();
+      const user = (db.users || []).find(u => u.id === userId);
+      if (!user) {
+        return { success: false, message: 'User tidak ditemukan.' };
+      }
+
+      const cfg = (db.settings && db.settings.dailyCheckIn) || {
+        enabled: true,
+        rewardAmount: 1000,
+        totalDays: 7
+      };
+
+      if (cfg.enabled === false) {
+        return { success: false, message: 'Fitur absensi harian sedang dinonaktifkan oleh Administrator.' };
+      }
+
+      // Local pre-guard before network request
+      const status = this.getDailyCheckInStatus(userId);
+      if (status && status.hasCheckedInToday) {
+        return { success: false, message: 'Anda sudah mengklaim bonus absen hari ini! Silakan kembali besok.' };
+      }
+
+      // Attempt direct server claim for strict atomic database validation
+      try {
+        if (typeof fetch === 'function') {
+          const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : '') ||
+                        (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : '') || '';
+          const url = this.getApiUrl('claim_daily_checkin');
+          const res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': 'Bearer ' + token, 'X-Session-Token': token } : {})
+            },
+            body: JSON.stringify({ userId, token })
+          });
+          const json = await res.json().catch(() => null);
+          if (json) {
+            if (json.sessionToken) {
+              try {
+                if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+                if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+              } catch(e) {}
             }
-            if (typeof localStorage !== 'undefined') {
-              try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch(e) {}
-            }
-            return json;
-          } else {
-            if (json.alreadyClaimed) {
+            if (json.success) {
+              // Authoritative synchronization with MySQL database response
+              user.walletBalance = json.walletBalance;
               user.dailyCheckIn = user.dailyCheckIn || {};
+              user.dailyCheckIn.currentStreak = json.currentStreak;
               user.dailyCheckIn.lastCheckInDate = this.getWibDateStr();
-              if (typeof json.walletBalance === 'number') {
-                user.walletBalance = json.walletBalance;
+              user.dailyCheckIn.history = user.dailyCheckIn.history || [];
+              user.dailyCheckIn.history.push({
+                date: this.getWibDateStr(),
+                day: json.currentStreak,
+                amount: json.rewardAmount,
+                claimedAt: new Date().toISOString()
+              });
+              if (json.transaction) {
+                db.transactions = db.transactions || [];
+                const exists = db.transactions.some(t => t.id === json.transaction.id);
+                if (!exists) {
+                  db.transactions.unshift(json.transaction);
+                }
               }
               if (typeof localStorage !== 'undefined') {
                 try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch(e) {}
               }
+              return json;
+            } else {
+              if (json.alreadyClaimed) {
+                user.dailyCheckIn = user.dailyCheckIn || {};
+                user.dailyCheckIn.lastCheckInDate = this.getWibDateStr();
+                if (typeof json.walletBalance === 'number') {
+                  user.walletBalance = json.walletBalance;
+                }
+                if (typeof localStorage !== 'undefined') {
+                  try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch(e) {}
+                }
+              }
+              return json;
             }
-            return json;
           }
         }
+      } catch(err) {
+        console.warn('Direct server claim check-in error:', err);
+        return { success: false, message: 'Gagal menghubungi server database. Periksa koneksi internet Anda.' };
       }
-    } catch(err) {
-      console.warn('Direct server claim check-in error:', err);
-      return { success: false, message: 'Gagal menghubungi server database. Periksa koneksi internet Anda.' };
-    }
 
-    return { success: false, message: 'Gagal memproses absensi harian pada server.' };
+      return { success: false, message: 'Gagal memproses absensi harian pada server.' };
+    } finally {
+      this._claimCheckInLocks[userId] = false;
+    }
   },
 
   // Banner Slides Carousel CRUD
