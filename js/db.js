@@ -1085,8 +1085,10 @@ export const DB = {
     if (typeof sessionStorage !== 'undefined') {
       try {
         sessionStorage.removeItem('autotrading_session_user_id');
+        sessionStorage.removeItem('autotrading_session_token');
         if (typeof localStorage !== 'undefined') {
           localStorage.removeItem('autotrading_session_user_id');
+          localStorage.removeItem('autotrading_session_token');
         }
         sessionStorage.removeItem('fgt_session_user_id');
       } catch (e) {}
@@ -1812,16 +1814,28 @@ export const DB = {
     // Attempt direct server claim for strict atomic database validation
     try {
       if (typeof fetch === 'function') {
+        const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : '') ||
+                      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : '') || '';
         const url = this.getApiUrl('claim_daily_checkin');
         const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId })
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token, 'X-Session-Token': token } : {})
+          },
+          body: JSON.stringify({ userId, token })
         });
-        if (res.ok) {
-          const json = await res.json();
+        const json = await res.json().catch(() => null);
+        if (json) {
+          if (json.sessionToken) {
+            try {
+              if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+            } catch(e) {}
+          }
           if (json.success) {
-            // Synchronize local active DB with server response
+            // Authoritative synchronization with MySQL database response
             user.walletBalance = json.walletBalance;
             user.dailyCheckIn = user.dailyCheckIn || {};
             user.dailyCheckIn.currentStreak = json.currentStreak;
@@ -1848,6 +1862,9 @@ export const DB = {
             if (json.alreadyClaimed) {
               user.dailyCheckIn = user.dailyCheckIn || {};
               user.dailyCheckIn.lastCheckInDate = this.getWibDateStr();
+              if (typeof json.walletBalance === 'number') {
+                user.walletBalance = json.walletBalance;
+              }
               if (typeof localStorage !== 'undefined') {
                 try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch(e) {}
               }
@@ -1857,70 +1874,11 @@ export const DB = {
         }
       }
     } catch(err) {
-      console.warn('Direct server claim check-in error, using local fallback:', err);
+      console.warn('Direct server claim check-in error:', err);
+      return { success: false, message: 'Gagal menghubungi server database. Periksa koneksi internet Anda.' };
     }
 
-    // Local fallback when server is unreachable
-    const todayWib = this.getWibDateStr();
-    user.dailyCheckIn = user.dailyCheckIn || {
-      currentStreak: 0,
-      lastCheckInDate: null,
-      history: []
-    };
-
-    let newStreak = (user.dailyCheckIn.currentStreak || 0) + 1;
-    if (user.dailyCheckIn.lastCheckInDate) {
-      try {
-        const last = new Date(user.dailyCheckIn.lastCheckInDate);
-        const now = new Date(todayWib);
-        const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
-        if (diffDays > 1) {
-          newStreak = 1;
-        }
-      } catch(e) {}
-    } else {
-      newStreak = 1;
-    }
-
-    if (newStreak > (cfg.totalDays || 7)) {
-      newStreak = 1;
-    }
-
-    const rewardAmount = Number(cfg.rewardAmount) || 1000;
-
-    user.walletBalance = (user.walletBalance || 0) + rewardAmount;
-    user.dailyCheckIn.currentStreak = newStreak;
-    user.dailyCheckIn.lastCheckInDate = todayWib;
-    user.dailyCheckIn.history = user.dailyCheckIn.history || [];
-    user.dailyCheckIn.history.push({
-      date: todayWib,
-      day: newStreak,
-      amount: rewardAmount,
-      claimedAt: new Date().toISOString()
-    });
-
-    const txId = 'TX-CHK-' + Date.now().toString().slice(-6);
-    db.transactions = db.transactions || [];
-    db.transactions.unshift({
-      id: txId,
-      userId: user.id,
-      username: user.username,
-      type: 'bonus',
-      amount: rewardAmount,
-      status: 'approved',
-      paymentMethod: 'Absensi Harian (Check-in H-' + newStreak + ')',
-      note: `Bonus absensi harian hari ke-${newStreak}/7 (+Rp ${rewardAmount.toLocaleString('id-ID')})`,
-      createdAt: new Date().toISOString()
-    });
-
-    await this.save(db);
-
-    return {
-      success: true,
-      rewardAmount,
-      currentStreak: newStreak,
-      message: `Selamat! Absensi hari ke-${newStreak} berhasil. Bonus Rp ${rewardAmount.toLocaleString('id-ID')} masuk ke Saldo Utama Anda!`
-    };
+    return { success: false, message: 'Gagal memproses absensi harian pada server.' };
   },
 
   // Banner Slides Carousel CRUD

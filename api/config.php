@@ -76,7 +76,7 @@ function startAppSession() {
         session_set_cookie_params($lifetime, '/; samesite=Lax', '', $secure, true);
     }
     session_name('ATSESSID');
-    session_start();
+    @session_start();
 }
 startAppSession();
 
@@ -90,10 +90,71 @@ function jsonResponse($payload, $httpCode = 200) {
 }
 
 // ---------------------------------------------------------------------------
+// Cryptographic Session Token helpers (HMAC-SHA256)
+// Provides bulletproof authentication even if PHP session files are cleared by cPanel GC
+// ---------------------------------------------------------------------------
+function createSessionToken($userId, $role = 'user') {
+    $payload = [
+        'uid'  => (string)$userId,
+        'role' => ($role === 'admin') ? 'admin' : 'user',
+        'iat'  => time(),
+        'exp'  => time() + (86400 * 60) // 60 days
+    ];
+    $json = json_encode($payload);
+    $sig = hash_hmac('sha256', $json, DB_PASS . '_at_sec_2026');
+    return rtrim(strtr(base64_encode($json), '+/', '-_'), '=') . '.' . $sig;
+}
+
+function parseSessionToken($token) {
+    if (!$token || !is_string($token) || strpos($token, '.') === false) return null;
+    $parts = explode('.', $token, 2);
+    if (count($parts) !== 2) return null;
+    list($b64, $sig) = $parts;
+    $json = base64_decode(strtr($b64, '-_', '+/'));
+    if (!$json) return null;
+    $expectedSig = hash_hmac('sha256', $json, DB_PASS . '_at_sec_2026');
+    if (!hash_equals($expectedSig, $sig)) return null;
+    $data = json_decode($json, true);
+    if (!is_array($data) || empty($data['uid']) || empty($data['exp'])) return null;
+    if (time() > (int)$data['exp']) return null;
+    return $data;
+}
+
+function getRequestAuthToken() {
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if ($authHeader !== '' && preg_match('/Bearer\s+(\S+)/i', $authHeader, $m)) {
+        return trim($m[1]);
+    }
+    if (!empty($_SERVER['HTTP_X_SESSION_TOKEN'])) {
+        return trim((string)$_SERVER['HTTP_X_SESSION_TOKEN']);
+    }
+    if (!empty($_SERVER['HTTP_X_AUTH_TOKEN'])) {
+        return trim((string)$_SERVER['HTTP_X_AUTH_TOKEN']);
+    }
+    if (!empty($_COOKIE['AT_TOKEN'])) {
+        return trim((string)$_COOKIE['AT_TOKEN']);
+    }
+    return '';
+}
+
+// ---------------------------------------------------------------------------
 // Auth helpers
 // ---------------------------------------------------------------------------
 function currentSessionUserId() {
-    return isset($_SESSION['uid']) && is_string($_SESSION['uid']) ? $_SESSION['uid'] : '';
+    if (isset($_SESSION['uid']) && is_string($_SESSION['uid']) && $_SESSION['uid'] !== '') {
+        return $_SESSION['uid'];
+    }
+    // Fallback to cryptographic Bearer / X-Session-Token header
+    $token = getRequestAuthToken();
+    if ($token !== '') {
+        $parsed = parseSessionToken($token);
+        if ($parsed && !empty($parsed['uid'])) {
+            $_SESSION['uid'] = (string)$parsed['uid'];
+            $_SESSION['role'] = (string)($parsed['role'] ?? 'user');
+            return $_SESSION['uid'];
+        }
+    }
+    return '';
 }
 
 function currentSessionRole() {

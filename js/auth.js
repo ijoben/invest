@@ -20,6 +20,15 @@ export const Auth = {
     return DB.getCurrentUser();
   },
 
+  getSessionToken() {
+    try {
+      return (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : null) ||
+             (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : null) || '';
+    } catch(e) {
+      return '';
+    }
+  },
+
   // Login handler: verified server-side first (bcrypt + rate limiting),
   // with a local state fallback when the server is unreachable (offline dev).
   async login(identifier, password) {
@@ -35,6 +44,7 @@ export const Auth = {
       try {
         const res = await fetch(DB.getApiUrl('login'), {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier: cleanId, password: cleanPass })
         });
@@ -52,6 +62,13 @@ export const Auth = {
               if (pendingUser) failure.user = pendingUser;
             }
             return failure;
+          }
+
+          if (json.sessionToken) {
+            try {
+              if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+            } catch(e) {}
           }
 
           const db = DB.get();
@@ -74,6 +91,7 @@ export const Auth = {
           return {
             success: true,
             user: local,
+            sessionToken: json.sessionToken || null,
             rotatedSeed: !!json.rotatedSeed,
             message: json.message || `Selamat datang kembali, ${local.fullName || local.username}!`
           };

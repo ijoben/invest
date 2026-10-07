@@ -712,21 +712,40 @@ export const Plans = {
     // 2. Direct server claim for atomic single-claim database validation
     try {
       if (typeof fetch === 'function') {
+        const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : '') ||
+                      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : '') || '';
         const url = DB.getApiUrl('claim_profit');
         const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId })
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token, 'X-Session-Token': token } : {})
+          },
+          body: JSON.stringify({ userId, token })
         });
-        if (res.ok) {
-          const json = await res.json();
+        const json = await res.json().catch(() => null);
+        if (json) {
+          if (json.sessionToken) {
+            try {
+              if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+            } catch(e) {}
+          }
           if (json.success) {
+            // Authoritative synchronization with MySQL database response
             user.walletBalance = json.walletBalance;
             (db.investments || []).forEach(inv => {
               if (inv.userId === userId && inv.status === 'active') {
                 inv.pendingProfitClaim = 0;
                 inv.lastProfitYieldDate = new Date().toISOString();
                 inv.daysElapsed = (inv.daysElapsed || 0) + 1;
+                if (inv.daysElapsed >= inv.durationDays) {
+                  inv.status = 'completed';
+                  inv.completedAt = inv.completedAt || new Date().toISOString();
+                  inv.refundReady = true;
+                  if (inv.capitalReturned === undefined) inv.capitalReturned = false;
+                }
               }
             });
             if (json.transaction) {
@@ -746,6 +765,9 @@ export const Plans = {
                   inv.pendingProfitClaim = 0;
                 }
               });
+              if (typeof json.walletBalance === 'number') {
+                user.walletBalance = json.walletBalance;
+              }
               if (typeof localStorage !== 'undefined') {
                 try { localStorage.setItem('autotrading_db', JSON.stringify(DB.stripSensitiveFields(db))); } catch(e) {}
               }
@@ -755,82 +777,11 @@ export const Plans = {
         }
       }
     } catch(err) {
-      console.warn('Direct server claim profit error, fallback to local:', err);
+      console.warn('Direct server claim profit error:', err);
+      return { success: false, message: 'Gagal terhubung ke server database. Periksa koneksi internet Anda.' };
     }
 
-    // 3. Local fallback (when server is offline)
-    const userInvs = (db.investments || []).filter(inv => inv.userId === userId && inv.status === 'active');
-    let totalClaimable = 0;
-    let completedPlans = [];
-
-    userInvs.forEach(inv => {
-      if (inv.pendingProfitClaim > 0) {
-        totalClaimable += inv.pendingProfitClaim;
-        inv.totalProfitEarned = (inv.totalProfitEarned || 0) + inv.pendingProfitClaim;
-        inv.pendingProfitClaim = 0;
-        inv.daysElapsed = (inv.daysElapsed || 0) + 1;
-        inv.lastProfitYieldDate = new Date().toISOString();
-
-        // Mark history records as claimed
-        if (inv.history) {
-          inv.history.forEach(h => {
-            if (h.status === 'pending_claim') h.status = 'claimed';
-          });
-        }
-
-        // Check if plan duration reached upon this claim
-        if (inv.daysElapsed >= inv.durationDays) {
-          inv.status = 'completed';
-          inv.completedAt = inv.completedAt || new Date().toISOString();
-          inv.refundReady = true;
-          if (inv.capitalReturned === undefined) {
-            inv.capitalReturned = false;
-          }
-          completedPlans.push(inv);
-        }
-      }
-    });
-
-    if (totalClaimable <= 0) {
-      return { success: false, message: 'Belum ada profit yang siap diklaim saat ini. Hitung mundur siklus 24 jam sedang berjalan.' };
-    }
-
-    // Add to user wallet balance
-    user.walletBalance = (user.walletBalance || 0) + totalClaimable;
-    user.points = (user.points || 0) + 2;
-
-    // Record Transaction
-    db.transactions = db.transactions || [];
-    db.transactions.unshift({
-      id: 'TRX-PRF-' + Math.floor(100000 + Math.random() * 900000),
-      userId: user.id,
-      username: user.username,
-      type: 'profit_claim',
-      amount: totalClaimable,
-      netAmount: totalClaimable,
-      note: `Klaim profit harian investasi AI (${DB.formatIDR(totalClaimable)})`,
-      status: 'approved',
-      createdAt: new Date().toISOString()
-    });
-
-    // Distribute Rabat (ROI match) to uplines based on claimed profit
-    if (user.referredBy) {
-      Affiliate.applyRabatBonus(db, user, totalClaimable);
-    }
-
-    await DB.save(db);
-
-    let msg = `Berhasil klaim profit harian sebesar ${DB.formatIDR(totalClaimable)} ke Saldo Utama!`;
-    if (completedPlans.length > 0) {
-      const lockedCap = completedPlans.reduce((sum, p) => sum + p.capital, 0);
-      msg += ` Kontrak paket investasi telah selesai (${completedPlans[0].durationDays}/${completedPlans[0].durationDays} hari). Modal sebesar ${DB.formatIDR(lockedCap)} tersimpan di Saldo Terlock. Silakan buka menu Refund dan klik "Proses refundkan ke saldo saya" untuk menarik (WD) atau mengaktifkan paket kembali.`;
-    }
-
-    return {
-      success: true,
-      amount: totalClaimable,
-      message: msg
-    };
+    return { success: false, message: 'Gagal memproses klaim profit pada server.' };
   },
 
   // Get completed investments that are pending capital refund
