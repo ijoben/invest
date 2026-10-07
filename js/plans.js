@@ -939,14 +939,26 @@ export const Plans = {
   // Leaderboard: Top Profit (Realtime Database Members Only)
   getTopProfits(limit = 10) {
     const db = DB.get();
-    const realUsers = (db.users || []).filter(u => u.role !== 'admin');
+    const realUsers = (db.users || []).filter(u => u && u.username && u.role !== 'admin' && u.status !== 'blocked');
     const investments = db.investments || [];
+    const transactions = db.transactions || [];
 
     const userProfits = realUsers.map(u => {
       const userInvs = investments.filter(i => i.userId === u.id);
-      const totalProfit = userInvs.reduce((sum, i) => sum + (i.totalProfitEarned || 0), 0);
-      const totalCap = userInvs.reduce((sum, i) => sum + (i.capital || 0), 0);
+      const userPrfTxs = transactions.filter(t => 
+        t.userId === u.id && 
+        (t.type === 'profit_claim' || (t.id && String(t.id).startsWith('TRX-PRF-'))) &&
+        (t.status === 'approved' || !t.status)
+      );
+      const txProfit = userPrfTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const invProfit = userInvs.reduce((sum, i) => sum + (Number(i.totalProfitEarned) || 0), 0);
+      const totalProfit = Math.max(txProfit, invProfit);
+      const totalCap = userInvs.reduce((sum, i) => sum + (Number(i.capital) || 0), 0);
       const activePlans = userInvs.filter(i => i.status === 'active');
+      const activePlan = activePlans.length > 0 
+        ? String(activePlans[0].planName || 'VIP Pro').trim() 
+        : (userInvs.length > 0 ? 'Kontrak Selesai' : 'Belum Ada Paket');
+
       return {
         id: u.id,
         username: u.username,
@@ -954,12 +966,18 @@ export const Plans = {
         totalProfit,
         totalCapital: totalCap,
         activePlansCount: activePlans.length,
-        activePlan: activePlans.length > 0 ? activePlans[0].planName : (userInvs.length > 0 ? 'Kontrak Selesai' : 'Belum Ada Paket'),
-        winRate: 98.4
+        activePlan,
+        winRate: totalProfit > 0 ? 98.8 : 98.4
       };
     });
 
-    userProfits.sort((a, b) => (b.totalProfit || b.totalCapital) - (a.totalProfit || a.totalCapital));
+    // Sort strictly: 1. Highest Total Profit, 2. Highest Capital, 3. Active Plans Count
+    userProfits.sort((a, b) => 
+      (b.totalProfit - a.totalProfit) || 
+      (b.totalCapital - a.totalCapital) || 
+      (b.activePlansCount - a.activePlansCount)
+    );
+
     return userProfits.slice(0, limit);
   }
 };

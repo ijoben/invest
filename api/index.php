@@ -1192,7 +1192,11 @@ if ($action === 'save') {
         foreach ($incomingInvs as $i) {
             if (!empty($i['id'])) {
                 if (isset($mergedInvMap[$i['id']])) {
-                    $mergedInvMap[$i['id']] = array_merge($mergedInvMap[$i['id']], $i);
+                    $curEarned = (int)($mergedInvMap[$i['id']]['totalProfitEarned'] ?? 0);
+                    $incEarned = (int)($i['totalProfitEarned'] ?? 0);
+                    $merged = array_merge($mergedInvMap[$i['id']], $i);
+                    $merged['totalProfitEarned'] = max($curEarned, $incEarned);
+                    $mergedInvMap[$i['id']] = $merged;
                 } else {
                     $mergedInvMap[$i['id']] = $i;
                 }
@@ -3135,9 +3139,16 @@ if ($action === 'cleanup_duplicates') {
         // deduplicate pendekar duplicate profit claim
         $pdo->exec("DELETE FROM `transactions` WHERE `id` = 'TRX-PRF-610051'");
 
-        // 5. Fix investments table (set last_profit_yield_date and clear pending)
+        // 5. Fix investments table (set last_profit_yield_date, clear pending, and synchronize total_profit_earned)
         $nowDt = date('Y-m-d H:i:s');
         $pdo->exec("UPDATE `investments` SET `last_profit_yield_date` = '{$nowDt}', `pending_profit_claim` = 0 WHERE `last_profit_yield_date` IS NULL OR `user_id` IN ('usr-1791033573810', 'usr-1790996838699')");
+        // Ensure total_profit_earned matches approved profit claim transactions
+        $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 87500 WHERE `id` = 'inv-1791248064000'");
+        $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 46000 WHERE `id` = 'inv-1791246898036'");
+        $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 9150 WHERE `id` = 'inv-1791242756249'");
+        $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 2009 WHERE `id` = 'inv-1791082184354'");
+        $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 1640 WHERE `id` = 'inv-1791143221090'");
+        $pdo->exec("UPDATE `investments` SET `total_profit_earned` = 1640 WHERE `id` = 'inv-1791220411248'");
 
         // 6. Synchronize JSON state table using chunked readStateJson (prevents 1MB fetch truncation cap)
         $rawState = readStateJson($pdo, 'autotrading_system_state');
@@ -3188,6 +3199,12 @@ if ($action === 'cleanup_duplicates') {
                 // Update investments in JSON
                 if (isset($json['investments']) && is_array($json['investments'])) {
                     foreach ($json['investments'] as &$invRef) {
+                        if (($invRef['id'] ?? '') === 'inv-1791248064000') $invRef['totalProfitEarned'] = 87500;
+                        if (($invRef['id'] ?? '') === 'inv-1791246898036') $invRef['totalProfitEarned'] = 46000;
+                        if (($invRef['id'] ?? '') === 'inv-1791242756249') $invRef['totalProfitEarned'] = 9150;
+                        if (($invRef['id'] ?? '') === 'inv-1791082184354') $invRef['totalProfitEarned'] = 2009;
+                        if (($invRef['id'] ?? '') === 'inv-1791143221090') $invRef['totalProfitEarned'] = 1640;
+                        if (($invRef['id'] ?? '') === 'inv-1791220411248') $invRef['totalProfitEarned'] = 1640;
                         if (empty($invRef['lastProfitYieldDate']) || in_array($invRef['userId'], ['usr-1791033573810', 'usr-1790996838699'])) {
                             $invRef['lastProfitYieldDate'] = $nowDt;
                             $invRef['pendingProfitClaim'] = 0;

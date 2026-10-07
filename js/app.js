@@ -3535,7 +3535,9 @@ const App = {
         </span>
       `).join('');
 
-      const topProfitItems = profits.slice(0, 5).map((p, idx) => `
+      const profitEarners = profits.filter(p => p.totalProfit > 0);
+      const profitMarqueeList = profitEarners.length > 0 ? profitEarners : profits;
+      const topProfitItems = profitMarqueeList.slice(0, 5).map((p, idx) => `
         <span class="autotrading-marquee-item fgt-marquee-item">
           <span class="badge-tag badge-dep">TOP ${idx + 1} PROFIT</span>
           <span style="font-weight:700;">${escapeHtml(p.username)}</span>
@@ -3592,10 +3594,21 @@ const App = {
       }).join('');
     } else {
       const profits = Plans.getTopProfits(12);
+      if (!profits || profits.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 30px 15px; color: #94A3B8;">
+            <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+            <div style="font-size: 13px; font-weight: 600;">Belum ada data profit tercatat.</div>
+          </div>
+        `;
+        return;
+      }
       container.innerHTML = profits.map((p, idx) => {
         const rank = idx + 1;
         const rankClass = rank === 1 ? 'lead-rank-1' : (rank === 2 ? 'lead-rank-2' : (rank === 3 ? 'lead-rank-3' : 'lead-rank-other'));
         const medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : `#${rank}`));
+        const profitColor = p.totalProfit > 0 ? '#15803D' : '#64748B';
+        const profitPrefix = p.totalProfit > 0 ? '+' : '';
 
         return `
           <div class="lead-member-row">
@@ -3611,8 +3624,8 @@ const App = {
               </div>
             </div>
             <div style="text-align: right;">
-              <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13.5px; color: #15803D;">
-                +${DB.formatIDR(p.totalProfit)}
+              <div style="font-weight: 800; font-family: var(--font-mono); font-size: 13.5px; color: ${profitColor};">
+                ${profitPrefix}${DB.formatIDR(p.totalProfit)}
               </div>
               <div style="font-size: 9.5px; color: #10B981;">Total Profit</div>
             </div>
