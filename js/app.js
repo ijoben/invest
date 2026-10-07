@@ -2255,7 +2255,7 @@ const App = {
     } else if (filterType === 'rabat_bonus') {
       txs = txs.filter(t => t.type === 'rabat_bonus' || (t.id && t.id.startsWith('TRX-RBT-')));
     } else if (filterType === 'sponsor_bonus') {
-      txs = txs.filter(t => t.type === 'sponsor_bonus' || (t.id && t.id.startsWith('TRX-SPS-')));
+      txs = txs.filter(t => t.type === 'sponsor_bonus' || (t.id && t.id.startsWith('TRX-SPS-')) || t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-')));
     } else if (filterType === 'dep_wd') {
       txs = txs.filter(t => t.type === 'deposit' || t.type === 'withdraw' || t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-')) || t.type === 'affiliate_transfer');
     }
@@ -2269,7 +2269,7 @@ const App = {
       let title = t.paymentMethod || t.type;
       let badgeHtml = '';
       let isInvest = t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-'));
-      let isPlus = !isInvest && (t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return');
+      let isPlus = !isInvest && (t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-')) || t.type === 'capital_return');
       let amountColor = isPlus ? '#16A34A' : '#DC2626';
       let sign = isPlus ? '+' : '-';
       let noteText = t.note || '';
@@ -2289,6 +2289,10 @@ const App = {
       } else if (t.type === 'sponsor_bonus' || (t.id && t.id.startsWith('TRX-SPS-'))) {
         title = 'Bonus Sponsor Langsung (Level 1)';
         badgeHtml = '<span class="tx-detail-badge tx-badge-sponsor">SPONSOR L1</span>';
+      } else if (t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-'))) {
+        title = 'Bonus Target Kepemimpinan Tim';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-sponsor" style="background:linear-gradient(135deg, #FEF3C7, #FDE68A); color:#B45309; border-color:#F59E0B;">🏆 TARGET TIM</span>';
+        if (!noteText) noteText = 'Bonus pencapaian target omset tim (Masuk Saldo Utama)';
       } else if (t.type === 'bonus' || t.type === 'reward') {
         const rawBonus = t.paymentMethod || 'Bonus';
         const cleanBonus = cleanParentheses(rawBonus);
@@ -2348,7 +2352,7 @@ const App = {
         <div style="background:#FFFFFF; border-radius:14px; padding:12px 14px; box-shadow:var(--card-shadow); border:1px solid #F1F5F9; display:flex; align-items:center; justify-content:space-between; gap:10px;">
           <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
             <div style="width:38px; height:38px; border-radius:12px; background:${isPlus ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <span style="font-size:16px;">${t.type === 'profit_claim' ? '📈' : (t.type === 'rabat_bonus' ? '👥' : (t.type === 'sponsor_bonus' ? '🎁' : (isPlus ? '↓' : '↑')))}</span>
+              <span style="font-size:16px;">${t.type === 'profit_claim' ? '📈' : (t.type === 'rabat_bonus' ? '👥' : (t.type === 'sponsor_bonus' ? '🎁' : ((t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-'))) ? '🏆' : (isPlus ? '↓' : '↑'))))}</span>
             </div>
             <div style="min-width:0; flex:1;">
               <div style="font-weight:700; font-size:12.5px; color:#1E293B; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
@@ -2639,12 +2643,21 @@ const App = {
 
       if (lrIcon) lrIcon.textContent = lRank.badge;
       if (lrTitle) lrTitle.textContent = lRank.currentRank;
-      if (lrReward) lrReward.textContent = lRank.reward > 0 ? `Bonus: ${DB.formatIDR(lRank.reward)}` : 'Target Terbuka';
+      if (lrReward) lrReward.textContent = lRank.reward > 0 ? `✓ Bonus: ${DB.formatIDR(lRank.reward)} (Masuk Saldo Utama)` : 'Target Terbuka';
       if (lrProgCur) lrProgCur.textContent = `Omset: ${DB.formatIDR(downlines.totalTeamTurnover)}`;
       if (lrProgTarget) lrProgTarget.textContent = `Target: ${DB.formatIDR(lRank.nextTurnoverRequired)}`;
       if (lrProgressBar) lrProgressBar.style.width = `${lRank.progressPct}%`;
       if (lrNextLabel) lrNextLabel.textContent = `Menuju: ${lRank.nextRank}`;
       if (lrPercent) lrPercent.textContent = `${lRank.progressPct}%`;
+    }
+
+    // Check if new leader milestones were awarded and notify user (Auto-transfer to Saldo Utama)
+    if (downlines.newlyAwardedMilestones && downlines.newlyAwardedMilestones.length > 0) {
+      downlines.newlyAwardedMilestones.forEach(aw => {
+        this.showToast(`🏆 Selamat! Target Kepemimpinan [${aw.milestone.name}] tercapai. Bonus ${DB.formatIDR(aw.amount)} telah ditransfer ke Saldo Utama Anda!`, 'success');
+      });
+      DB.save(db);
+      this.renderUserBalances(user);
     }
 
     // Update dynamic affiliate commission & rabat level descriptions (Requirement 1)

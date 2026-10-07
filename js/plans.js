@@ -605,6 +605,24 @@ export const Plans = {
     // Distribute Sponsor Bonus if user was referred by someone (Atomic in same DB instance)
     if (user.referredBy) {
       Affiliate.applySponsorBonus(db, user, parsedAmount);
+
+      // Automatically evaluate & reward leader milestone bonuses directly to Saldo Utama for uplines in hierarchy
+      try {
+        let curRef = user.referredBy;
+        let depth = 0;
+        const seen = new Set([user.id]);
+        while (curRef && depth < 5) {
+          const up = (db.users || []).find(u => u.referralCode && u.referralCode.toUpperCase() === curRef.toUpperCase());
+          if (!up || seen.has(up.id)) break;
+          seen.add(up.id);
+          const downlines = Affiliate.getDownlines(up.referralCode);
+          Affiliate.applyLeaderMilestoneReward(db, up, downlines.totalTeamTurnover);
+          curRef = up.referredBy;
+          depth++;
+        }
+      } catch (e) {
+        console.warn('Leader milestone evaluation error on invest:', e);
+      }
     }
 
     await DB.save(db);

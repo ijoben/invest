@@ -19,7 +19,8 @@ export const Affiliate = {
     const bonusAmount = Math.floor((amount * percent) / 100);
 
     if (bonusAmount > 0) {
-      // Credit to Upline's "Wallet Tambah Teman" (affiliateBalance)
+      // Transfer directly to Upline's Saldo Utama (walletBalance) & sync affiliateBalance
+      upline.walletBalance = (upline.walletBalance || 0) + bonusAmount;
       upline.affiliateBalance = (upline.affiliateBalance || 0) + bonusAmount;
       upline.points = (upline.points || 0) + 10; // Extra bonus points
 
@@ -31,7 +32,7 @@ export const Affiliate = {
         username: upline.username,
         type: 'sponsor_bonus',
         amount: bonusAmount,
-        note: `Bonus Sponsor ${percent}% dari investasi ${buyerUser.username} (${DB.formatIDR(amount)})`,
+        note: `Bonus Sponsor ${percent}% dari investasi ${buyerUser.username} (${DB.formatIDR(amount)}) ditransfer ke Saldo Utama`,
         status: 'approved',
         createdAt: new Date().toISOString()
       });
@@ -159,6 +160,80 @@ export const Affiliate = {
     };
   },
 
+  // Apply Leader Milestone Target Reward directly to Saldo Utama (walletBalance)
+  applyLeaderMilestoneReward(db, user, totalTeamTurnover) {
+    if (!user || !totalTeamTurnover || totalTeamTurnover <= 0) return [];
+
+    const milestones = (db.settings && db.settings.levelTurnoverMilestones) || [
+      { name: 'Bronze Leader', minTurnover: 25000000, reward: 1500000, badge: '🥉' },
+      { name: 'Silver Director', minTurnover: 100000000, reward: 5000000, badge: '🥈' },
+      { name: 'Gold Ambassador', minTurnover: 500000000, reward: 25000000, badge: '🥇' },
+      { name: 'Crown Diamond', minTurnover: 1500000000, reward: 75000000, badge: '💎' }
+    ];
+
+    user.claimedLeaderMilestones = user.claimedLeaderMilestones || [];
+    db.transactions = db.transactions || [];
+
+    const awarded = [];
+
+    milestones.forEach(m => {
+      if (totalTeamTurnover >= m.minTurnover && m.reward > 0) {
+        // Prevent double reward: check user claimed list & existing transactions
+        const alreadyClaimed = user.claimedLeaderMilestones.includes(m.name) ||
+          db.transactions.some(t => {
+            return t.userId === user.id &&
+              (t.type === 'leader_bonus' || (t.id && String(t.id).startsWith('TRX-LDR-'))) &&
+              t.note && t.note.includes(m.name);
+          });
+
+        if (!alreadyClaimed) {
+          // Transfer directly to Saldo Utama (walletBalance)
+          user.walletBalance = (user.walletBalance || 0) + m.reward;
+          user.claimedLeaderMilestones.push(m.name);
+
+          const txId = 'TRX-LDR-' + Math.floor(100000 + Math.random() * 900000);
+          const tx = {
+            id: txId,
+            userId: user.id,
+            username: user.username,
+            type: 'leader_bonus',
+            amount: m.reward,
+            note: `Bonus Target Kepemimpinan Tim (${m.name}) ditransfer ke Saldo Utama (Omset Tim: ${DB.formatIDR(totalTeamTurnover)})`,
+            status: 'approved',
+            createdAt: new Date().toISOString()
+          };
+
+          db.transactions.unshift(tx);
+          awarded.push({ milestone: m, amount: m.reward, txId });
+        }
+      }
+    });
+
+    return awarded;
+  },
+
+  // Check and reward leader milestones for a specific user ID
+  checkAndRewardLeaderMilestones(db, userId) {
+    if (!userId) return [];
+    const user = (db.users || []).find(u => u.id === userId);
+    if (!user || !user.referralCode) return [];
+    const downlines = this.getDownlines(user.referralCode);
+    return this.applyLeaderMilestoneReward(db, user, downlines.totalTeamTurnover);
+  },
+
+  // Standalone async reward distribution with DB save
+  async distributeLeaderMilestones(userId) {
+    const db = DB.get();
+    const user = (db.users || []).find(u => u.id === userId);
+    if (!user) return [];
+    const downlines = this.getDownlines(user.referralCode);
+    const awarded = this.applyLeaderMilestoneReward(db, user, downlines.totalTeamTurnover);
+    if (awarded.length > 0) {
+      await DB.save(db);
+    }
+    return awarded;
+  },
+
   // Get Downlines for a specific user categorized by levels
   getDownlines(userReferralCode) {
     const db = DB.get();
@@ -225,6 +300,11 @@ export const Affiliate = {
     result.level3Turnover = result.level3.reduce((sum, m) => sum + m.personalTurnover, 0);
     result.totalTeamTurnover = result.level1Turnover + result.level2Turnover + result.level3Turnover;
     result.leaderRank = this.getLeaderRank(result.totalTeamTurnover);
+
+    // Automatically check and reward leader target milestones to Saldo Utama
+    if (uplineUser && result.totalTeamTurnover > 0) {
+      result.newlyAwardedMilestones = this.applyLeaderMilestoneReward(db, uplineUser, result.totalTeamTurnover);
+    }
 
     // Calculate Bonus Recap per level for this upline user
     if (uplineId) {
