@@ -1235,8 +1235,11 @@ const App = {
       if (footerHintEl) footerHintEl.textContent = 'Aktifkan paket investasi untuk memulai proses profit berjalan';
       if (nextYieldEl) nextYieldEl.textContent = '-';
       if (claimBtn) {
-        claimBtn.innerHTML = `<span>Mulai Investasi Paket AI</span>`;
+        claimBtn.classList.remove('claimed-today', 'live-active');
+        claimBtn.removeAttribute('disabled');
+        claimBtn.disabled = false;
         claimBtn.style.opacity = '1';
+        claimBtn.innerHTML = `<span>Mulai Investasi Paket AI</span>`;
         claimBtn.onclick = () => {
           const planSection = document.querySelector('.tier-carousel-container');
           if (planSection) planSection.scrollIntoView({ behavior: 'smooth' });
@@ -1245,13 +1248,131 @@ const App = {
       return;
     }
 
-    // Set default claim onClick handler
-    if (claimBtn) {
-      claimBtn.onclick = () => App.claimProfit();
+    // Helper to safely parse dates across browsers/platforms
+    const parseSafeTs = (dStr) => {
+      if (!dStr) return 0;
+      if (typeof dStr === 'number') return dStr;
+      const s = String(dStr).trim().replace(' ', 'T');
+      const d = new Date(s);
+      const ts = d.getTime();
+      return isNaN(ts) ? 0 : ts;
+    };
+
+    const db = DB.get();
+    const todayWib = DB.getWibDateStr();
+    const now = Date.now();
+
+    // Check if user has already claimed profit today
+    const todayClaimTx = (db.transactions || []).find(t => {
+      if (t.userId !== user.id) return false;
+      const isPrf = t.type === 'profit_claim' || (t.id && String(t.id).startsWith('TRX-PRF-'));
+      if (!isPrf) return false;
+      return DB.getWibDateStr(t.createdAt) === todayWib;
+    });
+
+    const todayClaimInv = userInvs.find(inv => {
+      return inv.lastProfitYieldDate && DB.getWibDateStr(inv.lastProfitYieldDate) === todayWib;
+    });
+
+    const hasClaimedToday = Boolean(todayClaimTx || (todayClaimInv && totalPendingProfit <= 0));
+
+    // Check weekend market status
+    const marketStatus = Plans.isWeekendMarketClosed();
+    if (marketStatus.closed) {
+      if (statusTitleEl) statusTitleEl.textContent = 'Status Pasar:';
+      if (timerValEl) {
+        timerValEl.textContent = `PASAR LIBUR (${marketStatus.dayName.toUpperCase()})`;
+        timerValEl.style.color = '#EF4444';
+      }
+      if (percentBadgeEl) {
+        percentBadgeEl.textContent = 'LIBUR';
+        percentBadgeEl.style.background = '#EF4444';
+        percentBadgeEl.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.4)';
+      }
+      if (progressBarEl) {
+        progressBarEl.style.width = '100%';
+        progressBarEl.style.background = '#334155';
+        progressBarEl.style.boxShadow = 'none';
+      }
+      if (footerHintEl) footerHintEl.textContent = marketStatus.message || 'Pasar libur akhir pekan (Sabtu & Minggu). Dividen profit aktif kembali hari Senin.';
+      if (nextYieldEl) nextYieldEl.textContent = 'Buka Senin';
+
+      if (claimBtn) {
+        claimBtn.classList.remove('live-active');
+        claimBtn.classList.add('claimed-today');
+        claimBtn.setAttribute('disabled', 'true');
+        claimBtn.disabled = true;
+        claimBtn.innerHTML = `<span>Pasar Libur Akhir Pekan (Sabtu & Minggu)</span>`;
+      }
+      return;
     }
 
+    const cycleDurationMs = 24 * 3600 * 1000;
+
+    // SCENARIO 1: User has already claimed profit today -> Count down until the next 24-hour cycle
+    if (hasClaimedToday) {
+      let claimTs = 0;
+      if (todayClaimTx && todayClaimTx.createdAt) {
+        claimTs = parseSafeTs(todayClaimTx.createdAt);
+      }
+      if (!claimTs && todayClaimInv && todayClaimInv.lastProfitYieldDate) {
+        claimTs = parseSafeTs(todayClaimInv.lastProfitYieldDate);
+      }
+      if (!claimTs) {
+        // Fallback: cycle anchor
+        const midToday = new Date();
+        midToday.setHours(0, 0, 0, 0);
+        claimTs = midToday.getTime();
+      }
+
+      const elapsed = Math.max(0, now - claimTs);
+      const remainingMs = Math.max(0, cycleDurationMs - elapsed);
+      const percent = Math.min(100, Math.max(0, (elapsed / cycleDurationMs) * 100));
+
+      const hours = Math.floor(remainingMs / 3600000);
+      const minutes = Math.floor((remainingMs % 3600000) / 60000);
+      const seconds = Math.floor((remainingMs % 60000) / 1000);
+      const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      const nextDate = new Date(claimTs + cycleDurationMs);
+      const hourStr = String(nextDate.getHours()).padStart(2, '0');
+      const minStr = String(nextDate.getMinutes()).padStart(2, '0');
+
+      if (remainingMs > 0) {
+        // Within active 24h wait period
+        if (statusTitleEl) statusTitleEl.textContent = 'Sudah Diklaim Hari Ini:';
+        if (timerValEl) {
+          timerValEl.textContent = timeFormatted;
+          timerValEl.style.color = '#94A3B8';
+        }
+        if (percentBadgeEl) {
+          percentBadgeEl.textContent = `${Math.round(percent)}%`;
+          percentBadgeEl.style.background = 'linear-gradient(135deg, #475569 0%, #334155 100%)';
+          percentBadgeEl.style.boxShadow = 'none';
+        }
+        if (progressBarEl) {
+          progressBarEl.style.width = `${Math.max(6, Math.round(percent))}%`;
+          progressBarEl.style.background = 'linear-gradient(90deg, #334155 0%, #64748B 100%)';
+          progressBarEl.style.boxShadow = 'none';
+        }
+        if (footerHintEl) footerHintEl.textContent = 'Klaim profit harian Anda telah berhasil. Siklus berikutnya siap dalam 24 jam.';
+        if (nextYieldEl) nextYieldEl.textContent = `Siklus: ${hourStr}:${minStr} WIB`;
+
+        if (claimBtn) {
+          claimBtn.classList.remove('live-active');
+          claimBtn.classList.add('claimed-today');
+          claimBtn.setAttribute('disabled', 'true');
+          claimBtn.disabled = true;
+          claimBtn.onclick = null;
+          claimBtn.innerHTML = `<span><i class="fas fa-check-circle" style="margin-right:6px;"></i> Sudah Diklaim Hari Ini (${timeFormatted})</span>`;
+        }
+        return;
+      }
+      // If remainingMs === 0, 24 hours have elapsed: drops through to ready-to-claim below!
+    }
+
+    // SCENARIO 2: Ready to Claim (either totalPendingProfit > 0, or 24-hour cycle completed)
     if (totalPendingProfit > 0) {
-      // 100% Ready To Claim State
       if (statusTitleEl) statusTitleEl.textContent = 'Profit Siap Diklaim:';
       if (timerValEl) {
         timerValEl.textContent = '100% SELESAI';
@@ -1271,60 +1392,64 @@ const App = {
       if (nextYieldEl) nextYieldEl.textContent = 'Siap Klaim';
 
       if (claimBtn) {
-        claimBtn.innerHTML = `<span>Klaim Profit Harian (${DB.formatIDR(totalPendingProfit)})</span>`;
-        claimBtn.style.opacity = '1';
+        claimBtn.classList.remove('claimed-today');
+        claimBtn.classList.add('live-active');
         claimBtn.removeAttribute('disabled');
+        claimBtn.disabled = false;
+        claimBtn.onclick = () => App.claimProfit();
+        claimBtn.innerHTML = `<span>⚡ Klaim Profit Harian (${DB.formatIDR(totalPendingProfit)})</span>`;
+      }
+      return;
+    }
+
+    // SCENARIO 3: Active plan running cycle (not claimed today yet)
+    let lastYieldTime = 0;
+    userInvs.forEach(inv => {
+      const time = parseSafeTs(inv.lastProfitYieldDate) || parseSafeTs(inv.startDate);
+      if (time > lastYieldTime) lastYieldTime = time;
+    });
+
+    if (!lastYieldTime) lastYieldTime = now - 3600000;
+
+    let elapsed = now - lastYieldTime;
+    if (elapsed < 0) elapsed = 0;
+
+    if (elapsed >= cycleDurationMs) {
+      // 24 Hours cycle finished -> Button becomes alive ("hidup lagi kalau sudah 24jam waktu mau klaim")
+      if (statusTitleEl) statusTitleEl.textContent = 'Profit Siap Diklaim:';
+      if (timerValEl) {
+        timerValEl.textContent = 'SIAP KLAIM';
+        timerValEl.style.color = '#22C55E';
+      }
+      if (percentBadgeEl) {
+        percentBadgeEl.textContent = '100%';
+        percentBadgeEl.style.background = 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)';
+        percentBadgeEl.style.boxShadow = '0 0 14px rgba(34, 197, 94, 0.6)';
+      }
+      if (progressBarEl) {
+        progressBarEl.style.width = '100%';
+        progressBarEl.style.background = 'linear-gradient(90deg, #E5A83B 0%, #22C55E 100%)';
+        progressBarEl.style.boxShadow = '0 0 14px rgba(34, 197, 94, 0.7)';
+      }
+      if (footerHintEl) footerHintEl.textContent = 'Siklus 24 jam selesai. Klik tombol di bawah untuk klaim profit harian.';
+      if (nextYieldEl) nextYieldEl.textContent = 'Siap Klaim';
+
+      if (claimBtn) {
+        claimBtn.classList.remove('claimed-today');
+        claimBtn.classList.add('live-active');
+        claimBtn.removeAttribute('disabled');
+        claimBtn.disabled = false;
+        claimBtn.onclick = () => App.claimProfit();
+        claimBtn.innerHTML = `<span>⚡ Klaim Profit Harian</span>`;
       }
     } else {
-      const marketStatus = Plans.isWeekendMarketClosed();
-      if (marketStatus.closed) {
-        if (statusTitleEl) statusTitleEl.textContent = 'Status Pasar:';
-        if (timerValEl) {
-          timerValEl.textContent = `PASAR LIBUR (${marketStatus.dayName.toUpperCase()})`;
-          timerValEl.style.color = '#EF4444';
-        }
-        if (percentBadgeEl) {
-          percentBadgeEl.textContent = 'LIBUR';
-          percentBadgeEl.style.background = '#EF4444';
-          percentBadgeEl.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.4)';
-        }
-        if (progressBarEl) {
-          progressBarEl.style.width = '100%';
-          progressBarEl.style.background = '#334155';
-          progressBarEl.style.boxShadow = 'none';
-        }
-        if (footerHintEl) footerHintEl.textContent = marketStatus.message || 'Pasar libur akhir pekan (Sabtu & Minggu). Dividen profit aktif kembali hari Senin.';
-        if (nextYieldEl) nextYieldEl.textContent = 'Buka Senin';
-
-        if (claimBtn) {
-          claimBtn.innerHTML = `<span>Pasar Libur Akhir Pekan (Sabtu & Minggu)</span>`;
-          claimBtn.style.opacity = '0.7';
-          claimBtn.setAttribute('disabled', 'true');
-        }
-        return;
-      }
-
-      // Countdown State in 24-Hour Cycle
-      const cycleDurationMs = 24 * 3600 * 1000;
-      
-      let lastYieldTime = 0;
-      userInvs.forEach(inv => {
-        const time = new Date(inv.lastProfitYieldDate || inv.startDate || Date.now()).getTime();
-        if (time > lastYieldTime) lastYieldTime = time;
-      });
-
-      const now = Date.now();
-      let elapsed = now - lastYieldTime;
-      if (elapsed < 0) elapsed = 0;
-      if (elapsed >= cycleDurationMs) elapsed = cycleDurationMs;
-
+      // Countdown running
       const remainingMs = Math.max(0, cycleDurationMs - elapsed);
       const percent = Math.min(100, Math.max(0, (elapsed / cycleDurationMs) * 100));
 
       const hours = Math.floor(remainingMs / 3600000);
       const minutes = Math.floor((remainingMs % 3600000) / 60000);
       const seconds = Math.floor((remainingMs % 60000) / 1000);
-
       const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
       if (statusTitleEl) statusTitleEl.textContent = 'Proses Profit Berjalan:';
@@ -1343,15 +1468,18 @@ const App = {
         progressBarEl.style.boxShadow = '0 0 10px rgba(229, 168, 59, 0.5)';
       }
       if (footerHintEl) footerHintEl.textContent = 'Siklus profit berjalan otomatis 24 jam realtime';
-      
+
       const nextResetDate = new Date(now + remainingMs);
       const hourStr = String(nextResetDate.getHours()).padStart(2, '0');
       const minStr = String(nextResetDate.getMinutes()).padStart(2, '0');
       if (nextYieldEl) nextYieldEl.textContent = `Siklus: ${hourStr}:${minStr} WIB`;
 
       if (claimBtn) {
+        claimBtn.classList.remove('claimed-today', 'live-active');
+        claimBtn.disabled = true;
+        claimBtn.setAttribute('disabled', 'true');
         claimBtn.innerHTML = `<span>Proses Profit Berjalan (${timeFormatted})</span>`;
-        claimBtn.style.opacity = '0.82';
+        claimBtn.style.opacity = '0.85';
       }
     }
   },
@@ -2251,7 +2379,7 @@ const App = {
     }).join('');
   },
 
-  // Render Trade View Page (with 30-day Duration Progress Bar & AI Chart)
+  // Render Trade View Page (with Enhanced Detail Box Cards & AI Chart)
   renderTradeView(user) {
     if (!user) {
       this.showToast('Silahkan login atau daftar dulu', 'info');
@@ -2282,54 +2410,87 @@ const App = {
       const isActive = inv.status === 'active';
       const duration = Number(inv.durationDays || 30);
       const daysElapsed = Number(inv.daysElapsed || 0);
+      const daysRemaining = Math.max(0, duration - daysElapsed);
       const progressPercent = Math.min(100, Math.max(0, Math.round((daysElapsed / duration) * 100)));
+      const rateRange = Plans.getRateRange(inv);
 
       return `
-        <div style="background:#FFFFFF; border-radius:18px; padding:16px; box-shadow:var(--card-shadow); border:1px solid ${isActive ? '#E2E8F0' : '#E2E8F0'}; display:flex; flex-direction:column; gap:10px; opacity:${isActive ? '1' : '0.85'};">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-weight:800; font-size:15px; color:#0F172A;">Paket ${inv.planName}</span>
-            <span class="badge-status ${isActive ? 'approved' : 'rejected'}">${isActive ? `BERJALAN (${daysElapsed}/${duration} Hari)` : `SELESAI (Modal Kembali)`}</span>
-          </div>
-
-          ${isActive ? `
-            <div class="active-plan-progress-wrap">
-              <div class="active-plan-progress-header">
-                <span class="active-plan-progress-label">⏱️ Progress Durasi Paket:</span>
-                <span class="active-plan-progress-val">${progressPercent}% (Hari ke-${daysElapsed} dari ${duration} Hari)</span>
+        <div class="trade-plan-card ${isActive ? '' : 'completed'}">
+          <div class="trade-plan-header">
+            <div class="trade-plan-title-group">
+              <div class="trade-plan-icon">
+                <i class="fas fa-microchip"></i>
               </div>
-              <div class="active-plan-progress-track">
-                <div class="active-plan-progress-bar" style="width: ${Math.max(4, progressPercent)}%;"></div>
-              </div>
-            </div>
-          ` : ''}
-
-          <div style="display:grid; grid-template-columns:repeat(3, 1fr); background:#F8FAFC; border-radius:12px; padding:10px; text-align:center; gap:6px;">
-            <div>
-              <div style="font-size:10px; color:#64748B;">Modal Awal</div>
-              <div style="font-weight:800; font-size:12px;">${DB.formatIDR(inv.capital)}</div>
-            </div>
-            <div>
-              <div style="font-size:10px; color:#64748B;">Rentang Profit</div>
-              <div style="font-weight:800; font-size:12px; color:#22C55E;">${inv.minRate ?? inv.minDailyProfit ?? '-'}% - ${inv.maxRate ?? inv.maxDailyProfit ?? '-'}%</div>
-            </div>
-            <div>
-              <div style="font-size:10px; color:#64748B;">Total Profit Didapat</div>
-              <div style="font-weight:800; font-size:12px; color:#C89338;">${DB.formatIDR(inv.totalProfitEarned)}</div>
-            </div>
-          </div>
-          ${isActive && inv.pendingProfitClaim > 0 ? `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#DCFCE7; border:1px solid #86EFAC; padding:10px 14px; border-radius:12px;">
               <div>
-                <div style="font-size:10px; font-weight:700; color:#15803D;">Profit Siap Diklaim:</div>
+                <div class="trade-plan-name">Paket ${inv.planName}</div>
+                <div class="trade-plan-sub-id">ID: #${inv.id || 'INV'} • Durasi Total: ${duration} Hari</div>
+              </div>
+            </div>
+            <span class="badge-status ${isActive ? 'approved' : 'rejected'}">
+              ${isActive ? `AKTIF` : `SELESAI`}
+            </span>
+          </div>
+
+          <div class="trade-plan-grid">
+            <!-- Kotak Awal -->
+            <div class="trade-plan-box-item">
+              <div class="trade-plan-box-label"><i class="fas fa-wallet" style="color:#64748B;"></i> Awal :</div>
+              <div class="trade-plan-box-value">${DB.formatIDR(inv.capital)}</div>
+            </div>
+
+            <!-- Kotak Rentang Profit -->
+            <div class="trade-plan-box-item">
+              <div class="trade-plan-box-label"><i class="fas fa-chart-line" style="color:#10B981;"></i> Rentang Profit :</div>
+              <div class="trade-plan-box-value highlight-green">${rateRange.min}% - ${rateRange.max}%</div>
+            </div>
+
+            <!-- Kotak Profit -->
+            <div class="trade-plan-box-item">
+              <div class="trade-plan-box-label"><i class="fas fa-coins" style="color:#D97706;"></i> Profit :</div>
+              <div class="trade-plan-box-value highlight-gold">${DB.formatIDR(inv.totalProfitEarned || 0)}</div>
+            </div>
+
+            <!-- Kotak Tersisa -->
+            <div class="trade-plan-box-item">
+              <div class="trade-plan-box-label"><i class="fas fa-hourglass-half" style="color:#2563EB;"></i> Tersisa :</div>
+              <div class="trade-plan-box-value highlight-blue">
+                <span class="trade-plan-remaining-badge">${daysRemaining} Hari</span>
+              </div>
+            </div>
+
+            <!-- Kotak Status (Full Width) -->
+            <div class="trade-plan-box-item full-width">
+              <div class="trade-plan-box-label"><i class="fas fa-shield-alt" style="color:#059669;"></i> Status :</div>
+              <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                <span class="trade-plan-status-badge">
+                  ${isActive ? '<span class="pulse-dot-green"></span> Progressnya berlangsung sesuai kontrak' : '✓ Selesai sesuai kontrak'}
+                </span>
+                <span style="font-size:11px; color:#64748B; font-weight:700;">Hari ke-${daysElapsed} dari ${duration} (${progressPercent}%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Bar Micro Line -->
+          <div class="active-plan-progress-wrap" style="margin-top:2px;">
+            <div class="active-plan-progress-track">
+              <div class="active-plan-progress-bar" style="width: ${Math.max(4, progressPercent)}%;"></div>
+            </div>
+          </div>
+
+          ${isActive && inv.pendingProfitClaim > 0 ? `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#DCFCE7; border:1px solid #86EFAC; padding:10px 14px; border-radius:12px; margin-top:2px;">
+              <div>
+                <div style="font-size:10.5px; font-weight:700; color:#15803D;">Profit Siap Diklaim:</div>
                 <div style="font-size:14px; font-weight:800; color:#166534;">${DB.formatIDR(inv.pendingProfitClaim)}</div>
               </div>
               <button class="tier-btn btn-topup" onclick="App.claimProfit()">Klaim Sekarang</button>
             </div>
           ` : ''}
+
           ${!isActive ? `
-            <div style="font-size:11px; color:#059669; font-weight:700; background:#ECFDF5; padding:10px 12px; border-radius:10px; text-align:center; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:11.5px; color:#059669; font-weight:700; background:#ECFDF5; padding:10px 12px; border-radius:12px; text-align:center; display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
               <span>✓ Durasi ${inv.durationDays} hari selesai.${!inv.capitalReturned ? ` Modal Rp ${DB.formatIDR(inv.capital)} tersimpan di Saldo Terlock.` : ` Modal Rp ${DB.formatIDR(inv.capital)} telah direfund.`}</span>
-              ${!inv.capitalReturned ? `<button class="tier-btn btn-topup" style="padding:4px 8px; font-size:10px;" onclick="App.openRefundModal()">Klaim Refund</button>` : ''}
+              ${!inv.capitalReturned ? `<button class="tier-btn btn-topup" style="padding:4px 8px; font-size:10.5px;" onclick="App.openRefundModal()">Klaim Refund</button>` : ''}
             </div>
           ` : ''}
         </div>
@@ -3852,11 +4013,7 @@ const App = {
       }
     } finally {
       this._isClaimingProfit = false;
-      btnList.forEach(b => {
-        b.disabled = false;
-        b.style.opacity = '1';
-        if (b.dataset.origHtml) b.innerHTML = b.dataset.origHtml;
-      });
+      this.updateProfitCountdown();
     }
   },
 
