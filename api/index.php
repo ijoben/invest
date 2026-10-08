@@ -1776,7 +1776,7 @@ if ($action === 'claim_daily_checkin') {
     $chkTrxStmt = $pdo->prepare("
         SELECT COUNT(*) FROM `transactions` 
         WHERE `user_id` = :uid 
-          AND (`id` LIKE 'TX-CHK-%' OR `type` = 'bonus' OR `payment_method` LIKE '%Absensi%' OR `note` LIKE '%absen%')
+          AND (`id` LIKE 'TX-CHK-%' OR `payment_method` LIKE '%Absensi%' OR `note` LIKE '%absen%')
           AND (`created_at` LIKE :todayPat OR DATE(`created_at`) = :today)
     ");
     $chkTrxStmt->execute([
@@ -1988,11 +1988,12 @@ if ($action === 'claim_profit') {
     $chkPrfStmt->execute([':uid' => $userId, ':todayPat' => $todayPat, ':today' => $todayWib]);
     $alreadyClaimedToday = (int)$chkPrfStmt->fetchColumn();
 
-    // Also check if any active investment already recorded a profit yield today
+    // Also check if any active investment already recorded a profit yield today (only if pending profit is 0)
     if ($alreadyClaimedToday === 0) {
         $chkInvStmt = $pdo->prepare("
             SELECT COUNT(*) FROM `investments`
             WHERE `user_id` = :uid
+              AND `pending_profit_claim` = 0
               AND (`last_profit_yield_date` LIKE :todayPat OR DATE(`last_profit_yield_date`) = :today)
         ");
         $chkInvStmt->execute([':uid' => $userId, ':todayPat' => $todayPat, ':today' => $todayWib]);

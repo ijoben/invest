@@ -1201,6 +1201,7 @@ const App = {
 
   // 5.1 Real-time Profit Countdown & 100% Progress Bar Calculation
   updateProfitCountdown() {
+    if (this._isClaimingProfit) return;
     const user = Auth.getUser();
     if (!user) return;
 
@@ -1340,22 +1341,22 @@ const App = {
 
       if (remainingMs > 0) {
         // Within active 24h wait period
-        if (statusTitleEl) statusTitleEl.textContent = 'Sudah Diklaim Hari Ini:';
+        if (statusTitleEl) statusTitleEl.textContent = 'Sudah Diklaim (Waktu Tunggu 24 Jam):';
         if (timerValEl) {
           timerValEl.textContent = timeFormatted;
-          timerValEl.style.color = '#94A3B8';
+          timerValEl.style.color = '#38BDF8';
         }
         if (percentBadgeEl) {
           percentBadgeEl.textContent = `${Math.round(percent)}%`;
-          percentBadgeEl.style.background = 'linear-gradient(135deg, #475569 0%, #334155 100%)';
-          percentBadgeEl.style.boxShadow = 'none';
+          percentBadgeEl.style.background = 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)';
+          percentBadgeEl.style.boxShadow = '0 0 10px rgba(56, 189, 248, 0.4)';
         }
         if (progressBarEl) {
           progressBarEl.style.width = `${Math.max(6, Math.round(percent))}%`;
-          progressBarEl.style.background = 'linear-gradient(90deg, #334155 0%, #64748B 100%)';
-          progressBarEl.style.boxShadow = 'none';
+          progressBarEl.style.background = 'linear-gradient(90deg, #0284C7 0%, #38BDF8 60%, #22C55E 100%)';
+          progressBarEl.style.boxShadow = '0 0 10px rgba(56, 189, 248, 0.5)';
         }
-        if (footerHintEl) footerHintEl.textContent = 'Klaim profit harian Anda telah berhasil. Siklus berikutnya siap dalam 24 jam.';
+        if (footerHintEl) footerHintEl.textContent = 'Klaim profit harian Anda telah berhasil. Waktu tunggu 24 jam sedang berjalan menuju siklus klaim berikutnya.';
         if (nextYieldEl) nextYieldEl.textContent = `Siklus: ${hourStr}:${minStr} WIB`;
 
         if (claimBtn) {
@@ -1364,7 +1365,8 @@ const App = {
           claimBtn.setAttribute('disabled', 'true');
           claimBtn.disabled = true;
           claimBtn.onclick = null;
-          claimBtn.innerHTML = `<span><i class="fas fa-check-circle" style="margin-right:6px;"></i> Sudah Diklaim Hari Ini (${timeFormatted})</span>`;
+          claimBtn.innerHTML = `<span><i class="fas fa-clock" style="margin-right:6px;"></i> Sudah Diklaim (Tunggu ${timeFormatted})</span>`;
+          claimBtn.style.opacity = '0.75';
         }
         return;
       }
@@ -4037,6 +4039,7 @@ const App = {
     const btnList = document.querySelectorAll('button[onclick*="App.claimProfit"]');
     btnList.forEach(b => {
       b.disabled = true;
+      b.setAttribute('disabled', 'true');
       b.dataset.origHtml = b.innerHTML;
       b.innerHTML = '<span>⏳ Memproses klaim...</span>';
       b.style.opacity = '0.6';
@@ -4051,8 +4054,20 @@ const App = {
         this.showToast(res.message, res.alreadyClaimed ? 'info' : 'warning');
         this.renderAll();
       }
+    } catch(err) {
+      console.warn('claimProfit UI error:', err);
+      this.showToast('Terjadi kendala saat memproses klaim profit.', 'warning');
     } finally {
       this._isClaimingProfit = false;
+      btnList.forEach(b => {
+        if (b.dataset.origHtml) {
+          b.innerHTML = b.dataset.origHtml;
+          delete b.dataset.origHtml;
+        }
+        b.disabled = false;
+        b.removeAttribute('disabled');
+        b.style.opacity = '1';
+      });
       this.updateProfitCountdown();
     }
   },
@@ -4156,21 +4171,28 @@ const App = {
 
     this._isClaimingCheckIn = true;
     const btnEl = document.getElementById('btnClaimDailyCheckIn');
-    if (btnEl) btnEl.disabled = true;
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.setAttribute('disabled', 'true');
+      btnEl.innerHTML = '<span>⏳ Memproses absensi...</span>';
+      btnEl.style.opacity = '0.6';
+    }
 
     try {
       const res = await DB.claimDailyCheckIn(user.id);
       if (res.success) {
         this.playCelebratoryFanfare();
         this.showToast(res.message, 'success');
-        this.renderDailyCheckInUI();
-        this.renderAll();
       } else {
-        this.showToast(res.message, 'info');
+        this.showToast(res.message, res.alreadyClaimed ? 'info' : 'warning');
       }
+    } catch(err) {
+      console.warn('claimDailyCheckIn UI error:', err);
+      this.showToast('Terjadi kendala saat memproses absensi.', 'warning');
     } finally {
       this._isClaimingCheckIn = false;
       this.renderDailyCheckInUI();
+      this.renderAll();
     }
   },
 
@@ -4221,11 +4243,13 @@ const App = {
     if (btnEl) {
       if (status.hasCheckedInToday) {
         btnEl.setAttribute('disabled', 'true');
+        btnEl.disabled = true;
         btnEl.style.opacity = '0.6';
         btnEl.innerHTML = '<span>✓ Sudah Absen Hari Ini (+Rp ' + status.rewardAmount.toLocaleString('id-ID') + ')</span>';
         if (noticeEl) noticeEl.textContent = `Hebat! Anda sedang di rangkaian hari ke-${status.currentStreak}/7. Silakan kembali besok untuk bonus berikutnya!`;
       } else {
         btnEl.removeAttribute('disabled');
+        btnEl.disabled = false;
         btnEl.style.opacity = '1';
         btnEl.innerHTML = '<span>📅 Klaim Absen Hari Ini (+Rp ' + status.rewardAmount.toLocaleString('id-ID') + ')</span>';
         if (noticeEl) noticeEl.textContent = `Klaim bonus absen login harian Anda sekarang (+Rp ${status.rewardAmount.toLocaleString('id-ID')} masuk Saldo Utama).`;

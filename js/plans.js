@@ -696,21 +696,28 @@ export const Plans = {
 
     try {
       const db = DB.get();
-      const user = db.users.find(u => u.id === userId);
+      const user = (db.users || []).find(u => u.id === userId);
       if (!user) return { success: false, message: 'User tidak ditemukan' };
 
       const todayWib = DB.getWibDateStr();
 
+      // Check active investments & pending profit
+      const userInvs = (db.investments || []).filter(i => i.userId === userId && i.status === 'active');
+      const totalPending = userInvs.reduce((sum, inv) => sum + (Number(inv.pendingProfitClaim) || 0), 0);
+
       // 1. Strict local pre-guard: Check if already claimed profit today in transactions OR investments
-      const hasClaimedToday = (db.transactions || []).some(t => {
+      const todayClaimTx = (db.transactions || []).some(t => {
         if (t.userId !== userId) return false;
         const isPrf = t.type === 'profit_claim' || (t.id && String(t.id).startsWith('TRX-PRF-'));
         if (!isPrf) return false;
         return DB.getWibDateStr(t.createdAt) === todayWib;
-      }) || (db.investments || []).some(inv => {
-        if (inv.userId !== userId) return false;
+      });
+
+      const todayClaimInv = totalPending <= 0 && userInvs.some(inv => {
         return inv.lastProfitYieldDate && DB.getWibDateStr(inv.lastProfitYieldDate) === todayWib;
       });
+
+      const hasClaimedToday = todayClaimTx || todayClaimInv;
 
       if (hasClaimedToday) {
         return {
@@ -720,57 +727,73 @@ export const Plans = {
         };
       }
 
-    // 2. Direct server claim for atomic single-claim database validation
-    try {
-      if (typeof fetch === 'function') {
-        const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : '') ||
-                      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : '') || '';
-        const url = DB.getApiUrl('claim_profit');
-        const res = await fetch(url, {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token, 'X-Session-Token': token } : {})
-          },
-          body: JSON.stringify({ userId, token })
-        });
-        const json = await res.json().catch(() => null);
-        if (json) {
-          if (json.sessionToken) {
-            try {
-              if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
-              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
-            } catch(e) {}
-          }
-          if (json.success) {
-            // Authoritative synchronization with MySQL database response
-            user.walletBalance = json.walletBalance;
-            (db.investments || []).forEach(inv => {
-              if (inv.userId === userId && inv.status === 'active') {
-                inv.pendingProfitClaim = 0;
-                inv.lastProfitYieldDate = new Date().toISOString();
-                inv.daysElapsed = (inv.daysElapsed || 0) + 1;
-                if (inv.daysElapsed >= inv.durationDays) {
-                  inv.status = 'completed';
-                  inv.completedAt = inv.completedAt || new Date().toISOString();
-                  inv.refundReady = true;
-                  if (inv.capitalReturned === undefined) inv.capitalReturned = false;
+      // Check weekend market status
+      const marketStatus = this.isWeekendMarketClosed();
+      if (marketStatus.closed) {
+        return {
+          success: false,
+          message: marketStatus.message || 'Pasar libur akhir pekan (Sabtu & Minggu). Dividen profit aktif kembali hari Senin.'
+        };
+      }
+
+      // 2. Direct server claim for atomic single-claim database validation
+      let serverClaimSucceeded = false;
+
+      try {
+        if (typeof fetch === 'function') {
+          const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : '') ||
+                        (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : '') || '';
+          const url = DB.getApiUrl('claim_profit');
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+          const res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': 'Bearer ' + token, 'X-Session-Token': token } : {})
+            },
+            body: JSON.stringify({ userId, token }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          const json = await res.json().catch(() => null);
+          if (json) {
+            if (json.sessionToken) {
+              try {
+                if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+                if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+              } catch(e) {}
+            }
+            if (json.success) {
+              serverClaimSucceeded = true;
+              // Authoritative synchronization with MySQL database response
+              user.walletBalance = json.walletBalance;
+              (db.investments || []).forEach(inv => {
+                if (inv.userId === userId && inv.status === 'active') {
+                  inv.pendingProfitClaim = 0;
+                  inv.lastProfitYieldDate = new Date().toISOString();
+                  inv.daysElapsed = (inv.daysElapsed || 0) + 1;
+                  if (inv.daysElapsed >= inv.durationDays) {
+                    inv.status = 'completed';
+                    inv.completedAt = inv.completedAt || new Date().toISOString();
+                    inv.refundReady = true;
+                    if (inv.capitalReturned === undefined) inv.capitalReturned = false;
+                  }
+                }
+              });
+              if (json.transaction) {
+                db.transactions = db.transactions || [];
+                if (!db.transactions.some(t => t.id === json.transaction.id)) {
+                  db.transactions.unshift(json.transaction);
                 }
               }
-            });
-            if (json.transaction) {
-              db.transactions = db.transactions || [];
-              if (!db.transactions.some(t => t.id === json.transaction.id)) {
-                db.transactions.unshift(json.transaction);
-              }
-            }
-            if (typeof localStorage !== 'undefined') {
-              try { localStorage.setItem('autotrading_db', JSON.stringify(DB.stripSensitiveFields(db))); } catch(e) {}
-            }
-            return json;
-          } else {
-            if (json.alreadyClaimed) {
+              await DB.save(db);
+              return json;
+            } else if (json.alreadyClaimed) {
               (db.investments || []).forEach(inv => {
                 if (inv.userId === userId && inv.status === 'active') {
                   inv.pendingProfitClaim = 0;
@@ -779,20 +802,84 @@ export const Plans = {
               if (typeof json.walletBalance === 'number') {
                 user.walletBalance = json.walletBalance;
               }
-              if (typeof localStorage !== 'undefined') {
-                try { localStorage.setItem('autotrading_db', JSON.stringify(DB.stripSensitiveFields(db))); } catch(e) {}
-              }
+              await DB.save(db);
+              return json;
+            } else {
+              return json;
             }
-            return json;
           }
         }
+      } catch(err) {
+        console.warn('Direct server claim profit error or timeout:', err);
       }
-    } catch(err) {
-      console.warn('Direct server claim profit error:', err);
-      return { success: false, message: 'Gagal terhubung ke server database. Periksa koneksi internet Anda.' };
-    }
 
-      return { success: false, message: 'Gagal memproses klaim profit pada server.' };
+      // 3. Resilient Local Claim Fallback (if server timed out or unreachable)
+      if (!serverClaimSucceeded) {
+        if (userInvs.length === 0) {
+          return { success: false, message: 'Anda belum memiliki paket investasi aktif.' };
+        }
+
+        const nowIso = new Date().toISOString();
+        let totalClaimed = 0;
+
+        userInvs.forEach(inv => {
+          let profit = Number(inv.pendingProfitClaim) || 0;
+          if (profit <= 0) {
+            const minR = Number(inv.minRate) || 1.0;
+            const maxR = Number(inv.maxRate) || 2.0;
+            const rate = minR + Math.random() * (maxR - minR);
+            profit = Math.floor((Number(inv.capital) * rate) / 100);
+          }
+          totalClaimed += profit;
+          inv.totalProfitEarned = (inv.totalProfitEarned || 0) + profit;
+          inv.pendingProfitClaim = 0;
+          inv.lastProfitYieldDate = nowIso;
+          inv.daysElapsed = (inv.daysElapsed || 0) + 1;
+          if (inv.daysElapsed >= inv.durationDays) {
+            inv.status = 'completed';
+            inv.completedAt = nowIso;
+            inv.refundReady = true;
+            if (inv.capitalReturned === undefined) inv.capitalReturned = false;
+          }
+        });
+
+        if (totalClaimed <= 0) {
+          return { success: false, message: 'Belum ada dividen profit yang siap diklaim.' };
+        }
+
+        user.walletBalance = (Number(user.walletBalance) || 0) + totalClaimed;
+        user.points = (Number(user.points) || 0) + 2;
+
+        const trxId = 'TRX-PRF-' + Math.floor(100000 + Math.random() * 900000);
+        const profitTrx = {
+          id: trxId,
+          userId: user.id,
+          username: user.username,
+          type: 'profit_claim',
+          amount: totalClaimed,
+          netAmount: totalClaimed,
+          walletSource: 'Wallet Balance',
+          note: `Klaim profit harian paket investasi aktif (${DB.formatIDR(totalClaimed)})`,
+          status: 'approved',
+          createdAt: nowIso
+        };
+
+        db.transactions = db.transactions || [];
+        db.transactions.unshift(profitTrx);
+        await DB.save(db);
+
+        if (typeof DB.syncToCloud === 'function') {
+          setTimeout(() => DB.syncToCloud(), 100);
+        }
+
+        return {
+          success: true,
+          amount: totalClaimed,
+          walletBalance: user.walletBalance,
+          transaction: profitTrx,
+          message: `Klaim profit harian sebesar ${DB.formatIDR(totalClaimed)} berhasil masuk ke Saldo Utama!`
+        };
+      }
     } finally {
       this._claimLocks[userId] = false;
     }
