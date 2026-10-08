@@ -267,14 +267,18 @@ export const Payment = {
     };
   },
 
-  // Get user transaction history
+  // Get user transaction history (Terbaru selalu di paling atas)
   getUserTransactions(userId, filterType = 'all') {
     const db = DB.get();
-    let list = db.transactions.filter(t => t.userId === userId);
+    let list = (db.transactions || []).filter(t => t.userId === userId);
     if (filterType !== 'all') {
       list = list.filter(t => t.type === filterType);
     }
-    return list;
+    return list.sort((a, b) => {
+      const tA = new Date(a.createdAt || a.date || 0).getTime();
+      const tB = new Date(b.createdAt || b.date || 0).getTime();
+      return tB - tA;
+    });
   },
 
   // Get live member deposits for running text ticker
@@ -282,6 +286,11 @@ export const Payment = {
     const db = DB.get();
     return (db.transactions || [])
       .filter(t => t.type === 'deposit')
+      .sort((a, b) => {
+        const tA = new Date(a.createdAt || a.date || 0).getTime();
+        const tB = new Date(b.createdAt || b.date || 0).getTime();
+        return tB - tA;
+      })
       .map(t => {
         let status = 'Diproses';
         if (t.status === 'approved') status = 'Sukses';
@@ -309,6 +318,11 @@ export const Payment = {
     const db = DB.get();
     return (db.transactions || [])
       .filter(t => t.type === 'withdraw')
+      .sort((a, b) => {
+        const tA = new Date(a.createdAt || a.date || 0).getTime();
+        const tB = new Date(b.createdAt || b.date || 0).getTime();
+        return tB - tA;
+      })
       .map(t => {
         let status = 'Diproses';
         if (t.status === 'approved') status = 'Sukses Masuk';

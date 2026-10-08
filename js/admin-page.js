@@ -322,7 +322,13 @@ export const AdminPage = {
   // 2. Deposit Table
   renderDeposits(db) {
     const tbody = document.getElementById('depositTableBody');
-    const deposits = db.transactions.filter(t => t.type === 'deposit');
+    const deposits = (db.transactions || [])
+      .filter(t => t.type === 'deposit')
+      .sort((a, b) => {
+        const tA = new Date(a.createdAt || a.date || 0).getTime();
+        const tB = new Date(b.createdAt || b.date || 0).getTime();
+        return tB - tA;
+      });
 
     if (deposits.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data deposit.</td></tr>';
@@ -377,7 +383,13 @@ export const AdminPage = {
   // 3. Withdraw Table (Penarikan Dana & Konversi PPOB)
   renderWithdrawals(db) {
     const tbody = document.getElementById('withdrawTableBody');
-    let withdrawals = db.transactions.filter(t => t.type === 'withdraw' || t.type === 'ppob_conversion');
+    let withdrawals = (db.transactions || [])
+      .filter(t => t.type === 'withdraw' || t.type === 'ppob_conversion')
+      .sort((a, b) => {
+        const tA = new Date(a.createdAt || a.date || 0).getTime();
+        const tB = new Date(b.createdAt || b.date || 0).getTime();
+        return tB - tA;
+      });
 
     if (this.withdrawFilter === 'withdraw') {
       withdrawals = withdrawals.filter(t => t.type === 'withdraw');
@@ -2494,10 +2506,15 @@ export const AdminPage = {
 
     // Render Transactions Table
     const txBody = document.getElementById('admMemTxsTableBody');
-    if (transactions.length === 0) {
+    const sortedTxs = (transactions || []).slice().sort((a, b) => {
+      const tA = new Date(a.createdAt || a.date || 0).getTime();
+      const tB = new Date(b.createdAt || b.date || 0).getTime();
+      return tB - tA;
+    });
+    if (sortedTxs.length === 0) {
       txBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:#94A3B8;">Belum ada riwayat transaksi.</td></tr>';
     } else {
-      txBody.innerHTML = transactions.map(t => {
+      txBody.innerHTML = sortedTxs.map(t => {
         let isPlus = t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
         let color = isPlus ? '#16A34A' : '#DC2626';
         let sign = isPlus ? '+' : '-';
@@ -4314,7 +4331,11 @@ export const AdminPage = {
   // 4. Export Transactions CSV
   downloadTransactionsCsv() {
     const db = DB.get();
-    const txs = db.transactions || [];
+    const txs = (db.transactions || []).slice().sort((a, b) => {
+      const tA = new Date(a.createdAt || a.date || 0).getTime();
+      const tB = new Date(b.createdAt || b.date || 0).getTime();
+      return tB - tA;
+    });
     if (txs.length === 0) {
       this.showToast('Tidak ada data transaksi untuk diekspor.', 'info');
       return;

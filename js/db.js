@@ -640,7 +640,15 @@ export const DB = {
       const parsed = _activeDB;
       if (!parsed.plans) parsed.plans = defaultDB.plans;
       if (!parsed.users) parsed.users = defaultDB.users;
-      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.transactions) {
+        parsed.transactions = [];
+      } else if (Array.isArray(parsed.transactions)) {
+        parsed.transactions.sort((a, b) => {
+          const tA = new Date(a.createdAt || a.date || 0).getTime();
+          const tB = new Date(b.createdAt || b.date || 0).getTime();
+          return tB - tA;
+        });
+      }
       if (!parsed.investments) parsed.investments = [];
       if (!parsed.signals) parsed.signals = defaultDB.signals;
       if (!parsed.marketTickers) parsed.marketTickers = defaultDB.marketTickers;
@@ -741,6 +749,13 @@ export const DB = {
 
   async save(data) {
     try {
+      if (data && Array.isArray(data.transactions)) {
+        data.transactions.sort((a, b) => {
+          const tA = new Date(a.createdAt || a.date || 0).getTime();
+          const tB = new Date(b.createdAt || b.date || 0).getTime();
+          return tB - tA;
+        });
+      }
       _activeDB = data;
       const safeData = this.stripSensitiveFields(data);
       if (typeof localStorage !== 'undefined') {
@@ -943,6 +958,13 @@ export const DB = {
       if (!res.ok) return null;
       const json = await res.json();
       if (json && json.success && json.data) {
+        if (Array.isArray(json.data.transactions)) {
+          json.data.transactions.sort((a, b) => {
+            const tA = new Date(a.createdAt || a.date || 0).getTime();
+            const tB = new Date(b.createdAt || b.date || 0).getTime();
+            return tB - tA;
+          });
+        }
         _activeDB = json.data;
         if (typeof localStorage !== 'undefined') {
           try {

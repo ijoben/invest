@@ -2223,7 +2223,11 @@ const App = {
       }
     }
 
-    const txs = Payment.getUserTransactions(user.id);
+    const txs = (Payment.getUserTransactions(user.id) || []).slice().sort((a, b) => {
+      const tA = new Date(a.createdAt || a.date || 0).getTime();
+      const tB = new Date(b.createdAt || b.date || 0).getTime();
+      return tB - tA;
+    });
     this.cachedWalletTransactions = txs;
     this.renderWalletTransactionList(this.activeTxFilter || 'all');
   },
@@ -2251,7 +2255,11 @@ const App = {
     const txListEl = document.getElementById('walletTransactionList');
     if (!txListEl) return;
 
-    let txs = this.cachedWalletTransactions || [];
+    let txs = (this.cachedWalletTransactions || []).slice().sort((a, b) => {
+      const tA = new Date(a.createdAt || a.date || 0).getTime();
+      const tB = new Date(b.createdAt || b.date || 0).getTime();
+      return tB - tA;
+    });
     if (filterType === 'profit_claim') {
       txs = txs.filter(t => t.type === 'profit_claim' || (t.id && t.id.startsWith('TRX-PRF-')));
     } else if (filterType === 'rabat_bonus') {
@@ -6176,6 +6184,11 @@ const App = {
 
     const txs = (db.transactions || [])
       .filter(t => t.type === 'ppob_conversion' && t.userId === user.id)
+      .sort((a, b) => {
+        const tA = new Date(a.createdAt || a.date || 0).getTime();
+        const tB = new Date(b.createdAt || b.date || 0).getTime();
+        return tB - tA;
+      })
       .slice(0, 5);
 
     const countText = `${txs.length} Pengajuan Terakhir`;

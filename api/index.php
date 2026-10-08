@@ -927,6 +927,14 @@ if ($action === 'get') {
                     }
                 }
 
+                // Urutkan transaksi: Transaksi terbaru selalu di paling atas (DESC)
+                if (!empty($data['transactions']) && is_array($data['transactions'])) {
+                    usort($data['transactions'], function($a, $b) {
+                        $tA = strtotime($a['createdAt'] ?? $a['created_at'] ?? '1970-01-01');
+                        $tB = strtotime($b['createdAt'] ?? $b['created_at'] ?? '1970-01-01');
+                        return $tB <=> $tA;
+                    });
+                }
             }
 
             // 3. Merge investments table
@@ -1091,6 +1099,13 @@ if ($action === 'get') {
                         $t['paymentMethod'] = cleanPaymentMethodStr($t['paymentMethod']);
                     }
                     $cleanTrx[] = $t;
+                }
+                if (!empty($cleanTrx)) {
+                    usort($cleanTrx, function($a, $b) {
+                        $tA = isset($a['createdAt']) ? strtotime($a['createdAt']) : (isset($a['created_at']) ? strtotime($a['created_at']) : 0);
+                        $tB = isset($b['createdAt']) ? strtotime($b['createdAt']) : (isset($b['created_at']) ? strtotime($b['created_at']) : 0);
+                        return $tB <=> $tA;
+                    });
                 }
                 $data['transactions'] = $cleanTrx;
             }
@@ -1274,6 +1289,13 @@ if ($action === 'save') {
                 $t['paymentMethod'] = cleanPaymentMethodStr($t['paymentMethod']);
             }
             $cleanTrxList[] = $t;
+        }
+        if (!empty($cleanTrxList)) {
+            usort($cleanTrxList, function($a, $b) {
+                $tA = isset($a['createdAt']) ? strtotime($a['createdAt']) : (isset($a['created_at']) ? strtotime($a['created_at']) : 0);
+                $tB = isset($b['createdAt']) ? strtotime($b['createdAt']) : (isset($b['created_at']) ? strtotime($b['created_at']) : 0);
+                return $tB <=> $tA;
+            });
         }
         $parsed['transactions'] = $cleanTrxList;
 

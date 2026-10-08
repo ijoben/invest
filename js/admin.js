@@ -566,7 +566,13 @@ export const Admin = {
     const user = db.users.find(u => u.id === userId);
     if (!user) return null;
 
-    const txs = db.transactions.filter(t => t.userId === userId || t.username === user.username);
+    const txs = (db.transactions || [])
+      .filter(t => t.userId === userId || t.username === user.username)
+      .sort((a, b) => {
+        const tA = new Date(a.createdAt || a.date || 0).getTime();
+        const tB = new Date(b.createdAt || b.date || 0).getTime();
+        return tB - tA;
+      });
     const investments = db.investments.filter(i => i.userId === userId);
     const downlines = Affiliate.getDownlines(user.referralCode || '');
 
