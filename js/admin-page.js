@@ -355,35 +355,55 @@ export const AdminPage = {
     `).join('');
   },
 
-  // 3. Withdraw Table
+  // 3. Withdraw Table (Penarikan Dana & Konversi PPOB)
   renderWithdrawals(db) {
     const tbody = document.getElementById('withdrawTableBody');
-    const withdrawals = db.transactions.filter(t => t.type === 'withdraw');
+    const withdrawals = db.transactions.filter(t => t.type === 'withdraw' || t.type === 'ppob_conversion');
 
     if (withdrawals.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data penarikan dana.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data penarikan dana atau konversi PPOB.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = withdrawals.map(t => `
-      <tr>
-        <td><strong>${escapeHtml(t.id)}</strong></td>
-        <td>${DB.formatWibDateTime(t.createdAt)} WIB</td>
-        <td><strong>${escapeHtml(t.username)}</strong></td>
-        <td>${escapeHtml(t.walletSource || 'Wallet Balance')}</td>
-        <td>${escapeHtml(t.destinationAccount || t.paymentMethod)}</td>
-        <td><strong style="color:#EF4444;">${DB.formatIDR(t.netAmount || t.amount)}</strong> (Total: ${DB.formatIDR(t.amount)})</td>
-        <td><span class="badge-status ${escapeHtml(t.status)}">${escapeHtml(t.status.toUpperCase())}</span></td>
-        <td>
-          ${t.status === 'pending' ? `
-            <div class="btn-action-group">
-              <button class="btn-admin-action approve" onclick="AdminPage.approveWithdraw('${escapeHtml(t.id)}')">✓ Setujui</button>
-              <button class="btn-admin-action reject" onclick="AdminPage.rejectWithdraw('${escapeHtml(t.id)}')">✕ Tolak</button>
-            </div>
-          ` : '<span style="color:#64748B;">Selesai</span>'}
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = withdrawals.map(t => {
+      const isPpob = t.type === 'ppob_conversion';
+      let walletSourceHtml = escapeHtml(t.walletSource || 'Wallet Balance');
+      let destHtml = escapeHtml(t.destinationAccount || t.paymentMethod || '-');
+      let amountHtml = `<strong style="color:#EF4444;">${DB.formatIDR(t.netAmount || t.amount)}</strong> (Total: ${DB.formatIDR(t.amount)})`;
+
+      if (isPpob) {
+        const isPln = t.category === 'pln' || (t.note && t.note.toLowerCase().includes('listrik'));
+        walletSourceHtml = t.source === 'affiliate' 
+          ? '<span class="badge-status approved" style="font-size:9.5px; background:rgba(34,197,94,0.15); color:#16A34A; border:1px solid rgba(34,197,94,0.3);">Wallet Tim (PPOB)</span>' 
+          : '<span class="badge-status approved" style="font-size:9.5px; background:rgba(245,158,11,0.15); color:#D97706; border:1px solid rgba(245,158,11,0.3);">Saldo Utama (PPOB)</span>';
+        
+        destHtml = isPln 
+          ? `<span style="display:inline-flex; align-items:center; gap:4px;">⚡ <strong>Token PLN:</strong> ${escapeHtml(t.targetNumber || '-')}</span>` 
+          : `<span style="display:inline-flex; align-items:center; gap:4px;">📱 <strong>Pulsa:</strong> ${escapeHtml(t.targetNumber || '-')}</span>`;
+        
+        amountHtml = `<strong style="color:#D97706;">${DB.formatIDR(t.amount)}</strong> <span style="font-size:10px; color:#64748B;">(PPOB)</span>`;
+      }
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(t.id)}</strong></td>
+          <td>${DB.formatWibDateTime(t.createdAt)} WIB</td>
+          <td><strong>${escapeHtml(t.username)}</strong></td>
+          <td>${walletSourceHtml}</td>
+          <td>${destHtml}</td>
+          <td>${amountHtml}</td>
+          <td><span class="badge-status ${escapeHtml(t.status)}">${escapeHtml(t.status.toUpperCase())}</span></td>
+          <td>
+            ${t.status === 'pending' ? `
+              <div class="btn-action-group">
+                <button class="btn-admin-action approve" onclick="AdminPage.approveWithdraw('${escapeHtml(t.id)}')">✓ Setujui</button>
+                <button class="btn-admin-action reject" onclick="AdminPage.rejectWithdraw('${escapeHtml(t.id)}')">✕ Tolak</button>
+              </div>
+            ` : '<span style="color:#64748B;">Selesai</span>'}
+          </td>
+        </tr>
+      `;
+    }).join('');
   },
 
   // 4. Plans Table

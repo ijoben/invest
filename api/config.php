@@ -379,7 +379,7 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
         }
     }
     $creditTypes = ['profit_claim', 'capital_refund', 'capital_return', 'bonus', 'commission', 'referral_bonus',
-                    'rabat', 'rabat_bonus', 'leader_bonus', 'affiliate_transfer', 'member_transfer', 'reward', 'matching_bonus', 'sponsor_bonus', 'checkin', 'adjustment', 'manual_adjustment'];
+                    'rabat', 'rabat_bonus', 'leader_bonus', 'affiliate_transfer', 'member_transfer', 'reward', 'matching_bonus', 'sponsor_bonus', 'checkin', 'ppob_conversion', 'ppob_refund', 'adjustment', 'manual_adjustment'];
     $creditByUser = [];
     $pointsByUser = [];
     $newTrxCount = [];

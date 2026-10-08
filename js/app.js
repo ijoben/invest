@@ -2257,7 +2257,7 @@ const App = {
     } else if (filterType === 'sponsor_bonus') {
       txs = txs.filter(t => t.type === 'sponsor_bonus' || (t.id && t.id.startsWith('TRX-SPS-')) || t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-')));
     } else if (filterType === 'dep_wd') {
-      txs = txs.filter(t => t.type === 'deposit' || t.type === 'withdraw' || t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-')) || t.type === 'affiliate_transfer');
+      txs = txs.filter(t => t.type === 'deposit' || t.type === 'withdraw' || t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-')) || t.type === 'affiliate_transfer' || t.type === 'ppob_conversion' || (t.id && t.id.startsWith('TRX-POB-')));
     }
 
     if (txs.length === 0) {
@@ -2342,17 +2342,28 @@ const App = {
       } else if (t.type === 'capital_return') {
         title = 'Pengembalian Modal Kontrak Selesai';
         badgeHtml = '<span class="tx-detail-badge tx-badge-return">MODAL KEMBALI</span>';
+      } else if (t.type === 'ppob_conversion' || (t.id && t.id.startsWith('TRX-POB-'))) {
+        const isPln = t.category === 'pln' || (t.note && t.note.toLowerCase().includes('listrik'));
+        title = isPln ? 'Konversi Token Listrik PLN' : 'Konversi Pulsa Seluler';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-wd" style="background:#FEF3C7; color:#B45309; border-color:#F59E0B;">PPOB</span>';
+        if (!noteText) {
+          noteText = isPln ? `Token Listrik (No. Meter: ${t.targetNumber || '-'})` : `Pulsa (No. HP: ${t.targetNumber || '-'})`;
+        }
       }
 
       const dateStr = DB.formatWibDateTime(t.createdAt);
       let statusClass = t.status === 'approved' ? 'approved' : (t.status === 'rejected' ? 'rejected' : 'pending');
       let statusLabel = t.status === 'approved' ? 'SUKSES' : (t.status === 'rejected' ? 'DITOLAK' : 'DIPROSES');
 
+      const isPpob = t.type === 'ppob_conversion' || (t.id && t.id.startsWith('TRX-POB-'));
+      const isPlnItem = isPpob && (t.category === 'pln' || (t.note && t.note.toLowerCase().includes('listrik')));
+      const txIcon = isPpob ? (isPlnItem ? '⚡' : '📱') : (t.type === 'profit_claim' ? '📈' : (t.type === 'rabat_bonus' ? '👥' : (t.type === 'sponsor_bonus' ? '🎁' : ((t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-'))) ? '🏆' : (isPlus ? '↓' : '↑')))));
+
       return `
         <div style="background:#FFFFFF; border-radius:14px; padding:12px 14px; box-shadow:var(--card-shadow); border:1px solid #F1F5F9; display:flex; align-items:center; justify-content:space-between; gap:10px;">
           <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
             <div style="width:38px; height:38px; border-radius:12px; background:${isPlus ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <span style="font-size:16px;">${t.type === 'profit_claim' ? '📈' : (t.type === 'rabat_bonus' ? '👥' : (t.type === 'sponsor_bonus' ? '🎁' : ((t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-'))) ? '🏆' : (isPlus ? '↓' : '↑'))))}</span>
+              <span style="font-size:16px;">${txIcon}</span>
             </div>
             <div style="min-width:0; flex:1;">
               <div style="font-weight:700; font-size:12.5px; color:#1E293B; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
@@ -2437,39 +2448,39 @@ const App = {
 
           <div class="trade-plan-grid">
             <!-- Kotak Awal -->
-            <div class="trade-plan-box-item">
-              <div class="trade-plan-box-label"><i class="fas fa-wallet" style="color:#64748B;"></i> Awal :</div>
+            <div class="trade-plan-box-item box-modal-awal">
+              <div class="trade-plan-box-label"><i class="fas fa-wallet" style="color:#1D4ED8;"></i> Awal :</div>
               <div class="trade-plan-box-value">${DB.formatIDR(inv.capital)}</div>
             </div>
 
             <!-- Kotak Rentang Profit -->
-            <div class="trade-plan-box-item">
-              <div class="trade-plan-box-label"><i class="fas fa-chart-line" style="color:#10B981;"></i> Rentang Profit :</div>
+            <div class="trade-plan-box-item box-profit-range">
+              <div class="trade-plan-box-label"><i class="fas fa-chart-line" style="color:#047857;"></i> Rentang Profit :</div>
               <div class="trade-plan-box-value highlight-green">${rateRange.min}% - ${rateRange.max}%</div>
             </div>
 
             <!-- Kotak Profit -->
-            <div class="trade-plan-box-item">
-              <div class="trade-plan-box-label"><i class="fas fa-coins" style="color:#D97706;"></i> Profit :</div>
+            <div class="trade-plan-box-item box-total-profit">
+              <div class="trade-plan-box-label"><i class="fas fa-coins" style="color:#B45309;"></i> Profit :</div>
               <div class="trade-plan-box-value highlight-gold">${DB.formatIDR(inv.totalProfitEarned || 0)}</div>
             </div>
 
             <!-- Kotak Tersisa -->
-            <div class="trade-plan-box-item">
-              <div class="trade-plan-box-label"><i class="fas fa-hourglass-half" style="color:#2563EB;"></i> Tersisa :</div>
+            <div class="trade-plan-box-item box-days-remaining">
+              <div class="trade-plan-box-label"><i class="fas fa-hourglass-half" style="color:#0369A1;"></i> Tersisa :</div>
               <div class="trade-plan-box-value highlight-blue">
                 <span class="trade-plan-remaining-badge">${daysRemaining} Hari</span>
               </div>
             </div>
 
             <!-- Kotak Status (Full Width) -->
-            <div class="trade-plan-box-item full-width">
-              <div class="trade-plan-box-label"><i class="fas fa-shield-alt" style="color:#059669;"></i> Status :</div>
+            <div class="trade-plan-box-item full-width box-contract-status">
+              <div class="trade-plan-box-label"><i class="fas fa-shield-alt" style="color:#7E22CE;"></i> Status :</div>
               <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
                 <span class="trade-plan-status-badge">
                   ${isActive ? '<span class="pulse-dot-green"></span> Progressnya berlangsung sesuai kontrak' : '✓ Selesai sesuai kontrak'}
                 </span>
-                <span style="font-size:11px; color:#64748B; font-weight:700;">Hari ke-${daysElapsed} dari ${duration} (${progressPercent}%)</span>
+                <span style="font-size:11px; color:#581C87; font-weight:700;">Hari ke-${daysElapsed} dari ${duration} (${progressPercent}%)</span>
               </div>
             </div>
           </div>
@@ -2651,13 +2662,29 @@ const App = {
       if (lrPercent) lrPercent.textContent = `${lRank.progressPct}%`;
     }
 
-    // Check if new leader milestones were awarded and notify user (Auto-transfer to Saldo Utama)
-    if (downlines.newlyAwardedMilestones && downlines.newlyAwardedMilestones.length > 0) {
-      downlines.newlyAwardedMilestones.forEach(aw => {
-        this.showToast(`🏆 Selamat! Target Kepemimpinan [${aw.milestone.name}] tercapai. Bonus ${DB.formatIDR(aw.amount)} telah ditransfer ke Saldo Utama Anda!`, 'success');
-      });
-      DB.save(db);
-      this.renderUserBalances(user);
+    // Render tombol klaim target kepemimpinan (Sistem Klaim Manual ke Saldo Utama)
+    const claimWrap = document.getElementById('affLeaderClaimActionWrap');
+    if (claimWrap) {
+      const milestonesStatus = downlines.milestonesStatus || [];
+      const claimable = milestonesStatus.filter(m => m.canClaim);
+      if (claimable.length > 0) {
+        claimWrap.innerHTML = claimable.map(m => `
+          <button type="button" class="btn-cta-gold" style="width: 100%; margin: 4px 0; padding: 10px 14px; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); animation: pulse 2s infinite; font-size: 11.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="App.claimLeaderBonus('${escapeHtml(m.name)}')">
+            <span>${m.badge} Klaim Bonus Target ${escapeHtml(m.name)} (${DB.formatIDR(m.reward)})</span>
+          </button>
+        `).join('');
+      } else {
+        const reached = milestonesStatus.filter(m => m.isReached);
+        if (reached.length > 0 && reached.every(m => m.isClaimed)) {
+          claimWrap.innerHTML = `
+            <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 8px 12px; font-size: 11px; color: #86EFAC; text-align: center; font-weight: 700;">
+              ✅ Semua target peringkat yang tercapai telah diklaim ke Saldo Utama!
+            </div>
+          `;
+        } else {
+          claimWrap.innerHTML = '';
+        }
+      }
     }
 
     // Update dynamic affiliate commission & rabat level descriptions (Requirement 1)
@@ -5377,8 +5404,12 @@ const App = {
     const user = Auth.getUser();
     if (!user) return;
 
+    if (!this.transferPpobCat) this.transferPpobCat = 'pulsa';
+    if (!this.transferPpobDenom) this.transferPpobDenom = 10000;
+
     const btnAff = document.getElementById('btnTransferTypeAffiliate');
     const btnMem = document.getElementById('btnTransferTypeMember');
+    const btnPpob = document.getElementById('btnTransferTypePpob');
     const mainTitle = document.getElementById('transferModalMainTitle');
     const subTitle = document.getElementById('transferModalSubTitle');
     const srcTitle = document.getElementById('transferSourceTitleText');
@@ -5389,6 +5420,8 @@ const App = {
     const destTag = document.getElementById('transferDestTagText');
     const targetGroup = document.getElementById('transferTargetUserGroup');
     const recipientBadge = document.getElementById('transferRecipientBadge');
+    const ppobSection = document.getElementById('transferPpobSection');
+    const generalAmountSection = document.getElementById('transferGeneralAmountSection');
     const infoBanner = document.getElementById('transferInfoBannerText');
     const lblLeft = document.getElementById('transferPreviewLabelLeft');
     const lblRight = document.getElementById('transferPreviewLabelRight');
@@ -5400,6 +5433,7 @@ const App = {
 
     if (btnAff) btnAff.classList.toggle('active', this.currentTransferType === 'affiliate');
     if (btnMem) btnMem.classList.toggle('active', this.currentTransferType === 'member');
+    if (btnPpob) btnPpob.classList.toggle('active', this.currentTransferType === 'ppob');
 
     if (this.currentTransferType === 'member') {
       if (mainTitle) mainTitle.textContent = 'Transfer Antar Member (P2P)';
@@ -5411,6 +5445,9 @@ const App = {
       if (destBalEl) destBalEl.textContent = 'Transfer Instan';
       if (destTag) destTag.textContent = 'Penerima P2P';
       if (targetGroup) targetGroup.style.display = 'block';
+      if (recipientBadge) recipientBadge.style.display = 'none';
+      if (ppobSection) ppobSection.style.display = 'none';
+      if (generalAmountSection) generalAmountSection.style.display = 'block';
       if (infoBanner) infoBanner.textContent = 'Transfer sesama member diproses realtime & bebas potongan biaya admin.';
       if (lblLeft) lblLeft.textContent = 'Sisa Saldo Utama:';
       if (lblRight) lblRight.textContent = 'Estimasi Diterima:';
@@ -5420,6 +5457,25 @@ const App = {
         inputEl.value = walletBal > 0 ? (walletBal <= 100000 ? walletBal : 50000) : 0;
       }
       this.onTransferTargetInput();
+    } else if (this.currentTransferType === 'ppob') {
+      if (mainTitle) mainTitle.textContent = 'Konversi Komisi ke PPOB';
+      if (subTitle) subTitle.textContent = 'Tukarkan saldo komisi tim dengan Pulsa atau Token PLN (Proses Manual)';
+      if (srcTitle) srcTitle.textContent = 'Wallet Tambah Teman';
+      if (srcBalEl) srcBalEl.textContent = DB.formatIDR(affBal);
+      if (srcTag) srcTag.textContent = 'Komisi Afiliasi';
+      const catLabel = this.transferPpobCat === 'pln' ? 'Token Listrik PLN' : 'Pulsa Seluler';
+      if (destTitle) destTitle.textContent = catLabel;
+      if (destBalEl) destBalEl.textContent = DB.formatIDR(this.transferPpobDenom || 10000);
+      if (destTag) destTag.textContent = 'PPOB Manual Admin';
+      if (targetGroup) targetGroup.style.display = 'none';
+      if (recipientBadge) recipientBadge.style.display = 'none';
+      if (ppobSection) ppobSection.style.display = 'block';
+      if (generalAmountSection) generalAmountSection.style.display = 'none';
+      if (infoBanner) infoBanner.textContent = 'Konversi saldo komisi ke pulsa/listrik diproses secara manual oleh Admin. Saldo komisi akan langsung dipotong setelah konfirmasi.';
+      if (lblLeft) lblLeft.textContent = 'Sisa Saldo Komisi:';
+      if (lblRight) lblRight.textContent = 'Nominal PPOB:';
+      this.setTransferPpobCategory(this.transferPpobCat || 'pulsa');
+      this.setTransferPpobDenom(this.transferPpobDenom || 10000);
     } else {
       if (mainTitle) mainTitle.textContent = 'Transfer Saldo Komisi';
       if (subTitle) subTitle.textContent = 'Pindahkan bonus afiliasi ke saldo utama siap pakai / WD';
@@ -5431,6 +5487,8 @@ const App = {
       if (destTag) destTag.textContent = 'Siap Tarik (WD) / Investasi';
       if (targetGroup) targetGroup.style.display = 'none';
       if (recipientBadge) recipientBadge.style.display = 'none';
+      if (ppobSection) ppobSection.style.display = 'none';
+      if (generalAmountSection) generalAmountSection.style.display = 'block';
       if (infoBanner) infoBanner.textContent = 'Saldo yang dipindahkan ke Wallet Utama akan langsung bertambah secara realtime dan siap ditarik (WD) ke rekening bank atau digunakan untuk membeli paket investasi.';
       if (lblLeft) lblLeft.textContent = 'Sisa Saldo Komisi:';
       if (lblRight) lblRight.textContent = 'Estimasi Saldo Baru:';
@@ -5444,6 +5502,60 @@ const App = {
     if (triggerPreview) {
       this.updateTransferPreview();
     }
+  },
+
+  setTransferPpobCategory(cat) {
+    this.transferPpobCat = cat === 'pln' ? 'pln' : 'pulsa';
+    const btnPulsa = document.getElementById('btnTransferPpobCatPulsa');
+    const btnPln = document.getElementById('btnTransferPpobCatPln');
+    const lbl = document.getElementById('transferPpobDestLabel');
+    const prefix = document.getElementById('transferPpobDestPrefix');
+    const input = document.getElementById('transferPpobDestInput');
+    const hint = document.getElementById('transferPpobDestHint');
+
+    if (btnPulsa) btnPulsa.classList.toggle('active', this.transferPpobCat === 'pulsa');
+    if (btnPln) btnPln.classList.toggle('active', this.transferPpobCat === 'pln');
+
+    if (this.transferPpobCat === 'pln') {
+      if (lbl) lbl.textContent = 'Nomor Meter / ID Pelanggan PLN:';
+      if (prefix) prefix.textContent = '⚡';
+      if (input) input.placeholder = 'Contoh: 14234567890 / 52123456789';
+      if (hint) hint.textContent = 'Masukkan ID Pelanggan atau No. Meter Token Listrik PLN.';
+    } else {
+      if (lbl) lbl.textContent = 'Nomor HP Tujuan:';
+      if (prefix) prefix.textContent = '📞';
+      if (input) input.placeholder = 'Contoh: 081234567890';
+      if (hint) hint.textContent = 'Masukkan nomor HP penerima pulsa (Semua operator).';
+    }
+
+    const destTitle = document.getElementById('transferDestTitleText');
+    if (destTitle && this.currentTransferType === 'ppob') {
+      destTitle.textContent = this.transferPpobCat === 'pln' ? 'Token Listrik PLN' : 'Pulsa Seluler';
+    }
+
+    this.updateTransferPreview();
+  },
+
+  setTransferPpobDenom(amt) {
+    this.transferPpobDenom = Number(amt) || 10000;
+    const denoms = [10000, 20000, 50000, 100000];
+    const ids = {
+      10000: 'btnPpobTransDenom10',
+      20000: 'btnPpobTransDenom20',
+      50000: 'btnPpobTransDenom50',
+      100000: 'btnPpobTransDenom100'
+    };
+    denoms.forEach(d => {
+      const el = document.getElementById(ids[d]);
+      if (el) el.classList.toggle('active', d === this.transferPpobDenom);
+    });
+
+    const destBalEl = document.getElementById('transferDestBalText');
+    if (destBalEl && this.currentTransferType === 'ppob') {
+      destBalEl.textContent = DB.formatIDR(this.transferPpobDenom);
+    }
+
+    this.updateTransferPreview();
   },
 
   onTransferTargetInput() {
@@ -5502,17 +5614,41 @@ const App = {
     const user = Auth.getUser();
     if (!user) return;
 
-    const isMember = this.currentTransferType === 'member';
     const affBal = user.affiliateBalance || 0;
     const walletBal = user.walletBalance || 0;
-    const maxBal = isMember ? walletBal : affBal;
-
-    const inputEl = document.getElementById('transferAmountInput');
-    const amount = Math.max(0, parseInt(inputEl ? inputEl.value : 0) || 0);
+    const isMember = this.currentTransferType === 'member';
+    const isPpob = this.currentTransferType === 'ppob';
 
     const remAffEl = document.getElementById('transferRemAffBal');
     const newMainEl = document.getElementById('transferNewMainBal');
     const btnConfirm = document.getElementById('btnConfirmTransfer');
+
+    if (isPpob) {
+      const amount = this.transferPpobDenom || 10000;
+      const remAffBal = Math.max(0, affBal - amount);
+      if (remAffEl) remAffEl.textContent = DB.formatIDR(remAffBal);
+      if (newMainEl) newMainEl.textContent = DB.formatIDR(amount);
+
+      const destBalEl = document.getElementById('transferDestBalText');
+      if (destBalEl) destBalEl.textContent = DB.formatIDR(amount);
+      const destTitle = document.getElementById('transferDestTitleText');
+      if (destTitle) destTitle.textContent = this.transferPpobCat === 'pln' ? 'Token Listrik PLN' : 'Pulsa Seluler';
+
+      if (btnConfirm) {
+        if (amount > affBal) {
+          btnConfirm.disabled = true;
+          btnConfirm.style.opacity = '0.6';
+        } else {
+          btnConfirm.disabled = false;
+          btnConfirm.style.opacity = '1';
+        }
+      }
+      return;
+    }
+
+    const maxBal = isMember ? walletBal : affBal;
+    const inputEl = document.getElementById('transferAmountInput');
+    const amount = Math.max(0, parseInt(inputEl ? inputEl.value : 0) || 0);
 
     if (isMember) {
       const remMainBal = Math.max(0, walletBal - amount);
@@ -5539,6 +5675,81 @@ const App = {
   submitTransferModal() {
     const user = Auth.getUser();
     if (!user) return;
+
+    if (this.currentTransferType === 'ppob') {
+      const amount = this.transferPpobDenom || 10000;
+      const affBal = user.affiliateBalance || 0;
+      if (amount > affBal) {
+        this.showToast('Saldo komisi tidak mencukupi untuk nominal PPOB ini!', 'error');
+        return;
+      }
+      const destInput = document.getElementById('transferPpobDestInput');
+      const targetNumber = (destInput ? destInput.value : '').trim();
+      if (!targetNumber) {
+        this.showToast((this.transferPpobCat === 'pln') ? 'Masukkan No. Meter / ID Pelanggan PLN!' : 'Masukkan Nomor HP tujuan!', 'error');
+        if (destInput) destInput.focus();
+        return;
+      }
+
+      const btnConfirm = document.getElementById('btnConfirmTransfer');
+      if (btnConfirm) {
+        btnConfirm.disabled = true;
+        btnConfirm.innerHTML = '<span>⏳ Mengajukan Konversi PPOB...</span>';
+      }
+
+      setTimeout(async () => {
+        const db = DB.get();
+        const u = (db.users || []).find(x => x.id === user.id);
+        if (!u) {
+          this.showToast('User tidak ditemukan.', 'error');
+          return;
+        }
+        u.affiliateBalance = Math.max(0, (u.affiliateBalance || 0) - amount);
+
+        const cat = this.transferPpobCat || 'pulsa';
+        const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
+        const note = cat === 'pln'
+          ? `Konversi Komisi Tim ke Token Listrik PLN ${DB.formatIDR(amount)} (No. Meter: ${targetNumber}) - Menunggu Proses Admin`
+          : `Konversi Komisi Tim ke Pulsa ${DB.formatIDR(amount)} (No. HP: ${targetNumber}) - Menunggu Proses Admin`;
+
+        const tx = {
+          id: txId,
+          userId: u.id,
+          username: u.username,
+          type: 'ppob_conversion',
+          category: cat,
+          amount: amount,
+          targetNumber: targetNumber,
+          source: 'affiliate',
+          status: 'pending',
+          note: note,
+          createdAt: new Date().toISOString()
+        };
+
+        db.transactions = db.transactions || [];
+        db.transactions.unshift(tx);
+        DB.save(db);
+
+        if (typeof API !== 'undefined' && API.createTransaction) {
+          try {
+            await API.createTransaction(tx);
+            if (API.updateUser) await API.updateUser(u.id, { affiliateBalance: u.affiliateBalance });
+          } catch (err) {
+            console.warn('[PPOB Transfer] API sync warning:', err);
+          }
+        }
+
+        Auth.setUser(u);
+        if (btnConfirm) {
+          btnConfirm.disabled = false;
+          btnConfirm.innerHTML = '<span>⚡ Konfirmasi Transfer Sekarang</span>';
+        }
+        this.closeModal('transferModal');
+        this.showToast(`Konversi PPOB ${cat === 'pln' ? 'Token Listrik' : 'Pulsa'} sebesar ${DB.formatIDR(amount)} berhasil diajukan dan sedang diproses manual oleh Admin!`, 'success');
+        this.renderAll();
+      }, 400);
+      return;
+    }
 
     const isMember = this.currentTransferType === 'member';
     const maxBal = isMember ? (user.walletBalance || 0) : (user.affiliateBalance || 0);
@@ -5599,6 +5810,246 @@ const App = {
         this.showToast(res.message || 'Gagal memproses transfer.', 'error');
       }
     }, 400);
+  },
+
+  // =========================================================================
+  // REQUIREMENT 4: KONVERSI SALDO UTAMA KE PPOB PULSA (PROSES MANUAL ADMIN)
+  // =========================================================================
+  openMainWalletPpobModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.showToast('Silakan login terlebih dahulu untuk membeli pulsa!', 'info');
+      this.openModal('authModal');
+      return;
+    }
+    this.mainWalletPpobDenom = 10000;
+    const balEl = document.getElementById('mainWalletPpobBalDisplay');
+    if (balEl) balEl.textContent = DB.formatIDR(user.walletBalance || 0);
+
+    const phoneInput = document.getElementById('mainWalletPpobPhoneInput');
+    if (phoneInput && user.phone) {
+      phoneInput.value = user.phone;
+    }
+
+    this.setMainWalletPpobDenom(10000);
+    this.openModal('mainWalletPpobModal');
+  },
+
+  setMainWalletPpobDenom(denom) {
+    this.mainWalletPpobDenom = Number(denom) || 10000;
+    const user = Auth.getUser();
+    const walletBal = (user && user.walletBalance) || 0;
+
+    const map = {
+      10000: 'btnMainPpob10',
+      20000: 'btnMainPpob20',
+      50000: 'btnMainPpob50',
+      100000: 'btnMainPpob100'
+    };
+    Object.keys(map).forEach(key => {
+      const el = document.getElementById(map[key]);
+      if (el) el.classList.toggle('active', Number(key) === this.mainWalletPpobDenom);
+    });
+
+    const amtEl = document.getElementById('mainWalletPpobAmountPreview');
+    if (amtEl) amtEl.textContent = `-${DB.formatIDR(this.mainWalletPpobDenom)}`;
+
+    const remEl = document.getElementById('mainWalletPpobRemBalPreview');
+    if (remEl) remEl.textContent = DB.formatIDR(Math.max(0, walletBal - this.mainWalletPpobDenom));
+
+    const btnConfirm = document.getElementById('btnConfirmMainWalletPpob');
+    if (btnConfirm) {
+      if (this.mainWalletPpobDenom > walletBal) {
+        btnConfirm.disabled = true;
+        btnConfirm.style.opacity = '0.6';
+      } else {
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+      }
+    }
+  },
+
+  submitMainWalletPpob() {
+    const user = Auth.getUser();
+    if (!user) return;
+    const walletBal = user.walletBalance || 0;
+    const amount = this.mainWalletPpobDenom || 10000;
+
+    if (amount > walletBal) {
+      this.showToast('Saldo Utama tidak mencukupi untuk nominal pulsa ini!', 'error');
+      return;
+    }
+
+    const phoneInput = document.getElementById('mainWalletPpobPhoneInput');
+    const phone = (phoneInput ? phoneInput.value : '').trim();
+    if (!phone) {
+      this.showToast('Masukkan nomor handphone tujuan pulsa!', 'error');
+      if (phoneInput) phoneInput.focus();
+      return;
+    }
+
+    const btnConfirm = document.getElementById('btnConfirmMainWalletPpob');
+    if (btnConfirm) {
+      btnConfirm.disabled = true;
+      btnConfirm.innerHTML = '<span>⏳ Mengajukan Pembelian Pulsa...</span>';
+    }
+
+    setTimeout(async () => {
+      const db = DB.get();
+      const u = (db.users || []).find(x => x.id === user.id);
+      if (!u) {
+        this.showToast('User tidak ditemukan.', 'error');
+        return;
+      }
+
+      u.walletBalance = Math.max(0, (u.walletBalance || 0) - amount);
+
+      const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
+      const tx = {
+        id: txId,
+        userId: u.id,
+        username: u.username,
+        type: 'ppob_conversion',
+        category: 'pulsa',
+        amount: amount,
+        targetNumber: phone,
+        source: 'main_wallet',
+        status: 'pending',
+        note: `Beli Pulsa dari Saldo Utama ${DB.formatIDR(amount)} (No. HP: ${phone}) - Menunggu Proses Manual Admin`,
+        createdAt: new Date().toISOString()
+      };
+
+      db.transactions = db.transactions || [];
+      db.transactions.unshift(tx);
+      DB.save(db);
+
+      if (typeof API !== 'undefined' && API.createTransaction) {
+        try {
+          await API.createTransaction(tx);
+          if (API.updateUser) await API.updateUser(u.id, { walletBalance: u.walletBalance });
+        } catch (err) {
+          console.warn('[Main Wallet PPOB] API sync warning:', err);
+        }
+      }
+
+      Auth.setUser(u);
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.innerHTML = '<span>⚡ Konfirmasi Beli Pulsa</span>';
+      }
+      this.closeModal('mainWalletPpobModal');
+      this.showToast(`Pengajuan pembelian pulsa ${DB.formatIDR(amount)} ke ${phone} berhasil diajukan dan sedang diproses manual oleh Admin!`, 'success');
+      this.renderAll();
+    }, 400);
+  },
+
+  // =========================================================================
+  // REQUIREMENT 1: KLAIM BONUS TARGET KEPEMIMPINAN KE SALDO UTAMA
+  // =========================================================================
+  async claimLeaderBonus(milestoneName) {
+    const user = Auth.getUser();
+    if (!user) {
+      this.showToast('Silakan login terlebih dahulu.', 'info');
+      return;
+    }
+    const res = await Affiliate.claimLeaderMilestone(user.id, milestoneName);
+    if (res.success) {
+      this.showToast(res.message, 'success');
+      if (res.user) {
+        Auth.setUser(res.user);
+      }
+      this.renderAll();
+      const modal = document.getElementById('leaderMilestonesModal');
+      if (modal && modal.classList.contains('active')) {
+        const updatedDownlines = Affiliate.getDownlines(user.referralCode);
+        this.renderLeaderMilestonesModalContent(updatedDownlines);
+      }
+    } else {
+      this.showToast(res.message || 'Gagal mengklaim bonus target kepemimpinan.', 'error');
+    }
+  },
+
+  openLeaderMilestonesModal() {
+    const user = Auth.getUser();
+    if (!user) {
+      this.showToast('Silakan login terlebih dahulu untuk melihat target kepemimpinan!', 'info');
+      this.openModal('authModal');
+      return;
+    }
+    const downlines = Affiliate.getDownlines(user.referralCode);
+    const curTurnEl = document.getElementById('leaderModalCurTurnover');
+    if (curTurnEl) curTurnEl.textContent = DB.formatIDR(downlines.totalTeamTurnover || 0);
+    this.renderLeaderMilestonesModalContent(downlines);
+    this.openModal('leaderMilestonesModal');
+  },
+
+  renderLeaderMilestonesModalContent(downlines) {
+    const container = document.getElementById('leaderMilestonesListContainer');
+    if (!container) return;
+    const statuses = downlines.milestonesStatus || [];
+    if (statuses.length === 0) {
+      container.innerHTML = '<div style="text-align:center; padding:15px; color:#64748B;">Tidak ada data target kepemimpinan.</div>';
+      return;
+    }
+    container.innerHTML = statuses.map(m => {
+      let actionHtml = '';
+      if (m.isClaimed) {
+        actionHtml = `
+          <button type="button" class="btn-cta-gold" disabled style="margin:0; padding:8px 12px; font-size:11px; background:#10B981; opacity:0.9; cursor:default;">
+            ✓ Sudah Diklaim (Masuk Saldo Utama)
+          </button>
+        `;
+      } else if (m.canClaim) {
+        actionHtml = `
+          <button type="button" class="btn-cta-gold" style="margin:0; padding:8px 12px; font-size:11px; background:linear-gradient(135deg, #F59E0B, #D97706); animation:pulse 2s infinite;" onclick="App.claimLeaderBonus('${escapeHtml(m.name)}')">
+            🎁 Klaim Bonus Sekarang (+${DB.formatIDR(m.reward)})
+          </button>
+        `;
+      } else {
+        actionHtml = `
+          <div style="font-size:10px; color:#94A3B8; background:rgba(0,0,0,0.25); padding:6px 10px; border-radius:8px; text-align:center;">
+            🔒 Kurang <strong>${DB.formatIDR(m.turnoverNeeded)}</strong> omset lagi
+          </div>
+        `;
+      }
+
+      const cardBg = m.isClaimed 
+        ? 'background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.05) 100%); border: 1px solid rgba(16, 185, 129, 0.3);' 
+        : m.canClaim 
+        ? 'background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.08) 100%); border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);' 
+        : 'background: #FFFFFF; border: 1px solid #E2E8F0;';
+
+      return `
+        <div style="${cardBg} border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:22px;">${m.badge}</span>
+              <div>
+                <strong style="font-size:13.5px; color:#0F172A; display:block;">${escapeHtml(m.name)}</strong>
+                <span style="font-size:10px; color:#64748B;">Target Omset: ${DB.formatIDR(m.minTurnover)}</span>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:9.5px; color:#64748B; display:block;">Bonus Reward</span>
+              <strong style="font-size:12.5px; color:#F59E0B;">+${DB.formatIDR(m.reward)}</strong>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:9.5px; color:#64748B; margin-bottom:3px;">
+              <span>Progres: ${m.progressPct}%</span>
+              <span>${DB.formatIDR(downlines.totalTeamTurnover)} / ${DB.formatIDR(m.minTurnover)}</span>
+            </div>
+            <div style="width:100%; height:6px; background:#E2E8F0; border-radius:99px; overflow:hidden;">
+              <div style="width:${m.progressPct}%; height:100%; background:${m.isReached ? '#10B981' : '#38BDF8'}; border-radius:99px; transition:width 0.3s ease;"></div>
+            </div>
+          </div>
+
+          ${actionHtml}
+        </div>
+      `;
+    }).join('');
   },
 
   openSignalDetail(signalId) {

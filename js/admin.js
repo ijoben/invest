@@ -38,7 +38,7 @@ export const Admin = {
       .filter(t => t.type === 'deposit' && t.status === 'pending').length;
 
     const pendingWithdrawalsCount = db.transactions
-      .filter(t => t.type === 'withdraw' && t.status === 'pending').length;
+      .filter(t => (t.type === 'withdraw' || t.type === 'ppob_conversion') && t.status === 'pending').length;
 
     const pendingRedemptionsCount = (db.redemptions || [])
       .filter(r => r.status === 'pending').length;
@@ -109,7 +109,7 @@ export const Admin = {
     return { success: true, message: `Deposit ${trx.id} berhasil ditolak.` };
   },
 
-  // Approve Withdrawal Request
+  // Approve Withdrawal / PPOB Request
   async approveWithdrawal(transactionId) {
     const db = DB.get();
     const trx = db.transactions.find(t => t.id === transactionId);
@@ -121,14 +121,21 @@ export const Admin = {
     trx.updatedAt = new Date().toISOString();
 
     await DB.save(db);
+    if (trx.type === 'ppob_conversion') {
+      const typeLabel = trx.category === 'pln' ? 'Token Listrik PLN' : 'Pulsa Seluler';
+      return {
+        success: true,
+        message: `Konversi PPOB ${typeLabel} ${DB.formatIDR(trx.amount)} ke ${trx.targetNumber || '-'} berhasil disetujui!`
+      };
+    }
     return {
       success: true,
       message: `Penarikan ${DB.formatIDR(trx.amount)} ke ${trx.destinationAccount} berhasil disetujui!`
     };
   },
 
-  // Reject Withdrawal Request (Refunds user balance)
-  async rejectWithdrawal(transactionId, reason = 'Data rekening tidak sesuai') {
+  // Reject Withdrawal / PPOB Request (Refunds user balance)
+  async rejectWithdrawal(transactionId, reason = 'Data rekening / nomor tujuan tidak sesuai') {
     const db = DB.get();
     const trx = db.transactions.find(t => t.id === transactionId);
     if (!trx || trx.status !== 'pending') {
@@ -138,10 +145,10 @@ export const Admin = {
     const user = db.users.find(u => u.id === trx.userId);
     if (user) {
       // Refund balance to appropriate wallet
-      if (trx.walletSource === 'Wallet Tambah Teman') {
-        user.affiliateBalance += trx.amount;
+      if (trx.walletSource === 'Wallet Tambah Teman' || trx.source === 'affiliate') {
+        user.affiliateBalance = (user.affiliateBalance || 0) + trx.amount;
       } else {
-        user.walletBalance += trx.amount;
+        user.walletBalance = (user.walletBalance || 0) + trx.amount;
       }
     }
 
@@ -150,7 +157,7 @@ export const Admin = {
     trx.updatedAt = new Date().toISOString();
 
     await DB.save(db);
-    return { success: true, message: `Penarikan ${trx.id} ditolak dan saldo telah dikembalikan ke user.` };
+    return { success: true, message: `Transaksi ${trx.type === 'ppob_conversion' ? 'konversi PPOB' : 'penarikan'} ${trx.id} ditolak dan saldo telah dikembalikan ke user.` };
   },
 
   // Save / Update Plan

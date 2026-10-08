@@ -420,6 +420,8 @@ function syncRelationalTables($pdo, $parsed) {
                     $tType = 'rabat_bonus';
                 } elseif (strpos($t['id'], 'TRX-LDR-') === 0 || stripos($t['note'] ?? '', 'Kepemimpinan') !== false) {
                     $tType = 'leader_bonus';
+                } elseif (strpos($t['id'], 'TRX-POB-') === 0 || ($t['type'] ?? '') === 'ppob_conversion') {
+                    $tType = 'ppob_conversion';
                 }
 
 
@@ -884,6 +886,8 @@ if ($action === 'get') {
                             $tType = 'rabat_bonus';
                         } elseif (strpos($tId, 'TRX-LDR-') === 0 || stripos($rowT['note'] ?? '', 'Kepemimpinan') !== false) {
                             $tType = 'leader_bonus';
+                        } elseif (strpos($tId, 'TRX-POB-') === 0) {
+                            $tType = 'ppob_conversion';
                         }
                     }
 

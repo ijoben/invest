@@ -3293,6 +3293,175 @@ html, body {
   transition: all 0.2s ease;
 }
 
+/* Variasi Warna Latar Kotak Portofolio AI Trade (Sesuai Struktur Jaringan & Kepemimpinan) */
+.trade-plan-box-item.box-modal-awal {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%) !important;
+  border: 1px solid #BFDBFE !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+.trade-plan-box-item.box-modal-awal .trade-plan-box-label { color: #1D4ED8 !important; }
+.trade-plan-box-item.box-modal-awal .trade-plan-box-value { color: #1E3A8A !important; }
+
+.trade-plan-box-item.box-profit-range {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%) !important;
+  border: 1px solid #A7F3D0 !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+}
+.trade-plan-box-item.box-profit-range .trade-plan-box-label { color: #047857 !important; }
+.trade-plan-box-item.box-profit-range .trade-plan-box-value { color: #065F46 !important; }
+
+.trade-plan-box-item.box-total-profit {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%) !important;
+  border: 1px solid #FDE68A !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
+}
+.trade-plan-box-item.box-total-profit .trade-plan-box-label { color: #B45309 !important; }
+.trade-plan-box-item.box-total-profit .trade-plan-box-value { color: #92400E !important; }
+
+.trade-plan-box-item.box-days-remaining {
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%) !important;
+  border: 1px solid #BAE6FD !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.08);
+}
+.trade-plan-box-item.box-days-remaining .trade-plan-box-label { color: #0369A1 !important; }
+.trade-plan-box-item.box-days-remaining .trade-plan-box-value { color: #075985 !important; }
+
+.trade-plan-box-item.box-contract-status {
+  background: linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%) !important;
+  border: 1px solid #E9D5FF !important;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.08);
+}
+.trade-plan-box-item.box-contract-status .trade-plan-box-label { color: #7E22CE !important; }
+.trade-plan-box-item.box-contract-status .trade-plan-box-value { color: #581C87 !important; }
+
+/* Dark mode overrides for portfolio boxes */
+[data-theme="dark"] .trade-plan-box-item.box-modal-awal {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(37, 99, 235, 0.2) 100%) !important;
+  border-color: #1E40AF !important;
+}
+[data-theme="dark"] .trade-plan-box-item.box-modal-awal .trade-plan-box-label { color: #93C5FD !important; }
+[data-theme="dark"] .trade-plan-box-item.box-modal-awal .trade-plan-box-value { color: #DBEAFE !important; }
+
+[data-theme="dark"] .trade-plan-box-item.box-profit-range {
+  background: linear-gradient(135deg, rgba(6, 95, 70, 0.35) 0%, rgba(16, 185, 129, 0.2) 100%) !important;
+  border-color: #065F46 !important;
+}
+[data-theme="dark"] .trade-plan-box-item.box-profit-range .trade-plan-box-label { color: #6EE7B7 !important; }
+[data-theme="dark"] .trade-plan-box-item.box-profit-range .trade-plan-box-value { color: #A7F3D0 !important; }
+
+[data-theme="dark"] .trade-plan-box-item.box-total-profit {
+  background: linear-gradient(135deg, rgba(146, 64, 14, 0.35) 0%, rgba(245, 158, 11, 0.2) 100%) !important;
+  border-color: #92400E !important;
+}
+[data-theme="dark"] .trade-plan-box-item.box-total-profit .trade-plan-box-label { color: #FCD34D !important; }
+[data-theme="dark"] .trade-plan-box-item.box-total-profit .trade-plan-box-value { color: #FEF3C7 !important; }
+
+[data-theme="dark"] .trade-plan-box-item.box-days-remaining {
+  background: linear-gradient(135deg, rgba(7, 89, 133, 0.35) 0%, rgba(14, 165, 233, 0.2) 100%) !important;
+  border-color: #075985 !important;
+}
+[data-theme="dark"] .trade-plan-box-item.box-days-remaining .trade-plan-box-label { color: #7DD3FC !important; }
+[data-theme="dark"] .trade-plan-box-item.box-days-remaining .trade-plan-box-value { color: #E0F2FE !important; }
+
+[data-theme="dark"] .trade-plan-box-item.box-contract-status {
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.35) 0%, rgba(168, 85, 247, 0.2) 100%) !important;
+  border-color: #6B21A8 !important;
+}
+[data-theme="dark"] .trade-plan-box-item.box-contract-status .trade-plan-box-label { color: #D8B4FE !important; }
+[data-theme="dark"] .trade-plan-box-item.box-contract-status .trade-plan-box-value { color: #F3E8FF !important; }
+
+/* PPOB Component Styles */
+.ppob-type-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border: 1.5px solid #E2E8F0;
+  background: #F8FAFC;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.ppob-type-btn.active {
+  background: #EFF6FF;
+  border-color: #3B82F6;
+  color: #1D4ED8;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+.ppob-denom-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.ppob-denom-btn {
+  padding: 11px 10px;
+  border: 1.5px solid #E2E8F0;
+  background: #FFFFFF;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+.ppob-denom-btn:hover {
+  border-color: #CBD5E1;
+}
+.ppob-denom-btn.active {
+  border-color: #F59E0B;
+  background: #FFFBEB;
+  color: #B45309;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.18);
+}
+
+.quick-ppob-banner {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+  border: 1.5px solid #FDE68A;
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.08);
+}
+.quick-ppob-banner:active {
+  transform: scale(0.99);
+}
+
+[data-theme="dark"] .ppob-type-btn {
+  background: #1E293B;
+  border-color: #334155;
+  color: #94A3B8;
+}
+[data-theme="dark"] .ppob-type-btn.active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3B82F6;
+  color: #60A5FA;
+}
+[data-theme="dark"] .ppob-denom-btn {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+[data-theme="dark"] .ppob-denom-btn.active {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #F59E0B;
+  color: #FCD34D;
+}
+[data-theme="dark"] .quick-ppob-banner {
+  background: linear-gradient(135deg, rgba(146, 64, 14, 0.25) 0%, rgba(245, 158, 11, 0.15) 100%);
+  border-color: #92400E;
+}
+
 .trade-plan-box-item.full-width {
   grid-column: span 2;
 }

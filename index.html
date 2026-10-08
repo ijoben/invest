@@ -293,6 +293,22 @@
           </div>
         </section>
 
+        <!-- Quick PPOB Pulsa Banner (Konversi Saldo Utama Manual) -->
+        <div class="quick-ppob-banner" onclick="App.openMainWalletPpobModal()" style="margin: 0 14px 12px 14px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 38px; height: 38px; border-radius: 11px; background: rgba(245, 158, 11, 0.18); display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0;">
+              📱
+            </div>
+            <div>
+              <div style="font-size: 12.5px; font-weight: 800; color: #92400E;">Beli Pulsa dari Saldo Utama</div>
+              <div style="font-size: 10px; color: #B45309;">Konversi Saldo Utama ke Pulsa (10rb, 20rb, 50rb, 100rb) · Proses Manual</div>
+            </div>
+          </div>
+          <span style="font-size: 10.5px; font-weight: 800; color: #92400E; background: #FFFFFF; padding: 4px 10px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-shrink: 0;">
+            Beli Pulsa ›
+          </span>
+        </div>
+
         <!-- 2B. GRAFIK PORTOFOLIO PERTUMBUHAN ASET & RINCIAN PROFIT 7 HARI (Requirement 2 & 3 & 4) -->
         <section class="portfolio-analytics-container">
           
@@ -978,12 +994,15 @@
             </div>
             <div style="font-size: 24px; font-weight: 800; color: #FDE89C; font-family: var(--font-mono); margin-bottom: 16px;" id="walletPageMainBal">IDR 0</div>
 
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 8px;">
               <button class="btn-cta-gold" style="flex: 1; padding: 10px;" onclick="App.openDepositModal()">
                 <span>Deposit</span>
               </button>
               <button class="btn-cta-gold" style="flex: 1; padding: 10px; background: #334155;" onclick="App.openWithdrawModal()">
                 <span>Tarik Dana</span>
+              </button>
+              <button class="btn-cta-gold" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #10B981, #059669);" onclick="App.openMainWalletPpobModal()">
+                <span>Pulsa (PPOB)</span>
               </button>
             </div>
           </div>
@@ -1265,9 +1284,17 @@
                   <span id="affLeaderProgPercent" style="font-weight:700; color:#38BDF8;">0%</span>
                 </div>
               </div>
-              <div style="margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.12); font-size:10.5px; color:#94A3B8; display:flex; align-items:center; gap:6px;">
-                <span>💡</span>
-                <span>Bonus target kepemimpinan otomatis ditransfer oleh sistem ke <strong>Saldo Utama</strong> Anda saat target omset tercapai.</span>
+              <!-- Container Tombol Klaim Target Kepemimpinan -->
+              <div id="affLeaderClaimActionWrap" style="margin-top: 10px;"></div>
+
+              <div style="margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.12); font-size:10.5px; color:#94A3B8; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span>💡</span>
+                  <span>Klaim bonus target kepemimpinan otomatis masuk ke <strong>Saldo Utama</strong>.</span>
+                </div>
+                <button type="button" onclick="App.openLeaderMilestonesModal()" style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:#FDE047; font-size:10.5px; padding:3px 9px; border-radius:6px; cursor:pointer; font-weight:700; flex-shrink:0;">
+                  Daftar Target ›
+                </button>
               </div>
             </div>
 
@@ -1834,9 +1861,12 @@
         <button type="button" class="transfer-type-btn" id="btnTransferTypeMember" onclick="App.setTransferType('member')">
           <span>👥 Antar Member (P2P)</span>
         </button>
+        <button type="button" class="transfer-type-btn" id="btnTransferTypePpob" onclick="App.setTransferType('ppob')">
+          <span>⚡ Konversi PPOB</span>
+        </button>
       </div>
 
-      <!-- Flow Card (Dynamic for Affiliate or P2P) -->
+      <!-- Flow Card (Dynamic for Affiliate, P2P, or PPOB) -->
       <div class="transfer-flow-card">
         <div class="transfer-wallet-box source">
           <div class="transfer-wallet-label">Dari (Sumber):</div>
@@ -1876,30 +1906,66 @@
         </div>
       </div>
 
-      <!-- Transfer Amount Input -->
-      <div class="form-group" style="margin-top: 14px;">
-        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
-          <span>Nominal yang Ingin Ditransfer:</span>
-          <span style="font-size: 11px; color: #C89338; font-weight: 700; cursor: pointer;" onclick="App.setTransferPercentage(100)">
-            Transfer Semua (100%)
-          </span>
-        </label>
-        <div class="transfer-amount-input-wrap">
-          <span class="currency-prefix">IDR</span>
-          <input type="number" class="form-input transfer-number-input" id="transferAmountInput" placeholder="0" min="10000" oninput="App.updateTransferPreview()">
+      <!-- Section Khusus Konversi PPOB Pulsa & Listrik (Requirement 3) -->
+      <div id="transferPpobSection" style="display: none; margin-top: 14px;">
+        <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 6px;">Pilih Layanan PPOB:</label>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <button type="button" class="ppob-type-btn active" id="btnTransferPpobCatPulsa" onclick="App.setTransferPpobCategory('pulsa')">
+            <span>📱 Pulsa Seluler</span>
+          </button>
+          <button type="button" class="ppob-type-btn" id="btnTransferPpobCatPln" onclick="App.setTransferPpobCategory('pln')">
+            <span>⚡ Token Listrik PLN</span>
+          </button>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 10.5px; color: #64748B;">
-          <span>Minimal transfer: <strong>Rp 10.000</strong></span>
-          <span id="transferMaxNotice">Maksimal: IDR 0</span>
+
+        <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 6px;">Pilih Nominal:</label>
+        <div class="ppob-denom-grid" style="margin-bottom: 12px;">
+          <button type="button" class="ppob-denom-btn active" id="btnPpobTransDenom10" onclick="App.setTransferPpobDenom(10000)">Rp 10.000</button>
+          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom20" onclick="App.setTransferPpobDenom(20000)">Rp 20.000</button>
+          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom50" onclick="App.setTransferPpobDenom(50000)">Rp 50.000</button>
+          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom100" onclick="App.setTransferPpobDenom(100000)">Rp 100.000</button>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 4px;" id="transferPpobDestLabel">
+            Nomor HP Tujuan:
+          </label>
+          <div class="transfer-amount-input-wrap">
+            <span class="currency-prefix" style="color: #64748B; font-size: 13px;" id="transferPpobDestPrefix">📞</span>
+            <input type="tel" class="form-input" id="transferPpobDestInput" placeholder="Contoh: 081234567890" style="font-size: 14px; font-weight: 700; letter-spacing: 0.5px;">
+          </div>
+          <div style="font-size: 10px; color: #64748B; margin-top: 4px;" id="transferPpobDestHint">
+            Masukkan nomor HP penerima pulsa (Semua operator).
+          </div>
         </div>
       </div>
 
-      <!-- Quick Percentage Chips -->
-      <div class="transfer-chips-grid">
-        <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(25)">25%</button>
-        <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(50)">50%</button>
-        <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(75)">75%</button>
-        <button type="button" class="transfer-chip-btn active" onclick="App.setTransferPercentage(100)">100% (Semua)</button>
+      <!-- General Transfer Amount Input (For Affiliate & P2P) -->
+      <div id="transferGeneralAmountSection">
+        <div class="form-group" style="margin-top: 14px;">
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Nominal yang Ingin Ditransfer:</span>
+            <span style="font-size: 11px; color: #C89338; font-weight: 700; cursor: pointer;" onclick="App.setTransferPercentage(100)">
+              Transfer Semua (100%)
+            </span>
+          </label>
+          <div class="transfer-amount-input-wrap">
+            <span class="currency-prefix">IDR</span>
+            <input type="number" class="form-input transfer-number-input" id="transferAmountInput" placeholder="0" min="10000" oninput="App.updateTransferPreview()">
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 10.5px; color: #64748B;">
+            <span>Minimal transfer: <strong>Rp 10.000</strong></span>
+            <span id="transferMaxNotice">Maksimal: IDR 0</span>
+          </div>
+        </div>
+
+        <!-- Quick Percentage Chips -->
+        <div class="transfer-chips-grid">
+          <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(25)">25%</button>
+          <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(50)">50%</button>
+          <button type="button" class="transfer-chip-btn" onclick="App.setTransferPercentage(75)">75%</button>
+          <button type="button" class="transfer-chip-btn active" onclick="App.setTransferPercentage(100)">100% (Semua)</button>
+        </div>
       </div>
 
       <!-- Live Calculation Breakdown Summary -->
@@ -3080,6 +3146,123 @@
           Batalkan
         </a>
       </div>
+  <!-- ======================================================================
+       MODAL: KONVERSI SALDO UTAMA KE PPOB PULSA (PROSES MANUAL)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="mainWalletPpobModal">
+    <div class="modal-sheet transfer-modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="transfer-header-icon" style="background: rgba(245, 158, 11, 0.15);">
+            <span style="font-size: 20px;">📱</span>
+          </div>
+          <div>
+            <h3 class="modal-title">Konversi Saldo ke Pulsa</h3>
+            <p class="modal-subtitle">Gunakan Saldo Utama untuk pengisian pulsa manual</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="App.closeModal('mainWalletPpobModal')">&times;</button>
+      </div>
+
+      <!-- Saldo Utama Info Card -->
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 10.5px; color: #64748B; font-weight: 600;">Saldo Utama Anda:</div>
+          <div style="font-size: 16px; font-weight: 800; color: #0F172A; font-family: var(--font-mono);" id="mainWalletPpobBalDisplay">IDR 0</div>
+        </div>
+        <span class="badge-status approved" style="font-size: 9px;">SALDO AKTIF</span>
+      </div>
+
+      <!-- Pilihan Nominal Pulsa (10rb, 20rb, 50rb, 100rb) -->
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 6px;">Pilih Nominal Pulsa:</label>
+        <div class="ppob-denom-grid">
+          <button type="button" class="ppob-denom-btn active" id="btnMainPpob10" onclick="App.setMainWalletPpobDenom(10000)">Rp 10.000</button>
+          <button type="button" class="ppob-denom-btn" id="btnMainPpob20" onclick="App.setMainWalletPpobDenom(20000)">Rp 20.000</button>
+          <button type="button" class="ppob-denom-btn" id="btnMainPpob50" onclick="App.setMainWalletPpobDenom(50000)">Rp 50.000</button>
+          <button type="button" class="ppob-denom-btn" id="btnMainPpob100" onclick="App.setMainWalletPpobDenom(100000)">Rp 100.000</button>
+        </div>
+      </div>
+
+      <!-- Input Nomor Handphone -->
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 4px;">Nomor Handphone Tujuan:</label>
+        <div class="transfer-amount-input-wrap">
+          <span class="currency-prefix" style="color: #64748B; font-size: 13px;">📞</span>
+          <input type="tel" class="form-input" id="mainWalletPpobPhoneInput" placeholder="Contoh: 081234567890" style="font-size: 14px; font-weight: 700; letter-spacing: 0.5px;">
+        </div>
+        <div style="font-size: 10px; color: #64748B; margin-top: 4px;">Pastikan nomor HP aktif dan benar (Semua operator seluler).</div>
+      </div>
+
+      <!-- Preview Card -->
+      <div class="transfer-preview-card" style="margin-bottom: 12px;">
+        <div class="transfer-preview-row">
+          <span class="preview-lbl">Potong Saldo Utama:</span>
+          <strong class="preview-val highlight" id="mainWalletPpobAmountPreview" style="color: #DC2626;">-IDR 10.000</strong>
+        </div>
+        <div class="transfer-preview-row">
+          <span class="preview-lbl">Estimasi Sisa Saldo:</span>
+          <strong class="preview-val" id="mainWalletPpobRemBalPreview">IDR 0</strong>
+        </div>
+      </div>
+
+      <!-- Notice Banner -->
+      <div class="transfer-info-banner" style="background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3);">
+        <span style="font-size: 16px;">💡</span>
+        <span style="color: #92400E; font-size: 11px; line-height: 1.35;">
+          Proses konversi pulsa ini dilakukan secara <strong>manual oleh admin</strong>. Saldo Utama akan langsung dipotong dan pengiriman pulsa segera diproses oleh admin ke nomor tujuan.
+        </span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 10px; margin-top: 16px;">
+        <button type="button" class="btn-cta-gold" style="background: #334155; flex: 1; margin: 0; padding: 12px;" onclick="App.closeModal('mainWalletPpobModal')">
+          <span>Batal</span>
+        </button>
+        <button type="button" class="btn-cta-gold" style="flex: 2; margin: 0; padding: 12px; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);" id="btnConfirmMainWalletPpob" onclick="App.submitMainWalletPpob()">
+          <span>⚡ Konfirmasi Beli Pulsa</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: DAFTAR TARGET PERINGKAT KEPEMIMPINAN TIM & KLAIM
+       ====================================================================== -->
+  <div class="modal-backdrop" id="leaderMilestonesModal">
+    <div class="modal-sheet transfer-modal-sheet" style="max-height: 85vh;">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="transfer-header-icon" style="background: rgba(245, 158, 11, 0.15);">
+            <span style="font-size: 20px;">🏆</span>
+          </div>
+          <div>
+            <h3 class="modal-title">Target Kepemimpinan Tim</h3>
+            <p class="modal-subtitle">Capai target omset & klaim bonus ke Saldo Utama</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="App.closeModal('leaderMilestonesModal')">&times;</button>
+      </div>
+
+      <!-- Current Turnover Banner -->
+      <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; color: #FFFFFF; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 10.5px; color: #94A3B8;">Akumulasi Omset Tim Anda:</div>
+          <div style="font-size: 16px; font-weight: 800; color: #38BDF8;" id="leaderModalCurTurnover">IDR 0</div>
+        </div>
+        <span class="badge-status approved" style="font-size: 9px; padding: 3px 8px;">REALTIME</span>
+      </div>
+
+      <!-- List of Milestones -->
+      <div id="leaderMilestonesListContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+        <!-- Rendered via App.renderLeaderMilestonesModalContent() -->
+      </div>
+
+      <button type="button" class="btn-cta-gold" style="width: 100%; margin: 0; padding: 11px;" onclick="App.closeModal('leaderMilestonesModal')">
+        <span>Tutup</span>
+      </button>
     </div>
   </div>
 
