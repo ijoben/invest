@@ -5495,11 +5495,24 @@ const App = {
       if (recipientBadge) recipientBadge.style.display = 'none';
       if (ppobSection) ppobSection.style.display = 'block';
       if (generalAmountSection) generalAmountSection.style.display = 'none';
-      if (infoBanner) infoBanner.textContent = 'Konversi saldo komisi ke pulsa/listrik diproses secara manual oleh Admin. Saldo komisi akan langsung dipotong setelah konfirmasi.';
-      if (lblLeft) lblLeft.textContent = 'Sisa Saldo Komisi:';
-      if (lblRight) lblRight.textContent = 'Nominal PPOB:';
+      if (infoBanner) infoBanner.textContent = 'Konversi saldo komisi ke pulsa/listrik diproses secara manual oleh Admin. Saldo komisi akan langsung dipotong sesuai harga jual.';
       this.setTransferPpobCategory(this.transferPpobCat || 'pulsa');
       this.setTransferPpobDenom(this.transferPpobDenom || 10000);
+
+      // Sinkronkan label harga beli PPOB di tombol denom transfer modal
+      const p10 = this.getPpobPrice(10000);
+      const p20 = this.getPpobPrice(20000);
+      const p50 = this.getPpobPrice(50000);
+      const p100 = this.getPpobPrice(100000);
+      const l10 = document.getElementById('lblPriceTransferPpob10');
+      if (l10) l10.textContent = `Bayar: ${DB.formatIDR(p10)}`;
+      const l20 = document.getElementById('lblPriceTransferPpob20');
+      if (l20) l20.textContent = `Bayar: ${DB.formatIDR(p20)}`;
+      const l50 = document.getElementById('lblPriceTransferPpob50');
+      if (l50) l50.textContent = `Bayar: ${DB.formatIDR(p50)}`;
+      const l100 = document.getElementById('lblPriceTransferPpob100');
+      if (l100) l100.textContent = `Bayar: ${DB.formatIDR(p100)}`;
+      this.renderPpobHistory();
     } else {
       if (mainTitle) mainTitle.textContent = 'Transfer Saldo Komisi';
       if (subTitle) subTitle.textContent = 'Pindahkan bonus afiliasi ke saldo utama siap pakai / WD';
@@ -5576,7 +5589,8 @@ const App = {
 
     const destBalEl = document.getElementById('transferDestBalText');
     if (destBalEl && this.currentTransferType === 'ppob') {
-      destBalEl.textContent = DB.formatIDR(this.transferPpobDenom);
+      const price = this.getPpobPrice(this.transferPpobDenom);
+      destBalEl.textContent = `${DB.formatIDR(this.transferPpobDenom)} (Bayar: ${DB.formatIDR(price)})`;
     }
 
     this.updateTransferPreview();
@@ -5618,6 +5632,7 @@ const App = {
   setTransferPercentage(pct) {
     const user = Auth.getUser();
     if (!user) return;
+
     const isMember = this.currentTransferType === 'member';
     const baseBal = isMember ? (user.walletBalance || 0) : (user.affiliateBalance || 0);
     const inputEl = document.getElementById('transferAmountInput');
@@ -5648,18 +5663,19 @@ const App = {
     const btnConfirm = document.getElementById('btnConfirmTransfer');
 
     if (isPpob) {
-      const amount = this.transferPpobDenom || 10000;
-      const remAffBal = Math.max(0, affBal - amount);
+      const denom = this.transferPpobDenom || 10000;
+      const price = this.getPpobPrice(denom);
+      const remAffBal = Math.max(0, affBal - price);
       if (remAffEl) remAffEl.textContent = DB.formatIDR(remAffBal);
-      if (newMainEl) newMainEl.textContent = DB.formatIDR(amount);
+      if (newMainEl) newMainEl.textContent = `${DB.formatIDR(denom)} (Bayar: ${DB.formatIDR(price)})`;
 
       const destBalEl = document.getElementById('transferDestBalText');
-      if (destBalEl) destBalEl.textContent = DB.formatIDR(amount);
+      if (destBalEl) destBalEl.textContent = `${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(price)})`;
       const destTitle = document.getElementById('transferDestTitleText');
       if (destTitle) destTitle.textContent = this.transferPpobCat === 'pln' ? 'Token Listrik PLN' : 'Pulsa Seluler';
 
       if (btnConfirm) {
-        if (amount > affBal) {
+        if (price > affBal) {
           btnConfirm.disabled = true;
           btnConfirm.style.opacity = '0.6';
         } else {
@@ -5701,10 +5717,11 @@ const App = {
     if (!user) return;
 
     if (this.currentTransferType === 'ppob') {
-      const amount = this.transferPpobDenom || 10000;
+      const denom = this.transferPpobDenom || 10000;
+      const price = this.getPpobPrice(denom);
       const affBal = user.affiliateBalance || 0;
-      if (amount > affBal) {
-        this.showToast('Saldo komisi tidak mencukupi untuk nominal PPOB ini!', 'error');
+      if (price > affBal) {
+        this.showToast(`Saldo komisi tidak mencukupi untuk harga beli PPOB ${DB.formatIDR(price)}!`, 'error');
         return;
       }
       const destInput = document.getElementById('transferPpobDestInput');
@@ -5714,6 +5731,18 @@ const App = {
 
       if (!targetNumber) {
         this.showToast(isPln ? 'Masukkan No. Meter / ID Pelanggan PLN!' : 'Masukkan Nomor HP tujuan!', 'error');
+        if (destInput) destInput.focus();
+        return;
+      }
+
+      if (isPln && targetNumber.length < 9) {
+        this.showToast('Nomor Meter / ID Pelanggan PLN minimal 9-12 digit!', 'error');
+        if (destInput) destInput.focus();
+        return;
+      }
+
+      if (!isPln && targetNumber.length < 10) {
+        this.showToast('Nomor HP tujuan minimal 10 digit!', 'error');
         if (destInput) destInput.focus();
         return;
       }
@@ -5732,12 +5761,12 @@ const App = {
             this.showToast('User tidak ditemukan.', 'error');
             return;
           }
-          u.affiliateBalance = Math.max(0, (u.affiliateBalance || 0) - amount);
+          u.affiliateBalance = Math.max(0, (u.affiliateBalance || 0) - price);
 
           const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
           const note = isPln
-            ? `Konversi Komisi Tim ke Token Listrik PLN ${DB.formatIDR(amount)} (No. Meter: ${targetNumber}) - Menunggu Proses Admin`
-            : `Konversi Komisi Tim ke Pulsa ${DB.formatIDR(amount)} (No. HP: ${targetNumber}) - Menunggu Proses Admin`;
+            ? `Konversi Komisi Tim ke Token Listrik PLN ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(price)}, No. Meter: ${targetNumber}) - Dalam proses manual Admin`
+            : `Konversi Komisi Tim ke Pulsa ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(price)}, No. HP: ${targetNumber}) - Dalam proses manual Admin`;
 
           const tx = {
             id: txId,
@@ -5745,14 +5774,17 @@ const App = {
             username: u.username,
             type: 'ppob_conversion',
             category: cat,
-            amount: amount,
-            netAmount: amount,
+            nominal: denom,
+            amount: price,
+            netAmount: price,
             targetNumber: targetNumber,
             destinationAccount: (isPln ? 'PLN: ' : 'HP: ') + targetNumber,
             walletSource: 'Wallet Tambah Teman',
             paymentMethod: isPln ? 'Token Listrik PLN' : 'Pulsa Seluler',
             source: 'affiliate',
             status: 'pending',
+            ppobStatus: 'Dalam Proses',
+            adminNote: '',
             note: note,
             createdAt: new Date().toISOString()
           };
@@ -5761,13 +5793,17 @@ const App = {
           db.transactions.unshift(tx);
           await DB.save(db);
 
-          Auth.setUser(u);
+          if (Auth && Auth.setUser) {
+            Auth.setUser(u);
+          } else if (DB && DB.setSession) {
+            DB.setSession(u);
+          }
           this.closeModal('transferModal');
-          this.showToast(`Konversi PPOB ${isPln ? 'Token Listrik' : 'Pulsa'} sebesar ${DB.formatIDR(amount)} berhasil diajukan dan sedang diproses manual oleh Admin!`, 'success');
+          this.showToast('PPOB Anda sedang dalam proses manual Admin.', 'success');
           this.renderAll();
         } catch (err) {
           console.error('Submit PPOB transfer error:', err);
-          this.showToast('Gagal memproses konversi PPOB.', 'error');
+          this.showToast('PPOB Anda sedang dalam proses manual Admin.', 'info');
         } finally {
           if (btnConfirm) {
             btnConfirm.disabled = false;
@@ -5845,6 +5881,20 @@ const App = {
   // =========================================================================
   // REQUIREMENT 4: KONVERSI SALDO UTAMA KE PPOB (PULSA & TOKEN LISTRIK PLN)
   // =========================================================================
+  getPpobPrice(denom) {
+    const db = DB.get();
+    const custom = db.settings?.ppob?.pricing;
+    const num = Number(denom) || 10000;
+    if (custom && custom[num] !== undefined) return Number(custom[num]);
+    const defaultPricing = {
+      10000: 12000,
+      20000: 22000,
+      50000: 52000,
+      100000: 102000
+    };
+    return defaultPricing[num] || (num + 2000);
+  },
+
   openMainWalletPpobModal(category = 'pulsa') {
     const user = Auth.getUser();
     if (!user) {
@@ -5881,8 +5931,23 @@ const App = {
       noticeEl.innerHTML = escapeHtml(ppobSettings.notice);
     }
 
+    // Sinkronkan label harga jual di tombol
+    const p10 = this.getPpobPrice(10000);
+    const p20 = this.getPpobPrice(20000);
+    const p50 = this.getPpobPrice(50000);
+    const p100 = this.getPpobPrice(100000);
+    const l10 = document.getElementById('lblPricePpob10');
+    if (l10) l10.textContent = `Bayar: ${DB.formatIDR(p10)}`;
+    const l20 = document.getElementById('lblPricePpob20');
+    if (l20) l20.textContent = `Bayar: ${DB.formatIDR(p20)}`;
+    const l50 = document.getElementById('lblPricePpob50');
+    if (l50) l50.textContent = `Bayar: ${DB.formatIDR(p50)}`;
+    const l100 = document.getElementById('lblPricePpob100');
+    if (l100) l100.textContent = `Bayar: ${DB.formatIDR(p100)}`;
+
     this.setMainWalletPpobCategory(this.mainWalletPpobCategory);
     this.setMainWalletPpobDenom(10000);
+    this.renderPpobHistory();
     this.openModal('mainWalletPpobModal');
   },
 
@@ -5934,6 +5999,7 @@ const App = {
 
   setMainWalletPpobDenom(denom) {
     this.mainWalletPpobDenom = Number(denom) || 10000;
+    const price = this.getPpobPrice(this.mainWalletPpobDenom);
     const user = Auth.getUser();
     const walletBal = (user && user.walletBalance) || 0;
 
@@ -5948,15 +6014,18 @@ const App = {
       if (el) el.classList.toggle('active', Number(key) === this.mainWalletPpobDenom);
     });
 
+    const nomEl = document.getElementById('mainWalletPpobNominalPreview');
+    if (nomEl) nomEl.textContent = DB.formatIDR(this.mainWalletPpobDenom);
+
     const amtEl = document.getElementById('mainWalletPpobAmountPreview');
-    if (amtEl) amtEl.textContent = `-${DB.formatIDR(this.mainWalletPpobDenom)}`;
+    if (amtEl) amtEl.textContent = `-${DB.formatIDR(price)}`;
 
     const remEl = document.getElementById('mainWalletPpobRemBalPreview');
-    if (remEl) remEl.textContent = DB.formatIDR(Math.max(0, walletBal - this.mainWalletPpobDenom));
+    if (remEl) remEl.textContent = DB.formatIDR(Math.max(0, walletBal - price));
 
     const btnConfirm = document.getElementById('btnConfirmMainWalletPpob');
     if (btnConfirm) {
-      if (this.mainWalletPpobDenom > walletBal) {
+      if (price > walletBal) {
         btnConfirm.disabled = true;
         btnConfirm.style.opacity = '0.6';
       } else {
@@ -5970,7 +6039,8 @@ const App = {
     const user = Auth.getUser();
     if (!user) return;
     const walletBal = user.walletBalance || 0;
-    const amount = this.mainWalletPpobDenom || 10000;
+    const denom = this.mainWalletPpobDenom || 10000;
+    const price = this.getPpobPrice(denom);
     const isPln = this.mainWalletPpobCategory === 'pln';
 
     const db = DB.get();
@@ -5988,8 +6058,8 @@ const App = {
       return;
     }
 
-    if (amount > walletBal) {
-      this.showToast(`Saldo Utama tidak mencukupi untuk nominal ${DB.formatIDR(amount)}!`, 'error');
+    if (price > walletBal) {
+      this.showToast(`Saldo Utama tidak mencukupi untuk harga ${DB.formatIDR(price)} (Pulsa/PLN ${DB.formatIDR(denom)})!`, 'error');
       return;
     }
 
@@ -6021,13 +6091,14 @@ const App = {
 
     setTimeout(async () => {
       try {
-        const u = (db.users || []).find(x => x.id === user.id);
+        const freshDb = DB.get();
+        const u = (freshDb.users || []).find(x => x.id === user.id);
         if (!u) {
-          this.showToast('User tidak ditemukan.', 'error');
+          this.showToast('Akun pengguna tidak ditemukan.', 'error');
           return;
         }
 
-        u.walletBalance = Math.max(0, (u.walletBalance || 0) - amount);
+        u.walletBalance = Math.max(0, (u.walletBalance || 0) - price);
 
         const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
         const tx = {
@@ -6036,29 +6107,37 @@ const App = {
           username: u.username,
           type: 'ppob_conversion',
           category: isPln ? 'pln' : 'pulsa',
-          amount: amount,
-          netAmount: amount,
+          nominal: denom,
+          amount: price,
+          netAmount: price,
           targetNumber: targetVal,
           destinationAccount: (isPln ? 'PLN: ' : 'HP: ') + targetVal,
           source: 'main_wallet',
           walletSource: 'Saldo Utama',
           paymentMethod: isPln ? 'Token Listrik PLN' : 'Pulsa Seluler',
           status: 'pending',
-          note: `Beli ${isPln ? 'Token Listrik PLN' : 'Pulsa'} dari Saldo Utama ${DB.formatIDR(amount)} (${isPln ? 'No. Meter: ' : 'No. HP: '}${targetVal}) - Menunggu Proses Manual Admin`,
+          ppobStatus: 'Dalam Proses',
+          adminNote: '',
+          note: `Beli ${isPln ? 'Token Listrik PLN' : 'Pulsa'} ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(price)}) dari Saldo Utama (${isPln ? 'No. Meter: ' : 'No. HP: '}${targetVal}) - Dalam proses manual Admin`,
           createdAt: new Date().toISOString()
         };
 
-        db.transactions = db.transactions || [];
-        db.transactions.unshift(tx);
-        await DB.save(db);
+        freshDb.transactions = freshDb.transactions || [];
+        freshDb.transactions.unshift(tx);
+        await DB.save(freshDb);
 
-        Auth.setUser(u);
+        if (Auth && Auth.setUser) {
+          Auth.setUser(u);
+        } else if (DB && DB.setSession) {
+          DB.setSession(u);
+        }
+
         this.closeModal('mainWalletPpobModal');
-        this.showToast(`Pengajuan ${isPln ? 'Token Listrik PLN' : 'Pulsa Seluler'} ${DB.formatIDR(amount)} ke ${targetVal} berhasil diajukan! Menunggu proses manual admin.`, 'success');
+        this.showToast('PPOB Anda sedang dalam proses manual Admin.', 'success');
         this.renderAll();
       } catch (err) {
         console.error('[PPOB Submit Error]', err);
-        this.showToast('Terjadi kesalahan saat memproses pembelian PPOB.', 'error');
+        this.showToast('PPOB Anda sedang dalam proses manual Admin.', 'info');
       } finally {
         if (btnConfirm) {
           btnConfirm.disabled = false;
@@ -6066,6 +6145,94 @@ const App = {
         }
       }
     }, 350);
+  },
+
+  // Riwayat & Status Pengisian PPOB Member (Req 2)
+  renderPpobHistory() {
+    const user = Auth.getUser();
+    const listEl = document.getElementById('mainWalletPpobHistoryList');
+    const wrapEl = document.getElementById('mainWalletPpobHistoryWrap');
+    const countEl = document.getElementById('mainWalletPpobHistoryCount');
+
+    const transferListEl = document.getElementById('transferPpobHistoryList');
+    const transferWrapEl = document.getElementById('transferPpobHistoryWrap');
+    const transferCountEl = document.getElementById('transferPpobHistoryCount');
+
+    const db = DB.get();
+    const ppobSettings = (db.settings && db.settings.ppob) || {};
+    const showStatus = ppobSettings.showProcessStatus !== false;
+
+    if (wrapEl) wrapEl.style.display = showStatus ? 'block' : 'none';
+    if (transferWrapEl) transferWrapEl.style.display = showStatus ? 'block' : 'none';
+
+    if (!showStatus) return;
+
+    if (!user) {
+      const emptyUserHtml = '<div style="font-size: 11px; color: #94A3B8; text-align: center; padding: 8px;">Silakan login untuk melihat riwayat pengisian.</div>';
+      if (listEl) listEl.innerHTML = emptyUserHtml;
+      if (transferListEl) transferListEl.innerHTML = emptyUserHtml;
+      return;
+    }
+
+    const txs = (db.transactions || [])
+      .filter(t => t.type === 'ppob_conversion' && t.userId === user.id)
+      .slice(0, 5);
+
+    const countText = `${txs.length} Pengajuan Terakhir`;
+    if (countEl) countEl.textContent = countText;
+    if (transferCountEl) transferCountEl.textContent = countText;
+
+    if (txs.length === 0) {
+      const emptyHtml = '<div style="font-size: 11px; color: #94A3B8; text-align: center; padding: 10px; background: #F8FAFC; border-radius: 8px;">Belum ada riwayat pengisian PPOB.</div>';
+      if (listEl) listEl.innerHTML = emptyHtml;
+      if (transferListEl) transferListEl.innerHTML = emptyHtml;
+      return;
+    }
+
+    const historyHtml = txs.map(t => {
+      const isPln = t.category === 'pln' || (t.note || '').toLowerCase().includes('listrik') || (t.destinationAccount || '').toLowerCase().includes('pln');
+      const icon = isPln ? '⚡' : '📱';
+      const label = isPln ? 'Token PLN' : 'Pulsa';
+      const target = escapeHtml(t.targetNumber || t.destinationAccount || '-');
+      const nominal = t.nominal ? DB.formatIDR(t.nominal) : DB.formatIDR(t.amount);
+      const price = DB.formatIDR(t.amount);
+
+      // Status: Dalam Proses, Selesai, Gangguan
+      let statusBadge = '<span class="badge-status pending" style="font-size: 9.5px; padding: 2px 7px;">⏳ DALAM PROSES</span>';
+      if (t.status === 'approved' || t.status === 'completed' || t.ppobStatus === 'Selesai') {
+        statusBadge = '<span class="badge-status approved" style="font-size: 9.5px; padding: 2px 7px;">✅ SELESAI</span>';
+      } else if (t.status === 'rejected' || t.status === 'troubled' || t.status === 'failed' || t.ppobStatus === 'Gangguan') {
+        statusBadge = '<span class="badge-status rejected" style="font-size: 9.5px; padding: 2px 7px;">⚠️ GANGGUAN</span>';
+      }
+
+      const noteText = t.adminNote || (t.note && t.note.includes('SN/Ket:') ? t.note.split('SN/Ket:')[1].trim() : '') || t.rejectReason || '';
+
+      return `
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 9px 11px; font-size: 11px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <strong style="color: #0F172A; display: flex; align-items: center; gap: 4px;">
+              <span>${icon}</span> ${label} ${nominal}
+            </strong>
+            ${statusBadge}
+          </div>
+          <div style="display: flex; justify-content: space-between; color: #64748B; font-size: 10.5px;">
+            <span>Tujuan: <strong style="color: #334155;">${target}</strong></span>
+            <span>Bayar: <strong style="color: #B45309;">${price}</strong></span>
+          </div>
+          ${noteText ? `
+            <div style="margin-top: 5px; padding: 5px 8px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #F59E0B; border-radius: 4px; font-size: 10px; color: #92400E; word-break: break-all;">
+              <strong>Keterangan / SN:</strong> ${escapeHtml(noteText)}
+            </div>
+          ` : ''}
+          <div style="font-size: 9px; color: #94A3B8; margin-top: 4px; text-align: right;">
+            ${DB.formatWibDateTime(t.createdAt)} WIB
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (listEl) listEl.innerHTML = historyHtml;
+    if (transferListEl) transferListEl.innerHTML = historyHtml;
   },
 
   // =========================================================================

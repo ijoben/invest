@@ -20,6 +20,13 @@ export const Auth = {
     return DB.getCurrentUser();
   },
 
+  setUser(user) {
+    if (user && DB.setSession) {
+      DB.setSession(user);
+    }
+    return user;
+  },
+
   getSessionToken() {
     try {
       return (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : null) ||

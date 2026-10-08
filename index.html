@@ -1931,12 +1931,24 @@
           </button>
         </div>
 
-        <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 6px;">Pilih Nominal:</label>
+        <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 6px;">Pilih Nominal &amp; Harga Jual:</label>
         <div class="ppob-denom-grid" style="margin-bottom: 12px;">
-          <button type="button" class="ppob-denom-btn active" id="btnPpobTransDenom10" onclick="App.setTransferPpobDenom(10000)">Rp 10.000</button>
-          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom20" onclick="App.setTransferPpobDenom(20000)">Rp 20.000</button>
-          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom50" onclick="App.setTransferPpobDenom(50000)">Rp 50.000</button>
-          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom100" onclick="App.setTransferPpobDenom(100000)">Rp 100.000</button>
+          <button type="button" class="ppob-denom-btn active" id="btnPpobTransDenom10" onclick="App.setTransferPpobDenom(10000)">
+            <span style="display: block; font-size: 13px; font-weight: 800;">10.000</span>
+            <span style="display: block; font-size: 9.5px; color: #B45309; font-weight: 700;" id="lblPriceTransferPpob10">Bayar: Rp 12.000</span>
+          </button>
+          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom20" onclick="App.setTransferPpobDenom(20000)">
+            <span style="display: block; font-size: 13px; font-weight: 800;">20.000</span>
+            <span style="display: block; font-size: 9.5px; color: #B45309; font-weight: 700;" id="lblPriceTransferPpob20">Bayar: Rp 22.000</span>
+          </button>
+          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom50" onclick="App.setTransferPpobDenom(50000)">
+            <span style="display: block; font-size: 13px; font-weight: 800;">50.000</span>
+            <span style="display: block; font-size: 9.5px; color: #B45309; font-weight: 700;" id="lblPriceTransferPpob50">Bayar: Rp 52.000</span>
+          </button>
+          <button type="button" class="ppob-denom-btn" id="btnPpobTransDenom100" onclick="App.setTransferPpobDenom(100000)">
+            <span style="display: block; font-size: 13px; font-weight: 800;">100.000</span>
+            <span style="display: block; font-size: 9.5px; color: #B45309; font-weight: 700;" id="lblPriceTransferPpob100">Bayar: Rp 102.000</span>
+          </button>
         </div>
 
         <div class="form-group" style="margin-bottom: 8px;">
@@ -1950,6 +1962,15 @@
           <div style="font-size: 10px; color: #64748B; margin-top: 4px;" id="transferPpobDestHint">
             Masukkan nomor HP penerima pulsa (Semua operator).
           </div>
+        </div>
+
+        <!-- Riwayat & Status Pengisian PPOB dari Komisi (Req 2) -->
+        <div id="transferPpobHistoryWrap" style="margin-top: 14px; border-top: 1px dashed #E2E8F0; padding-top: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" style="font-weight: 700; color: #0F172A; margin: 0; font-size: 11.5px;">Status Proses Pengisian Terakhir:</label>
+            <span style="font-size: 10px; color: #64748B;" id="transferPpobHistoryCount">5 Pengajuan</span>
+          </div>
+          <div id="transferPpobHistoryList" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;"></div>
         </div>
       </div>
 
@@ -3205,12 +3226,24 @@
 
       <!-- Pilihan Nominal Pulsa/PLN (10rb, 20rb, 50rb, 100rb) -->
       <div class="form-group" style="margin-bottom: 12px;">
-        <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 6px;">Pilih Nominal:</label>
+        <label class="form-label" style="font-weight: 700; color: #0F172A; margin-bottom: 6px;">Pilih Nominal &amp; Harga Jual:</label>
         <div class="ppob-denom-grid">
-          <button type="button" class="ppob-denom-btn active" id="btnMainPpob10" onclick="App.setMainWalletPpobDenom(10000)">Rp 10.000</button>
-          <button type="button" class="ppob-denom-btn" id="btnMainPpob20" onclick="App.setMainWalletPpobDenom(20000)">Rp 20.000</button>
-          <button type="button" class="ppob-denom-btn" id="btnMainPpob50" onclick="App.setMainWalletPpobDenom(50000)">Rp 50.000</button>
-          <button type="button" class="ppob-denom-btn" id="btnMainPpob100" onclick="App.setMainWalletPpobDenom(100000)">Rp 100.000</button>
+          <button type="button" class="ppob-denom-btn active" id="btnMainPpob10" onclick="App.setMainWalletPpobDenom(10000)">
+            <span style="display: block; font-size: 13.5px; font-weight: 800;">10.000</span>
+            <span style="display: block; font-size: 10px; color: #B45309; font-weight: 700; margin-top: 2px;" id="lblPricePpob10">Bayar: Rp 12.000</span>
+          </button>
+          <button type="button" class="ppob-denom-btn" id="btnMainPpob20" onclick="App.setMainWalletPpobDenom(20000)">
+            <span style="display: block; font-size: 13.5px; font-weight: 800;">20.000</span>
+            <span style="display: block; font-size: 10px; color: #B45309; font-weight: 700; margin-top: 2px;" id="lblPricePpob20">Bayar: Rp 22.000</span>
+          </button>
+          <button type="button" class="ppob-denom-btn" id="btnMainPpob50" onclick="App.setMainWalletPpobDenom(50000)">
+            <span style="display: block; font-size: 13.5px; font-weight: 800;">50.000</span>
+            <span style="display: block; font-size: 10px; color: #B45309; font-weight: 700; margin-top: 2px;" id="lblPricePpob50">Bayar: Rp 52.000</span>
+          </button>
+          <button type="button" class="ppob-denom-btn" id="btnMainPpob100" onclick="App.setMainWalletPpobDenom(100000)">
+            <span style="display: block; font-size: 13.5px; font-weight: 800;">100.000</span>
+            <span style="display: block; font-size: 10px; color: #B45309; font-weight: 700; margin-top: 2px;" id="lblPricePpob100">Bayar: Rp 102.000</span>
+          </button>
         </div>
       </div>
 
@@ -3227,8 +3260,12 @@
       <!-- Preview Card -->
       <div class="transfer-preview-card" style="margin-bottom: 12px;">
         <div class="transfer-preview-row">
-          <span class="preview-lbl">Potong Saldo Utama:</span>
-          <strong class="preview-val highlight" id="mainWalletPpobAmountPreview" style="color: #DC2626;">-IDR 10.000</strong>
+          <span class="preview-lbl">Nominal Pulsa/PLN:</span>
+          <strong class="preview-val" id="mainWalletPpobNominalPreview" style="color: #0F172A;">IDR 10.000</strong>
+        </div>
+        <div class="transfer-preview-row">
+          <span class="preview-lbl">Harga Jual (Potong Saldo):</span>
+          <strong class="preview-val highlight" id="mainWalletPpobAmountPreview" style="color: #DC2626;">-IDR 12.000</strong>
         </div>
         <div class="transfer-preview-row">
           <span class="preview-lbl">Estimasi Sisa Saldo:</span>
@@ -3245,13 +3282,26 @@
       </div>
 
       <!-- Action Buttons -->
-      <div style="display: flex; gap: 10px; margin-top: 16px;">
+      <div style="display: flex; gap: 10px; margin-top: 14px;">
         <button type="button" class="btn-cta-gold" style="background: #334155; flex: 1; margin: 0; padding: 12px;" onclick="App.closeModal('mainWalletPpobModal')">
           <span>Batal</span>
         </button>
         <button type="button" class="btn-cta-gold" style="flex: 2; margin: 0; padding: 12px; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);" id="btnConfirmMainWalletPpob" onclick="App.submitMainWalletPpob()">
           <span>⚡ Konfirmasi Beli Pulsa</span>
         </button>
+      </div>
+
+      <!-- Riwayat & Keterangan Status Proses Pengisian PPOB Member -->
+      <div id="mainWalletPpobHistoryWrap" style="margin-top: 16px; border-top: 1px dashed #CBD5E1; padding-top: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 11.5px; font-weight: 800; color: #0F172A; display: flex; align-items: center; gap: 5px;">
+            <span>📋</span> Riwayat &amp; Status Pengisian PPOB
+          </span>
+          <span style="font-size: 10px; color: #64748B;" id="mainWalletPpobHistoryCount">Pembaruan Realtime</span>
+        </div>
+        <div id="mainWalletPpobHistoryList" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+          <!-- Rendered dynamically via JS App.renderPpobHistory() -->
+        </div>
       </div>
     </div>
   </div>

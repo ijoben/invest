@@ -269,8 +269,9 @@ export const AdminPage = {
     // 2. Deposit Table
     this.renderDeposits(db);
 
-    // 3. Withdraw Table
+    // 3. Withdraw Table & PPOB Settings
     this.renderWithdrawals(db);
+    this.renderPpobSettings(db);
 
     // 4. Plans Table, Master Market & Weekend Profit Settings
     this.renderPlans(db);
@@ -396,6 +397,8 @@ export const AdminPage = {
       let walletSourceHtml = escapeHtml(t.walletSource || 'Wallet Balance');
       let destHtml = escapeHtml(t.destinationAccount || t.paymentMethod || '-');
       let amountHtml = `<strong style="color:#EF4444;">${DB.formatIDR(t.netAmount || t.amount)}</strong> (Total: ${DB.formatIDR(t.amount)})`;
+      let statusBadgeHtml = `<span class="badge-status ${escapeHtml(t.status)}">${escapeHtml(t.status.toUpperCase())}</span>`;
+      let actionHtml = '';
 
       if (isPpob) {
         const isPln = t.category === 'pln' || (t.note && t.note.toLowerCase().includes('listrik')) || (t.destinationAccount && t.destinationAccount.toLowerCase().includes('pln'));
@@ -404,10 +407,43 @@ export const AdminPage = {
           : '<span class="badge-status approved" style="font-size:9.5px; background:rgba(245,158,11,0.15); color:#D97706; border:1px solid rgba(245,158,11,0.3);">Saldo Utama (PPOB)</span>';
         
         destHtml = isPln 
-          ? `<span style="display:inline-flex; align-items:center; gap:4px;">⚡ <strong>Token PLN:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>` 
-          : `<span style="display:inline-flex; align-items:center; gap:4px;">📱 <strong>Pulsa:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>`;
+          ? `<span style="display:inline-flex; align-items:center; gap:4px;">⚡ <strong>PLN:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>` 
+          : `<span style="display:inline-flex; align-items:center; gap:4px;">📱 <strong>HP:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>`;
         
-        amountHtml = `<strong style="color:#D97706;">${DB.formatIDR(t.amount)}</strong> <span style="font-size:10px; color:#64748B;">(PPOB)</span>`;
+        const nominalStr = t.nominal ? DB.formatIDR(t.nominal) : DB.formatIDR(t.amount);
+        amountHtml = `<strong style="color:#D97706;">${nominalStr}</strong> <span style="font-size:10px; color:#64748B;">(Bayar: ${DB.formatIDR(t.amount)})</span>`;
+
+        if (t.status === 'approved' || t.ppobStatus === 'Selesai') {
+          statusBadgeHtml = `<span class="badge-status approved" style="font-size:10px;">✅ SELESAI</span>`;
+        } else if (t.status === 'rejected' || t.ppobStatus === 'Gangguan') {
+          statusBadgeHtml = `<span class="badge-status rejected" style="font-size:10px;">⚠️ GANGGUAN</span>`;
+        } else {
+          statusBadgeHtml = `<span class="badge-status pending" style="font-size:10px;">⏳ DALAM PROSES</span>`;
+        }
+
+        const noteSn = t.adminNote || (t.note && t.note.includes('SN/Ket:') ? t.note.split('SN/Ket:')[1].trim() : '') || t.rejectReason || '';
+        if (noteSn) {
+          statusBadgeHtml += `<div style="font-size:9.5px; color:#38BDF8; margin-top:3px; word-break:break-all;"><strong>SN/Ket:</strong> ${escapeHtml(noteSn)}</div>`;
+        }
+
+        actionHtml = `
+          <div class="btn-action-group" style="flex-wrap: wrap; gap: 4px;">
+            <button class="btn-admin-action edit" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.5); font-weight: 700; font-size: 10.5px; padding: 4px 8px;" onclick="AdminPage.openPpobProcessModal('${escapeHtml(t.id)}')">
+              ⚙️ Proses PPOB
+            </button>
+            ${t.status === 'pending' ? `
+              <button class="btn-admin-action approve" style="font-size: 10px; padding: 4px 6px;" onclick="AdminPage.approveWithdraw('${escapeHtml(t.id)}')">✓ Selesai</button>
+              <button class="btn-admin-action reject" style="font-size: 10px; padding: 4px 6px;" onclick="AdminPage.rejectWithdraw('${escapeHtml(t.id)}')">✕ Gangguan</button>
+            ` : ''}
+          </div>
+        `;
+      } else {
+        actionHtml = t.status === 'pending' ? `
+          <div class="btn-action-group">
+            <button class="btn-admin-action approve" onclick="AdminPage.approveWithdraw('${escapeHtml(t.id)}')">✓ Setujui</button>
+            <button class="btn-admin-action reject" onclick="AdminPage.rejectWithdraw('${escapeHtml(t.id)}')">✕ Tolak</button>
+          </div>
+        ` : '<span style="color:#64748B;">Selesai</span>';
       }
 
       return `
@@ -418,15 +454,8 @@ export const AdminPage = {
           <td>${walletSourceHtml}</td>
           <td>${destHtml}</td>
           <td>${amountHtml}</td>
-          <td><span class="badge-status ${escapeHtml(t.status)}">${escapeHtml(t.status.toUpperCase())}</span></td>
-          <td>
-            ${t.status === 'pending' ? `
-              <div class="btn-action-group">
-                <button class="btn-admin-action approve" onclick="AdminPage.approveWithdraw('${escapeHtml(t.id)}')">✓ Setujui</button>
-                <button class="btn-admin-action reject" onclick="AdminPage.rejectWithdraw('${escapeHtml(t.id)}')">✕ Tolak</button>
-              </div>
-            ` : '<span style="color:#64748B;">Selesai</span>'}
-          </td>
+          <td>${statusBadgeHtml}</td>
+          <td>${actionHtml}</td>
         </tr>
       `;
     }).join('');
@@ -1674,13 +1703,178 @@ export const AdminPage = {
   },
 
   async rejectWithdraw(id) {
-    const reason = prompt('Masukkan alasan penolakan penarikan (saldo akan di-refund):', 'Data rekening tujuan tidak sesuai');
+    const reason = prompt('Masukkan alasan penolakan penarikan / gangguan PPOB (saldo akan di-refund):', 'Data nomor / rekening tidak sesuai atau gangguan jaringan');
     if (reason === null) return;
     const res = await Admin.rejectWithdrawal(id, reason);
     if (res.success) {
       this.showToast(res.message, 'info');
       this.renderAll();
     }
+  },
+
+  // 3.1 PPOB Process Modal (Req 2)
+  openPpobProcessModal(trxId) {
+    const db = DB.get();
+    const trx = (db.transactions || []).find(t => t.id === trxId);
+    if (!trx) {
+      this.showToast('Transaksi PPOB tidak ditemukan!', 'error');
+      return;
+    }
+
+    const isPln = trx.category === 'pln' || (trx.note || '').toLowerCase().includes('listrik') || (trx.destinationAccount || '').toLowerCase().includes('pln');
+    const serviceLabel = isPln ? '⚡ Token Listrik PLN' : '📱 Pulsa Seluler';
+    const target = trx.targetNumber || trx.destinationAccount || '-';
+    const denom = trx.nominal ? DB.formatIDR(trx.nominal) : DB.formatIDR(trx.amount);
+    const price = DB.formatIDR(trx.amount || trx.netAmount);
+
+    const idInput = document.getElementById('adminPpobTrxId');
+    if (idInput) idInput.value = trx.id;
+
+    const idText = document.getElementById('adminPpobDetailId');
+    if (idText) idText.textContent = trx.id;
+
+    const userText = document.getElementById('adminPpobDetailUser');
+    if (userText) userText.textContent = `@${trx.username || 'User'}`;
+
+    const targetText = document.getElementById('adminPpobDetailTarget');
+    if (targetText) targetText.textContent = `${serviceLabel} (${target})`;
+
+    const amountText = document.getElementById('adminPpobDetailAmount');
+    if (amountText) amountText.textContent = `${denom} (Potong Saldo: ${price})`;
+
+    const statusSelect = document.getElementById('adminPpobStatusSelect');
+    if (statusSelect) {
+      if (trx.status === 'approved' || trx.ppobStatus === 'Selesai') {
+        statusSelect.value = 'approved';
+      } else if (trx.status === 'rejected' || trx.ppobStatus === 'Gangguan') {
+        statusSelect.value = 'rejected';
+      } else {
+        statusSelect.value = 'pending';
+      }
+    }
+
+    const noteInput = document.getElementById('adminPpobNoteInput');
+    if (noteInput) {
+      noteInput.value = trx.adminNote || (trx.note && trx.note.includes('SN/Ket:') ? trx.note.split('SN/Ket:')[1].trim() : '') || trx.rejectReason || '';
+    }
+
+    this.openModal('adminPpobProcessModal');
+  },
+
+  async savePpobProcessModal() {
+    const trxId = document.getElementById('adminPpobTrxId')?.value;
+    const newStatus = document.getElementById('adminPpobStatusSelect')?.value || 'pending';
+    const note = (document.getElementById('adminPpobNoteInput')?.value || '').trim();
+
+    if (!trxId) return;
+
+    const db = DB.get();
+    const trx = (db.transactions || []).find(t => t.id === trxId);
+    if (!trx) {
+      this.showToast('Transaksi tidak ditemukan!', 'error');
+      return;
+    }
+
+    const oldStatus = trx.status;
+    trx.status = newStatus;
+    trx.adminNote = note;
+    if (note) {
+      const baseNote = (trx.note || '').split(' | SN/Ket:')[0];
+      trx.note = `${baseNote} | SN/Ket: ${note}`;
+    }
+    trx.updatedAt = new Date().toISOString();
+
+    if (newStatus === 'approved') {
+      trx.ppobStatus = 'Selesai';
+    } else if (newStatus === 'rejected') {
+      trx.ppobStatus = 'Gangguan';
+      trx.rejectReason = note || 'Gangguan pengisian PPOB oleh operator';
+
+      // Refund saldo jika sebelumnya bukan rejected dan belum pernah di-refund
+      if (oldStatus !== 'rejected' && !trx.isRefunded) {
+        const u = (db.users || []).find(x => x.id === trx.userId);
+        if (u) {
+          const refundAmount = trx.amount || trx.netAmount || 0;
+          if (trx.walletSource === 'Wallet Tambah Teman' || trx.source === 'affiliate') {
+            u.affiliateBalance = (u.affiliateBalance || 0) + refundAmount;
+          } else {
+            u.walletBalance = (u.walletBalance || 0) + refundAmount;
+          }
+          trx.isRefunded = true;
+          this.showToast(`Saldo ${DB.formatIDR(refundAmount)} telah otomatis di-refund ke user!`, 'info');
+        }
+      }
+    } else {
+      trx.ppobStatus = 'Dalam Proses';
+    }
+
+    await DB.save(db);
+    this.closeModal('adminPpobProcessModal');
+    this.showToast(`Status transaksi PPOB ${trx.id} berhasil diperbarui!`, 'success');
+    this.renderAll();
+  },
+
+  // 3.2 PPOB Settings (Harga Jual & Saklar Status Member) (Req 1 & 2)
+  renderPpobSettings(db) {
+    const ppob = (db.settings && db.settings.ppob) || {};
+    const pricing = ppob.pricing || {};
+
+    const p10Input = document.getElementById('ppobCfgPrice10');
+    const p20Input = document.getElementById('ppobCfgPrice20');
+    const p50Input = document.getElementById('ppobCfgPrice50');
+    const p100Input = document.getElementById('ppobCfgPrice100');
+    const showStatusSelect = document.getElementById('ppobCfgShowStatus');
+    const globalEnabledSelect = document.getElementById('ppobCfgGlobalEnabled');
+    const noticeInput = document.getElementById('ppobCfgNotice');
+    const badgeEl = document.getElementById('ppobStatusGlobalBadge');
+
+    if (p10Input) p10Input.value = pricing[10000] !== undefined ? pricing[10000] : 12000;
+    if (p20Input) p20Input.value = pricing[20000] !== undefined ? pricing[20000] : 22000;
+    if (p50Input) p50Input.value = pricing[50000] !== undefined ? pricing[50000] : 52000;
+    if (p100Input) p100Input.value = pricing[100000] !== undefined ? pricing[100000] : 102000;
+
+    if (showStatusSelect) showStatusSelect.value = ppob.showProcessStatus !== false ? 'true' : 'false';
+    if (globalEnabledSelect) globalEnabledSelect.value = ppob.enabled !== false ? 'true' : 'false';
+    if (noticeInput) noticeInput.value = ppob.notice || 'Pengisian pulsa seluler dan token listrik PLN diproses manual oleh Admin maksimal 1x24 jam.';
+
+    if (badgeEl) {
+      const isEnabled = ppob.enabled !== false;
+      badgeEl.textContent = isEnabled ? '🟢 PPOB AKTIF' : '🔴 PPOB NONAKTIF';
+      badgeEl.className = `badge-status ${isEnabled ? 'approved' : 'rejected'}`;
+    }
+  },
+
+  async savePpobSettings() {
+    const p10 = Number(document.getElementById('ppobCfgPrice10')?.value) || 12000;
+    const p20 = Number(document.getElementById('ppobCfgPrice20')?.value) || 22000;
+    const p50 = Number(document.getElementById('ppobCfgPrice50')?.value) || 52000;
+    const p100 = Number(document.getElementById('ppobCfgPrice100')?.value) || 102000;
+    const showStatus = document.getElementById('ppobCfgShowStatus')?.value === 'true';
+    const enabled = document.getElementById('ppobCfgGlobalEnabled')?.value === 'true';
+    const notice = (document.getElementById('ppobCfgNotice')?.value || '').trim();
+
+    this.showToast('Menyimpan pengaturan PPOB ke database...', 'info');
+
+    const db = DB.get();
+    db.settings = db.settings || {};
+    db.settings.ppob = {
+      ...(db.settings.ppob || {}),
+      enabled: enabled,
+      pulsaEnabled: true,
+      plnEnabled: true,
+      showProcessStatus: showStatus,
+      notice: notice,
+      pricing: {
+        10000: p10,
+        20000: p20,
+        50000: p50,
+        100000: p100
+      }
+    };
+
+    await DB.save(db);
+    this.showToast('Pengaturan harga jual dan saklar status PPOB berhasil disimpan!', 'success');
+    this.renderAll();
   },
 
   async saveAffiliateSettings() {

@@ -412,6 +412,105 @@
           </table>
         </div>
       </div>
+
+      <!-- Card PPOB: Pengaturan Harga Jual & Saklar Status Pengisian Member (Req 1 & 2) -->
+      <div class="admin-card" style="margin-top: 24px; border-left: 4px solid #F59E0B;">
+        <div class="admin-card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 class="admin-card-title">📱 Pengaturan Harga Jual PPOB &amp; Saklar Status Member</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 3px;">Atur harga jual pulsa &amp; token listrik PLN (contoh: 10 rb bayar 12 rb) serta aktifkan/nonaktifkan status pengisian di aplikasi member.</p>
+          </div>
+          <span class="badge-status approved" id="ppobStatusGlobalBadge" style="font-size: 11px; padding: 4px 12px;">🟢 PPOB AKTIF</span>
+        </div>
+
+        <!-- Saklar Tampilan Status Pengisian di Member (Req 2) -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Saklar Keterangan Status Pengisian di Member (ON / OFF)</div>
+            <div class="setting-desc">Pilih <strong>ON (Tampilkan)</strong> agar member dapat melihat riwayat nomor yang diisi beserta status (Dalam Proses / Selesai / Gangguan) dan Serial Number (SN/Token). Pilih <strong>OFF</strong> untuk menyembunyikannya.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <select class="admin-input" id="ppobCfgShowStatus">
+              <option value="true">🟢 ON - Tampilkan Status Pengisian di Member</option>
+              <option value="false">🔴 OFF - Sembunyikan Status Pengisian</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Saklar Master Layanan PPOB -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Layanan PPOB Keseluruhan</div>
+            <div class="setting-desc">Aktifkan atau matikan seluruh akses konversi PPOB di menu Saldo Utama dan Wallet Tambah Teman.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 280px;">
+            <select class="admin-input" id="ppobCfgGlobalEnabled">
+              <option value="true">🟢 BUKA (ON) - Layanan PPOB Dibuka</option>
+              <option value="false">🔴 TUTUP (OFF) - Layanan PPOB Ditutup Sementara</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Grid Harga Jual Pulsa & Token Listrik PLN (Req 1) -->
+        <div style="margin-top: 14px; margin-bottom: 6px;">
+          <h4 style="font-size: 13px; color: #F8FAFC; margin-bottom: 4px;">Harga Jual Potong Saldo (Pulsa Seluler &amp; Token PLN Prabayar):</h4>
+          <p style="font-size: 11px; color: #94A3B8;">Saldo member yang akan dipotong sesuai nominal harga jual yang ditentukan di bawah ini:</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+          <div style="background: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 12px;">
+            <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Pulsa / Token <strong>10.000</strong>:</label>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 11px; color: #64748B;">Rp</span>
+              <input type="number" class="admin-input" id="ppobCfgPrice10" value="12000" min="10000" step="500" style="font-weight: 700; color: #F59E0B;">
+            </div>
+            <span style="font-size: 9.5px; color: #64748B; margin-top: 4px; display: block;">Contoh: Bayar Rp 12.000</span>
+          </div>
+
+          <div style="background: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 12px;">
+            <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Pulsa / Token <strong>20.000</strong>:</label>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 11px; color: #64748B;">Rp</span>
+              <input type="number" class="admin-input" id="ppobCfgPrice20" value="22000" min="20000" step="500" style="font-weight: 700; color: #F59E0B;">
+            </div>
+            <span style="font-size: 9.5px; color: #64748B; margin-top: 4px; display: block;">Contoh: Bayar Rp 22.000</span>
+          </div>
+
+          <div style="background: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 12px;">
+            <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Pulsa / Token <strong>50.000</strong>:</label>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 11px; color: #64748B;">Rp</span>
+              <input type="number" class="admin-input" id="ppobCfgPrice50" value="52000" min="50000" step="500" style="font-weight: 700; color: #F59E0B;">
+            </div>
+            <span style="font-size: 9.5px; color: #64748B; margin-top: 4px; display: block;">Contoh: Bayar Rp 52.000</span>
+          </div>
+
+          <div style="background: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 12px;">
+            <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Pulsa / Token <strong>100.000</strong>:</label>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 11px; color: #64748B;">Rp</span>
+              <input type="number" class="admin-input" id="ppobCfgPrice100" value="102000" min="100000" step="500" style="font-weight: 700; color: #F59E0B;">
+            </div>
+            <span style="font-size: 9.5px; color: #64748B; margin-top: 4px; display: block;">Contoh: Bayar Rp 102.000</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Pesan Panduan / Notice PPOB untuk Member</div>
+            <div class="setting-desc">Teks keterangan panduan yang muncul di bagian atas popup PPOB member.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 100%; max-width: 520px;">
+            <input type="text" class="admin-input" id="ppobCfgNotice" value="Pengisian pulsa seluler dan token listrik PLN diproses manual oleh Admin maksimal 1x24 jam.">
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.savePpobSettings()">
+            <span>💾 Simpan Pengaturan Harga &amp; Saklar PPOB</span>
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- ====================================================================
@@ -1034,6 +1133,60 @@
             <select class="admin-input" id="ppobCfgPlnEnabled">
               <option value="true">🟢 AKTIF (Bisa Beli Token PLN)</option>
               <option value="false">🔴 NONAKTIF (Tutup PLN)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Pengaturan Harga Jual PPOB (Req 1) -->
+        <div class="setting-row" style="background: rgba(245, 158, 11, 0.05); padding: 12px; border-radius: 10px; border: 1px dashed rgba(245, 158, 11, 0.3);">
+          <div class="setting-info">
+            <div class="setting-title" style="color: #F59E0B;">🏷️ Pengaturan Harga Jual PPOB (Potong Saldo)</div>
+            <div class="setting-desc">Tentukan harga potong saldo untuk masing-masing nominal pulsa &amp; token listrik PLN. Default: 10rb=12rb, 20rb=22rb, 50rb=52rb, 100rb=102rb.</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 100%; max-width: 440px;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+              <div>
+                <label style="font-size: 10.5px; color: #94A3B8; font-weight: 700;">Harga Pulsa/PLN 10.000:</label>
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                  <span style="font-size: 11px; color: #64748B;">Rp</span>
+                  <input type="number" class="admin-input" id="ppobCfgPrice10" value="12000" min="10000" step="500">
+                </div>
+              </div>
+              <div>
+                <label style="font-size: 10.5px; color: #94A3B8; font-weight: 700;">Harga Pulsa/PLN 20.000:</label>
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                  <span style="font-size: 11px; color: #64748B;">Rp</span>
+                  <input type="number" class="admin-input" id="ppobCfgPrice20" value="22000" min="20000" step="500">
+                </div>
+              </div>
+              <div>
+                <label style="font-size: 10.5px; color: #94A3B8; font-weight: 700;">Harga Pulsa/PLN 50.000:</label>
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                  <span style="font-size: 11px; color: #64748B;">Rp</span>
+                  <input type="number" class="admin-input" id="ppobCfgPrice50" value="52000" min="50000" step="500">
+                </div>
+              </div>
+              <div>
+                <label style="font-size: 10.5px; color: #94A3B8; font-weight: 700;">Harga Pulsa/PLN 100.000:</label>
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                  <span style="font-size: 11px; color: #64748B;">Rp</span>
+                  <input type="number" class="admin-input" id="ppobCfgPrice100" value="102000" min="100000" step="500">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tampilkan Status Proses ke Member (Req 2) -->
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Tampilkan Riwayat &amp; Status Pengisian di Menu Member</div>
+            <div class="setting-desc">Tampilkan status proses (Dalam Proses, Selesai, Gangguan) pada menu PPOB member</div>
+          </div>
+          <div class="setting-input-wrap">
+            <select class="admin-input" id="ppobCfgShowStatus">
+              <option value="true">🟢 AKTIF (Tampilkan Status ke Member)</option>
+              <option value="false">🔴 NONAKTIF (Sembunyikan)</option>
             </select>
           </div>
         </div>
@@ -3307,6 +3460,70 @@
       <button class="admin-btn-action-secondary" style="width: 100%; justify-content: center; padding: 10px;" onclick="AdminPage.closeModal('adminDepositProofModal')">
         <span>Tutup Jendela</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Modal Proses & Edit Status Pengisian PPOB (Req 2) -->
+  <div class="modal-backdrop" id="adminPpobProcessModal">
+    <div class="modal-sheet" style="max-width: 500px;">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title" id="adminPpobModalTitle">⚙️ Proses Transaksi PPOB</h3>
+        <button class="modal-close-btn" onclick="AdminPage.closeModal('adminPpobProcessModal')">&times;</button>
+      </div>
+
+      <input type="hidden" id="adminPpobTrxId">
+
+      <!-- Detail Transaksi Box -->
+      <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 11px; color: #94A3B8;">ID Transaksi:</span>
+          <strong style="font-size: 11.5px; color: #F8FAFC; font-family: var(--font-mono);" id="adminPpobDetailId">-</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 11px; color: #94A3B8;">Member:</span>
+          <strong style="font-size: 11.5px; color: #38BDF8;" id="adminPpobDetailUser">-</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 11px; color: #94A3B8;">Layanan &amp; Nomor:</span>
+          <strong style="font-size: 11.5px; color: #F59E0B;" id="adminPpobDetailTarget">-</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 11px; color: #94A3B8;">Nominal / Potong Saldo:</span>
+          <strong style="font-size: 12px; color: #22C55E;" id="adminPpobDetailAmount">-</strong>
+        </div>
+      </div>
+
+      <!-- Pilihan Status Pengisian (Req 2) -->
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Status Pengisian:</label>
+        <select class="form-select" id="adminPpobStatusSelect" style="font-weight: 700;">
+          <option value="pending" style="color: #D97706;">⏳ Dalam Proses (Sedang Diproses)</option>
+          <option value="approved" style="color: #16A34A;">✅ Selesai (Pulsa / Token Berhasil Terisi)</option>
+          <option value="rejected" style="color: #DC2626;">⚠️ Gangguan (Gagal &amp; Refund Saldo Otomatis ke User)</option>
+        </select>
+        <div style="font-size: 10px; color: #94A3B8; margin-top: 4px;">
+          Jika dipilih <strong>Gangguan</strong>, saldo user akan otomatis dikembalikan (refund 100%) ke dompet asalnya.
+        </div>
+      </div>
+
+      <!-- Keterangan / Serial Number / Token Listrik PLN -->
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Keterangan Pengisian / Token Listrik / SN:</label>
+        <textarea class="form-input" id="adminPpobNoteInput" rows="3" placeholder="Contoh: No. Token PLN: 1234-5678-9012-3456-7890 atau SN: 20261008001 / Sedang gangguan operator" style="font-size: 11.5px; resize: vertical;"></textarea>
+        <div style="font-size: 10px; color: #94A3B8; margin-top: 4px;">
+          Keterangan ini langsung tampil secara realtime pada menu status PPOB member.
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="admin-btn-action-secondary" style="flex: 1; justify-content: center; padding: 11px;" onclick="AdminPage.closeModal('adminPpobProcessModal')">
+          <span>Batal</span>
+        </button>
+        <button class="admin-btn-action-primary" style="flex: 2; justify-content: center; padding: 11px;" onclick="AdminPage.savePpobProcessModal()">
+          <span>💾 Simpan Status &amp; Keterangan</span>
+        </button>
+      </div>
     </div>
   </div>
 

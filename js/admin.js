@@ -118,6 +118,9 @@ export const Admin = {
     }
 
     trx.status = 'approved';
+    if (trx.type === 'ppob_conversion') {
+      trx.ppobStatus = 'Selesai';
+    }
     trx.updatedAt = new Date().toISOString();
 
     await DB.save(db);
@@ -125,7 +128,7 @@ export const Admin = {
       const typeLabel = trx.category === 'pln' ? 'Token Listrik PLN' : 'Pulsa Seluler';
       return {
         success: true,
-        message: `Konversi PPOB ${typeLabel} ${DB.formatIDR(trx.amount)} ke ${trx.targetNumber || '-'} berhasil disetujui!`
+        message: `Konversi PPOB ${typeLabel} ${DB.formatIDR(trx.amount)} ke ${trx.targetNumber || '-'} berhasil disetujui (Status: Selesai)!`
       };
     }
     return {
@@ -143,21 +146,26 @@ export const Admin = {
     }
 
     const user = db.users.find(u => u.id === trx.userId);
-    if (user) {
+    if (user && !trx.isRefunded) {
       // Refund balance to appropriate wallet
       if (trx.walletSource === 'Wallet Tambah Teman' || trx.source === 'affiliate') {
-        user.affiliateBalance = (user.affiliateBalance || 0) + trx.amount;
+        user.affiliateBalance = (user.affiliateBalance || 0) + (trx.amount || trx.netAmount || 0);
       } else {
-        user.walletBalance = (user.walletBalance || 0) + trx.amount;
+        user.walletBalance = (user.walletBalance || 0) + (trx.amount || trx.netAmount || 0);
       }
+      trx.isRefunded = true;
     }
 
     trx.status = 'rejected';
+    if (trx.type === 'ppob_conversion') {
+      trx.ppobStatus = 'Gangguan';
+      trx.adminNote = reason;
+    }
     trx.rejectReason = reason;
     trx.updatedAt = new Date().toISOString();
 
     await DB.save(db);
-    return { success: true, message: `Transaksi ${trx.type === 'ppob_conversion' ? 'konversi PPOB' : 'penarikan'} ${trx.id} ditolak dan saldo telah dikembalikan ke user.` };
+    return { success: true, message: `Transaksi ${trx.type === 'ppob_conversion' ? 'konversi PPOB' : 'penarikan'} ${trx.id} ditandai gangguan/ditolak dan saldo telah dikembalikan ke user.` };
   },
 
   // Save / Update Plan
