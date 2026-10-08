@@ -5709,8 +5709,11 @@ const App = {
       }
       const destInput = document.getElementById('transferPpobDestInput');
       const targetNumber = (destInput ? destInput.value : '').trim();
+      const cat = this.transferPpobCat || 'pulsa';
+      const isPln = cat === 'pln';
+
       if (!targetNumber) {
-        this.showToast((this.transferPpobCat === 'pln') ? 'Masukkan No. Meter / ID Pelanggan PLN!' : 'Masukkan Nomor HP tujuan!', 'error');
+        this.showToast(isPln ? 'Masukkan No. Meter / ID Pelanggan PLN!' : 'Masukkan Nomor HP tujuan!', 'error');
         if (destInput) destInput.focus();
         return;
       }
@@ -5722,56 +5725,56 @@ const App = {
       }
 
       setTimeout(async () => {
-        const db = DB.get();
-        const u = (db.users || []).find(x => x.id === user.id);
-        if (!u) {
-          this.showToast('User tidak ditemukan.', 'error');
-          return;
-        }
-        u.affiliateBalance = Math.max(0, (u.affiliateBalance || 0) - amount);
+        try {
+          const db = DB.get();
+          const u = (db.users || []).find(x => x.id === user.id);
+          if (!u) {
+            this.showToast('User tidak ditemukan.', 'error');
+            return;
+          }
+          u.affiliateBalance = Math.max(0, (u.affiliateBalance || 0) - amount);
 
-        const cat = this.transferPpobCat || 'pulsa';
-        const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
-        const note = cat === 'pln'
-          ? `Konversi Komisi Tim ke Token Listrik PLN ${DB.formatIDR(amount)} (No. Meter: ${targetNumber}) - Menunggu Proses Admin`
-          : `Konversi Komisi Tim ke Pulsa ${DB.formatIDR(amount)} (No. HP: ${targetNumber}) - Menunggu Proses Admin`;
+          const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
+          const note = isPln
+            ? `Konversi Komisi Tim ke Token Listrik PLN ${DB.formatIDR(amount)} (No. Meter: ${targetNumber}) - Menunggu Proses Admin`
+            : `Konversi Komisi Tim ke Pulsa ${DB.formatIDR(amount)} (No. HP: ${targetNumber}) - Menunggu Proses Admin`;
 
-        const tx = {
-          id: txId,
-          userId: u.id,
-          username: u.username,
-          type: 'ppob_conversion',
-          category: cat,
-          amount: amount,
-          targetNumber: targetNumber,
-          source: 'affiliate',
-          status: 'pending',
-          note: note,
-          createdAt: new Date().toISOString()
-        };
+          const tx = {
+            id: txId,
+            userId: u.id,
+            username: u.username,
+            type: 'ppob_conversion',
+            category: cat,
+            amount: amount,
+            netAmount: amount,
+            targetNumber: targetNumber,
+            destinationAccount: (isPln ? 'PLN: ' : 'HP: ') + targetNumber,
+            walletSource: 'Wallet Tambah Teman',
+            paymentMethod: isPln ? 'Token Listrik PLN' : 'Pulsa Seluler',
+            source: 'affiliate',
+            status: 'pending',
+            note: note,
+            createdAt: new Date().toISOString()
+          };
 
-        db.transactions = db.transactions || [];
-        db.transactions.unshift(tx);
-        DB.save(db);
+          db.transactions = db.transactions || [];
+          db.transactions.unshift(tx);
+          await DB.save(db);
 
-        if (typeof API !== 'undefined' && API.createTransaction) {
-          try {
-            await API.createTransaction(tx);
-            if (API.updateUser) await API.updateUser(u.id, { affiliateBalance: u.affiliateBalance });
-          } catch (err) {
-            console.warn('[PPOB Transfer] API sync warning:', err);
+          Auth.setUser(u);
+          this.closeModal('transferModal');
+          this.showToast(`Konversi PPOB ${isPln ? 'Token Listrik' : 'Pulsa'} sebesar ${DB.formatIDR(amount)} berhasil diajukan dan sedang diproses manual oleh Admin!`, 'success');
+          this.renderAll();
+        } catch (err) {
+          console.error('Submit PPOB transfer error:', err);
+          this.showToast('Gagal memproses konversi PPOB.', 'error');
+        } finally {
+          if (btnConfirm) {
+            btnConfirm.disabled = false;
+            btnConfirm.innerHTML = '<span>⚡ Konfirmasi Transfer Sekarang</span>';
           }
         }
-
-        Auth.setUser(u);
-        if (btnConfirm) {
-          btnConfirm.disabled = false;
-          btnConfirm.innerHTML = '<span>⚡ Konfirmasi Transfer Sekarang</span>';
-        }
-        this.closeModal('transferModal');
-        this.showToast(`Konversi PPOB ${cat === 'pln' ? 'Token Listrik' : 'Pulsa'} sebesar ${DB.formatIDR(amount)} berhasil diajukan dan sedang diproses manual oleh Admin!`, 'success');
-        this.renderAll();
-      }, 400);
+      }, 300);
       return;
     }
 
@@ -5839,24 +5842,94 @@ const App = {
   // =========================================================================
   // REQUIREMENT 4: KONVERSI SALDO UTAMA KE PPOB PULSA (PROSES MANUAL ADMIN)
   // =========================================================================
-  openMainWalletPpobModal() {
+  // =========================================================================
+  // REQUIREMENT 4: KONVERSI SALDO UTAMA KE PPOB (PULSA & TOKEN LISTRIK PLN)
+  // =========================================================================
+  openMainWalletPpobModal(category = 'pulsa') {
     const user = Auth.getUser();
     if (!user) {
-      this.showToast('Silakan login terlebih dahulu untuk membeli pulsa!', 'info');
+      this.showToast('Silakan login terlebih dahulu untuk konversi PPOB!', 'info');
       this.openModal('authModal');
       return;
     }
+
+    const db = DB.get();
+    const ppobSettings = (db.settings && db.settings.ppob) || { enabled: true, pulsaEnabled: true, plnEnabled: true };
+    if (ppobSettings.enabled === false) {
+      this.showToast('Layanan PPOB sedang ditutup sementara oleh Administrator.', 'warning');
+      return;
+    }
+
+    this.mainWalletPpobCategory = category === 'pln' ? 'pln' : 'pulsa';
     this.mainWalletPpobDenom = 10000;
+
     const balEl = document.getElementById('mainWalletPpobBalDisplay');
     if (balEl) balEl.textContent = DB.formatIDR(user.walletBalance || 0);
 
     const phoneInput = document.getElementById('mainWalletPpobPhoneInput');
-    if (phoneInput && user.phone) {
-      phoneInput.value = user.phone;
+    if (phoneInput) {
+      if (this.mainWalletPpobCategory === 'pulsa' && user.phone) {
+        phoneInput.value = user.phone;
+      } else {
+        phoneInput.value = '';
+      }
     }
 
+    // Tampilkan catatan panduan admin jika ada
+    const noticeEl = document.getElementById('mainWalletPpobNoticeText');
+    if (noticeEl && ppobSettings.notice) {
+      noticeEl.innerHTML = escapeHtml(ppobSettings.notice);
+    }
+
+    this.setMainWalletPpobCategory(this.mainWalletPpobCategory);
     this.setMainWalletPpobDenom(10000);
     this.openModal('mainWalletPpobModal');
+  },
+
+  setMainWalletPpobCategory(category) {
+    this.mainWalletPpobCategory = category === 'pln' ? 'pln' : 'pulsa';
+    const isPln = this.mainWalletPpobCategory === 'pln';
+
+    const btnPulsa = document.getElementById('btnMainPpobCatPulsa');
+    const btnPln = document.getElementById('btnMainPpobCatPln');
+    if (btnPulsa) btnPulsa.classList.toggle('active', !isPln);
+    if (btnPln) btnPln.classList.toggle('active', isPln);
+
+    const iconEl = document.getElementById('mainWalletPpobHeaderIcon');
+    if (iconEl) iconEl.textContent = isPln ? '⚡' : '📱';
+
+    const titleEl = document.getElementById('mainWalletPpobModalTitle');
+    if (titleEl) titleEl.textContent = isPln ? 'Konversi Token Listrik PLN' : 'Konversi Pulsa Seluler';
+
+    const subtitleEl = document.getElementById('mainWalletPpobModalSubtitle');
+    if (subtitleEl) subtitleEl.textContent = isPln ? 'Beli Token PLN Prabayar dari Saldo Utama' : 'Beli Pulsa Seluler dari Saldo Utama';
+
+    const labelEl = document.getElementById('mainWalletPpobDestLabel');
+    if (labelEl) labelEl.textContent = isPln ? 'Nomor Meter / ID Pelanggan PLN:' : 'Nomor Handphone Tujuan:';
+
+    const prefixEl = document.getElementById('mainWalletPpobDestPrefix');
+    if (prefixEl) prefixEl.textContent = isPln ? '⚡' : '📞';
+
+    const hintEl = document.getElementById('mainWalletPpobDestHint');
+    if (hintEl) hintEl.textContent = isPln ? 'Masukkan 11-12 digit No. Meter atau ID Pelanggan PLN Prabayar.' : 'Pastikan nomor HP aktif dan benar (Semua operator seluler).';
+
+    const phoneInput = document.getElementById('mainWalletPpobPhoneInput');
+    if (phoneInput) {
+      phoneInput.placeholder = isPln ? 'Contoh: 14234567890' : 'Contoh: 081234567890';
+      if (!isPln) {
+        const user = Auth.getUser();
+        if (user && user.phone && !phoneInput.value) {
+          phoneInput.value = user.phone;
+        }
+      }
+    }
+
+    const btnConfirm = document.getElementById('btnConfirmMainWalletPpob');
+    if (btnConfirm) {
+      btnConfirm.innerHTML = isPln ? '<span>⚡ Konfirmasi Beli Token PLN</span>' : '<span>📱 Konfirmasi Beli Pulsa</span>';
+    }
+
+    this.setMainWalletPpobDenom(this.mainWalletPpobDenom || 10000);
   },
 
   setMainWalletPpobDenom(denom) {
@@ -5893,21 +5966,49 @@ const App = {
     }
   },
 
-  submitMainWalletPpob() {
+  async submitMainWalletPpob() {
     const user = Auth.getUser();
     if (!user) return;
     const walletBal = user.walletBalance || 0;
     const amount = this.mainWalletPpobDenom || 10000;
+    const isPln = this.mainWalletPpobCategory === 'pln';
+
+    const db = DB.get();
+    const ppobSettings = (db.settings && db.settings.ppob) || { enabled: true, pulsaEnabled: true, plnEnabled: true };
+    if (ppobSettings.enabled === false) {
+      this.showToast('Layanan PPOB sedang dinonaktifkan oleh administrator.', 'warning');
+      return;
+    }
+    if (isPln && ppobSettings.plnEnabled === false) {
+      this.showToast('Layanan Token Listrik PLN sedang dinonaktifkan oleh administrator.', 'warning');
+      return;
+    }
+    if (!isPln && ppobSettings.pulsaEnabled === false) {
+      this.showToast('Layanan Pulsa Seluler sedang dinonaktifkan oleh administrator.', 'warning');
+      return;
+    }
 
     if (amount > walletBal) {
-      this.showToast('Saldo Utama tidak mencukupi untuk nominal pulsa ini!', 'error');
+      this.showToast(`Saldo Utama tidak mencukupi untuk nominal ${DB.formatIDR(amount)}!`, 'error');
       return;
     }
 
     const phoneInput = document.getElementById('mainWalletPpobPhoneInput');
-    const phone = (phoneInput ? phoneInput.value : '').trim();
-    if (!phone) {
-      this.showToast('Masukkan nomor handphone tujuan pulsa!', 'error');
+    const targetVal = (phoneInput ? phoneInput.value : '').trim();
+    if (!targetVal) {
+      this.showToast(isPln ? 'Masukkan Nomor Meter atau ID Pelanggan PLN!' : 'Masukkan nomor handphone tujuan pulsa!', 'error');
+      if (phoneInput) phoneInput.focus();
+      return;
+    }
+
+    if (isPln && targetVal.length < 9) {
+      this.showToast('Nomor Meter / ID Pelanggan PLN minimal 9-12 digit!', 'error');
+      if (phoneInput) phoneInput.focus();
+      return;
+    }
+
+    if (!isPln && targetVal.length < 10) {
+      this.showToast('Nomor handphone minimal 10 digit!', 'error');
       if (phoneInput) phoneInput.focus();
       return;
     }
@@ -5915,56 +6016,56 @@ const App = {
     const btnConfirm = document.getElementById('btnConfirmMainWalletPpob');
     if (btnConfirm) {
       btnConfirm.disabled = true;
-      btnConfirm.innerHTML = '<span>⏳ Mengajukan Pembelian Pulsa...</span>';
+      btnConfirm.innerHTML = `<span>⏳ Mengajukan Pembelian ${isPln ? 'Token PLN' : 'Pulsa'}...</span>`;
     }
 
     setTimeout(async () => {
-      const db = DB.get();
-      const u = (db.users || []).find(x => x.id === user.id);
-      if (!u) {
-        this.showToast('User tidak ditemukan.', 'error');
-        return;
-      }
+      try {
+        const u = (db.users || []).find(x => x.id === user.id);
+        if (!u) {
+          this.showToast('User tidak ditemukan.', 'error');
+          return;
+        }
 
-      u.walletBalance = Math.max(0, (u.walletBalance || 0) - amount);
+        u.walletBalance = Math.max(0, (u.walletBalance || 0) - amount);
 
-      const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
-      const tx = {
-        id: txId,
-        userId: u.id,
-        username: u.username,
-        type: 'ppob_conversion',
-        category: 'pulsa',
-        amount: amount,
-        targetNumber: phone,
-        source: 'main_wallet',
-        status: 'pending',
-        note: `Beli Pulsa dari Saldo Utama ${DB.formatIDR(amount)} (No. HP: ${phone}) - Menunggu Proses Manual Admin`,
-        createdAt: new Date().toISOString()
-      };
+        const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
+        const tx = {
+          id: txId,
+          userId: u.id,
+          username: u.username,
+          type: 'ppob_conversion',
+          category: isPln ? 'pln' : 'pulsa',
+          amount: amount,
+          netAmount: amount,
+          targetNumber: targetVal,
+          destinationAccount: (isPln ? 'PLN: ' : 'HP: ') + targetVal,
+          source: 'main_wallet',
+          walletSource: 'Saldo Utama',
+          paymentMethod: isPln ? 'Token Listrik PLN' : 'Pulsa Seluler',
+          status: 'pending',
+          note: `Beli ${isPln ? 'Token Listrik PLN' : 'Pulsa'} dari Saldo Utama ${DB.formatIDR(amount)} (${isPln ? 'No. Meter: ' : 'No. HP: '}${targetVal}) - Menunggu Proses Manual Admin`,
+          createdAt: new Date().toISOString()
+        };
 
-      db.transactions = db.transactions || [];
-      db.transactions.unshift(tx);
-      DB.save(db);
+        db.transactions = db.transactions || [];
+        db.transactions.unshift(tx);
+        await DB.save(db);
 
-      if (typeof API !== 'undefined' && API.createTransaction) {
-        try {
-          await API.createTransaction(tx);
-          if (API.updateUser) await API.updateUser(u.id, { walletBalance: u.walletBalance });
-        } catch (err) {
-          console.warn('[Main Wallet PPOB] API sync warning:', err);
+        Auth.setUser(u);
+        this.closeModal('mainWalletPpobModal');
+        this.showToast(`Pengajuan ${isPln ? 'Token Listrik PLN' : 'Pulsa Seluler'} ${DB.formatIDR(amount)} ke ${targetVal} berhasil diajukan! Menunggu proses manual admin.`, 'success');
+        this.renderAll();
+      } catch (err) {
+        console.error('[PPOB Submit Error]', err);
+        this.showToast('Terjadi kesalahan saat memproses pembelian PPOB.', 'error');
+      } finally {
+        if (btnConfirm) {
+          btnConfirm.disabled = false;
+          btnConfirm.innerHTML = isPln ? '<span>⚡ Konfirmasi Beli Token PLN</span>' : '<span>📱 Konfirmasi Beli Pulsa</span>';
         }
       }
-
-      Auth.setUser(u);
-      if (btnConfirm) {
-        btnConfirm.disabled = false;
-        btnConfirm.innerHTML = '<span>⚡ Konfirmasi Beli Pulsa</span>';
-      }
-      this.closeModal('mainWalletPpobModal');
-      this.showToast(`Pengajuan pembelian pulsa ${DB.formatIDR(amount)} ke ${phone} berhasil diajukan dan sedang diproses manual oleh Admin!`, 'success');
-      this.renderAll();
-    }, 400);
+    }, 350);
   },
 
   // =========================================================================
@@ -6335,6 +6436,11 @@ const App = {
       temp.remove();
       this.showToast(`${label} berhasil disalin.`, 'success');
     });
+  },
+
+  // Alias PPOB Modal
+  openPpobModal(category = 'pulsa') {
+    return this.openMainWalletPpobModal(category);
   }
 };
 
@@ -6346,6 +6452,8 @@ window.Plans = Plans;
 window.Affiliate = Affiliate;
 window.Payment = Payment;
 window.Rewards = Rewards;
+window.openMainWalletPpobModal = (cat) => App.openMainWalletPpobModal(cat);
+window.openPpobModal = (cat) => App.openMainWalletPpobModal(cat);
 
 // Launch App on DOM ready or immediately if already loaded
 if (document.readyState === 'loading') {

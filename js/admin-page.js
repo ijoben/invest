@@ -15,6 +15,7 @@ export const AdminPage = {
   currentTab: 'dashboard',
   userFilter: 'all',
   userSearchQuery: '',
+  withdrawFilter: 'all',
   tabTitles: {
     dashboard: 'Dashboard Overview',
     deposits: 'Konfirmasi Deposit',
@@ -355,13 +356,38 @@ export const AdminPage = {
     `).join('');
   },
 
+  setWithdrawFilter(filter) {
+    this.withdrawFilter = filter;
+    ['btnWdFilterAll', 'btnWdFilterWd', 'btnWdFilterPulsa', 'btnWdFilterPln'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+    const map = {
+      all: 'btnWdFilterAll',
+      withdraw: 'btnWdFilterWd',
+      pulsa: 'btnWdFilterPulsa',
+      pln: 'btnWdFilterPln'
+    };
+    const curEl = document.getElementById(map[filter]);
+    if (curEl) curEl.classList.add('active');
+    this.renderWithdrawals(DB.get());
+  },
+
   // 3. Withdraw Table (Penarikan Dana & Konversi PPOB)
   renderWithdrawals(db) {
     const tbody = document.getElementById('withdrawTableBody');
-    const withdrawals = db.transactions.filter(t => t.type === 'withdraw' || t.type === 'ppob_conversion');
+    let withdrawals = db.transactions.filter(t => t.type === 'withdraw' || t.type === 'ppob_conversion');
+
+    if (this.withdrawFilter === 'withdraw') {
+      withdrawals = withdrawals.filter(t => t.type === 'withdraw');
+    } else if (this.withdrawFilter === 'pulsa') {
+      withdrawals = withdrawals.filter(t => t.type === 'ppob_conversion' && t.category !== 'pln' && !((t.note || '').toLowerCase().includes('listrik') || (t.destinationAccount || '').toLowerCase().includes('pln')));
+    } else if (this.withdrawFilter === 'pln') {
+      withdrawals = withdrawals.filter(t => t.type === 'ppob_conversion' && (t.category === 'pln' || (t.note || '').toLowerCase().includes('listrik') || (t.destinationAccount || '').toLowerCase().includes('pln')));
+    }
 
     if (withdrawals.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data penarikan dana atau konversi PPOB.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data transaksi penarikan atau konversi PPOB untuk filter ini.</td></tr>';
       return;
     }
 
@@ -372,14 +398,14 @@ export const AdminPage = {
       let amountHtml = `<strong style="color:#EF4444;">${DB.formatIDR(t.netAmount || t.amount)}</strong> (Total: ${DB.formatIDR(t.amount)})`;
 
       if (isPpob) {
-        const isPln = t.category === 'pln' || (t.note && t.note.toLowerCase().includes('listrik'));
-        walletSourceHtml = t.source === 'affiliate' 
+        const isPln = t.category === 'pln' || (t.note && t.note.toLowerCase().includes('listrik')) || (t.destinationAccount && t.destinationAccount.toLowerCase().includes('pln'));
+        walletSourceHtml = (t.source === 'affiliate' || t.walletSource === 'Wallet Tambah Teman')
           ? '<span class="badge-status approved" style="font-size:9.5px; background:rgba(34,197,94,0.15); color:#16A34A; border:1px solid rgba(34,197,94,0.3);">Wallet Tim (PPOB)</span>' 
           : '<span class="badge-status approved" style="font-size:9.5px; background:rgba(245,158,11,0.15); color:#D97706; border:1px solid rgba(245,158,11,0.3);">Saldo Utama (PPOB)</span>';
         
         destHtml = isPln 
-          ? `<span style="display:inline-flex; align-items:center; gap:4px;">⚡ <strong>Token PLN:</strong> ${escapeHtml(t.targetNumber || '-')}</span>` 
-          : `<span style="display:inline-flex; align-items:center; gap:4px;">📱 <strong>Pulsa:</strong> ${escapeHtml(t.targetNumber || '-')}</span>`;
+          ? `<span style="display:inline-flex; align-items:center; gap:4px;">⚡ <strong>Token PLN:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>` 
+          : `<span style="display:inline-flex; align-items:center; gap:4px;">📱 <strong>Pulsa:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>`;
         
         amountHtml = `<strong style="color:#D97706;">${DB.formatIDR(t.amount)}</strong> <span style="font-size:10px; color:#64748B;">(PPOB)</span>`;
       }
@@ -825,7 +851,59 @@ export const AdminPage = {
     const checkInRewardEl = document.getElementById('checkInCfgReward');
     if (checkInRewardEl) checkInRewardEl.value = checkIn.rewardAmount || 1000;
 
+    // PPOB Settings
+    this.renderPpobSettings(db);
+
     this.renderWdQuickToggle(db);
+  },
+
+  // 6.1 PPOB (Pulsa & Token Listrik PLN) Settings
+  renderPpobSettings(db) {
+    const ppob = (db && db.settings && db.settings.ppob) || {
+      enabled: true,
+      pulsaEnabled: true,
+      plnEnabled: true,
+      adminFee: 0,
+      notice: 'Proses konversi PPOB ini dilakukan secara manual oleh admin. Saldo akan dipotong dan transaksi diproses dalam 5-15 menit.'
+    };
+
+    const masterEl = document.getElementById('ppobCfgMasterEnabled');
+    if (masterEl) masterEl.value = String(ppob.enabled !== false);
+
+    const pulsaEl = document.getElementById('ppobCfgPulsaEnabled');
+    if (pulsaEl) pulsaEl.value = String(ppob.pulsaEnabled !== false);
+
+    const plnEl = document.getElementById('ppobCfgPlnEnabled');
+    if (plnEl) plnEl.value = String(ppob.plnEnabled !== false);
+
+    const feeEl = document.getElementById('ppobCfgAdminFee');
+    if (feeEl) feeEl.value = Number(ppob.adminFee) || 0;
+
+    const noticeEl = document.getElementById('ppobCfgNotice');
+    if (noticeEl) noticeEl.value = ppob.notice || '';
+
+    this.previewPpobSettings();
+  },
+
+  previewPpobSettings() {
+    const masterEl = document.getElementById('ppobCfgMasterEnabled');
+    const badgeEl = document.getElementById('ppobAdminStatusBadge');
+    if (!masterEl || !badgeEl) return;
+
+    const isEnabled = masterEl.value === 'true';
+    if (isEnabled) {
+      badgeEl.textContent = '🟢 PPOB AKTIF';
+      badgeEl.className = 'badge-status approved';
+      badgeEl.style.background = 'rgba(34, 197, 94, 0.15)';
+      badgeEl.style.color = '#22C55E';
+      badgeEl.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+    } else {
+      badgeEl.textContent = '🔴 PPOB NONAKTIF';
+      badgeEl.className = 'badge-status rejected';
+      badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+      badgeEl.style.color = '#EF4444';
+      badgeEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+    }
   },
 
   // 6.2 Email & OTP Configuration
@@ -1844,6 +1922,30 @@ export const AdminPage = {
     this.showToast('Menyimpan absensi ke database...', 'info');
     await DB.save(db);
     this.showToast(`Pengaturan Absensi Harian disimpan ke database! Bonus: Rp ${reward.toLocaleString('id-ID')} / hari (${enabled ? 'AKTIF' : 'NONAKTIF'})`, 'success');
+    this.renderAll();
+  },
+
+  // Save PPOB Settings (Pulsa & Token Listrik PLN)
+  async savePpobSettings() {
+    const enabled = document.getElementById('ppobCfgMasterEnabled')?.value === 'true';
+    const pulsaEnabled = document.getElementById('ppobCfgPulsaEnabled')?.value === 'true';
+    const plnEnabled = document.getElementById('ppobCfgPlnEnabled')?.value === 'true';
+    const adminFee = Math.max(0, parseInt(document.getElementById('ppobCfgAdminFee')?.value || '0', 10) || 0);
+    const notice = document.getElementById('ppobCfgNotice')?.value.trim() || '';
+
+    const db = DB.get();
+    db.settings = db.settings || {};
+    db.settings.ppob = {
+      enabled,
+      pulsaEnabled,
+      plnEnabled,
+      adminFee,
+      notice
+    };
+
+    this.showToast('Menyimpan pengaturan PPOB ke database...', 'info');
+    await DB.save(db);
+    this.showToast(`Pengaturan Layanan PPOB berhasil disimpan ke database! Status: ${enabled ? 'AKTIF' : 'NONAKTIF'} (Pulsa: ${pulsaEnabled ? 'ON' : 'OFF'}, PLN: ${plnEnabled ? 'ON' : 'OFF'})`, 'success');
     this.renderAll();
   },
 

@@ -373,8 +373,26 @@
          ==================================================================== -->
     <section id="pane-withdrawals" class="admin-view-panel">
       <div class="admin-card">
-        <div class="admin-card-header">
-          <h3 class="admin-card-title">Permintaan Penarikan Dana (Withdrawal)</h3>
+        <div class="admin-card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 class="admin-card-title">Permintaan Penarikan Dana &amp; Konversi PPOB</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 3px;">Persetujuan manual penarikan rekening/e-wallet serta transaksi pembelian pulsa &amp; token listrik PLN.</p>
+          </div>
+          <!-- Filter Tabs Penarikan vs PPOB -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;" class="admin-filter-pills">
+            <button type="button" class="btn-admin-action active" id="btnWdFilterAll" onclick="AdminPage.setWithdrawFilter('all')" style="font-size: 11px; padding: 6px 12px; border-radius: 20px;">
+              Semua (WD &amp; PPOB)
+            </button>
+            <button type="button" class="btn-admin-action" id="btnWdFilterWd" onclick="AdminPage.setWithdrawFilter('withdraw')" style="font-size: 11px; padding: 6px 12px; border-radius: 20px;">
+              🏦 Tarik Dana Bank
+            </button>
+            <button type="button" class="btn-admin-action" id="btnWdFilterPulsa" onclick="AdminPage.setWithdrawFilter('pulsa')" style="font-size: 11px; padding: 6px 12px; border-radius: 20px;">
+              📱 Pulsa Seluler
+            </button>
+            <button type="button" class="btn-admin-action" id="btnWdFilterPln" onclick="AdminPage.setWithdrawFilter('pln')" style="font-size: 11px; padding: 6px 12px; border-radius: 20px;">
+              ⚡ Token Listrik PLN
+            </button>
+          </div>
         </div>
         <div class="admin-table-container">
           <table class="admin-table">
@@ -967,6 +985,82 @@
         <div style="margin-top: 16px;">
           <button class="admin-btn-action-primary" onclick="AdminPage.saveDailyCheckInSettings()">
             <span>💾 Simpan Pengaturan Absensi Harian</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card Pengaturan Layanan Konversi PPOB (Pulsa & Token Listrik PLN) -->
+      <div class="admin-card" style="margin-top: 24px; border-left: 4px solid #F59E0B;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📱⚡ Pengaturan Layanan Konversi PPOB (Pulsa &amp; Token Listrik PLN)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Kelola status master switch PPOB, aktivasi jenis layanan (Pulsa / PLN), biaya admin, dan instruksi member.</p>
+          </div>
+          <span class="badge-status approved" id="ppobAdminStatusBadge" style="font-size: 11px; padding: 5px 12px;">🟢 PPOB AKTIF</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Master Layanan PPOB</div>
+            <div class="setting-desc">Aktifkan atau nonaktifkan seluruh konversi PPOB dari Saldo Utama &amp; Wallet Tambah Teman</div>
+          </div>
+          <div class="setting-input-wrap">
+            <select class="admin-input" id="ppobCfgMasterEnabled" onchange="AdminPage.previewPpobSettings()">
+              <option value="true">🟢 AKTIF (Layanan Buka)</option>
+              <option value="false">🔴 NONAKTIF (Tutup Sementara)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Layanan Pulsa Seluler</div>
+            <div class="setting-desc">Izinkan pembelian pulsa seluler (Semua operator: Telkomsel, Indosat, XL, Tri, Smartfren)</div>
+          </div>
+          <div class="setting-input-wrap">
+            <select class="admin-input" id="ppobCfgPulsaEnabled">
+              <option value="true">🟢 AKTIF (Bisa Beli Pulsa)</option>
+              <option value="false">🔴 NONAKTIF (Tutup Pulsa)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Layanan Token Listrik PLN</div>
+            <div class="setting-desc">Izinkan pembelian token listrik PLN prabayar (No. Meter / ID Pelanggan PLN)</div>
+          </div>
+          <div class="setting-input-wrap">
+            <select class="admin-input" id="ppobCfgPlnEnabled">
+              <option value="true">🟢 AKTIF (Bisa Beli Token PLN)</option>
+              <option value="false">🔴 NONAKTIF (Tutup PLN)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Biaya Admin Konversi PPOB (Rp)</div>
+            <div class="setting-desc">Biaya potongan admin per transaksi PPOB (default: Rp 0 / Gratis)</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 260px;">
+            <input type="number" class="admin-input" id="ppobCfgAdminFee" min="0" step="500" value="0">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Catatan &amp; Panduan Konversi Member</div>
+            <div class="setting-desc">Pesan informasi yang ditampilkan kepada member saat mengajukan PPOB</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 380px;">
+            <textarea class="admin-input" id="ppobCfgNotice" rows="3" style="width: 100%; font-size: 11px; line-height: 1.4; padding: 8px; resize: vertical;" placeholder="Proses konversi PPOB ini dilakukan secara manual oleh admin..."></textarea>
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="admin-btn-action-primary" onclick="AdminPage.savePpobSettings()">
+            <span>💾 Simpan Pengaturan PPOB</span>
           </button>
         </div>
       </div>
