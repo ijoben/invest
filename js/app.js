@@ -5779,12 +5779,13 @@ const App = {
             this.showToast('User tidak ditemukan.', 'error');
             return;
           }
-          u.affiliateBalance = Math.max(0, (u.affiliateBalance || 0) - price);
+          const exactPrice = this.getPpobPrice(denom);
+          u.affiliateBalance = Math.max(0, (u.affiliateBalance || 0) - exactPrice);
 
           const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
           const note = isPln
-            ? `Konversi Komisi Tim ke Token Listrik PLN ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(price)}, No. Meter: ${targetNumber}) - Dalam proses manual Admin`
-            : `Konversi Komisi Tim ke Pulsa ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(price)}, No. HP: ${targetNumber}) - Dalam proses manual Admin`;
+            ? `Konversi Komisi Tim ke Token Listrik PLN ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(exactPrice)}, No. Meter: ${targetNumber}) - Dalam proses manual Admin`
+            : `Konversi Komisi Tim ke Pulsa ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(exactPrice)}, No. HP: ${targetNumber}) - Dalam proses manual Admin`;
 
           const tx = {
             id: txId,
@@ -5793,8 +5794,8 @@ const App = {
             type: 'ppob_conversion',
             category: cat,
             nominal: denom,
-            amount: price,
-            netAmount: price,
+            amount: exactPrice,
+            netAmount: exactPrice,
             targetNumber: targetNumber,
             destinationAccount: (isPln ? 'PLN: ' : 'HP: ') + targetNumber,
             walletSource: 'Wallet Tambah Teman',
@@ -5903,14 +5904,17 @@ const App = {
     const db = DB.get();
     const custom = db.settings?.ppob?.pricing;
     const num = Number(denom) || 10000;
-    if (custom && custom[num] !== undefined) return Number(custom[num]);
     const defaultPricing = {
       10000: 12000,
       20000: 22000,
       50000: 52000,
       100000: 102000
     };
-    return defaultPricing[num] || (num + 2000);
+    const defaultPrice = defaultPricing[num] || (num + 2000);
+    if (custom && custom[num] !== undefined && Number(custom[num]) > 0) {
+      return Math.max(defaultPrice, Number(custom[num]));
+    }
+    return defaultPrice;
   },
 
   openMainWalletPpobModal(category = 'pulsa') {
@@ -6116,7 +6120,8 @@ const App = {
           return;
         }
 
-        u.walletBalance = Math.max(0, (u.walletBalance || 0) - price);
+        const exactPrice = this.getPpobPrice(denom);
+        u.walletBalance = Math.max(0, (u.walletBalance || 0) - exactPrice);
 
         const txId = 'TRX-POB-' + Math.floor(100000 + Math.random() * 900000);
         const tx = {
@@ -6126,8 +6131,8 @@ const App = {
           type: 'ppob_conversion',
           category: isPln ? 'pln' : 'pulsa',
           nominal: denom,
-          amount: price,
-          netAmount: price,
+          amount: exactPrice,
+          netAmount: exactPrice,
           targetNumber: targetVal,
           destinationAccount: (isPln ? 'PLN: ' : 'HP: ') + targetVal,
           source: 'main_wallet',
@@ -6136,7 +6141,7 @@ const App = {
           status: 'pending',
           ppobStatus: 'Dalam Proses',
           adminNote: '',
-          note: `Beli ${isPln ? 'Token Listrik PLN' : 'Pulsa'} ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(price)}) dari Saldo Utama (${isPln ? 'No. Meter: ' : 'No. HP: '}${targetVal}) - Dalam proses manual Admin`,
+          note: `Beli ${isPln ? 'Token Listrik PLN' : 'Pulsa'} ${DB.formatIDR(denom)} (Harga: ${DB.formatIDR(exactPrice)}) dari Saldo Utama (${isPln ? 'No. Meter: ' : 'No. HP: '}${targetVal}) - Dalam proses manual Admin`,
           createdAt: new Date().toISOString()
         };
 

@@ -1845,6 +1845,15 @@ export const AdminPage = {
     if (p50Input) p50Input.value = pricing[50000] !== undefined ? pricing[50000] : 52000;
     if (p100Input) p100Input.value = pricing[100000] !== undefined ? pricing[100000] : 102000;
 
+    const sysP10 = document.getElementById('ppobSysCfgPrice10');
+    const sysP20 = document.getElementById('ppobSysCfgPrice20');
+    const sysP50 = document.getElementById('ppobSysCfgPrice50');
+    const sysP100 = document.getElementById('ppobSysCfgPrice100');
+    if (sysP10) sysP10.value = p10Input ? p10Input.value : 12000;
+    if (sysP20) sysP20.value = p20Input ? p20Input.value : 22000;
+    if (sysP50) sysP50.value = p50Input ? p50Input.value : 52000;
+    if (sysP100) sysP100.value = p100Input ? p100Input.value : 102000;
+
     if (showStatusSelect) showStatusSelect.value = ppob.showProcessStatus !== false ? 'true' : 'false';
     if (globalEnabledSelect) globalEnabledSelect.value = ppob.enabled !== false ? 'true' : 'false';
     if (noticeInput) noticeInput.value = ppob.notice || 'Pengisian pulsa seluler dan token listrik PLN diproses manual oleh Admin maksimal 1x24 jam.';
@@ -1857,10 +1866,10 @@ export const AdminPage = {
   },
 
   async savePpobSettings() {
-    const p10 = Number(document.getElementById('ppobCfgPrice10')?.value) || 12000;
-    const p20 = Number(document.getElementById('ppobCfgPrice20')?.value) || 22000;
-    const p50 = Number(document.getElementById('ppobCfgPrice50')?.value) || 52000;
-    const p100 = Number(document.getElementById('ppobCfgPrice100')?.value) || 102000;
+    const p10 = Number(document.getElementById('ppobCfgPrice10')?.value) || Number(document.getElementById('ppobSysCfgPrice10')?.value) || 12000;
+    const p20 = Number(document.getElementById('ppobCfgPrice20')?.value) || Number(document.getElementById('ppobSysCfgPrice20')?.value) || 22000;
+    const p50 = Number(document.getElementById('ppobCfgPrice50')?.value) || Number(document.getElementById('ppobSysCfgPrice50')?.value) || 52000;
+    const p100 = Number(document.getElementById('ppobCfgPrice100')?.value) || Number(document.getElementById('ppobSysCfgPrice100')?.value) || 102000;
     const showStatus = document.getElementById('ppobCfgShowStatus')?.value === 'true';
     const enabled = document.getElementById('ppobCfgGlobalEnabled')?.value === 'true';
     const notice = (document.getElementById('ppobCfgNotice')?.value || '').trim();

@@ -72,3 +72,16 @@ Options -Indexes
     AddOutputFilterByType DEFLATE application/javascript application/x-javascript text/javascript
     AddOutputFilterByType DEFLATE application/json image/svg+xml
 </IfModule>
+
+# 7. Cache-Control: Mencegah file JS/CSS/HTML tertahan di browser cache saat ada pembaruan kode
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html|htm)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+    <FilesMatch "\.(js|mjs|css)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
