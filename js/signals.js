@@ -42,7 +42,6 @@ export const Signals = {
       }
     });
 
-    DB.save(db);
     return db.marketTickers;
   },
 

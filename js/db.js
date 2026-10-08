@@ -636,19 +636,18 @@ export const DB = {
         if (!_activeDB) {
           _activeDB = JSON.parse(JSON.stringify(defaultDB));
         }
+        if (_activeDB && Array.isArray(_activeDB.transactions)) {
+          _activeDB.transactions.sort((a, b) => {
+            const tA = new Date(a.createdAt || a.date || 0).getTime();
+            const tB = new Date(b.createdAt || b.date || 0).getTime();
+            return tB - tA;
+          });
+        }
       }
       const parsed = _activeDB;
       if (!parsed.plans) parsed.plans = defaultDB.plans;
       if (!parsed.users) parsed.users = defaultDB.users;
-      if (!parsed.transactions) {
-        parsed.transactions = [];
-      } else if (Array.isArray(parsed.transactions)) {
-        parsed.transactions.sort((a, b) => {
-          const tA = new Date(a.createdAt || a.date || 0).getTime();
-          const tB = new Date(b.createdAt || b.date || 0).getTime();
-          return tB - tA;
-        });
-      }
+      if (!parsed.transactions) parsed.transactions = [];
       if (!parsed.investments) parsed.investments = [];
       if (!parsed.signals) parsed.signals = defaultDB.signals;
       if (!parsed.marketTickers) parsed.marketTickers = defaultDB.marketTickers;

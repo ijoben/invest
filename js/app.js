@@ -166,7 +166,9 @@ const App = {
   startProfitCountdownLoop() {
     if (this.profitCountdownInterval) clearInterval(this.profitCountdownInterval);
     this.profitCountdownInterval = setInterval(() => {
-      this.updateProfitCountdown();
+      if (this.currentTab === 'home') {
+        this.updateProfitCountdown();
+      }
     }, 1000);
   },
 
@@ -175,7 +177,9 @@ const App = {
     if (this.marketInterval) clearInterval(this.marketInterval);
     this.marketInterval = setInterval(() => {
       Signals.tickMarkets();
-      this.renderMarketTickers();
+      if (this.currentTab === 'home') {
+        this.renderMarketTickers();
+      }
     }, 2000);
   },
 
@@ -237,12 +241,18 @@ const App = {
     const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
     const activeModal = document.querySelector('.modal.active, .modal[style*="display: flex"], .modal[style*="display: block"]');
 
-    if (!isTyping && !activeModal) {
-      this.renderAll();
-    } else {
-      this.renderHeader(freshUser);
-    }
+    const freshTxCount = (freshDb.transactions || []).length;
+    const freshInvCount = (freshDb.investments || []).length;
+    const hasStateChange = (newBal !== oldBal) || (newAff !== oldAff) || (this._cachedTxCount !== freshTxCount) || (this._cachedInvCount !== freshInvCount);
+    this._cachedTxCount = freshTxCount;
+    this._cachedInvCount = freshInvCount;
+
+    this.renderHeader(freshUser);
     this.updateHeaderNotifBadge(freshUser);
+
+    if (hasStateChange && !isTyping && !activeModal) {
+      this.renderCurrentTab(freshUser, dbData);
+    }
     const notifModalEl = document.getElementById('notifModal');
     if (notifModalEl && notifModalEl.classList.contains('show')) {
       this.renderNotificationsUI();
@@ -396,50 +406,46 @@ const App = {
       });
     }
 
-    // 1. Render Top Header
+    // 1. Render Top Header & Notifications Badge
     this.renderHeader(user);
-
-    // 1.2 Render Public Web Stats & Device IP Detection (Requirements 6 & 7)
-    this.renderPublicWebStats(db);
-
-    // 1.5 Render Running Text / Announcement Ticker
-    this.renderRunningText();
-
-    // 2. Render 4-Column Wallet Balance Card
-    this.renderWalletSummary(user);
-
-    // 2.5 Render Portfolio Analytics & Growth Chart (Requirements 2, 3, 4)
-    this.renderPortfolioAnalytics(user, db);
-
-    // 3. Render Plan / VIP Tier Carousel
-    this.renderTierCarousel(user, db);
-
-    // 4. Render Live Market Tickers
-    this.renderMarketTickers();
-
-    // 5. Render Trading / CTA Banner
-    this.renderTradingBanner(user);
-
-    // 5.5 Render Banner Slides Carousel (Below Login Button)
-    this.renderBannerCarousel();
-
-    // 6. Render Autotrading Signal Status
-    this.renderSignals();
-
-    // 6.5 Render Rewards Points Carousel (Under Signals Section)
-    this.renderRewardsCarousel(user);
-
-    // 6.6 Render Daily Check-in Streak Strip
-    this.renderDailyCheckInUI();
-
-    // 6.7 Update Realtime Header Notifications Badge
     this.updateHeaderNotifBadge(user);
 
-    // 7. Render Other Views if active
-    if (this.currentTab === 'wallet') this.renderWalletView(user);
-    if (this.currentTab === 'trade') this.renderTradeView(user);
-    if (this.currentTab === 'profile') this.renderProfileView(user);
-    if (this.currentTab === 'markets') this.renderMarketsView();
+    // 2. Render only the active tab view for lightweight performance
+    this.renderCurrentTab(user, db);
+  },
+
+  // Render components specific to the Home Tab
+  renderHomeView(user, db) {
+    this.renderPublicWebStats(db);
+    this.renderRunningText();
+    this.renderWalletSummary(user);
+    this.renderPortfolioAnalytics(user, db);
+    this.renderTierCarousel(user, db);
+    this.renderMarketTickers();
+    this.renderTradingBanner(user);
+    this.renderBannerCarousel();
+    this.renderSignals();
+    this.renderRewardsCarousel(user);
+    this.renderDailyCheckInUI();
+  },
+
+  // Render only the active tab view
+  renderCurrentTab(user, db) {
+    const u = user !== undefined ? user : Auth.getUser();
+    const d = db || DB.get();
+    const activeTab = this.currentTab || 'home';
+
+    if (activeTab === 'home') {
+      this.renderHomeView(u, d);
+    } else if (activeTab === 'wallet') {
+      this.renderWalletView(u);
+    } else if (activeTab === 'trade') {
+      this.renderTradeView(u);
+    } else if (activeTab === 'profile') {
+      this.renderProfileView(u);
+    } else if (activeTab === 'markets') {
+      this.renderMarketsView();
+    }
   },
 
   // 1. Header Rendering (Optimized for Mobile Screens)
@@ -3329,8 +3335,12 @@ const App = {
       pane.classList.toggle('active', pane.id === `tab-${tabId}`);
     });
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    this.renderAll();
+    window.scrollTo(0, 0);
+    const user = Auth.getUser();
+    const db = DB.get();
+    this.renderHeader(user);
+    this.updateHeaderNotifBadge(user);
+    this.renderCurrentTab(user, db);
   },
 
   // Modals Controller
