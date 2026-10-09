@@ -7,7 +7,7 @@
 import { DB, createReceiptBase64, escapeHtml } from './db.js';
 import { Auth } from './auth.js';
 import { Plans } from './plans.js';
-import { Affiliate } from './affiliate.js';
+import { Affiliate, maskAffiliateUsername, maskAffiliateFullName } from './affiliate.js';
 import { Payment } from './payment.js';
 import { Signals } from './signals.js';
 import { Rewards } from './rewards.js';
@@ -2777,13 +2777,20 @@ const App = {
       return;
     }
 
-    listEl.innerHTML = members.map(m => `
+    listEl.innerHTML = members.map(m => {
+      const displayUsername = m.maskedUsername || maskAffiliateUsername(m.username);
+      const displayFullName = m.maskedFullName || maskAffiliateFullName(m.fullName);
+      const displayUpline = (m.maskedUplineUsername && m.maskedUplineUsername !== '-')
+        ? m.maskedUplineUsername
+        : (m.uplineUsername && m.uplineUsername !== '-' ? maskAffiliateUsername(m.uplineUsername) : '-');
+
+      return `
       <div class="downline-member-card">
         <div class="downline-card-header">
           <div class="downline-card-user">
             <span class="network-level-badge lvl-${m.level}">L${m.level}</span>
-            <span>${escapeHtml(m.username)}</span>
-            <span style="font-size:11px; color:#64748B; font-weight:500;">(${escapeHtml(m.fullName || '-')})</span>
+            <span>${escapeHtml(displayUsername)}</span>
+            <span style="font-size:11px; color:#64748B; font-weight:500;">(${escapeHtml(displayFullName)})</span>
           </div>
           <span class="badge-status ${m.activeInvsCount > 0 ? 'approved' : 'active'}">
             ${m.activeInvsCount > 0 ? `● ${m.activeInvsCount} Paket Aktif` : 'Terdaftar'}
@@ -2797,7 +2804,7 @@ const App = {
           </div>
           <div>
             <div style="color:#64748B;">Sponsor Langsung</div>
-            <div style="font-weight:700; color:#475569;">${m.uplineUsername || '-'}</div>
+            <div style="font-weight:700; color:#475569;">${escapeHtml(displayUpline)}</div>
           </div>
           <div>
             <div style="color:#64748B;">Bergabung</div>
@@ -2805,8 +2812,12 @@ const App = {
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   },
+
+  maskUsername: maskAffiliateUsername,
+  maskFullName: maskAffiliateFullName,
 
   // Member Profile & Personal Data Controller
   openEditProfileModal() {

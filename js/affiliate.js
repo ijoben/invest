@@ -6,7 +6,42 @@
 
 import { DB } from './db.js';
 
+// Helper: Mask username with xxx on trailing letters for privacy & security
+export function maskAffiliateUsername(username) {
+  if (!username || typeof username !== 'string') return '-';
+  const clean = username.trim();
+  if (!clean || clean === '-') return '-';
+  if (clean.toLowerCase().endsWith('xxx')) return clean;
+  if (clean.length <= 2) return clean.charAt(0) + 'xxx';
+  if (clean.length === 3) return clean.slice(0, 2) + 'xxx';
+  return clean.slice(0, 3) + 'xxx';
+}
+
+// Helper: Mask full name with xxx on trailing letters for each name component
+export function maskAffiliateFullName(fullName) {
+  if (!fullName || typeof fullName !== 'string') return '-';
+  const clean = fullName.trim();
+  if (!clean || clean === '-') return '-';
+  const words = clean.split(/\s+/);
+  return words.map(w => {
+    if (!w) return '';
+    const match = w.match(/^([^.,!?;:]+)([.,!?;:]*)$/);
+    const text = match ? match[1] : w;
+    const punct = match ? match[2] : '';
+    if (text.toLowerCase().endsWith('xxx')) return w;
+    if (text.length <= 1) return w;
+    let masked = '';
+    if (text.length <= 2) masked = text.charAt(0) + 'xxx';
+    else if (text.length === 3) masked = text.slice(0, 2) + 'xxx';
+    else masked = text.slice(0, 3) + 'xxx';
+    return masked + punct;
+  }).join(' ');
+}
+
 export const Affiliate = {
+  maskUsername: maskAffiliateUsername,
+  maskFullName: maskAffiliateFullName,
+
   // Apply Direct Sponsor Bonus to db in-memory (Atomic)
   applySponsorBonus(db, buyerUser, amount) {
     if (!buyerUser || !buyerUser.referredBy || !amount || amount <= 0) return 0;
@@ -295,11 +330,17 @@ export const Affiliate = {
     const enrichMember = (u, lvl, uplineName) => {
       const activeInvs = (db.investments || []).filter(inv => inv.userId === u.id && inv.status === 'active');
       const totalCapital = activeInvs.reduce((sum, inv) => sum + (inv.capital || 0), 0);
+      const maskedUser = maskAffiliateUsername(u.username);
+      const maskedName = maskAffiliateFullName(u.fullName);
+      const maskedUp = uplineName && uplineName !== '-' ? maskAffiliateUsername(uplineName) : '-';
       return {
         ...u,
         level: lvl,
         levelStr: `Level ${lvl}`,
         uplineUsername: uplineName || '-',
+        maskedUsername: maskedUser,
+        maskedFullName: maskedName,
+        maskedUplineUsername: maskedUp,
         activeInvsCount: activeInvs.length,
         personalTurnover: totalCapital,
         joinedDateStr: u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Member Aktif'
