@@ -4191,8 +4191,8 @@ export const AdminPage = {
       return;
     }
 
-    if (newPass.length < 6) {
-      this.showToast('Kata sandi baru minimal 6 karakter!', 'error');
+    if (newPass.length < 4) {
+      this.showToast('Kata sandi baru minimal 4 karakter!', 'error');
       return;
     }
 
@@ -4207,6 +4207,7 @@ export const AdminPage = {
       this.showToast((res && res.message) || 'Gagal mengubah kata sandi!', 'error');
       return;
     }
+    adminUser.password = newPass;
     DB.setSession(adminUser);
 
     // Clear password inputs

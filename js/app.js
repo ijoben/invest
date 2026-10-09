@@ -1638,6 +1638,28 @@ const App = {
     }
   },
 
+  // Mask price / rate values: Entry, TP, SL (digits behind decimal replaced with XXX + blur)
+  maskSignalPrice(val, hasActivePlan) {
+    if (hasActivePlan) return String(val);
+    const str = String(val || '').trim();
+    if (!str) return '-';
+    if (str.includes('.')) {
+      const parts = str.split('.');
+      return `${parts[0]}.<span class="signal-masked-digit">XXX</span>`;
+    }
+    const keepLen = Math.max(1, Math.floor(str.length / 2));
+    return `${str.substring(0, keepLen)}<span class="signal-masked-digit">XXX</span>`;
+  },
+
+  // Mask confidence percentage (e.g. 92% -> 9X%)
+  maskSignalConfidence(conf, hasActivePlan) {
+    if (hasActivePlan) return `${conf}%`;
+    const str = String(conf || '').replace('%', '').trim();
+    if (!str) return '-';
+    const firstDigit = str.charAt(0) || '9';
+    return `${firstDigit}<span class="signal-masked-digit">X%</span>`;
+  },
+
   // 6. Autotrading Signal Status Feed (Members Only & Max 4 Signals)
   renderSignals() {
     const feed = document.getElementById('signalFeedContainer');
@@ -1664,6 +1686,10 @@ const App = {
       `;
       return;
     }
+
+    // Check if user has active investment plan
+    const activePlans = Plans.getUserInvestments(user.id);
+    const hasActivePlan = Boolean(user.role === 'admin' || (activePlans && activePlans.length > 0));
 
     // Member Mode: Limit to maximum 4 latest active signals
     const marketStatus = Plans.isMarketOpen();
@@ -1704,19 +1730,19 @@ const App = {
         <div class="signal-matrix-box">
           <div class="matrix-item">
             <span class="matrix-label">Entry</span>
-            <span class="matrix-value">${sig.entry}</span>
+            <span class="matrix-value">${this.maskSignalPrice(sig.entry, hasActivePlan)}</span>
           </div>
           <div class="matrix-item">
             <span class="matrix-label">TP</span>
-            <span class="matrix-value">${sig.tp}</span>
+            <span class="matrix-value">${this.maskSignalPrice(sig.tp, hasActivePlan)}</span>
           </div>
           <div class="matrix-item">
             <span class="matrix-label">SL</span>
-            <span class="matrix-value">${sig.sl}</span>
+            <span class="matrix-value">${this.maskSignalPrice(sig.sl, hasActivePlan)}</span>
           </div>
           <div class="matrix-item">
             <span class="matrix-label">Confidence</span>
-            <span class="matrix-value highlight">${sig.confidence}%</span>
+            <span class="matrix-value highlight">${this.maskSignalConfidence(sig.confidence, hasActivePlan)}</span>
           </div>
         </div>
       </div>
@@ -4501,19 +4527,24 @@ const App = {
       });
     });
 
-    // 5. Signals
-    (db.signals || []).filter(s => s.status === 'active').slice(0, 3).forEach(s => {
-      notifs.push({
-        id: 'sig-' + s.id,
-        type: 'system',
-        category: 'Sinyal AI',
-        title: `Sinyal ${s.action} ${s.pair} (Akurasi ${s.confidence}%)`,
-        message: `Entry: ${s.entry} · TP: ${s.tp} · SL: ${s.sl}. Rekomendasi Autotrading Signal Status AI.`,
-        time: new Date().toISOString(),
-        icon: 'signal',
-        action: () => this.switchTab('trade')
+    // 5. Signals (Khusus Member yang Sudah Aktifkan Paket Investasi)
+    const activeInvsForSignals = Plans.getUserInvestments(user.id);
+    const hasActivePlanForSignalNotif = Boolean(user.role === 'admin' || (activeInvsForSignals && activeInvsForSignals.length > 0));
+
+    if (hasActivePlanForSignalNotif) {
+      (db.signals || []).filter(s => s.status === 'active').slice(0, 3).forEach(s => {
+        notifs.push({
+          id: 'sig-' + s.id,
+          type: 'system',
+          category: 'Sinyal AI',
+          title: `Sinyal ${s.action} ${s.pair} (Akurasi ${s.confidence}%)`,
+          message: `Entry: ${s.entry} · TP: ${s.tp} · SL: ${s.sl}. Rekomendasi Autotrading Signal Status AI.`,
+          time: new Date().toISOString(),
+          icon: 'signal',
+          action: () => this.switchTab('trade')
+        });
       });
-    });
+    }
 
     // Sort newest first
     notifs.sort((a, b) => new Date(b.time) - new Date(a.time));
@@ -6393,6 +6424,10 @@ const App = {
     const sig = signals.find(s => s.id === signalId);
     if (!sig) return;
 
+    const user = Auth.getUser();
+    const activePlans = user ? Plans.getUserInvestments(user.id) : [];
+    const hasActivePlan = Boolean(user && (user.role === 'admin' || (activePlans && activePlans.length > 0)));
+
     const marketStatus = Plans.isMarketOpen();
     const isOff = !marketStatus.isOpen;
 
@@ -6429,21 +6464,46 @@ const App = {
         actionBadge.textContent = sig.action;
         actionBadge.className = `badge-signal-action ${sig.action.toLowerCase()}`;
       }
-      if (noticeEl) {
-        noticeEl.innerHTML = '';
-      }
-      document.getElementById('sigModalEntry').textContent = sig.entry;
-      document.getElementById('sigModalTp').textContent = sig.tp;
-      document.getElementById('sigModalSl').textContent = sig.sl;
-      document.getElementById('sigModalConf').textContent = `${sig.confidence}%`;
 
-      if (ctaBtn) {
-        ctaBtn.innerHTML = '<span>Terapkan ke Akun Trading</span>';
-        ctaBtn.style.background = '';
-        ctaBtn.onclick = () => {
-          this.closeModal('signalModal');
-          this.showToast('Sinyal telah disalin ke trading desk Anda!', 'success');
-        };
+      if (!hasActivePlan) {
+        if (noticeEl) {
+          noticeEl.innerHTML = `
+            <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 10px 12px; margin-top: 10px; color: #D97706; font-size: 11.5px; font-weight: 600; line-height: 1.4;">
+              🔒 <strong>Khusus Member Aktif:</strong> Angka Entry, TP, SL, dan Akurasi disensor blur XXX karena Anda belum mengaktifkan paket investasi. Aktifkan paket sekarang untuk membuka sinyal presisi penuh!
+            </div>
+          `;
+        }
+        document.getElementById('sigModalEntry').innerHTML = this.maskSignalPrice(sig.entry, false);
+        document.getElementById('sigModalTp').innerHTML = this.maskSignalPrice(sig.tp, false);
+        document.getElementById('sigModalSl').innerHTML = this.maskSignalPrice(sig.sl, false);
+        document.getElementById('sigModalConf').innerHTML = this.maskSignalConfidence(sig.confidence, false);
+
+        if (ctaBtn) {
+          ctaBtn.innerHTML = '<span>⚡ Aktifkan Paket untuk Buka Sinyal</span>';
+          ctaBtn.style.background = 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)';
+          ctaBtn.onclick = () => {
+            this.closeModal('signalModal');
+            this.switchTab('plans');
+            this.showToast('Pilih dan aktifkan paket investasi untuk membuka sinyal presisi penuh!', 'info');
+          };
+        }
+      } else {
+        if (noticeEl) {
+          noticeEl.innerHTML = '';
+        }
+        document.getElementById('sigModalEntry').textContent = sig.entry;
+        document.getElementById('sigModalTp').textContent = sig.tp;
+        document.getElementById('sigModalSl').textContent = sig.sl;
+        document.getElementById('sigModalConf').textContent = `${sig.confidence}%`;
+
+        if (ctaBtn) {
+          ctaBtn.innerHTML = '<span>Terapkan ke Akun Trading</span>';
+          ctaBtn.style.background = '';
+          ctaBtn.onclick = () => {
+            this.closeModal('signalModal');
+            this.showToast('Sinyal telah disalin ke trading desk Anda!', 'success');
+          };
+        }
       }
     }
 

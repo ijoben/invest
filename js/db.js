@@ -1290,22 +1290,56 @@ export const DB = {
       return { success: false, message: 'Password lama dan password baru wajib diisi!' };
     }
 
-    if (newPassword.length < 6) {
-      return { success: false, message: 'Password baru minimal harus 6 karakter!' };
+    if (newPassword.length < 4) {
+      return { success: false, message: 'Password baru minimal harus 4 karakter!' };
     }
 
     if (typeof fetch === 'function') {
       try {
-        const res = await fetch(this.getApiUrl('change_password'), {
+        const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : null) ||
+                      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : null) || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+          headers['X-Session-Token'] = token;
+        }
+
+        let res = await fetch(this.getApiUrl('change_password'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ oldPassword, newPassword })
+          credentials: 'include',
+          headers,
+          body: JSON.stringify({ userId, oldPassword, newPassword })
         });
+
+        if (res.status === 401) {
+          const relogged = await this.ensureServerSession();
+          if (relogged) {
+            const freshToken = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : null) || '';
+            if (freshToken) {
+              headers['Authorization'] = 'Bearer ' + freshToken;
+              headers['X-Session-Token'] = freshToken;
+            }
+            res = await fetch(this.getApiUrl('change_password'), {
+              method: 'POST',
+              credentials: 'include',
+              headers,
+              body: JSON.stringify({ userId, oldPassword, newPassword })
+            });
+          }
+        }
+
         const json = await res.json().catch(() => null);
         if (res.ok && json && json.success) {
-          user.password = newPassword; // in-memory only, never persisted to storage
+          user.password = newPassword;
           user.passwordUpdatedAt = new Date().toISOString();
-          return { success: true, message: (json.message || 'Password berhasil diubah! Gunakan password baru untuk login berikutnya.') };
+          if (json.sessionToken) {
+            try {
+              if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+            } catch(e) {}
+          }
+          this.save(db);
+          return { success: true, message: (json.message || 'Password berhasil diubah dan disimpan permanen!') };
         }
         return { success: false, message: (json && json.message) || `Gagal mengubah password (HTTP ${res.status}).` };
       } catch (e) {
