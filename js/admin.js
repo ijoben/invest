@@ -279,6 +279,22 @@ export const Admin = {
     return { success: true, message: 'Pengaturan QRIS berhasil disimpan!' };
   },
 
+  // USDT Crypto Gateway Management
+  async saveUsdtSettings({ active, trc20Address, bep20Address, usdIdrRate, withdrawFeePercent, depositPointsReward }) {
+    const db = DB.get();
+    db.settings.paymentGateways = db.settings.paymentGateways || {};
+    db.settings.paymentGateways.usdt = {
+      active: active !== undefined ? Boolean(active) : true,
+      trc20Address: trc20Address ? trc20Address.trim() : 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1',
+      bep20Address: bep20Address ? bep20Address.trim() : '0x71C4982aF12B76295328B83716d1029C837A5982'
+    };
+    if (usdIdrRate !== undefined) db.settings.usdIdrRate = Number(usdIdrRate) || 16250;
+    if (withdrawFeePercent !== undefined) db.settings.withdrawFeePercent = Number(withdrawFeePercent);
+    if (depositPointsReward !== undefined) db.settings.depositPointsReward = Number(depositPointsReward);
+    await DB.save(db);
+    return { success: true, message: 'Pengaturan Crypto USDT & Kurs berhasil disimpan!' };
+  },
+
   // Adjust User Balance directly (Authoritative via MySQL + Audit Transaction)
   async adjustUserBalance(userId, { walletBalance, affiliateBalance, points, note }) {
     const payload = {};
@@ -633,8 +649,10 @@ export const Admin = {
     return await DB.adminSaveSettings(settingsPayload);
   },
 
-  async sendTestEmail(targetEmail) {
-    return await DB.dispatchMailApi('test', { targetEmail });
+  async sendTestEmail(targetEmail, currentSettings = null) {
+    const payload = { targetEmail };
+    if (currentSettings) payload.currentSettings = currentSettings;
+    return await DB.dispatchMailApi('test', payload);
   },
 
   async manuallyVerifyUser(userId) {

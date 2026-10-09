@@ -800,16 +800,17 @@
             <h3 class="admin-card-title">📱 Pengaturan QRIS Deposit Instant</h3>
             <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Atur barcode QRIS dinamis/statis yang mendukung scan pembayaran otomatis dari semua Bank & E-Wallet.</p>
           </div>
+          <span class="badge-status approved" id="qrisAdminStatusBadge" style="font-size: 11px; padding: 4px 10px;">🟢 QRIS AKTIF</span>
         </div>
 
         <div class="admin-qris-settings-grid">
           <div>
             <div class="setting-row">
               <div class="setting-info">
-                <div class="setting-title">Status Saluran QRIS</div>
+                <div class="setting-title">Status Saluran QRIS (Toggle ON / OFF)</div>
                 <div class="setting-desc">Aktifkan atau nonaktifkan saluran pembayaran QRIS di formulir deposit member</div>
               </div>
-              <div class="setting-input-wrap" style="width: 200px;">
+              <div class="setting-input-wrap" style="width: 240px;">
                 <select class="admin-input" id="qrisCfgActive" onchange="AdminPage.previewQrisSettings()">
                   <option value="true">🟢 AKTIF (Tampil di Frontend)</option>
                   <option value="false">🔴 NONAKTIF (Sembunyikan)</option>
@@ -868,10 +869,27 @@
         </div>
       </div>
 
-      <!-- Card 3: Pengaturan Crypto USDT TRC20 & Kurs -->
+      <!-- Card 3: Pengaturan Crypto USDT TRC20 / BEP20 & Kurs -->
       <div class="admin-card" style="margin-top: 24px;">
         <div class="admin-card-header">
-          <h3 class="admin-card-title">💎 Pengaturan Crypto USDT TRC20 & Kurs</h3>
+          <div>
+            <h3 class="admin-card-title">💎 Pengaturan Crypto USDT TRC20 / BEP20 & Kurs</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Atur toggle saluran deposit crypto USDT, alamat wallet TRC20 & BEP20, serta kurs konversi USD / IDR.</p>
+          </div>
+          <span class="badge-status approved" id="usdtAdminStatusBadge" style="font-size: 11px; padding: 4px 10px;">🟢 USDT AKTIF</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Status Saluran Crypto USDT (Toggle ON / OFF)</div>
+            <div class="setting-desc">Aktifkan atau nonaktifkan saluran deposit Crypto USDT (TRC20 / BEP20) di formulir deposit member</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 240px;">
+            <select class="admin-input" id="usdtCfgActive" onchange="AdminPage.previewUsdtSettings()">
+              <option value="true">🟢 AKTIF (Tampil di Frontend)</option>
+              <option value="false">🔴 NONAKTIF (Sembunyikan)</option>
+            </select>
+          </div>
         </div>
 
         <div class="setting-row">
@@ -887,10 +905,20 @@
         <div class="setting-row">
           <div class="setting-info">
             <div class="setting-title">Alamat USDT TRC20 Resmi</div>
-            <div class="setting-desc">Alamat deposit wallet crypto TRC20 yang ditampilkan kepada pengguna</div>
+            <div class="setting-desc">Alamat deposit wallet crypto jaringan Tron (TRC20) yang ditampilkan kepada pengguna</div>
           </div>
           <div class="setting-input-wrap" style="width: 320px;">
             <input type="text" class="admin-input" id="gwCfgTrc20" value="TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1">
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">Alamat USDT BEP20 Resmi</div>
+            <div class="setting-desc">Alamat deposit wallet crypto jaringan BNB Smart Chain (BEP20)</div>
+          </div>
+          <div class="setting-input-wrap" style="width: 320px;">
+            <input type="text" class="admin-input" id="gwCfgBep20" value="0x71C4982aF12B76295328B83716d1029C837A5982">
           </div>
         </div>
 
@@ -1018,7 +1046,7 @@
             <div class="setting-desc">URL langsung file .apk (contoh: direct download link atau server CDN)</div>
           </div>
           <div class="setting-input-wrap" style="width: 340px;">
-            <input type="text" class="admin-input" id="apkCfgUrl" value="https://autotrading.my.id/downloads/autotrading-v2.4.apk">
+            <input type="text" class="admin-input" id="apkCfgUrl" value="https://autotrading.my.id/appautotrading.apk">
           </div>
         </div>
 
@@ -1813,6 +1841,10 @@
         </div>
 
         <div id="emailTestResultBox" style="display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; font-size: 12px; line-height: 1.5;"></div>
+
+        <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 8px; padding: 10px 14px; margin-top: 14px; font-size: 11.5px; color: #FDE047; line-height: 1.5;">
+          <strong>💡 Tips Pengujian:</strong> Jika menggunakan metode default cPanel (PHP mail), email biasanya disaring oleh Gmail / Yahoo ke <strong>Folder SPAM, JUNK, atau tab PROMOSI</strong> karena sistem DNS domain shared hosting belum memiliki DKIM/SPF. Silakan periksa folder Spam Anda dan tandai <em>"Bukan Spam"</em>. Untuk pengiriman 100% langsung ke Inbox utama, gunakan metode <strong>Custom SMTP Server</strong>.
+        </div>
       </div>
     </section>
 

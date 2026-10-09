@@ -14,6 +14,14 @@ export const Payment = {
     if (!user) return { success: false, message: 'User tidak ditemukan' };
     if (user.isBlocked) return { success: false, message: 'Akun Anda sedang diblokir oleh Administrator. Transaksi deposit ditolak.' };
 
+    const gateways = db.settings.paymentGateways || {};
+    if (method === 'qris' && gateways.qris && gateways.qris.active === false) {
+      return { success: false, message: 'Saluran deposit QRIS sedang dinonaktifkan oleh Administrator.' };
+    }
+    if (method === 'usdt' && gateways.usdt && gateways.usdt.active === false) {
+      return { success: false, message: 'Saluran deposit Crypto USDT sedang dinonaktifkan oleh Administrator.' };
+    }
+
     let finalAmount = Number(amount);
     let uniqueCode = 0;
 

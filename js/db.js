@@ -44,10 +44,10 @@ const defaultDB = {
       "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
     ],
     apkDownload: {
-      url: 'https://autotrading.my.id/downloads/autotrading-v2.4.apk',
+      url: 'https://autotrading.my.id/appautotrading.apk',
       version: 'v2.4.0 (Official Release)',
       size: '18.5 MB',
-      updatedAt: '2026-09-18',
+      updatedAt: '2026-10-09',
       enabled: true
     },
     email: {
@@ -136,6 +136,7 @@ const defaultDB = {
         imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2'
       },
       usdt: {
+        active: true,
         trc20Address: 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1',
         bep20Address: '0x71C4982aF12B76295328B83716d1029C837A5982'
       }
@@ -515,6 +516,16 @@ export const DB = {
     return `https://autotrading.my.id/api/index.php?action=${action}`;
   },
 
+  getMailApiUrl() {
+    if (typeof window !== 'undefined' && window.location) {
+      const origin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : '';
+      if (origin) {
+        return `${origin}/api/mail.php`;
+      }
+    }
+    return 'https://autotrading.my.id/api/mail.php';
+  },
+
   // Reliable WIB (Asia/Jakarta UTC+7) Date string YYYY-MM-DD
   getWibDateStr(dateInput = new Date()) {
     try {
@@ -657,6 +668,27 @@ export const DB = {
       if (!parsed.redemptions) parsed.redemptions = [];
       if (!parsed.testimonials) parsed.testimonials = [];
       if (!parsed.settings) parsed.settings = defaultDB.settings;
+      if (!parsed.settings.paymentGateways) {
+        parsed.settings.paymentGateways = JSON.parse(JSON.stringify(defaultDB.settings.paymentGateways));
+      } else {
+        if (!parsed.settings.paymentGateways.qris) {
+          parsed.settings.paymentGateways.qris = { ...defaultDB.settings.paymentGateways.qris };
+        }
+        if (parsed.settings.paymentGateways.qris.active === undefined) {
+          parsed.settings.paymentGateways.qris.active = true;
+        }
+        if (!parsed.settings.paymentGateways.usdt) {
+          parsed.settings.paymentGateways.usdt = { ...defaultDB.settings.paymentGateways.usdt };
+        }
+        if (parsed.settings.paymentGateways.usdt.active === undefined) {
+          parsed.settings.paymentGateways.usdt.active = true;
+        }
+      }
+      if (!parsed.settings.apkDownload) {
+        parsed.settings.apkDownload = { ...defaultDB.settings.apkDownload };
+      } else if (parsed.settings.apkDownload.url === 'https://autotrading.my.id/downloads/autotrading-v2.4.apk' || !parsed.settings.apkDownload.url) {
+        parsed.settings.apkDownload.url = 'https://autotrading.my.id/appautotrading.apk';
+      }
 
       return parsed;
     } catch (e) {
@@ -1714,18 +1746,17 @@ export const DB = {
         ...payload
       };
 
-      const res = await fetch('api/mail.php', {
+      const url = this.getMailApiUrl();
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyData)
       });
       return await res.json();
     } catch (e) {
-      // Graceful fallback for offline / mock testing
       return {
-        success: true,
-        offlineSimulated: true,
-        message: 'Email dispatch diproses (mode offline/simulasi)'
+        success: false,
+        message: 'Gagal menghubungi server email: ' + e.message
       };
     }
   },

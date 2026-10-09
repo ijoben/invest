@@ -16,90 +16,170 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/config.php';
 
-// Helper: send email via native PHP mail()
+// Helper: send email via native PHP mail() with proper cPanel Envelope Sender
 function sendViaPhpMail($to, $subject, $htmlContent, $fromName, $fromEmail) {
+    $cleanFromEmail = filter_var($fromEmail, FILTER_VALIDATE_EMAIL) ? $fromEmail : ('noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id'));
     $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
     $encodedFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
 
     $headers = [];
-    $headers[] = "From: {$encodedFromName} <{$fromEmail}>";
-    $headers[] = "Reply-To: {$encodedFromName} <{$fromEmail}>";
+    $headers[] = "From: {$encodedFromName} <{$cleanFromEmail}>";
+    $headers[] = "Reply-To: {$encodedFromName} <{$cleanFromEmail}>";
+    $headers[] = "Return-Path: <{$cleanFromEmail}>";
     $headers[] = "MIME-Version: 1.0";
     $headers[] = "Content-Type: text/html; charset=UTF-8";
-    $headers[] = "X-Mailer: PHP/" . phpversion();
+    $headers[] = "X-Mailer: AUTOTRADING-PHP/" . phpversion();
+    $headers[] = "Date: " . date('r');
+    $headers[] = "Message-ID: <" . time() . "." . uniqid() . "@" . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id') . ">";
 
     $headerStr = implode("\r\n", $headers);
-    return @mail($to, $encodedSubject, $htmlContent, $headerStr);
+    // 5th parameter -f sets Return-Path/Envelope-From in Exim so SPF/DMARC doesn't immediately drop
+    $res = @mail($to, $encodedSubject, $htmlContent, $headerStr, "-f " . escapeshellarg($cleanFromEmail));
+    if (!$res) {
+        $res = @mail($to, $encodedSubject, $htmlContent, $headerStr);
+    }
+    return $res;
 }
 
-// Helper: send email via direct Socket SMTP
+// Helper: send email via direct Socket SMTP with full diagnostics & SSL/TLS handshake
 function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) {
     $host = !empty($smtp['host']) ? trim($smtp['host']) : 'localhost';
     $port = !empty($smtp['port']) ? intval($smtp['port']) : 465;
     $user = !empty($smtp['user']) ? trim($smtp['user']) : '';
     $pass = !empty($smtp['pass']) ? trim($smtp['pass']) : '';
     $secure = !empty($smtp['secure']) ? strtolower(trim($smtp['secure'])) : 'ssl';
+    $logs = [];
 
-    $socketHost = ($secure === 'ssl' && !str_starts_with($host, 'ssl://')) ? 'ssl://' . $host : $host;
-    $timeout = 15;
+    $context = stream_context_create([
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+        ]
+    ]);
 
-    $socket = @fsockopen($socketHost, $port, $errno, $errstr, $timeout);
-    if (!$socket) {
-        // Fallback to PHP mail if socket connection fails
-        return sendViaPhpMail($to, $subject, $htmlContent, $fromName, $fromEmail);
+    $protocol = '';
+    if ($secure === 'ssl' || $port === 465) {
+        $protocol = 'ssl://';
     }
 
-    $read = function($expectedCode) use ($socket) {
+    $socketHost = $protocol . $host;
+    $timeout = 20;
+
+    $logs[] = "Menghubungkan ke SMTP {$socketHost}:{$port}...";
+    $errno = 0; $errstr = '';
+    $socket = @stream_socket_client("{$socketHost}:{$port}", $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT, $context);
+
+    if (!$socket) {
+        $logs[] = "Koneksi SMTP gagal: {$errstr} (Kode {$errno})";
+        return [
+            'ok' => false,
+            'logs' => $logs,
+            'error' => "Gagal terhubung ke {$host}:{$port} ({$errstr})"
+        ];
+    }
+
+    stream_set_timeout($socket, 15);
+
+    $read = function($expectedCode) use ($socket, &$logs) {
         $response = '';
         while ($line = fgets($socket, 512)) {
             $response .= $line;
             if (substr($line, 3, 1) === ' ') break;
         }
-        return substr($response, 0, 3) === strval($expectedCode);
+        $code = substr($response, 0, 3);
+        $logs[] = "<- " . trim($response);
+        return $code === strval($expectedCode);
     };
 
-    $write = function($cmd) use ($socket) {
+    $write = function($cmd, $mask = false) use ($socket, &$logs) {
+        $logs[] = "-> " . ($mask ? '*** [Password Disembunyikan] ***' : $cmd);
         fputs($socket, $cmd . "\r\n");
     };
 
-    if (!$read(220)) { fclose($socket); return false; }
+    if (!$read(220)) {
+        fclose($socket);
+        return ['ok' => false, 'logs' => $logs, 'error' => 'Greeting 220 dari server SMTP tidak diterima.'];
+    }
 
     $write("EHLO " . gethostname());
     if (!$read(250)) {
         $write("HELO " . gethostname());
-        if (!$read(250)) { fclose($socket); return false; }
+        if (!$read(250)) {
+            fclose($socket);
+            return ['ok' => false, 'logs' => $logs, 'error' => 'Handshake EHLO/HELO ditolak server SMTP.'];
+        }
     }
 
+    // STARTTLS jika port 587 atau mode TLS
+    if (($secure === 'tls' || $port === 587) && $protocol === '') {
+        $write("STARTTLS");
+        if ($read(220)) {
+            $crypto = @stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT);
+            if (!$crypto) {
+                fclose($socket);
+                return ['ok' => false, 'logs' => $logs, 'error' => 'Gagal negosiasi enkripsi TLS.'];
+            }
+            $write("EHLO " . gethostname());
+            if (!$read(250)) {
+                fclose($socket);
+                return ['ok' => false, 'logs' => $logs, 'error' => 'EHLO setelah STARTTLS ditolak.'];
+            }
+        }
+    }
+
+    // Autentikasi
     if (!empty($user) && !empty($pass)) {
         $write("AUTH LOGIN");
-        if (!$read(334)) { fclose($socket); return false; }
+        if (!$read(334)) {
+            fclose($socket);
+            return ['ok' => false, 'logs' => $logs, 'error' => 'Server tidak merespons AUTH LOGIN (Kode bukan 334).'];
+        }
 
         $write(base64_encode($user));
-        if (!$read(334)) { fclose($socket); return false; }
+        if (!$read(334)) {
+            fclose($socket);
+            return ['ok' => false, 'logs' => $logs, 'error' => 'Username SMTP ditolak server.'];
+        }
 
-        $write(base64_encode($pass));
-        if (!$read(235)) { fclose($socket); return false; }
+        $write(base64_encode($pass), true);
+        if (!$read(235)) {
+            fclose($socket);
+            return ['ok' => false, 'logs' => $logs, 'error' => 'Autentikasi gagal! Password atau akun SMTP salah (Kode 535).'];
+        }
     }
 
-    $write("MAIL FROM: <{$fromEmail}>");
-    if (!$read(250)) { fclose($socket); return false; }
+    $cleanFromEmail = filter_var($fromEmail, FILTER_VALIDATE_EMAIL) ? $fromEmail : ('noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id'));
+    $write("MAIL FROM: <{$cleanFromEmail}>");
+    if (!$read(250)) {
+        fclose($socket);
+        return ['ok' => false, 'logs' => $logs, 'error' => "Server menolak alamat pengirim (MAIL FROM <{$cleanFromEmail}>)."];
+    }
 
     $write("RCPT TO: <{$to}>");
-    if (!$read(250)) { fclose($socket); return false; }
+    if (!$read(250)) {
+        fclose($socket);
+        return ['ok' => false, 'logs' => $logs, 'error' => "Server menolak alamat penerima (RCPT TO <{$to}>)."];
+    }
 
     $write("DATA");
-    if (!$read(354)) { fclose($socket); return false; }
+    if (!$read(354)) {
+        fclose($socket);
+        return ['ok' => false, 'logs' => $logs, 'error' => 'Server menolak perintah DATA (Kode bukan 354).'];
+    }
 
     $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
     $encodedFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
 
     $headers = [];
-    $headers[] = "From: {$encodedFromName} <{$fromEmail}>";
+    $headers[] = "From: {$encodedFromName} <{$cleanFromEmail}>";
     $headers[] = "To: <{$to}>";
     $headers[] = "Subject: {$encodedSubject}";
     $headers[] = "MIME-Version: 1.0";
     $headers[] = "Content-Type: text/html; charset=UTF-8";
     $headers[] = "X-Mailer: AUTOTRADING-SMTP";
+    $headers[] = "Date: " . date('r');
+    $headers[] = "Message-ID: <" . time() . "." . uniqid() . "@" . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id') . ">";
 
     $body = implode("\r\n", $headers) . "\r\n\r\n" . $htmlContent . "\r\n.";
     $write($body);
@@ -108,7 +188,12 @@ function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) 
     $write("QUIT");
     fclose($socket);
 
-    return $ok;
+    if ($ok) {
+        $logs[] = "Pesan diterima server SMTP (250 OK Queue).";
+        return ['ok' => true, 'logs' => $logs, 'error' => ''];
+    } else {
+        return ['ok' => false, 'logs' => $logs, 'error' => 'Server SMTP menolak isi pesan saat pengiriman data.'];
+    }
 }
 
 // Master email dispatcher
@@ -118,7 +203,8 @@ function dispatchEmail($to, $subject, $htmlContent, $emailSettings) {
     $method = !empty($emailSettings['mailMethod']) ? strtolower($emailSettings['mailMethod']) : 'cpanel';
 
     if ($method === 'smtp' && !empty($emailSettings['smtp']['host'])) {
-        return sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $emailSettings['smtp']);
+        $res = sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $emailSettings['smtp']);
+        return !empty($res['ok']);
     } else {
         return sendViaPhpMail($to, $subject, $htmlContent, $fromName, $fromEmail);
     }
@@ -198,22 +284,43 @@ if (empty($action)) {
     exit();
 }
 
-$emailSettings = $data['settings']['email'] ?? [
-    'verificationRequired' => true,
-    'adminNotificationOnRegister' => true,
-    'adminNotificationEmail' => 'admin@autotrading.my.id',
-    'welcomeEmailEnabled' => true,
-    'mailMethod' => 'cpanel',
-    'smtp' => [
-        'host' => 'mail.' . ($_SERVER['SERVER_NAME'] ?? 'localhost'),
-        'port' => 465,
-        'secure' => 'ssl',
-        'user' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'localhost'),
-        'pass' => '',
-        'fromName' => 'AUTOTRADING Official',
-        'fromEmail' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id')
-    ]
-];
+$emailSettings = $data['currentSettings']['email'] ?? ($data['settings']['email'] ?? null);
+
+if (!$emailSettings) {
+    $pdo = getDbConnection();
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT setting_value FROM general_settings WHERE setting_key = 'general_settings' LIMIT 1");
+            $stmt->execute();
+            $row = $stmt->fetch();
+            if ($row && !empty($row['setting_value'])) {
+                $gs = json_decode($row['setting_value'], true);
+                if (!empty($gs['email'])) {
+                    $emailSettings = $gs['email'];
+                }
+            }
+        } catch (Exception $e) {}
+    }
+}
+
+if (!$emailSettings) {
+    $emailSettings = [
+        'verificationRequired' => false,
+        'adminNotificationOnRegister' => true,
+        'adminNotificationEmail' => 'admin@autotrading.my.id',
+        'welcomeEmailEnabled' => true,
+        'mailMethod' => 'cpanel',
+        'smtp' => [
+            'host' => 'mail.' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id'),
+            'port' => 465,
+            'secure' => 'ssl',
+            'user' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id'),
+            'pass' => '',
+            'fromName' => 'AUTOTRADING Official',
+            'fromEmail' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id')
+        ]
+    ];
+}
 
 // 1. ACTION: SEND OTP VERIFICATION TO NEW USER
 if ($action === 'send_otp') {
@@ -344,8 +451,11 @@ if ($action === 'test') {
     }
 
     $nowStr = date('d M Y - H:i:s') . ' WIB';
-    $methodStr = strtoupper($emailSettings['mailMethod'] ?? 'cpanel');
+    $method = !empty($emailSettings['mailMethod']) ? strtolower($emailSettings['mailMethod']) : 'cpanel';
     $subject = "[AUTOTRADING] Tes Konfigurasi Server Email Berhasil!";
+
+    $fromName = !empty($emailSettings['smtp']['fromName']) ? $emailSettings['smtp']['fromName'] : 'AUTOTRADING Official';
+    $fromEmail = !empty($emailSettings['smtp']['fromEmail']) ? $emailSettings['smtp']['fromEmail'] : 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id');
 
     $innerContent = <<<HTML
       <div style="text-align: center; margin-bottom: 20px;">
@@ -359,11 +469,11 @@ if ($action === 'test') {
       <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
         <tr>
           <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155; width: 35%;">Metode Dispatch</td>
-          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #E5A83B; border-bottom: 1px solid #334155;">{$methodStr}</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #E5A83B; border-bottom: 1px solid #334155;">{$method}</td>
         </tr>
         <tr>
           <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Pengirim Resmi</td>
-          <td style="padding: 10px 14px; font-size: 13px; font-weight: 600; color: #F8FAFC; border-bottom: 1px solid #334155;">{$emailSettings['smtp']['fromName']} ({$emailSettings['smtp']['fromEmail']})</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 600; color: #F8FAFC; border-bottom: 1px solid #334155;">{$fromName} ({$fromEmail})</td>
         </tr>
         <tr>
           <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Waktu Uji Coba</td>
@@ -381,14 +491,44 @@ if ($action === 'test') {
 HTML;
 
     $html = getEmailWrapper($subject, $innerContent);
-    $sent = dispatchEmail($targetEmail, $subject, $html, $emailSettings);
 
-    echo json_encode([
-        'success' => $sent,
-        'sent' => $sent,
-        'targetEmail' => $targetEmail,
-        'message' => $sent ? "Email uji coba berhasil dikirim ke {$targetEmail}! Silakan cek kotak masuk Anda." : "Percobaan kirim email diproses (Pastikan PHP mail() atau kredensial SMTP aktif di hosting cPanel Anda)."
-    ]);
+    if ($method === 'smtp') {
+        $smtpRes = sendViaSmtp($targetEmail, $subject, $html, $fromName, $fromEmail, $emailSettings['smtp'] ?? []);
+        if ($smtpRes['ok']) {
+            echo json_encode([
+                'success' => true,
+                'sent' => true,
+                'method' => 'smtp',
+                'targetEmail' => $targetEmail,
+                'logs' => $smtpRes['logs'],
+                'message' => "Email berhasil dikirim via server SMTP ke {$targetEmail}! Server merespons 250 OK Queue.",
+                'tips' => "Pesan terkirim via server SMTP. Jika belum muncul di Kotak Masuk (Inbox), silakan periksa tab Promosi atau folder Spam Gmail Anda."
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'sent' => false,
+                'method' => 'smtp',
+                'targetEmail' => $targetEmail,
+                'logs' => $smtpRes['logs'],
+                'message' => "Pengiriman SMTP Gagal: " . $smtpRes['error'],
+                'tips' => "Periksa kembali Host SMTP, Port (465 SSL atau 587 TLS), Username, dan Password di form konfigurasi atas."
+            ]);
+        }
+    } else {
+        // cPanel PHP mail()
+        $sent = sendViaPhpMail($targetEmail, $subject, $html, $fromName, $fromEmail);
+        echo json_encode([
+            'success' => $sent,
+            'sent' => $sent,
+            'method' => 'cpanel',
+            'targetEmail' => $targetEmail,
+            'message' => $sent 
+                ? "Pesan telah berhasil diserahkan ke mail queue server cPanel (PHP mail)." 
+                : "Fungsi PHP mail() di server cPanel gagal dijalankan.",
+            'tips' => "PENTING: Email dari server cPanel (PHP mail) sangat sering disaring oleh Gmail / Yahoo ke folder SPAM, JUNK, atau PROMOSI karena reputasi IP shared hosting. Silakan buka dan periksa folder SPAM / JUNK di email Anda. Jika ada di Spam, klik 'Bukan Spam'. Untuk garansi 100% langsung masuk ke Inbox utama, beralih ke metode 'Custom SMTP Server'."
+        ]);
+    }
     exit();
 }
 

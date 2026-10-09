@@ -3050,16 +3050,11 @@ const App = {
     }
   },
 
-  // Download APK Controller (Requirement 1)
-  openDownloadApkModal() {
-    if (!Auth.isLoggedIn()) {
-      this.showToast('Silahkan login atau daftar dulu', 'info');
-      this.openModal('authModal');
-      return;
-    }
-
+  // Download APK Controller (Direct Auto-Download & Modal Guide)
+  openDownloadApkModal(autoDownload = true) {
     const db = DB.get();
     const apk = (db.settings && db.settings.apkDownload) || {};
+    const downloadUrl = (apk.url && apk.url.trim()) || 'https://autotrading.my.id/appautotrading.apk';
 
     const verEl = document.getElementById('apkModalVersion');
     if (verEl) verEl.textContent = apk.version || 'v2.4.0';
@@ -3073,37 +3068,64 @@ const App = {
         btn.innerHTML = '<span>⚠️ Unduhan APK Sedang Maintenance</span>';
         btn.style.background = '#64748B';
         btn.disabled = true;
+        if (btn.tagName === 'A') btn.removeAttribute('href');
       } else {
         btn.innerHTML = '<span>📲 Unduh File APK Langsung</span>';
         btn.style.background = '';
         btn.disabled = false;
+        if (btn.tagName === 'A') {
+          btn.href = downloadUrl;
+          btn.setAttribute('download', 'appautotrading.apk');
+        }
       }
     }
 
     this.openModal('apkDownloadModal');
+
+    // Otomatis download file APK saat diklik
+    if (autoDownload && apk.enabled !== false) {
+      setTimeout(() => {
+        this.downloadApk();
+      }, 350);
+    }
   },
 
-  downloadApk() {
+  downloadApk(e) {
     const db = DB.get();
     const apk = (db.settings && db.settings.apkDownload) || {};
     if (apk.enabled === false) {
+      if (e && e.preventDefault) e.preventDefault();
       this.showToast('Layanan unduhan APK sedang dalam pemeliharaan.', 'info');
       return;
     }
 
-    const downloadUrl = apk.url || 'https://autotrading.my.id/downloads/autotrading-v2.4.apk';
-    this.showToast(`Memulai pengunduhan APK AUTOTRADING (${apk.version || 'v2.4.0'})...`, 'success');
+    const downloadUrl = (apk.url && apk.url.trim()) || 'https://autotrading.my.id/appautotrading.apk';
+    this.showToast(`Memulai pengunduhan file APK (${apk.version || 'v2.4.0'})...`, 'success');
 
-    try {
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `AUTOTRADING_${(apk.version || 'v2.4.0').replace(/[^a-zA-Z0-9.]/g, '_')}.apk`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (e) {
-      window.open(downloadUrl, '_blank');
+    // Pastikan tombol unduh di modal terarah ke URL terbaru
+    const btn = document.getElementById('btnApkDownload');
+    if (btn && btn.tagName === 'A') {
+      btn.href = downloadUrl;
+      btn.setAttribute('download', 'appautotrading.apk');
+    }
+
+    // Jika dipanggil via tombol selain <a> tag asli atau dipanggil secara terprogram
+    if (!e || !e.target || (btn && e.target !== btn && !e.target.closest('#btnApkDownload'))) {
+      try {
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.setAttribute('download', 'appautotrading.apk');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          try {
+            if (link.parentNode) link.parentNode.removeChild(link);
+          } catch (_) {}
+        }, 800);
+      } catch (err) {
+        window.location.href = downloadUrl;
+      }
     }
   },
 
@@ -5080,8 +5102,9 @@ const App = {
     const qrisImg = document.getElementById('depQrisImage');
     const qrisMerchant = document.getElementById('depQrisMerchantTitle');
     const qrisNmid = document.getElementById('depQrisNmidText');
+    const isQrisActive = qris.active !== false;
 
-    if (qris.active !== false) {
+    if (isQrisActive) {
       if (optQris) {
         optQris.style.display = '';
         optQris.textContent = `QRIS Instant (${qris.merchantName || 'Semua Bank & E-Wallet'})`;
@@ -5093,18 +5116,36 @@ const App = {
       if (qrisNmid) qrisNmid.textContent = qris.nmid ? `NMID: ${qris.nmid}` : '';
     } else {
       if (optQris) optQris.style.display = 'none';
-      const methodSelect = document.getElementById('depMethodSelect');
-      if (methodSelect && methodSelect.value === 'qris') {
-        methodSelect.value = 'bank';
-      }
     }
 
-    // 3. Setup USDT Info
+    // 3. Setup USDT Info & Visibility
+    const optUsdt = document.getElementById('depOptUsdt');
     const usdtAddrEl = document.getElementById('depUsdtAddress');
     const rateText = document.getElementById('depUsdtRateText');
     const rate = cfg.usdIdrRate || 16250;
-    if (usdtAddrEl) usdtAddrEl.textContent = usdt.trc20Address || 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1';
-    if (rateText) rateText.textContent = Number(rate).toLocaleString('id-ID');
+    const isUsdtActive = usdt.active !== false;
+
+    if (isUsdtActive) {
+      if (optUsdt) optUsdt.style.display = '';
+      if (usdtAddrEl) usdtAddrEl.textContent = usdt.trc20Address || 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1';
+      if (rateText) rateText.textContent = Number(rate).toLocaleString('id-ID');
+    } else {
+      if (optUsdt) optUsdt.style.display = 'none';
+    }
+
+    // Smart Method Fallback if currently selected method is disabled
+    const methodSelect = document.getElementById('depMethodSelect');
+    if (methodSelect) {
+      const isBankActive = banks.length > 0;
+      const curVal = methodSelect.value;
+      if (curVal === 'qris' && !isQrisActive) {
+        methodSelect.value = isBankActive ? 'bank' : (isUsdtActive ? 'usdt' : '');
+      } else if (curVal === 'usdt' && !isUsdtActive) {
+        methodSelect.value = isBankActive ? 'bank' : (isQrisActive ? 'qris' : '');
+      } else if (curVal === 'bank' && !isBankActive) {
+        methodSelect.value = isQrisActive ? 'qris' : (isUsdtActive ? 'usdt' : '');
+      }
+    }
 
     // Trigger amount calculation
     const depUsdtAmountInput = document.getElementById('depUsdtAmountInput');
@@ -5150,11 +5191,28 @@ const App = {
     const qrisFields = document.getElementById('depQrisFields');
     const usdtFields = document.getElementById('depUsdtFields');
     const nominalWrap = document.getElementById('depNominalWrap');
+    const proofWrap = document.getElementById('depProofWrap');
+    const submitBtn = document.getElementById('btnSubmitDeposit');
 
     if (bankFields) bankFields.style.display = val === 'bank' ? 'block' : 'none';
     if (qrisFields) qrisFields.style.display = val === 'qris' ? 'block' : 'none';
     if (usdtFields) usdtFields.style.display = val === 'usdt' ? 'block' : 'none';
     if (nominalWrap) nominalWrap.style.display = val === 'usdt' ? 'none' : 'block';
+
+    if (!val) {
+      if (nominalWrap) nominalWrap.style.display = 'none';
+      if (proofWrap) proofWrap.style.display = 'none';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Saluran Deposit Sedang Tutup</span>';
+      }
+    } else {
+      if (proofWrap) proofWrap.style.display = 'block';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Konfirmasi & Ajukan Deposit</span>';
+      }
+    }
   },
 
   openWithdrawModal() {

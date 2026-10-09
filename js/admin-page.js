@@ -823,6 +823,16 @@ export const AdminPage = {
 
   previewQrisSettings() {
     const activeEl = document.getElementById('qrisCfgActive');
+    const badgeEl = document.getElementById('qrisAdminStatusBadge');
+    if (activeEl && badgeEl) {
+      const isAct = activeEl.value === 'true';
+      badgeEl.textContent = isAct ? '🟢 QRIS AKTIF' : '🔴 QRIS NONAKTIF';
+      badgeEl.className = isAct ? 'badge-status approved' : 'badge-status rejected';
+      badgeEl.style.background = isAct ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+      badgeEl.style.color = isAct ? '#22C55E' : '#EF4444';
+      badgeEl.style.border = isAct ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)';
+    }
+
     const merchantEl = document.getElementById('qrisCfgMerchant');
     const nmidEl = document.getElementById('qrisCfgNmid');
     const imgUrlEl = document.getElementById('qrisCfgImageUrl');
@@ -844,6 +854,18 @@ export const AdminPage = {
     if (previewNmid) previewNmid.textContent = nmidVal ? `NMID: ${nmidVal}` : 'NMID: -';
   },
 
+  previewUsdtSettings() {
+    const activeEl = document.getElementById('usdtCfgActive');
+    const badgeEl = document.getElementById('usdtAdminStatusBadge');
+    if (!activeEl || !badgeEl) return;
+    const isAct = activeEl.value === 'true';
+    badgeEl.textContent = isAct ? '🟢 USDT AKTIF' : '🔴 USDT NONAKTIF';
+    badgeEl.className = isAct ? 'badge-status approved' : 'badge-status rejected';
+    badgeEl.style.background = isAct ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+    badgeEl.style.color = isAct ? '#22C55E' : '#EF4444';
+    badgeEl.style.border = isAct ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)';
+  },
+
   renderGatewaySettings(db) {
     this.renderBanks(db);
     this.renderQrisSettings(db);
@@ -853,9 +875,18 @@ export const AdminPage = {
     document.getElementById('gwCfgWdFee').value = cfg.withdrawFeePercent !== undefined ? cfg.withdrawFeePercent : 10.0;
     const depPtsEl = document.getElementById('gwCfgDepositPoints');
     if (depPtsEl) depPtsEl.value = cfg.depositPointsReward !== undefined ? cfg.depositPointsReward : 5;
-    if (cfg.paymentGateways && cfg.paymentGateways.usdt) {
-      document.getElementById('gwCfgTrc20').value = cfg.paymentGateways.usdt.trc20Address || '';
-    }
+
+    const usdt = (cfg.paymentGateways && cfg.paymentGateways.usdt) || { active: true };
+    const usdtActEl = document.getElementById('usdtCfgActive');
+    if (usdtActEl) usdtActEl.value = String(usdt.active !== false);
+
+    const trc20El = document.getElementById('gwCfgTrc20');
+    if (trc20El) trc20El.value = usdt.trc20Address || 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1';
+
+    const bep20El = document.getElementById('gwCfgBep20');
+    if (bep20El) bep20El.value = usdt.bep20Address || '0x71C4982aF12B76295328B83716d1029C837A5982';
+
+    this.previewUsdtSettings();
 
     const sched = cfg.withdrawSchedule || { enabled: true, startHour: 9, endHour: 21, offMessage: '' };
     const enabledEl = document.getElementById('wdCfgEnabled');
@@ -1069,15 +1100,41 @@ export const AdminPage = {
     const btn = document.getElementById('btnSendTestEmail');
     const targetEmail = input ? input.value.trim() : '';
 
-    if (!targetEmail) {
-      this.showToast('Harap masukkan alamat email tujuan uji coba!', 'error');
+    if (!targetEmail || !targetEmail.includes('@') || !targetEmail.includes('.')) {
+      this.showToast('Harap masukkan alamat email tujuan uji coba yang valid!', 'error');
       if (input) input.focus();
       return;
     }
 
+    // Collect current values from active form fields
+    const methodEl = document.getElementById('emailCfgMethod');
+    const mailMethod = methodEl ? methodEl.value : 'cpanel';
+    const sHost = document.getElementById('emailCfgSmtpHost')?.value?.trim();
+    const sPort = Number(document.getElementById('emailCfgSmtpPort')?.value) || 465;
+    const sSec = document.getElementById('emailCfgSmtpSecure')?.value || 'ssl';
+    const sUser = document.getElementById('emailCfgSmtpUser')?.value?.trim();
+    const sPass = document.getElementById('emailCfgSmtpPass')?.value;
+    const fromName = document.getElementById('emailCfgFromName')?.value?.trim();
+    const fromEmail = document.getElementById('emailCfgFromEmail')?.value?.trim();
+
+    const currentSettings = {
+      email: {
+        mailMethod,
+        smtp: {
+          host: sHost || 'mail.autotrading.my.id',
+          port: sPort,
+          secure: sSec,
+          user: sUser || '',
+          pass: sPass || '',
+          fromName: fromName || 'AUTOTRADING Official',
+          fromEmail: fromEmail || 'noreply@autotrading.my.id'
+        }
+      }
+    };
+
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span>Mengirim...</span>';
+      btn.innerHTML = '<span>⏳ Mengirim...</span>';
     }
 
     if (resultBox) {
@@ -1085,23 +1142,84 @@ export const AdminPage = {
       resultBox.style.background = '#1E293B';
       resultBox.style.color = '#38BDF8';
       resultBox.style.border = '1px solid #334155';
-      resultBox.textContent = `⏳ Sedang menghubungkan ke server email dan mengirim pesan uji coba ke ${targetEmail}...`;
+      resultBox.innerHTML = `<div>⏳ Menghubungkan ke mail service (${mailMethod.toUpperCase()}) dan mengirim email uji coba ke <strong>${targetEmail}</strong>...</div>`;
     }
 
     try {
-      const res = await Admin.sendTestEmail(targetEmail);
+      const res = await Admin.sendTestEmail(targetEmail, currentSettings);
       if (resultBox) {
         if (res.sent || res.success) {
           resultBox.style.background = 'rgba(34, 197, 94, 0.12)';
           resultBox.style.color = '#22C55E';
           resultBox.style.border = '1px solid rgba(34, 197, 94, 0.3)';
-          resultBox.innerHTML = `<strong>✅ Sukses Terkirim!</strong> ${res.message || 'Email uji coba berhasil dikirim. Periksa inbox dan spam email Anda.'}`;
+
+          let detailHtml = `
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-weight: 700; font-size: 13.5px; color: #22C55E;">✅ Pengiriman Berhasil Diterima Server!</span>
+              <span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(34,197,94,0.2); color: #86EFAC; font-weight: 700;">Metode: ${(res.method || mailMethod).toUpperCase()}</span>
+            </div>
+            <div style="font-size: 12.5px; color: #E2E8F0; margin-bottom: 8px; line-height: 1.5;">
+              ${res.message || 'Pesan uji coba telah diproses server untuk dikirim ke ' + targetEmail}
+            </div>
+          `;
+
+          if (res.method === 'cpanel' || mailMethod === 'cpanel') {
+            detailHtml += `
+              <div style="background: rgba(234, 179, 8, 0.15); border-left: 3px solid #EAB308; padding: 10px 12px; border-radius: 6px; font-size: 12px; color: #FEF08A; line-height: 1.55; margin-top: 8px;">
+                <strong>⚠️ PENTING: BUKA FOLDER SPAM / JUNK / PROMOSI:</strong><br>
+                Email yang dikirim via <em>PHP mail() cPanel</em> sangat umum disaring oleh Gmail/Yahoo ke dalam <strong>Folder SPAM</strong> atau tab <strong>Promosi</strong> karena domain belum terpasang DNS SPF/DKIM.<br>
+                👉 <strong>Langkah Anda:</strong> Buka folder SPAM di email Anda, temukan email dari AUTOTRADING, lalu klik <strong>"Laporkan Bukan Spam"</strong>.<br>
+                💡 <em>Rekomendasi Utama: Jika ingin 100% langsung masuk ke Inbox utama, ubah metode di atas ke <strong>Custom SMTP Server</strong>.</em>
+              </div>
+            `;
+          } else {
+            detailHtml += `
+              <div style="background: rgba(59, 130, 246, 0.12); border-left: 3px solid #3B82F6; padding: 8px 12px; border-radius: 6px; font-size: 12px; color: #93C5FD; line-height: 1.5; margin-top: 8px;">
+                💡 Email berhasil dikirim via server SMTP dengan autentikasi. Silakan periksa Kotak Masuk (Inbox) Anda.
+              </div>
+            `;
+          }
+
+          if (res.logs && res.logs.length) {
+            detailHtml += `
+              <details style="margin-top: 10px; font-size: 11px;">
+                <summary style="cursor: pointer; color: #94A3B8;">📋 Tampilkan Log Komunikasi Server (${res.logs.length} baris)</summary>
+                <pre style="background: #090D16; border: 1px solid #1E293B; padding: 8px 10px; border-radius: 6px; margin-top: 6px; overflow-x: auto; color: #94A3B8; font-family: monospace; white-space: pre-wrap;">${res.logs.join('\n')}</pre>
+              </details>
+            `;
+          }
+
+          resultBox.innerHTML = detailHtml;
           this.showToast('Email tes berhasil dikirim!', 'success');
         } else {
           resultBox.style.background = 'rgba(239, 68, 68, 0.12)';
           resultBox.style.color = '#EF4444';
           resultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-          resultBox.innerHTML = `<strong>⚠️ Status:</strong> ${res.message || 'Gagal mengirim email tes. Periksa kembali konfigurasi SMTP / mail server di hosting cPanel.'}`;
+
+          let errorHtml = `
+            <div style="font-weight: 700; font-size: 13.5px; color: #EF4444; margin-bottom: 6px;">
+              ❌ Pengiriman Email Gagal!
+            </div>
+            <div style="font-size: 12.5px; color: #FCA5A5; margin-bottom: 6px; line-height: 1.5;">
+              ${res.message || 'Server email menolak pengiriman.'}
+            </div>
+          `;
+          if (res.tips) {
+            errorHtml += `
+              <div style="background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; font-size: 11.5px; color: #E2E8F0; margin-top: 6px; line-height: 1.5;">
+                💡 <strong>Solusi:</strong> ${res.tips}
+              </div>
+            `;
+          }
+          if (res.logs && res.logs.length) {
+            errorHtml += `
+              <details open style="margin-top: 10px; font-size: 11px;">
+                <summary style="cursor: pointer; color: #FCA5A5;">📋 Rincian Log Error Server:</summary>
+                <pre style="background: #090D16; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 10px; border-radius: 6px; margin-top: 6px; overflow-x: auto; color: #F87171; font-family: monospace; white-space: pre-wrap;">${res.logs.join('\n')}</pre>
+              </details>
+            `;
+          }
+          resultBox.innerHTML = errorHtml;
           this.showToast(res.message || 'Gagal mengirim email tes', 'error');
         }
       }
@@ -1110,7 +1228,7 @@ export const AdminPage = {
         resultBox.style.background = 'rgba(239, 68, 68, 0.12)';
         resultBox.style.color = '#EF4444';
         resultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-        resultBox.innerHTML = `<strong>⚠️ Error:</strong> ${e.message}`;
+        resultBox.innerHTML = `<strong>⚠️ Error Koneksi:</strong> ${e.message}`;
       }
       this.showToast('Gagal menghubungi server email: ' + e.message, 'error');
     } finally {
@@ -1951,20 +2069,25 @@ export const AdminPage = {
   async saveGatewaySettings() {
     const rate = Number(document.getElementById('gwCfgUsdRate').value);
     const fee = Number(document.getElementById('gwCfgWdFee').value);
-    const trc20 = document.getElementById('gwCfgTrc20').value;
+    const isUsdtActive = document.getElementById('usdtCfgActive') ? document.getElementById('usdtCfgActive').value === 'true' : true;
+    const trc20 = document.getElementById('gwCfgTrc20') ? document.getElementById('gwCfgTrc20').value.trim() : '';
+    const bep20 = document.getElementById('gwCfgBep20') ? document.getElementById('gwCfgBep20').value.trim() : '';
     const depPts = Number(document.getElementById('gwCfgDepositPoints')?.value !== undefined ? document.getElementById('gwCfgDepositPoints').value : 5);
 
     const db = DB.get();
     db.settings.usdIdrRate = rate;
     db.settings.withdrawFeePercent = fee;
     db.settings.depositPointsReward = isNaN(depPts) ? 5 : depPts;
-    if (db.settings.paymentGateways && db.settings.paymentGateways.usdt) {
-      db.settings.paymentGateways.usdt.trc20Address = trc20;
-    }
+    db.settings.paymentGateways = db.settings.paymentGateways || {};
+    db.settings.paymentGateways.usdt = {
+      active: isUsdtActive,
+      trc20Address: trc20 || 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1',
+      bep20Address: bep20 || '0x71C4982aF12B76295328B83716d1029C837A5982'
+    };
 
-    this.showToast('Menyimpan pengaturan gateway ke database...', 'info');
+    this.showToast('Menyimpan pengaturan gateway & USDT ke database...', 'info');
     await DB.save(db);
-    this.showToast('Pengaturan gateway pembayaran & kurs berhasil disimpan ke database!', 'success');
+    this.showToast(`Pengaturan Crypto USDT (${isUsdtActive ? '🟢 AKTIF' : '🔴 NONAKTIF'}) & kurs berhasil disimpan ke database!`, 'success');
     this.renderAll();
   },
 
@@ -2074,7 +2197,7 @@ export const AdminPage = {
     });
 
     if (res.success) {
-      this.showToast('Pengaturan QRIS berhasil disimpan ke database!', 'success');
+      this.showToast(`Pengaturan QRIS (${active ? '🟢 AKTIF' : '🔴 NONAKTIF'}) berhasil disimpan ke database!`, 'success');
       this.renderAll();
     } else {
       this.showToast(res.message, 'error');
