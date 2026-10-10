@@ -210,13 +210,30 @@ function requireAdmin() {
 }
 
 // ---------------------------------------------------------------------------
-// Simple file-based rate limiter (per IP + action)
+// Robust file-based rate limiter (per IP + action)
 // ---------------------------------------------------------------------------
-function rateLimit($bucket, $maxAttempts, $windowSeconds) {
+function getRateLimitFile($bucket) {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'cli';
     $key = preg_replace('/[^a-zA-Z0-9_\-]/', '', $bucket) . '_' . md5($ip);
-    $file = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'at_rl_' . $key . '.json';
+    return rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'at_rl_' . $key . '.json';
+}
 
+function checkRateLimit($bucket, $maxAttempts, $windowSeconds) {
+    $file = getRateLimitFile($bucket);
+    if (!is_file($file)) return true;
+    $raw = @file_get_contents($file);
+    $decoded = $raw ? json_decode($raw, true) : null;
+    if (!is_array($decoded) || !isset($decoded['start'], $decoded['count'])) return true;
+    $now = time();
+    if (($now - (int)$decoded['start']) > $windowSeconds) {
+        @unlink($file);
+        return true;
+    }
+    return (int)$decoded['count'] < $maxAttempts;
+}
+
+function recordRateLimitHit($bucket, $windowSeconds) {
+    $file = getRateLimitFile($bucket);
     $now = time();
     $data = ['count' => 0, 'start' => $now];
     if (is_file($file)) {
@@ -231,8 +248,57 @@ function rateLimit($bucket, $maxAttempts, $windowSeconds) {
     }
     $data['count'] = (int)$data['count'] + 1;
     @file_put_contents($file, json_encode($data), LOCK_EX);
+    return $data['count'];
+}
 
-    return $data['count'] <= $maxAttempts;
+function clearRateLimit($bucket) {
+    $file = getRateLimitFile($bucket);
+    if (is_file($file)) {
+        @unlink($file);
+    }
+}
+
+function rateLimit($bucket, $maxAttempts, $windowSeconds) {
+    if (!checkRateLimit($bucket, $maxAttempts, $windowSeconds)) {
+        return false;
+    }
+    $count = recordRateLimitHit($bucket, $windowSeconds);
+    return $count <= $maxAttempts;
+}
+
+function setAuthSessionCookie($token) {
+    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    $lifetime = time() + (86400 * 60); // 60 days
+    if (PHP_VERSION_ID >= 70300) {
+        @setcookie('AT_TOKEN', $token, [
+            'expires' => $lifetime,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    } else {
+        @setcookie('AT_TOKEN', $token, $lifetime, '/; samesite=Lax', '', $secure, true);
+    }
+}
+
+function clearAuthSessionCookie() {
+    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    if (PHP_VERSION_ID >= 70300) {
+        @setcookie('AT_TOKEN', '', [
+            'expires' => time() - 86400,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    } else {
+        @setcookie('AT_TOKEN', '', time() - 86400, '/; samesite=Lax', '', $secure, true);
+    }
 }
 
 // ---------------------------------------------------------------------------

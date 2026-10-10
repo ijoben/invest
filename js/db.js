@@ -508,10 +508,13 @@ defaultDB.testimonials = [];
 export const DB = {
   getApiUrl(action) {
     let token = null;
-    try {
-      if (typeof localStorage !== 'undefined') token = localStorage.getItem('autotrading_session_token');
-      if (!token && typeof sessionStorage !== 'undefined') token = sessionStorage.getItem('autotrading_session_token');
-    } catch (e) {}
+    const isAuthAction = action === 'login' || action === 'register' || action === 'logout';
+    if (!isAuthAction) {
+      try {
+        if (typeof localStorage !== 'undefined') token = localStorage.getItem('autotrading_session_token');
+        if (!token && typeof sessionStorage !== 'undefined') token = sessionStorage.getItem('autotrading_session_token');
+      } catch (e) {}
+    }
     const tokenParam = token ? `&sessionToken=${encodeURIComponent(token)}` : '';
     if (typeof window !== 'undefined' && window.location) {
       const origin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : '';
@@ -747,16 +750,42 @@ export const DB = {
     }
   },
 
-  // Establish the httpOnly server session (api/index.php?action=login) using the
-  // locally cached credentials of the currently signed-in user. Needed once after
-  // deploy so previously logged-in browsers can keep syncing to the server.
+  // Maintain and verify active server session using cryptographic sessionToken,
+  // falling back to memory credentials only if valid plaintext password exists.
   _lastSessionAttempt: 0,
   async ensureServerSession() {
     if (typeof fetch !== 'function') return false;
     const now = Date.now();
-    if (now - (this._lastSessionAttempt || 0) < 45000) return false;
+    if (now - (this._lastSessionAttempt || 0) < 15000) return false;
     this._lastSessionAttempt = now;
     try {
+      let token = null;
+      try {
+        if (typeof localStorage !== 'undefined') token = localStorage.getItem('autotrading_session_token');
+        if (!token && typeof sessionStorage !== 'undefined') token = sessionStorage.getItem('autotrading_session_token');
+      } catch (e) {}
+
+      // 1. Verify active server session token if present
+      if (token) {
+        const res = await fetch(this.getApiUrl('session'), {
+          credentials: 'include',
+          headers: this.getAuthHeaders()
+        });
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          if (json && json.success && json.loggedIn) {
+            if (json.sessionToken && json.sessionToken !== token) {
+              try {
+                if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+                if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+              } catch(e) {}
+            }
+            return true;
+          }
+        }
+      }
+
+      // 2. Safe memory-only re-auth (only if plain text password is provided, NOT bcrypt hash)
       let userId = null;
       if (typeof sessionStorage !== 'undefined') {
         try {
@@ -766,9 +795,12 @@ export const DB = {
       }
       if (!userId) return false;
       const user = (this.get().users || []).find(u => u.id === userId);
-      if (!user || !user.password) return false;
+      if (!user || !user.password || user.password.startsWith('$2y$') || user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+        return false;
+      }
       const res = await fetch(this.getApiUrl('login'), {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           identifier: user.username || user.email || user.id,
@@ -776,8 +808,17 @@ export const DB = {
         })
       });
       if (!res.ok) return false;
-      const json = await res.json();
-      return !!(json && json.success);
+      const json = await res.json().catch(() => null);
+      if (json && json.success) {
+        if (json.sessionToken) {
+          try {
+            if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+            if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+          } catch(e) {}
+        }
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }

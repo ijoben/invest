@@ -12,10 +12,11 @@ console.log('Current live user:', dataGet?.data?.users?.[0]?.username);
 
 // 2. Test manual admin login against live master account
 const adminAccount = dataGet.data.users.find(u => u.username === 'admin');
-if (adminAccount && adminAccount.role === 'admin' && adminAccount.password === 'admin') {
-  console.log('[PASS] Live Master Admin Account verified: admin / admin (role: admin, balance: Rp 0)');
+const adminLoginRes = await Auth.login('admin', 'admin');
+if (adminAccount && adminAccount.role === 'admin' && adminLoginRes.success) {
+  console.log('[PASS] Live Master Admin Account verified: admin / admin (role: admin, balance: Rp ' + (adminAccount.walletBalance || 0) + ')');
 } else {
-  console.error('[FAIL] Master Admin Account mismatch:', adminAccount);
+  console.error('[FAIL] Master Admin Account mismatch:', adminAccount, adminLoginRes);
   process.exit(1);
 }
 

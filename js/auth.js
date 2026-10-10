@@ -46,6 +46,12 @@ export const Auth = {
       return { success: false, message: 'Harap isi username/email/no.hp dan password!' };
     }
 
+    // Clear any stale tokens before starting fresh login request
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('autotrading_session_token');
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('autotrading_session_token');
+    } catch(e) {}
+
     // ---- 1. Authoritative server-side login ----
     if (typeof fetch === 'function') {
       try {
@@ -94,6 +100,8 @@ export const Auth = {
           // Keep the password in memory only (never persisted) so the browser
           // session can be silently re-established on the next visit.
           local.password = cleanPass;
+          local.failedLoginAttempts = 0;
+          local.lockUntil = null;
           DB.setSession(local);
           return {
             success: true,

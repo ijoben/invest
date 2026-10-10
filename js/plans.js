@@ -347,6 +347,8 @@ export const Plans = {
         isGuest: false,
         hasActivePackage: false
       };
+    }
+
     const earliestStartDateStr = activeInvs.reduce((min, inv) => {
       const s = DB.getWibDateStr(inv.startDate || inv.createdAt);
       return !min || s < min ? s : min;

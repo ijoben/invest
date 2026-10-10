@@ -3553,7 +3553,8 @@ if ($action === 'login') {
         echo json_encode(['success' => false, 'message' => 'Database MySQL cPanel belum terhubung.']);
         exit();
     }
-    if (!rateLimit('login_ip', 20, 300)) {
+    // Network-level anti brute-force guard (allow up to 60 total attempts per 5 mins per IP)
+    if (!checkRateLimit('login_ip', 60, 300)) {
         http_response_code(429);
         echo json_encode(['success' => false, 'message' => 'Terlalu banyak percobaan login dari jaringan Anda. Coba lagi dalam beberapa menit.']);
         exit();
@@ -3569,9 +3570,10 @@ if ($action === 'login') {
         echo json_encode(['success' => false, 'message' => 'Harap isi username/email dan password!']);
         exit();
     }
-    if (!rateLimit('login_id_' . md5(strtolower($identifier)), 8, 300)) {
+    $idKey = 'login_id_' . md5(strtolower($identifier));
+    if (!checkRateLimit($idKey, 12, 300)) {
         http_response_code(429);
-        echo json_encode(['success' => false, 'message' => 'Terlalu banyak percobaan password salah (5x). Akun dikunci sementara selama beberapa menit demi keamanan!']);
+        echo json_encode(['success' => false, 'message' => 'Terlalu banyak percobaan password salah. Akun dikunci sementara selama beberapa menit demi keamanan!']);
         exit();
     }
 
@@ -3583,6 +3585,8 @@ if ($action === 'login') {
         $stateOnly = loadMainState($pdo);
         $su = findStateUserByIdentifier($stateOnly, $identifier);
         if (!$su) {
+            recordRateLimitHit($idKey, 300);
+            recordRateLimitHit('login_ip', 300);
             jsonResponse(['success' => false, 'message' => 'Akun tidak ditemukan. Silakan periksa kembali atau daftar!'], 401);
         }
         $isStateOnly = true;
@@ -3627,12 +3631,17 @@ if ($action === 'login') {
     }
 
     if (!$check['ok']) {
+        recordRateLimitHit($idKey, 300);
+        recordRateLimitHit('login_ip', 300);
         $msg = 'Username atau password salah!';
         if ($stored === '') {
             $msg = 'Password akun ini belum terdaftar di sistem. Gunakan fitur "Lupa Password" untuk mengatur ulang password Anda via kode OTP email.';
         }
         jsonResponse(['success' => false, 'message' => $msg], 401);
     }
+
+    // Reset failed attempt counters on successful authentication
+    clearRateLimit($idKey);
 
     if (!empty($check['needsRehash']) && !$rotatedSeed) {
         // Legacy plaintext row: migrate the account into MySQL with a bcrypt hash
@@ -3690,6 +3699,7 @@ if ($action === 'login') {
     $_SESSION['username'] = (string)($row['username'] ?? '');
 
     $sessionToken = createSessionToken($row['id'], $_SESSION['role']);
+    setAuthSessionCookie($sessionToken);
 
     jsonResponse([
         'success' => true,
@@ -3711,12 +3721,17 @@ if ($action === 'login') {
 if ($action === 'session') {
     $uid = currentSessionUserId();
     $role = currentSessionRole();
+    $token = null;
+    if ($uid !== '') {
+        $token = createSessionToken($uid, $role);
+        setAuthSessionCookie($token);
+    }
     echo json_encode([
         'success' => true,
         'loggedIn' => $uid !== '',
         'userId' => $uid,
         'role' => $role,
-        'sessionToken' => $uid !== '' ? createSessionToken($uid, $role) : null
+        'sessionToken' => $token
     ]);
     exit();
 }
@@ -3806,6 +3821,7 @@ if ($action === 'logout') {
         $p = session_get_cookie_params();
         setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], !empty($p['secure']), !empty($p['httponly']));
     }
+    clearAuthSessionCookie();
     session_destroy();
     echo json_encode(['success' => true, 'message' => 'Anda telah berhasil logout.']);
     exit();

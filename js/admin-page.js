@@ -38,20 +38,33 @@ export const AdminPage = {
   },
 
   // All admin writes require the httpOnly server session - verify it on boot.
-  // Silent re-login first (cached credentials), then force re-login if impossible.
   async verifyServerSession() {
     if (typeof fetch !== 'function') return;
     try {
       await DB.ensureServerSession();
-      const res = await fetch(DB.getApiUrl('session'));
+      const res = await fetch(DB.getApiUrl('session'), {
+        credentials: 'include',
+        headers: DB.getAuthHeaders()
+      });
       const json = await res.json().catch(() => null);
-      if (json && json.success && json.loggedIn === false) {
-        Auth.logout();
-        this.checkAdminAuth();
-        this.showToast('Sesi keamanan server telah berakhir. Silakan login kembali Administrator.', 'info');
+      if (res.ok && json && json.success) {
+        if (json.loggedIn === false) {
+          const localToken = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : null) ||
+                             (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : null);
+          if (!localToken) {
+            Auth.logout();
+            this.checkAdminAuth();
+            this.showToast('Sesi keamanan server telah berakhir. Silakan login kembali Administrator.', 'info');
+          }
+        } else if (json.sessionToken) {
+          try {
+            if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+            if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+          } catch(e) {}
+        }
       }
     } catch (e) {
-      // Offline mode: keep the local gate as-is
+      // Offline mode or network glitch: keep the local gate as-is
     }
   },
 
@@ -209,7 +222,21 @@ export const AdminPage = {
     this.showToast('Login Administrator berhasil!', 'success');
     if (pInput) pInput.value = '';
     if (this.checkAdminAuth()) {
+      let savedTab = 'dashboard';
+      if (typeof window !== 'undefined' && window.location && window.location.hash) {
+        const hashTab = window.location.hash.replace('#', '').trim();
+        if (hashTab && this.tabTitles[hashTab]) savedTab = hashTab;
+      }
+      this.switchTab(savedTab);
       this.renderAll();
+      DB.initCloudSync(() => {
+        this.renderAll();
+        if (this.currentTab) this.switchTab(this.currentTab);
+      });
+      DB.startLivePolling((freshDb) => {
+        this.onLiveDbSync(freshDb);
+      }, 6000);
+      this.verifyServerSession();
     }
   },
 
