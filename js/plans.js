@@ -347,13 +347,17 @@ export const Plans = {
         isGuest: false,
         hasActivePackage: false
       };
-    }
+    const earliestStartDateStr = activeInvs.reduce((min, inv) => {
+      const s = DB.getWibDateStr(inv.startDate || inv.createdAt);
+      return !min || s < min ? s : min;
+    }, null);
 
     const records = dayNames.map((dName, idx) => {
       const dayDate = new Date(mondayDate);
       dayDate.setDate(mondayDate.getDate() + idx);
       const dateStr = `${dayDate.getDate()} ${monthNames[dayDate.getMonth()]}`;
       const fullDateStr = dayDate.toLocaleDateString('id-ID');
+      const targetDateStr = DB.getWibDateStr(dayDate);
       const isToday = idx === currentMondayIdx;
       const isPast = idx < currentMondayIdx;
       const isWeekend = (idx === 5 || idx === 6); // Sabtu or Minggu
@@ -395,6 +399,46 @@ export const Plans = {
       }
 
       // Member Logged In with Active Package:
+      // If target date is before package activation date -> Belum Aktif
+      if (earliestStartDateStr && targetDateStr < earliestStartDateStr) {
+        return {
+          dayName: dName,
+          date: dateStr,
+          fullDate: fullDateStr,
+          rate: null,
+          isWeekend: false,
+          isOff: false,
+          isLoss: false,
+          isToday,
+          isPast,
+          isGuest: false,
+          hasActivePackage: true,
+          displayRate: '-',
+          statusLabel: 'Belum Aktif',
+          pillText: 'Kosong'
+        };
+      }
+
+      // If target date is the day the package was newly activated -> Baru Aktif (no yield on activation day)
+      if (earliestStartDateStr && targetDateStr === earliestStartDateStr) {
+        return {
+          dayName: dName,
+          date: dateStr,
+          fullDate: fullDateStr,
+          rate: null,
+          isWeekend: false,
+          isOff: false,
+          isLoss: false,
+          isToday,
+          isPast,
+          isGuest: false,
+          hasActivePackage: true,
+          displayRate: '-',
+          statusLabel: 'Baru Aktif',
+          pillText: 'Aktivasi'
+        };
+      }
+
       let rate = 0;
       let isLoss = false;
 
@@ -416,35 +460,26 @@ export const Plans = {
           if (h && typeof h.rate === 'number') foundHistoryRate = h.rate;
         });
 
+        if (foundHistoryRate === null) {
+          const claimTx = (db.transactions || []).find(t => {
+            if (t.userId !== userId) return false;
+            const isPrf = t.type === 'profit_claim' || (t.id && String(t.id).startsWith('TRX-PRF-'));
+            return isPrf && DB.getWibDateStr(t.createdAt) === targetDateStr;
+          });
+          if (claimTx) {
+            const totalCap = activeInvs.reduce((s, i) => s + (i.capital || 0), 0);
+            if (totalCap > 0) {
+              foundHistoryRate = parseFloat(((claimTx.amount / totalCap) * 100).toFixed(2));
+            }
+          }
+        }
+
         if (foundHistoryRate !== null) {
           rate = foundHistoryRate;
         } else {
-          // Check if package was already active on that day
-          const dayEnd = new Date(dayDate);
-          dayEnd.setHours(23, 59, 59, 999);
-          const wasActiveOnDate = activeInvs.some(inv => new Date(inv.createdAt) <= dayEnd);
-          if (wasActiveOnDate) {
-            rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
-              ? settingsHistory[idx].rate
-              : defaultRates[idx];
-          } else {
-            // Before package was activated
-            return {
-              dayName: dName,
-              date: dateStr,
-              fullDate: fullDateStr,
-              rate: null,
-              isWeekend: false,
-              isOff: false,
-              isLoss: false,
-              isToday,
-              isGuest: false,
-              hasActivePackage: true,
-              displayRate: '-',
-              statusLabel: 'Belum Aktif',
-              pillText: 'Kosong'
-            };
-          }
+          rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
+            ? settingsHistory[idx].rate
+            : defaultRates[idx];
         }
       } else {
         // Future weekdays: Plan expected rate
@@ -656,6 +691,18 @@ export const Plans = {
     db.investments = db.investments || [];
     db.investments.forEach(inv => {
       if (inv.status === 'active') {
+        const invStartWib = DB.getWibDateStr(inv.startDate || inv.createdAt);
+        const todayWib = DB.getWibDateStr();
+        // Prevent Day 0 yield (package activated today)
+        if (!force && invStartWib === todayWib) {
+          return;
+        }
+        // Prevent duplicate yield on same day
+        const lastYieldWib = inv.lastProfitYieldDate ? DB.getWibDateStr(inv.lastProfitYieldDate) : null;
+        if (!force && lastYieldWib === todayWib) {
+          return;
+        }
+
         if (inv.daysElapsed < inv.durationDays && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
           const range = this.getRateRange(inv);
           const rate = isTodayLossMode ? 0.0 : this.generateRandomDailyRate(range.min, range.max);
@@ -703,6 +750,18 @@ export const Plans = {
 
       // Check active investments & pending profit
       const userInvs = (db.investments || []).filter(i => i.userId === userId && i.status === 'active');
+
+      // Guard: If all active investments were activated today, no profit on Day 0
+      const isAllActivatedToday = userInvs.length > 0 && userInvs.every(inv => {
+        const invStartWib = DB.getWibDateStr(inv.startDate || inv.createdAt);
+        return invStartWib === todayWib;
+      });
+      if (isAllActivatedToday) {
+        return {
+          success: false,
+          message: 'Paket investasi Anda baru diaktifkan hari ini. Perhitungan dividen profit dimulai pada siklus hari berikutnya.'
+        };
+      }
       const totalPending = userInvs.reduce((sum, inv) => sum + (Number(inv.pendingProfitClaim) || 0), 0);
 
       // 1. Strict local pre-guard: Check if already claimed profit today in transactions OR investments

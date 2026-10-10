@@ -507,13 +507,37 @@ defaultDB.testimonials = [];
 // Database Service Helper Object
 export const DB = {
   getApiUrl(action) {
+    let token = null;
+    try {
+      if (typeof localStorage !== 'undefined') token = localStorage.getItem('autotrading_session_token');
+      if (!token && typeof sessionStorage !== 'undefined') token = sessionStorage.getItem('autotrading_session_token');
+    } catch (e) {}
+    const tokenParam = token ? `&sessionToken=${encodeURIComponent(token)}` : '';
     if (typeof window !== 'undefined' && window.location) {
       const origin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : '';
       if (origin) {
-        return `${origin}/api/index.php?action=${action}`;
+        return `${origin}/api/index.php?action=${action}${tokenParam}`;
       }
     }
-    return `https://autotrading.my.id/api/index.php?action=${action}`;
+    return `https://autotrading.my.id/api/index.php?action=${action}${tokenParam}`;
+  },
+
+  getAuthHeaders(extra = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...extra
+    };
+    let token = null;
+    try {
+      if (typeof localStorage !== 'undefined') token = localStorage.getItem('autotrading_session_token');
+      if (!token && typeof sessionStorage !== 'undefined') token = sessionStorage.getItem('autotrading_session_token');
+    } catch (e) {}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['X-Session-Token'] = token;
+      headers['X-Auth-Token'] = token;
+    }
+    return headers;
   },
 
   getMailApiUrl() {
@@ -631,6 +655,10 @@ export const DB = {
     } catch(e) {
       return String(dateInput);
     }
+  },
+
+  formatDate(dateInput) {
+    return this.formatWibDateTime(dateInput);
   },
 
   get() {
@@ -810,7 +838,8 @@ export const DB = {
       const url = this.getApiUrl('save');
       const doFetch = () => fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
       });
       let res = await doFetch();
@@ -861,7 +890,8 @@ export const DB = {
       const body = { userId, ...payload };
       let res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(body)
       });
       if (res.status === 401) {
@@ -869,7 +899,8 @@ export const DB = {
         if (relogged) {
           res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
             body: JSON.stringify(body)
           });
         }
@@ -914,7 +945,8 @@ export const DB = {
       const url = this.getApiUrl('admin_save_settings');
       let res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ settings })
       });
       if (res.status === 401) {
@@ -922,7 +954,8 @@ export const DB = {
         if (relogged) {
           res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
             body: JSON.stringify({ settings })
           });
         }
@@ -949,6 +982,90 @@ export const DB = {
       return json;
     } catch (e) {
       console.error('adminSaveSettings error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Admin Investment Plans Save (Persists customized plans to MySQL)
+  async adminSavePlans(plans) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_save_plans');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ plans })
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ plans })
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menyimpan paket investasi (HTTP ${res.status})` };
+      }
+
+      const db = this.get();
+      db.plans = json.plans || plans;
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db)));
+        } catch (e) {}
+      }
+      return json;
+    } catch (e) {
+      console.error('adminSavePlans error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Admin Rewards Catalog Save (Persists customized rewards to MySQL)
+  async adminSaveRewards(rewards) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_save_rewards');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ rewards })
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ rewards })
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menyimpan katalog reward (HTTP ${res.status})` };
+      }
+
+      const db = this.get();
+      db.rewards = json.rewards || rewards;
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db)));
+        } catch (e) {}
+      }
+      return json;
+    } catch (e) {
+      console.error('adminSaveRewards error:', e);
       return { success: false, message: e.message };
     }
   },
@@ -985,7 +1102,10 @@ export const DB = {
       // Migration hook: reconnect the browser session before pulling fresh state
       await this.ensureServerSession();
       const url = this.getApiUrl('get');
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        credentials: 'include',
+        headers: this.getAuthHeaders()
+      });
       if (!res.ok) return null;
       const json = await res.json();
       if (json && json.success && json.data) {
@@ -1483,7 +1603,8 @@ export const DB = {
       try {
         const res = await fetch(this.getApiUrl('admin_reset_password'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          headers: this.getAuthHeaders(),
           body: JSON.stringify({ userId, newPassword: cleanPass })
         });
         const json = await res.json().catch(() => null);
@@ -2161,6 +2282,7 @@ export const DB = {
     };
     db.rewards.unshift(newReward);
     this.save(db);
+    this.adminSaveRewards(db.rewards);
     return newReward;
   },
 
@@ -2173,6 +2295,7 @@ export const DB = {
       if (updates.stock !== undefined) updates.stock = Number(updates.stock);
       db.rewards[idx] = { ...db.rewards[idx], ...updates };
       this.save(db);
+      this.adminSaveRewards(db.rewards);
       return db.rewards[idx];
     }
     return null;
@@ -2182,6 +2305,7 @@ export const DB = {
     const db = this.get();
     db.rewards = (db.rewards || []).filter(r => r.id !== id);
     this.save(db);
+    this.adminSaveRewards(db.rewards);
     return true;
   },
 

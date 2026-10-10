@@ -131,8 +131,25 @@ function getRequestAuthToken() {
     if (!empty($_SERVER['HTTP_X_AUTH_TOKEN'])) {
         return trim((string)$_SERVER['HTTP_X_AUTH_TOKEN']);
     }
+    if (function_exists('apache_request_headers')) {
+        $headers = @apache_request_headers();
+        if (is_array($headers)) {
+            foreach ($headers as $k => $v) {
+                $lk = strtolower($k);
+                if ($lk === 'authorization' && preg_match('/Bearer\s+(\S+)/i', $v, $m)) {
+                    return trim($m[1]);
+                }
+                if ($lk === 'x-session-token' || $lk === 'x-auth-token') {
+                    return trim((string)$v);
+                }
+            }
+        }
+    }
     if (!empty($_COOKIE['AT_TOKEN'])) {
         return trim((string)$_COOKIE['AT_TOKEN']);
+    }
+    if (!empty($_GET['sessionToken'])) {
+        return trim((string)$_GET['sessionToken']);
     }
     return '';
 }

@@ -803,11 +803,22 @@ const App = {
     // Requirements 10 & 11: Active Member Notice & Today's Profit Nominal
     const activeNoticeEl = document.getElementById('weeklyActiveMemberNotice');
     const todayNominalEl = document.getElementById('weeklyTodayProfitNominal');
+    const packageActiveDateEl = document.getElementById('weeklyPackageActiveDate');
+    const packageActiveDateTextEl = document.getElementById('weeklyPackageActiveDateText');
     if (activeNoticeEl) {
       if (!weekly.isGuest && weekly.hasActivePackage) {
         activeNoticeEl.style.display = 'block';
+        const activeInvs = Plans.getUserInvestments(user.id);
+        if (packageActiveDateTextEl && activeInvs.length > 0) {
+          const earliestInv = activeInvs.reduce((earliest, inv) => {
+            const t = new Date(inv.startDate || inv.createdAt || 0).getTime();
+            const eT = new Date(earliest.startDate || earliest.createdAt || 0).getTime();
+            return t < eT ? inv : earliest;
+          }, activeInvs[0]);
+          packageActiveDateTextEl.textContent = DB.formatDate(earliestInv.startDate || earliestInv.createdAt);
+          if (packageActiveDateEl) packageActiveDateEl.style.display = 'block';
+        }
         if (todayNominalEl) {
-          const activeInvs = Plans.getUserInvestments(user.id);
           const pending = activeInvs.reduce((sum, inv) => sum + (inv.pendingProfitClaim || 0), 0);
           let todayNominal = pending;
           if (todayNominal <= 0) {
@@ -819,6 +830,7 @@ const App = {
         }
       } else {
         activeNoticeEl.style.display = 'none';
+        if (packageActiveDateEl) packageActiveDateEl.style.display = 'none';
       }
     }
 
@@ -2481,6 +2493,9 @@ const App = {
               <div>
                 <div class="trade-plan-name">Paket ${inv.planName}</div>
                 <div class="trade-plan-sub-id">ID: #${inv.id || 'INV'} • Durasi Total: ${duration} Hari</div>
+                <div style="font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px;">
+                  Tanggal Aktif Paket: <strong style="color: #0F172A;">${DB.formatDate(inv.startDate || inv.createdAt)}</strong>
+                </div>
               </div>
             </div>
             <span class="badge-status ${isActive ? 'approved' : 'rejected'}">

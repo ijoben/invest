@@ -185,6 +185,7 @@ export const Admin = {
     }
 
     await DB.save(db);
+    await DB.adminSavePlans(db.plans);
     return { success: true, message: 'Paket investasi berhasil disimpan!' };
   },
 
@@ -193,6 +194,7 @@ export const Admin = {
     const db = DB.get();
     db.plans = db.plans.filter(p => p.id !== planId);
     await DB.save(db);
+    await DB.adminSavePlans(db.plans);
     return { success: true, message: 'Paket investasi berhasil dihapus.' };
   },
 
@@ -201,6 +203,7 @@ export const Admin = {
     const db = DB.get();
     db.settings = { ...db.settings, ...newSettings };
     await DB.save(db);
+    await DB.adminSaveSettings(newSettings);
     return { success: true, message: 'Pengaturan sistem berhasil diperbarui!' };
   },
 
@@ -459,6 +462,10 @@ export const Admin = {
     db.settings.weekendProfitEnabled = isEnabled;
 
     await DB.save(db);
+    await DB.adminSaveSettings({
+      weekendProfit: db.settings.weekendProfit,
+      weekendProfitEnabled: isEnabled
+    });
     return {
       success: true,
       enabled: isEnabled,
@@ -495,6 +502,11 @@ export const Admin = {
       db.settings.marketOffMessage = message.trim();
     }
     await DB.save(db);
+    await DB.adminSaveSettings({
+      marketStatus: db.settings.marketStatus,
+      marketOpen: openVal,
+      marketOffMessage: db.settings.marketOffMessage
+    });
     return {
       success: true,
       isOpen: openVal,
@@ -534,6 +546,10 @@ export const Admin = {
     }
 
     await DB.save(db);
+    await DB.adminSaveSettings({
+      todayProfitLossMode: db.settings.todayProfitLossMode,
+      weeklyProfitHistory: db.settings.weeklyProfitHistory
+    });
     return {
       success: true,
       isLoss: lossVal,

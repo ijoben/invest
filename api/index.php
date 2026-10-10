@@ -328,7 +328,6 @@ function syncRelationalTables($pdo, $parsed) {
                     :status, :is_blocked, :blocked_reason, :bank_name, :account_number, :account_holder, :role, :created_at
                 ) ON DUPLICATE KEY UPDATE
                     `username` = VALUES(`username`),
-                    `password_hash` = IF(VALUES(`password_hash`) = '' OR VALUES(`password_hash`) IS NULL, `password_hash`, VALUES(`password_hash`)),
                     `full_name` = VALUES(`full_name`),
                     `email` = VALUES(`email`),
                     `phone` = VALUES(`phone`),
@@ -1078,6 +1077,31 @@ if ($action === 'get') {
                     }
                 }
             } catch(Exception $eRdm) {}
+
+            // 7. Merge custom plans and custom rewards from settings table
+            try {
+                $pStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'platform_plans' LIMIT 1");
+                $pStmt->execute();
+                $pRow = $pStmt->fetch();
+                if ($pRow && !empty($pRow['setting_value'])) {
+                    $savedPlans = json_decode($pRow['setting_value'], true);
+                    if (is_array($savedPlans) && count($savedPlans) > 0) {
+                        $data['plans'] = $savedPlans;
+                    }
+                }
+            } catch (Exception $eP) {}
+
+            try {
+                $rStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'platform_rewards' LIMIT 1");
+                $rStmt->execute();
+                $rRow = $rStmt->fetch();
+                if ($rRow && !empty($rRow['setting_value'])) {
+                    $savedRewards = json_decode($rRow['setting_value'], true);
+                    if (is_array($savedRewards) && count($savedRewards) > 0) {
+                        $data['rewards'] = $savedRewards;
+                    }
+                }
+            } catch (Exception $eR) {}
 
             // Deduplicate any check-in transactions in $data['transactions'] (drop TX-CHK-392542 or same-day duplicates)
             if (isset($data['transactions']) && is_array($data['transactions'])) {
@@ -2104,6 +2128,17 @@ if ($action === 'claim_profit') {
         if ($pending > 0) {
             $profit = $pending;
         } else {
+            // Check if package was activated TODAY: first yield requires 24h trading cycle (next day)
+            $invStartDay = substr($inv['start_date'] ?? $inv['created_at'] ?? '', 0, 10);
+            if ($invStartDay === $todayWib && (int)($inv['days_elapsed'] ?? 0) === 0) {
+                continue;
+            }
+            // Check if package already yielded today: cannot yield twice on the same day
+            $lastYieldDay = substr($inv['last_profit_yield_date'] ?? '', 0, 10);
+            if ($lastYieldDay === $todayWib) {
+                continue;
+            }
+
             $minR = (float)($inv['min_rate'] ?? 1.0);
             $maxR = (float)($inv['max_rate'] ?? 2.0);
             if ($isLossMode) {
@@ -3020,6 +3055,96 @@ if ($action === 'admin_save_settings') {
     exit();
 }
 
+// --- action=admin_save_plans (admin only) ---------------------------------
+if ($action === 'admin_save_plans') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method not allowed. Use POST.']);
+        exit();
+    }
+    requireAdmin();
+    if (!$pdo) {
+        http_response_code(503);
+        echo json_encode(['success' => false, 'message' => 'Database belum terhubung.']);
+        exit();
+    }
+    ensureTablesExist($pdo);
+
+    $raw = file_get_contents('php://input');
+    $in = json_decode($raw, true) ?: [];
+    $plans = isset($in['plans']) && is_array($in['plans']) ? $in['plans'] : (is_array($in) ? $in : []);
+
+    if (!is_array($plans) || count($plans) === 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Data paket investasi tidak valid.']);
+        exit();
+    }
+
+    $setStmt = $pdo->prepare("
+        INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
+        VALUES ('platform_plans', :sv, 'Platform customized investment plans')
+        ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`), `updated_at` = CURRENT_TIMESTAMP
+    ");
+    $setStmt->execute([':sv' => json_encode($plans, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
+
+    try {
+        $stData = loadMainState($pdo);
+        if (is_array($stData)) {
+            $stData['plans'] = $plans;
+            saveMainState($pdo, $stData);
+        }
+    } catch (Exception $eSt) {}
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Pengaturan nama & rincian paket investasi berhasil disimpan permanen ke database!',
+        'plans' => $plans
+    ]);
+    exit();
+}
+
+// --- action=admin_save_rewards (admin only) -------------------------------
+if ($action === 'admin_save_rewards') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method not allowed. Use POST.']);
+        exit();
+    }
+    requireAdmin();
+    if (!$pdo) {
+        http_response_code(503);
+        echo json_encode(['success' => false, 'message' => 'Database belum terhubung.']);
+        exit();
+    }
+    ensureTablesExist($pdo);
+
+    $raw = file_get_contents('php://input');
+    $in = json_decode($raw, true) ?: [];
+    $rewards = isset($in['rewards']) && is_array($in['rewards']) ? $in['rewards'] : (is_array($in) ? $in : []);
+
+    $setStmt = $pdo->prepare("
+        INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
+        VALUES ('platform_rewards', :sv, 'Platform point reward redeem catalog')
+        ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`), `updated_at` = CURRENT_TIMESTAMP
+    ");
+    $setStmt->execute([':sv' => json_encode($rewards, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
+
+    try {
+        $stData = loadMainState($pdo);
+        if (is_array($stData)) {
+            $stData['rewards'] = $rewards;
+            saveMainState($pdo, $stData);
+        }
+    } catch (Exception $eSt) {}
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Katalog hadiah point berhasil disimpan permanen ke database!',
+        'rewards' => $rewards
+    ]);
+    exit();
+}
+
 // 6. Action: Send Email / Mailer forwarding
 if ($action === 'send_email' || in_array($action, ['send_otp', 'admin_notification', 'test', 'welcome'])) {
     require_once __DIR__ . '/mail.php';
@@ -3048,16 +3173,12 @@ if ($action === 'clear_demo' || $action === 'reset_production') {
         // Reset admin balance & stats to 0
         $pdo->exec("UPDATE `users` SET `wallet_balance` = 0, `affiliate_balance` = 0, `points` = 0 WHERE `id` = 'usr-admin'");
         
-        // Ensure admin user exists if table was empty, and always reseed the
-        // admin credential to the configured bootstrap password (never 'admin').
+        // Ensure admin user exists if table was empty, and keep existing admin password intact!
         $bootstrapHash = hashPassword((getenv('AT_ADMIN_BOOTSTRAP') ?: ADMIN_BOOTSTRAP_PASSWORD));
         $checkAdmin = $pdo->query("SELECT COUNT(*) FROM `users` WHERE `id` = 'usr-admin'")->fetchColumn();
         if ((int)$checkAdmin === 0) {
             $insAdmin = $pdo->prepare("INSERT INTO `users` (`id`, `username`, `password_hash`, `salt`, `full_name`, `email`, `phone`, `city`, `wallet_balance`, `affiliate_balance`, `points`, `referral_code`, `referred_by`, `status`, `is_blocked`, `bank_name`, `account_number`, `account_holder`, `role`, `created_at`) VALUES ('usr-admin', 'admin', :ph, '', 'System Administrator', 'admin@autotrading.my.id', '081299990000', 'Jakarta', 0, 0, 0, 'ADMINVIP', NULL, 'active', 0, '', '', '', 'admin', '2026-01-01 00:00:00')");
             $insAdmin->execute([':ph' => $bootstrapHash]);
-        } else {
-            $updAdminPh = $pdo->prepare("UPDATE `users` SET `password_hash` = :ph WHERE `id` = 'usr-admin'");
-            $updAdminPh->execute([':ph' => $bootstrapHash]);
         }
 
         // Delete all transactions and investments
