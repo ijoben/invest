@@ -310,6 +310,34 @@ function ensureTablesExist($pdo) {
     }
 }
 
+/**
+ * Recursively merge configuration arrays.
+ * Associative arrays are merged recursively.
+ * Indexed arrays (lists like banks, rabatLevels, withdrawTerms, levelTurnoverMilestones)
+ * are overwritten completely by the override, preventing numerical index merge corruptions.
+ */
+function mergeSettingsData(array $base, array $override): array {
+    foreach ($override as $k => $v) {
+        if (is_array($v)) {
+            $isAssoc = false;
+            foreach (array_keys($v) as $ak) {
+                if (!is_int($ak)) {
+                    $isAssoc = true;
+                    break;
+                }
+            }
+            if ($isAssoc && isset($base[$k]) && is_array($base[$k])) {
+                $base[$k] = mergeSettingsData($base[$k], $v);
+            } else {
+                $base[$k] = $v;
+            }
+        } else {
+            $base[$k] = $v;
+        }
+    }
+    return $base;
+}
+
 // Synchronize relational tables in phpMyAdmin alongside JSON state
 function syncRelationalTables($pdo, $parsed) {
     if (!$pdo || !is_array($parsed)) return;
@@ -547,8 +575,32 @@ function syncRelationalTables($pdo, $parsed) {
             ");
             $setStmt->execute([
                 ':setting_key' => 'general_settings',
-                ':setting_value' => json_encode($parsed['settings']),
+                ':setting_value' => json_encode($parsed['settings'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                 ':description' => 'Platform global settings, withdraw rules, and commission rates'
+            ]);
+        }
+
+        // Sync Plans to settings table
+        if (isset($parsed['plans']) && is_array($parsed['plans'])) {
+            $setStmt = $pdo->prepare("
+                INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
+                VALUES ('platform_plans', :setting_value, 'Platform investment plans packages')
+                ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`), `updated_at` = CURRENT_TIMESTAMP
+            ");
+            $setStmt->execute([
+                ':setting_value' => json_encode($parsed['plans'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            ]);
+        }
+
+        // Sync Rewards to settings table
+        if (isset($parsed['rewards']) && is_array($parsed['rewards'])) {
+            $setStmt = $pdo->prepare("
+                INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
+                VALUES ('platform_rewards', :setting_value, 'Platform loyalty points rewards catalog')
+                ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`), `updated_at` = CURRENT_TIMESTAMP
+            ");
+            $setStmt->execute([
+                ':setting_value' => json_encode($parsed['rewards'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ]);
         }
 
@@ -992,9 +1044,22 @@ if ($action === 'get') {
             if ($sRow && !empty($sRow['setting_value'])) {
                 $dbSettings = json_decode($sRow['setting_value'], true);
                 if (is_array($dbSettings)) {
-                    $data['settings'] = array_replace_recursive($data['settings'] ?? [], $dbSettings);
+                    $data['settings'] = mergeSettingsData($data['settings'] ?? [], $dbSettings);
                 }
             }
+
+            // Merge customized platform_plans if available
+            try {
+                $pStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'platform_plans' LIMIT 1");
+                $pStmt->execute();
+                $pRow = $pStmt->fetch();
+                if ($pRow && !empty($pRow['setting_value'])) {
+                    $dbPlans = json_decode($pRow['setting_value'], true);
+                    if (is_array($dbPlans) && count($dbPlans) > 0) {
+                        $data['plans'] = $dbPlans;
+                    }
+                }
+            } catch(Exception $eP) {}
 
             // 5. Merge banners table
             try {
@@ -2262,6 +2327,8 @@ if ($action === 'claim_profit') {
     ];
 
     // 7. Distribute Rabat (Matching ROI) to uplines L1 - L5 directly in MySQL
+    $rabatTrxList = [];
+    $rabatUplineAdds = [];
     if (!empty($userRow['referred_by'])) {
         try {
             $rabatLevels = [
@@ -2307,6 +2374,21 @@ if ($action === 'claim_profit') {
                             ':note' => $rNote,
                             ':created_at' => $nowDt
                         ]);
+                        $rabatUplineAdds[$upRow['id']] = ($rabatUplineAdds[$upRow['id']] ?? 0) + $rAmt;
+                        $rabatTrxList[] = [
+                            'id' => $rTxId,
+                            'userId' => $upRow['id'],
+                            'username' => $upRow['username'] ?? '',
+                            'type' => 'rabat_bonus',
+                            'level' => $lvl,
+                            'amount' => $rAmt,
+                            'netAmount' => $rAmt,
+                            'status' => 'approved',
+                            'paymentMethod' => 'Bonus Rabat AI',
+                            'walletSource' => 'Wallet Tambah Teman',
+                            'note' => $rNote,
+                            'createdAt' => $nowDt
+                        ];
                     }
                 }
                 $currRef = trim((string)($upRow['referred_by'] ?? ''));
@@ -2326,6 +2408,8 @@ if ($action === 'claim_profit') {
                     if ($uRef['id'] === $userId) {
                         $uRef['walletBalance'] = $newBalance;
                         $uRef['points'] = $newPoints;
+                    } elseif (isset($rabatUplineAdds[$uRef['id']])) {
+                        $uRef['affiliateBalance'] = (int)($uRef['affiliateBalance'] ?? 0) + $rabatUplineAdds[$uRef['id']];
                     }
                 }
                 unset($uRef);
@@ -2341,6 +2425,9 @@ if ($action === 'claim_profit') {
             }
             if (!isset($stateData['transactions']) || !is_array($stateData['transactions'])) {
                 $stateData['transactions'] = [];
+            }
+            foreach ($rabatTrxList as $rTx) {
+                array_unshift($stateData['transactions'], $rTx);
             }
             array_unshift($stateData['transactions'], $trxObj);
             saveMainState($pdo, $stateData);
@@ -3068,7 +3155,7 @@ if ($action === 'admin_save_settings') {
         }
     } catch (Exception $eS1) {}
 
-    $mergedSettings = array_replace_recursive($currentSettings, $newSettings);
+    $mergedSettings = mergeSettingsData($currentSettings, $newSettings);
 
     $setStmt = $pdo->prepare("
         INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
@@ -3080,7 +3167,7 @@ if ($action === 'admin_save_settings') {
     try {
         $stData = loadMainState($pdo);
         if (is_array($stData)) {
-            $stData['settings'] = array_replace_recursive($stData['settings'] ?? [], $mergedSettings);
+            $stData['settings'] = mergeSettingsData($stData['settings'] ?? [], $mergedSettings);
             saveMainState($pdo, $stData);
         }
     } catch (Exception $eS2) {}

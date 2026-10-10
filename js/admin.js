@@ -240,6 +240,7 @@ export const Admin = {
     }
 
     await DB.save(db);
+    await DB.adminSaveSettings({ paymentGateways: db.settings.paymentGateways });
     return { success: true, message: 'Rekening bank berhasil disimpan!' };
   },
 
@@ -250,6 +251,7 @@ export const Admin = {
     }
     db.settings.paymentGateways.banks = db.settings.paymentGateways.banks.filter(b => b.id !== bankId);
     await DB.save(db);
+    await DB.adminSaveSettings({ paymentGateways: db.settings.paymentGateways });
     return { success: true, message: 'Rekening bank berhasil dihapus.' };
   },
 
@@ -261,6 +263,7 @@ export const Admin = {
 
     bank.active = !bank.active;
     await DB.save(db);
+    await DB.adminSaveSettings({ paymentGateways: db.settings.paymentGateways });
     return {
       success: true,
       active: bank.active,
@@ -279,6 +282,7 @@ export const Admin = {
       imageUrl: imageUrl ? imageUrl.trim() : ''
     };
     await DB.save(db);
+    await DB.adminSaveSettings({ paymentGateways: db.settings.paymentGateways });
     return { success: true, message: 'Pengaturan QRIS berhasil disimpan!' };
   },
 
@@ -295,6 +299,12 @@ export const Admin = {
     if (withdrawFeePercent !== undefined) db.settings.withdrawFeePercent = Number(withdrawFeePercent);
     if (depositPointsReward !== undefined) db.settings.depositPointsReward = Number(depositPointsReward);
     await DB.save(db);
+    await DB.adminSaveSettings({
+      paymentGateways: db.settings.paymentGateways,
+      usdIdrRate: db.settings.usdIdrRate,
+      withdrawFeePercent: db.settings.withdrawFeePercent,
+      depositPointsReward: db.settings.depositPointsReward
+    });
     return { success: true, message: 'Pengaturan Crypto USDT & Kurs berhasil disimpan!' };
   },
 
@@ -437,6 +447,7 @@ export const Admin = {
       ...scheduleConfig
     };
     await DB.save(db);
+    await DB.adminSaveSettings({ withdrawSchedule: db.settings.withdrawSchedule });
     return { success: true, message: 'Jadwal dan status jam operasional WD berhasil disimpan!' };
   },
 
@@ -573,6 +584,7 @@ export const Admin = {
     }
     db.settings.withdrawTerms = termsList;
     await DB.save(db);
+    await DB.adminSaveSettings({ withdrawTerms: termsList });
     return { success: true, message: 'Ketentuan dan syarat penarikan dana (WD) berhasil disimpan!' };
   },
 
@@ -584,6 +596,7 @@ export const Admin = {
       ...apkConfig
     };
     await DB.save(db);
+    await DB.adminSaveSettings({ apkDownload: db.settings.apkDownload });
     return { success: true, message: 'Pengaturan link unduhan APK Android berhasil disimpan!' };
   },
 

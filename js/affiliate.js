@@ -54,8 +54,7 @@ export const Affiliate = {
     const bonusAmount = Math.floor((amount * percent) / 100);
 
     if (bonusAmount > 0) {
-      // Transfer directly to Upline's Saldo Utama (walletBalance) & sync affiliateBalance
-      upline.walletBalance = (upline.walletBalance || 0) + bonusAmount;
+      // Transfer directly to Upline's Wallet Tambah Teman (affiliateBalance)
       upline.affiliateBalance = (upline.affiliateBalance || 0) + bonusAmount;
       upline.points = (upline.points || 0) + 10; // Extra bonus points
 
@@ -67,7 +66,9 @@ export const Affiliate = {
         username: upline.username,
         type: 'sponsor_bonus',
         amount: bonusAmount,
-        note: `Bonus Sponsor ${percent}% dari investasi ${buyerUser.username} (${DB.formatIDR(amount)}) ditransfer ke Saldo Utama`,
+        netAmount: bonusAmount,
+        walletSource: 'Wallet Tambah Teman',
+        note: `Bonus Sponsor ${percent}% dari investasi ${buyerUser.username} (${DB.formatIDR(amount)}) masuk ke Wallet Tambah Teman`,
         status: 'approved',
         createdAt: new Date().toISOString()
       });

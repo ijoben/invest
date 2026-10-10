@@ -2011,25 +2011,45 @@ export const AdminPage = {
   },
 
   async savePpobSettings() {
-    const p10 = Number(document.getElementById('ppobCfgPrice10')?.value) || Number(document.getElementById('ppobSysCfgPrice10')?.value) || 12000;
-    const p20 = Number(document.getElementById('ppobCfgPrice20')?.value) || Number(document.getElementById('ppobSysCfgPrice20')?.value) || 22000;
-    const p50 = Number(document.getElementById('ppobCfgPrice50')?.value) || Number(document.getElementById('ppobSysCfgPrice50')?.value) || 52000;
-    const p100 = Number(document.getElementById('ppobCfgPrice100')?.value) || Number(document.getElementById('ppobSysCfgPrice100')?.value) || 102000;
-    const showStatus = document.getElementById('ppobCfgShowStatus')?.value === 'true';
-    const enabled = document.getElementById('ppobCfgGlobalEnabled')?.value === 'true';
-    const notice = (document.getElementById('ppobCfgNotice')?.value || '').trim();
-
-    this.showToast('Menyimpan pengaturan PPOB ke database...', 'info');
-
     const db = DB.get();
     db.settings = db.settings || {};
+    const existingPpob = db.settings.ppob || {};
+
+    const p10 = Number(document.getElementById('ppobCfgPrice10')?.value) || Number(document.getElementById('ppobSysCfgPrice10')?.value) || existingPpob.pricing?.[10000] || 12000;
+    const p20 = Number(document.getElementById('ppobCfgPrice20')?.value) || Number(document.getElementById('ppobSysCfgPrice20')?.value) || existingPpob.pricing?.[20000] || 22000;
+    const p50 = Number(document.getElementById('ppobCfgPrice50')?.value) || Number(document.getElementById('ppobSysCfgPrice50')?.value) || existingPpob.pricing?.[50000] || 52000;
+    const p100 = Number(document.getElementById('ppobCfgPrice100')?.value) || Number(document.getElementById('ppobSysCfgPrice100')?.value) || existingPpob.pricing?.[100000] || 102000;
+
+    const globalEl = document.getElementById('ppobCfgGlobalEnabled');
+    const masterEl = document.getElementById('ppobCfgMasterEnabled');
+    let enabled = true;
+    if (globalEl) enabled = globalEl.value === 'true';
+    else if (masterEl) enabled = masterEl.value === 'true';
+    else if (existingPpob.enabled !== undefined) enabled = existingPpob.enabled;
+
+    const pulsaEl = document.getElementById('ppobCfgPulsaEnabled');
+    const pulsaEnabled = pulsaEl ? pulsaEl.value === 'true' : (existingPpob.pulsaEnabled !== false);
+
+    const plnEl = document.getElementById('ppobCfgPlnEnabled');
+    const plnEnabled = plnEl ? plnEl.value === 'true' : (existingPpob.plnEnabled !== false);
+
+    const showStatusEl = document.getElementById('ppobCfgShowStatus');
+    const showProcessStatus = showStatusEl ? showStatusEl.value === 'true' : (existingPpob.showProcessStatus !== false);
+
+    const adminFeeEl = document.getElementById('ppobCfgAdminFee');
+    const adminFee = adminFeeEl ? Math.max(0, parseInt(adminFeeEl.value || '0', 10) || 0) : (existingPpob.adminFee || 0);
+
+    const noticeEl = document.getElementById('ppobCfgNotice');
+    const notice = (noticeEl?.value || existingPpob.notice || 'Pengisian pulsa seluler dan token listrik PLN diproses manual oleh Admin maksimal 1x24 jam.').trim();
+
     db.settings.ppob = {
-      ...(db.settings.ppob || {}),
-      enabled: enabled,
-      pulsaEnabled: true,
-      plnEnabled: true,
-      showProcessStatus: showStatus,
-      notice: notice,
+      ...existingPpob,
+      enabled,
+      pulsaEnabled,
+      plnEnabled,
+      showProcessStatus,
+      adminFee,
+      notice,
       pricing: {
         10000: p10,
         20000: p20,
@@ -2038,8 +2058,10 @@ export const AdminPage = {
       }
     };
 
+    this.showToast('Menyimpan pengaturan PPOB ke database...', 'info');
     await DB.save(db);
-    this.showToast('Pengaturan harga jual dan saklar status PPOB berhasil disimpan!', 'success');
+    await DB.adminSaveSettings({ ppob: db.settings.ppob });
+    this.showToast(`Pengaturan Layanan PPOB berhasil disimpan ke database! Status: ${enabled ? '🟢 AKTIF' : '🔴 NONAKTIF'}`, 'success');
     this.renderAll();
   },
 
@@ -2089,6 +2111,7 @@ export const AdminPage = {
     db.settings.levelTurnoverMilestones = updated;
     this.showToast('Menyimpan pengaturan bonus target leader...', 'info');
     await DB.save(db);
+    await DB.adminSaveSettings({ levelTurnoverMilestones: updated });
     this.showToast('Pengaturan bonus target & reward leader berhasil disimpan!', 'success');
     this.renderAll();
   },
@@ -2114,6 +2137,12 @@ export const AdminPage = {
 
     this.showToast('Menyimpan pengaturan gateway & USDT ke database...', 'info');
     await DB.save(db);
+    await DB.adminSaveSettings({
+      usdIdrRate: rate,
+      withdrawFeePercent: fee,
+      depositPointsReward: isNaN(depPts) ? 5 : depPts,
+      paymentGateways: db.settings.paymentGateways
+    });
     this.showToast(`Pengaturan Crypto USDT (${isUsdtActive ? '🟢 AKTIF' : '🔴 NONAKTIF'}) & kurs berhasil disimpan ke database!`, 'success');
     this.renderAll();
   },
@@ -2286,31 +2315,8 @@ export const AdminPage = {
     };
     this.showToast('Menyimpan absensi ke database...', 'info');
     await DB.save(db);
+    await DB.adminSaveSettings({ dailyCheckIn: db.settings.dailyCheckIn });
     this.showToast(`Pengaturan Absensi Harian disimpan ke database! Bonus: Rp ${reward.toLocaleString('id-ID')} / hari (${enabled ? 'AKTIF' : 'NONAKTIF'})`, 'success');
-    this.renderAll();
-  },
-
-  // Save PPOB Settings (Pulsa & Token Listrik PLN)
-  async savePpobSettings() {
-    const enabled = document.getElementById('ppobCfgMasterEnabled')?.value === 'true';
-    const pulsaEnabled = document.getElementById('ppobCfgPulsaEnabled')?.value === 'true';
-    const plnEnabled = document.getElementById('ppobCfgPlnEnabled')?.value === 'true';
-    const adminFee = Math.max(0, parseInt(document.getElementById('ppobCfgAdminFee')?.value || '0', 10) || 0);
-    const notice = document.getElementById('ppobCfgNotice')?.value.trim() || '';
-
-    const db = DB.get();
-    db.settings = db.settings || {};
-    db.settings.ppob = {
-      enabled,
-      pulsaEnabled,
-      plnEnabled,
-      adminFee,
-      notice
-    };
-
-    this.showToast('Menyimpan pengaturan PPOB ke database...', 'info');
-    await DB.save(db);
-    this.showToast(`Pengaturan Layanan PPOB berhasil disimpan ke database! Status: ${enabled ? 'AKTIF' : 'NONAKTIF'} (Pulsa: ${pulsaEnabled ? 'ON' : 'OFF'}, PLN: ${plnEnabled ? 'ON' : 'OFF'})`, 'success');
     this.renderAll();
   },
 
@@ -2343,14 +2349,15 @@ export const AdminPage = {
     }
   },
 
-  toggleWithdrawMasterSwitch() {
+  async toggleWithdrawMasterSwitch() {
     const db = DB.get();
     if (!db.settings.withdrawSchedule) {
       db.settings.withdrawSchedule = { enabled: true, startHour: 9, endHour: 21, offMessage: '' };
     }
     const current = db.settings.withdrawSchedule.enabled !== false;
     db.settings.withdrawSchedule.enabled = !current;
-    DB.save(db);
+    await DB.save(db);
+    await DB.adminSaveSettings({ withdrawSchedule: db.settings.withdrawSchedule });
 
     const newStatus = db.settings.withdrawSchedule.enabled;
     this.renderWdQuickToggle(db);
@@ -4136,6 +4143,7 @@ export const AdminPage = {
 
     this.showToast('Menyimpan kontak CS ke database...', 'info');
     await DB.save(db);
+    await DB.adminSaveSettings({ cs: db.settings.cs });
     this.showToast('✅ Kontak WhatsApp & Telegram CS berhasil disimpan dan aktif!', 'success');
   },
 
@@ -4155,6 +4163,7 @@ export const AdminPage = {
 
     this.showToast('Menyimpan Kelas Trading ke database...', 'info');
     await DB.save(db);
+    await DB.adminSaveSettings({ kelasTrading: db.settings.kelasTrading });
     this.showToast('✅ Kontak WhatsApp & Telegram Kelas Trading berhasil disimpan dan aktif!', 'success');
   },
 

@@ -421,26 +421,6 @@ export const Plans = {
         };
       }
 
-      // If target date is the day the package was newly activated -> Baru Aktif (no yield on activation day)
-      if (earliestStartDateStr && targetDateStr === earliestStartDateStr) {
-        return {
-          dayName: dName,
-          date: dateStr,
-          fullDate: fullDateStr,
-          rate: null,
-          isWeekend: false,
-          isOff: false,
-          isLoss: false,
-          isToday,
-          isPast,
-          isGuest: false,
-          hasActivePackage: true,
-          displayRate: '-',
-          statusLabel: 'Baru Aktif',
-          pillText: 'Aktivasi'
-        };
-      }
-
       let rate = 0;
       let isLoss = false;
 
@@ -927,6 +907,16 @@ export const Plans = {
 
         db.transactions = db.transactions || [];
         db.transactions.unshift(profitTrx);
+
+        // Distribute rabat matching bonus to uplines (L1-L5) in fallback
+        try {
+          if (Affiliate && typeof Affiliate.applyRabatBonus === 'function') {
+            Affiliate.applyRabatBonus(db, user, totalClaimed);
+          }
+        } catch (eRbt) {
+          console.warn('Fallback applyRabatBonus warning:', eRbt);
+        }
+
         await DB.save(db);
 
         if (typeof DB.syncToCloud === 'function') {
