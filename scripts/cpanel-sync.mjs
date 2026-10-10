@@ -15,7 +15,7 @@ const FTP_CONFIG = {
 };
 
 const DEPLOY_DIRECTORIES = ['css', 'js', 'api'];
-const DEPLOY_ROOT_FILES = ['index.html', 'admin.html', '.htaccess', 'database.sql'];
+const DEPLOY_ROOT_FILES = ['index.html', 'admin.html', '.htaccess', 'robots.txt', 'database.sql'];
 
 function getFilesRecursively(dir, baseDir = '') {
   let results = [];

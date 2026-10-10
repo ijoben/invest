@@ -94,10 +94,10 @@ export const AdminPage = {
           this.switchTab(this.currentTab);
         }
       });
-      // Realtime live polling sync every 6 seconds
+      // Realtime live polling sync (15s interval, pauses on tab blur, uses ETag 304)
       DB.startLivePolling((freshDb) => {
         this.onLiveDbSync(freshDb);
-      }, 6000);
+      }, 15000);
       // Verify the authoritative server session (writes are rejected without it)
       this.verifyServerSession();
     }
@@ -235,7 +235,7 @@ export const AdminPage = {
       });
       DB.startLivePolling((freshDb) => {
         this.onLiveDbSync(freshDb);
-      }, 6000);
+      }, 15000);
       this.verifyServerSession();
     }
   },

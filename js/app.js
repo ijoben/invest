@@ -151,8 +151,11 @@ const App = {
     // Background sync with MySQL (if cPanel API is active)
     DB.initCloudSync(() => this.renderAll());
 
-    // Live background polling (every 7 seconds) for immediate synchronization with Database & Admin actions
-    DB.startLivePolling((freshDb) => this.onLiveDbSync(freshDb), 7000);
+    // Live background polling with intelligent bandwidth conservation:
+    // Logged-in users poll every 25s; guests poll every 120s; pauses automatically when tab is hidden.
+    const isMember = Auth && typeof Auth.isLoggedIn === 'function' && Auth.isLoggedIn();
+    const pollInterval = isMember ? 25000 : 120000;
+    DB.startLivePolling((freshDb) => this.onLiveDbSync(freshDb), pollInterval);
 
     // Show quick welcome toast
     setTimeout(() => {

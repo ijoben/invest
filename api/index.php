@@ -1137,13 +1137,45 @@ if ($action === 'get') {
             // Keep going with merged state
         }
 
-        // Never leak passwords / OTP / reset codes to any client
+        // Never leak passwords / OTP / reset codes to any client, and convert heavy base64 proof images to static URLs
         sanitizeStateData($data);
 
-        echo json_encode([
+        // One-time persist cleaned transactions back to MySQL and system state so DB does not store multi-megabyte base64
+        try {
+            if (!empty($data['transactions']) && is_array($data['transactions'])) {
+                $updTxStmt = $pdo->prepare("UPDATE `transactions` SET `proof_image` = :url WHERE `id` = :id AND (`proof_image` LIKE 'data:image%' OR `proof_image` IS NULL)");
+                $hasUpdatedAny = false;
+                foreach ($data['transactions'] as $tx) {
+                    if (!empty($tx['proofImage']) && strpos($tx['proofImage'], 'http') === 0 && !empty($tx['id'])) {
+                        $updTxStmt->execute([':url' => $tx['proofImage'], ':id' => $tx['id']]);
+                        if ($updTxStmt->rowCount() > 0) $hasUpdatedAny = true;
+                    }
+                }
+                if ($hasUpdatedAny) {
+                    writeStateJson($pdo, 'autotrading_system_state', json_encode($data));
+                }
+            }
+        } catch(Exception $eUpdTrx) {}
+
+        $jsonPayload = json_encode([
             'success' => true,
             'data' => $data
         ]);
+
+        $etag = '"' . md5($jsonPayload) . '"';
+        header('ETag: ' . $etag);
+        header('Cache-Control: private, must-revalidate, max-age=0');
+
+        $clientEtag = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH']) : '';
+        $cleanClientEtag = str_replace(['-gzip', '-br', 'W/'], '', $clientEtag);
+        $cleanServerEtag = str_replace('W/', '', $etag);
+
+        if (!empty($cleanClientEtag) && $cleanClientEtag === $cleanServerEtag) {
+            http_response_code(304);
+            exit();
+        }
+
+        echo $jsonPayload;
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode([
@@ -1227,6 +1259,12 @@ if ($action === 'save') {
                 }
             }
         }
+        foreach ($mergedTrxMap as &$mTx) {
+            if (!empty($mTx['proofImage']) && is_string($mTx['proofImage']) && strpos($mTx['proofImage'], 'data:image') === 0) {
+                $mTx['proofImage'] = saveBase64ImageFile($mTx['proofImage'], 'proof_' . preg_replace('/[^a-zA-Z0-9]/', '', $mTx['id'] ?? 'trx'));
+            }
+        }
+        unset($mTx);
         $parsed['transactions'] = array_values($mergedTrxMap);
 
         // Smart merge investments: preserve existing investments
@@ -4455,6 +4493,11 @@ if ($action === 'create_transaction') {
             exit();
         }
 
+        $proofImg = isset($in['proofImage']) ? (string)$in['proofImage'] : null;
+        if (!empty($proofImg) && strpos($proofImg, 'data:image') === 0) {
+            $proofImg = saveBase64ImageFile($proofImg, 'proof_' . preg_replace('/[^a-zA-Z0-9]/', '', $trxId));
+        }
+
         $newTrx = [
             'id' => $trxId,
             'userId' => $uid,
@@ -4465,7 +4508,7 @@ if ($action === 'create_transaction') {
             'paymentMethod' => (string)($in['paymentMethod'] ?? 'Transfer Bank'),
             'uniqueCode' => isset($in['uniqueCode']) ? (int)$in['uniqueCode'] : null,
             'txid' => isset($in['txid']) ? (string)$in['txid'] : null,
-            'proofImage' => isset($in['proofImage']) ? (string)$in['proofImage'] : null,
+            'proofImage' => $proofImg,
             'amountUsdt' => isset($in['amountUsdt']) ? (float)$in['amountUsdt'] : null,
             'createdAt' => date('c')
         ];

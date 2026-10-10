@@ -25,6 +25,10 @@ Options -Indexes
     # (scripts/ and scratch/ contain deployment credentials & ad-hoc tooling)
     RewriteRule ^(scripts|scratch|node_modules|\.freebuff|uploads/backups)(/|$) - [F,L]
 
+    # 3.0b Block known bandwidth-hogging crawlers and scrapers
+    RewriteCond %{HTTP_USER_AGENT} (Bytespider|ClaudeBot|GPTBot|CCBot|PetalBot|AhrefsBot|SemrushBot|MJ12bot|DotBot|MegaIndex) [NC]
+    RewriteRule .* - [F,L]
+
     # 3.1 Force HTTPS
     RewriteCond %{HTTPS} !=on
     RewriteCond %{HTTP:X-Forwarded-Proto} !https
@@ -73,15 +77,38 @@ Options -Indexes
     AddOutputFilterByType DEFLATE application/json image/svg+xml
 </IfModule>
 
-# 7. Cache-Control: Mencegah file JS/CSS/HTML tertahan di browser cache saat ada pembaruan kode
+# 7. Cache-Control & Browser Caching Optimization (Hemat Bandwidth)
 <IfModule mod_headers.c>
+    # HTML: Selalu revalidasi agar update halaman instan terdeteksi tanpa buang kuota jika tidak berubah
     <FilesMatch "\.(html|htm)$">
-        Header set Cache-Control "no-cache, no-store, must-revalidate"
-        Header set Pragma "no-cache"
-        Header set Expires "0"
+        Header set Cache-Control "no-cache, must-revalidate"
     </FilesMatch>
+
+    # JS & CSS: Revalidasi dengan ETag
     <FilesMatch "\.(js|mjs|css)$">
         Header set Cache-Control "no-cache, must-revalidate"
     </FilesMatch>
+
+    # Media, Gambar & Font: Cache browser 30 hari (Hemat Bandwidth 100%)
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico|woff|woff2|ttf|eot)$">
+        Header set Cache-Control "public, max-age=2592000, immutable"
+    </FilesMatch>
+
+    # APK Android File: Cache 7 hari
+    <FilesMatch "\.(apk)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>
+
+# 8. Mod Expires untuk Asset Statis
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/x-icon "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 30 days"
+    ExpiresByType font/woff "access plus 30 days"
 </IfModule>
 

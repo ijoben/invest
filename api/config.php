@@ -340,11 +340,71 @@ function stripUserSecrets(&$u) {
     }
 }
 
+function saveBase64ImageFile($base64Data, $prefix = 'proof') {
+    if (empty($base64Data) || !is_string($base64Data)) return null;
+    
+    // If it's already a URL, return it directly
+    if (strpos($base64Data, 'http://') === 0 || strpos($base64Data, 'https://') === 0 || strpos($base64Data, '/uploads/') === 0) {
+        return $base64Data;
+    }
+    
+    // Check if it's data URI
+    if (!preg_match('/^data:image\/([a-zA-Z0-9\+\-\.]+);base64,(.+)$/', $base64Data, $matches)) {
+        return $base64Data;
+    }
+    
+    $rawMime = strtolower($matches[1]);
+    if ($rawMime === 'jpeg') $ext = 'jpg';
+    elseif ($rawMime === 'svg+xml') $ext = 'svg';
+    elseif ($rawMime === 'x-icon' || $rawMime === 'vnd.microsoft.icon') $ext = 'ico';
+    else $ext = $rawMime;
+    
+    $binary = base64_decode($matches[2]);
+    if ($binary === false || strlen($binary) === 0) return null;
+    
+    $uploadDir = dirname(__DIR__) . '/uploads';
+    if (!is_dir($uploadDir)) {
+        @mkdir($uploadDir, 0755, true);
+    }
+    
+    // Deterministic filename so ETag remains rock-solid stable and avoids redundant writes
+    $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $prefix) . '.' . $ext;
+    $filePath = $uploadDir . '/' . $safeName;
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'autotrading.my.id';
+    $publicUrl = $protocol . '://' . $host . '/uploads/' . $safeName;
+
+    if (file_exists($filePath) && filesize($filePath) > 0) {
+        return $publicUrl;
+    }
+
+    $binary = base64_decode($matches[2]);
+    if ($binary === false || strlen($binary) === 0) return null;
+
+    if (file_put_contents($filePath, $binary) !== false) {
+        return $publicUrl;
+    }
+    
+    return $base64Data;
+}
+
 function sanitizeStateData(&$data) {
     if (!is_array($data)) return;
     if (isset($data['users']) && is_array($data['users'])) {
         foreach ($data['users'] as &$u) stripUserSecrets($u);
         unset($u);
+    }
+    if (isset($data['transactions']) && is_array($data['transactions'])) {
+        foreach ($data['transactions'] as &$t) {
+            if (!empty($t['proofImage']) && is_string($t['proofImage']) && strpos($t['proofImage'], 'data:image') === 0) {
+                $tId = preg_replace('/[^a-zA-Z0-9]/', '', $t['id'] ?? 'trx');
+                $url = saveBase64ImageFile($t['proofImage'], 'proof_' . $tId);
+                if ($url) {
+                    $t['proofImage'] = $url;
+                }
+            }
+        }
+        unset($t);
     }
 }
 

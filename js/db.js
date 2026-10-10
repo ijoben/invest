@@ -1137,17 +1137,31 @@ export const DB = {
     }
   },
 
+  _lastETag: null,
+
   async syncFromCloud() {
     try {
       if (typeof fetch !== 'function') return null;
       // Migration hook: reconnect the browser session before pulling fresh state
       await this.ensureServerSession();
       const url = this.getApiUrl('get');
+      const headers = this.getAuthHeaders();
+      if (this._lastETag) {
+        headers['If-None-Match'] = this._lastETag;
+      }
       const res = await fetch(url, {
         credentials: 'include',
-        headers: this.getAuthHeaders()
+        headers
       });
+      // 304 Not Modified: server state is identical to our local cache (0 bytes transferred!)
+      if (res.status === 304) {
+        return _activeDB || this.get();
+      }
       if (!res.ok) return null;
+      const etag = res.headers.get('ETag');
+      if (etag) {
+        this._lastETag = etag;
+      }
       const json = await res.json();
       if (json && json.success && json.data) {
         if (Array.isArray(json.data.transactions)) {
@@ -1171,9 +1185,11 @@ export const DB = {
     return null;
   },
 
-  // Live background polling mechanism for realtime frontend-admin-database synchronization
+  // Live background polling mechanism with bandwidth conservation & tab-visibility detection
   _pollingInterval: null,
+  _pollingIntervalMs: 20000,
   _syncListeners: [],
+  _visibilityBound: false,
 
   addSyncListener(fn) {
     if (typeof fn === 'function' && !this._syncListeners.includes(fn)) {
@@ -1185,11 +1201,43 @@ export const DB = {
     this._syncListeners = this._syncListeners.filter(f => f !== fn);
   },
 
-  startLivePolling(callback, intervalMs = 7000) {
+  startLivePolling(callback, intervalMs = 20000) {
     if (callback) this.addSyncListener(callback);
-    if (this._pollingInterval) return;
+    this._pollingIntervalMs = Math.max(10000, intervalMs);
 
+    // Bind tab visibility listener once so background tabs do not waste bandwidth
+    if (typeof document !== 'undefined' && !this._visibilityBound) {
+      this._visibilityBound = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          // Tab moved to background -> clear interval to stop bandwidth drain
+          if (this._pollingInterval) {
+            clearInterval(this._pollingInterval);
+            this._pollingInterval = null;
+          }
+        } else {
+          // Tab became visible again -> sync once immediately and resume polling
+          this.syncFromCloud().then(fresh => {
+            if (fresh) {
+              for (const listener of this._syncListeners) {
+                try { listener(fresh); } catch(err) {}
+              }
+            }
+          }).catch(() => {});
+          this._startPollingLoop();
+        }
+      });
+    }
+
+    if (this._pollingInterval) return;
+    this._startPollingLoop();
+  },
+
+  _startPollingLoop() {
+    if (this._pollingInterval) clearInterval(this._pollingInterval);
     this._pollingInterval = setInterval(async () => {
+      // Don't poll if document is in background
+      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const fresh = await this.syncFromCloud();
         if (fresh) {
@@ -1198,7 +1246,7 @@ export const DB = {
           }
         }
       } catch(e) {}
-    }, intervalMs);
+    }, this._pollingIntervalMs);
   },
 
   stopLivePolling() {
