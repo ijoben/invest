@@ -63,7 +63,7 @@ const App = {
   paginationState: {
     walletTx: { page: 1, perPage: 8, filter: 'all' },
     riwayatFull: { page: 1, perPage: 8, filter: 'all' },
-    downlines: { page: 1, perPage: 8, level: 'all' },
+    downlines: { page: 1, perPage: 10, level: 'all' },
     myRedemptions: { page: 1, perPage: 6 },
     testimonials: { page: 1, perPage: 6, filter: 'all' }
   },
@@ -2257,7 +2257,7 @@ const App = {
 
   setDownlinePage(p) {
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 8, level: 'all' };
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all' };
     this.paginationState.downlines.page = p;
     this.renderDownlineList(this.paginationState.downlines.level || 'all', false);
   },
@@ -2981,7 +2981,7 @@ const App = {
     if (!listEl) return;
 
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 8, level: 'all' };
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all' };
     if (resetPage) this.paginationState.downlines.page = 1;
     this.paginationState.downlines.level = level;
 
@@ -3004,7 +3004,7 @@ const App = {
       return;
     }
 
-    const perPage = this.paginationState.downlines.perPage || 8;
+    const perPage = this.paginationState.downlines.perPage || 10;
     const totalPages = Math.ceil(members.length / perPage);
     let curPage = Math.max(1, Math.min(this.paginationState.downlines.page || 1, totalPages));
     this.paginationState.downlines.page = curPage;
@@ -3263,6 +3263,12 @@ const App = {
 
   // Download APK Controller (Direct Auto-Download & Modal Guide)
   openDownloadApkModal(autoDownload = true) {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Silakan daftar atau login terlebih dahulu untuk mengunduh aplikasi (APK).', 'warning');
+      this.openAuthModalWithTab('register');
+      return;
+    }
+
     const db = DB.get();
     const apk = (db.settings && db.settings.apkDownload) || {};
     const downloadUrl = (apk.url && apk.url.trim()) || 'https://autotrading.my.id/appautotrading.apk';
@@ -3302,6 +3308,14 @@ const App = {
   },
 
   downloadApk(e) {
+    if (!Auth.isLoggedIn()) {
+      if (e && e.preventDefault) e.preventDefault();
+      this.showToast('Silakan daftar atau login terlebih dahulu untuk mengunduh aplikasi (APK).', 'warning');
+      this.closeModal('apkDownloadModal');
+      this.openAuthModalWithTab('login');
+      return;
+    }
+
     const db = DB.get();
     const apk = (db.settings && db.settings.apkDownload) || {};
     if (apk.enabled === false) {
@@ -4357,6 +4371,16 @@ const App = {
     try {
       const res = await Plans.claimProfit(user.id);
       if (res.success) {
+        // Dispatch profit claim email notification to member
+        if (user && user.email && res.amount > 0) {
+          DB.dispatchMailApi('profit_claim', {
+            user: { email: user.email, username: user.username, fullName: user.fullName },
+            amount: res.amount,
+            walletBalance: res.walletBalance,
+            transaction: res.transaction
+          });
+        }
+        this.cachedWalletTransactions = null;
         this.triggerClaimCelebration(res.amount, res.message);
         this.renderAll();
       } else {
@@ -5047,6 +5071,7 @@ const App = {
     const username = document.getElementById('regUsername') ? document.getElementById('regUsername').value.trim() : '';
     const fullName = document.getElementById('regFullName') ? document.getElementById('regFullName').value.trim() : '';
     const email = document.getElementById('regEmail') ? document.getElementById('regEmail').value.trim() : '';
+    const city = document.getElementById('regCity') ? document.getElementById('regCity').value.trim() : '';
     const phone = document.getElementById('regPhone') ? document.getElementById('regPhone').value.trim() : '';
     const password = document.getElementById('regPassword') ? document.getElementById('regPassword').value : '';
     const confirmPassword = document.getElementById('regConfirmPassword') ? document.getElementById('regConfirmPassword').value : '';
@@ -5059,7 +5084,7 @@ const App = {
     }
     let res;
     try {
-      res = await Auth.register({ username, fullName, email, phone, password, confirmPassword, referralCode });
+      res = await Auth.register({ username, fullName, email, city, phone, password, confirmPassword, referralCode });
     } finally {
       if (regBtn) {
         regBtn.disabled = false;
@@ -5069,7 +5094,7 @@ const App = {
     if (res.success) {
       if (riskCheckbox) riskCheckbox.checked = false;
       // Clear inputs
-      ['regUsername', 'regFullName', 'regEmail', 'regPhone', 'regPassword', 'regConfirmPassword', 'regReferral'].forEach(id => {
+      ['regUsername', 'regFullName', 'regEmail', 'regCity', 'regPhone', 'regPassword', 'regConfirmPassword', 'regReferral'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
@@ -5768,12 +5793,48 @@ const App = {
       return;
     }
 
+    const db = DB.get();
+    const ppobSettings = (db.settings && db.settings.ppob) || {};
+    const isPpobEnabled = ppobSettings.enabled !== false;
+
+    const btnPpob = document.getElementById('btnTransferTypePpob');
+    if (btnPpob) {
+      if (!isPpobEnabled) {
+        btnPpob.style.display = 'none';
+      } else {
+        btnPpob.style.display = '';
+      }
+    }
+
+    if (!isPpobEnabled && initialType === 'ppob') {
+      initialType = 'affiliate';
+    }
+
     this.currentTransferType = initialType;
     this.setTransferType(initialType, false);
     this.openModal('transferModal');
   },
 
   setTransferType(type, triggerPreview = true) {
+    const db = DB.get();
+    const ppobSettings = (db.settings && db.settings.ppob) || {};
+    const isPpobEnabled = ppobSettings.enabled !== false;
+
+    const btnPpob = document.getElementById('btnTransferTypePpob');
+    if (btnPpob) {
+      if (!isPpobEnabled) {
+        btnPpob.style.display = 'none';
+      } else {
+        btnPpob.style.display = '';
+      }
+    }
+
+    if (type === 'ppob' && !isPpobEnabled) {
+      this.showToast('Layanan konversi PPOB sedang dinonaktifkan sementara oleh Admin.', 'warning');
+      this.setTransferType('affiliate', true);
+      return;
+    }
+
     this.currentTransferType = type || 'affiliate';
     const user = Auth.getUser();
     if (!user) return;
@@ -6067,6 +6128,13 @@ const App = {
     if (!user) return;
 
     if (this.currentTransferType === 'ppob') {
+      const db = DB.get();
+      const ppobSettings = (db.settings && db.settings.ppob) || {};
+      if (ppobSettings.enabled === false) {
+        this.showToast('Layanan konversi PPOB sedang dinonaktifkan sementara oleh Admin.', 'error');
+        return;
+      }
+
       const denom = this.transferPpobDenom || 10000;
       const price = this.getPpobPrice(denom);
       const affBal = user.affiliateBalance || 0;
@@ -6143,6 +6211,15 @@ const App = {
           db.transactions = db.transactions || [];
           db.transactions.unshift(tx);
           await DB.save(db);
+
+          // Dispatch email notification to member
+          if (u && u.email) {
+            DB.dispatchMailApi('ppob', {
+              status: 'pending',
+              user: { email: u.email, username: u.username, fullName: u.fullName },
+              transaction: tx
+            });
+          }
 
           if (Auth && Auth.setUser) {
             Auth.setUser(u);

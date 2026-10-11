@@ -87,6 +87,14 @@ export const Admin = {
 
     await DB.save(db);
 
+    // Send email notification to member
+    if (user && user.email) {
+      DB.dispatchMailApi('deposit', {
+        user: { email: user.email, username: user.username, fullName: user.fullName },
+        transaction: trx
+      });
+    }
+
     return {
       success: true,
       message: `Deposit ${DB.formatIDR(trx.amount)} untuk ${user.username} berhasil disetujui!${pointsReward > 0 ? ` (+${pointsReward} Poin ditambahkan)` : ''}`
@@ -124,6 +132,25 @@ export const Admin = {
     trx.updatedAt = new Date().toISOString();
 
     await DB.save(db);
+
+    // Send email notification to member
+    const user = db.users.find(u => u.id === trx.userId);
+    if (user && user.email) {
+      if (trx.type === 'ppob_conversion') {
+        DB.dispatchMailApi('ppob', {
+          status: 'approved',
+          user: { email: user.email, username: user.username, fullName: user.fullName },
+          transaction: trx
+        });
+      } else {
+        DB.dispatchMailApi('withdraw', {
+          status: 'approved',
+          user: { email: user.email, username: user.username, fullName: user.fullName },
+          transaction: trx
+        });
+      }
+    }
+
     if (trx.type === 'ppob_conversion') {
       const typeLabel = trx.category === 'pln' ? 'Token Listrik PLN' : 'Pulsa Seluler';
       return {
@@ -165,6 +192,24 @@ export const Admin = {
     trx.updatedAt = new Date().toISOString();
 
     await DB.save(db);
+
+    // Send email notification to member
+    if (user && user.email) {
+      if (trx.type === 'ppob_conversion') {
+        DB.dispatchMailApi('ppob', {
+          status: 'rejected',
+          user: { email: user.email, username: user.username, fullName: user.fullName },
+          transaction: trx
+        });
+      } else {
+        DB.dispatchMailApi('withdraw', {
+          status: 'rejected',
+          user: { email: user.email, username: user.username, fullName: user.fullName },
+          transaction: trx
+        });
+      }
+    }
+
     return { success: true, message: `Transaksi ${trx.type === 'ppob_conversion' ? 'konversi PPOB' : 'penarikan'} ${trx.id} ditandai gangguan/ditolak dan saldo telah dikembalikan ke user.` };
   },
 

@@ -288,10 +288,13 @@ export const Auth = {
     const db = DB.get();
     const isVerifyRequired = !!(db.settings && db.settings.email && db.settings.email.verificationRequired);
 
+    const cleanCity = (formData.city || '').trim();
+
     const newUser = await DB.addUser({
       username: cleanUsername,
       fullName: cleanFullName || cleanUsername,
       email: cleanEmail,
+      city: cleanCity,
       phone: cleanPhone || '',
       password: cleanPassword,
       referralCode: generatedRef,
@@ -307,6 +310,22 @@ export const Auth = {
           username: newUser.username,
           fullName: newUser.fullName,
           email: newUser.email,
+          city: newUser.city || cleanCity,
+          phone: newUser.phone,
+          referralCode: newUser.referralCode,
+          referredBy: newUser.referredBy
+        }
+      });
+    }
+
+    // Send welcome email to new member if email verification is not required
+    if (!isVerifyRequired && newUser.email) {
+      DB.dispatchMailApi('welcome', {
+        user: {
+          username: newUser.username,
+          fullName: newUser.fullName,
+          email: newUser.email,
+          city: newUser.city || cleanCity,
           phone: newUser.phone,
           referralCode: newUser.referralCode,
           referredBy: newUser.referredBy
@@ -363,8 +382,26 @@ export const Auth = {
   },
 
   // Verify Registration OTP (server-side validation)
-  verifyRegistrationOtp(identifier, code) {
-    return DB.verifyUserEmailOtp(identifier, code);
+  async verifyRegistrationOtp(identifier, code) {
+    const res = await DB.verifyUserEmailOtp(identifier, code);
+    if (res && res.success) {
+      const db = DB.get();
+      const u = (db.users || []).find(x => x.id === identifier || x.email === identifier);
+      if (u && u.email) {
+        DB.dispatchMailApi('welcome', {
+          user: {
+            username: u.username,
+            fullName: u.fullName,
+            email: u.email,
+            city: u.city,
+            phone: u.phone,
+            referralCode: u.referralCode,
+            referredBy: u.referredBy
+          }
+        });
+      }
+    }
+    return res;
   },
 
   // Resend Registration OTP

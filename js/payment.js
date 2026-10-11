@@ -268,6 +268,15 @@ export const Payment = {
     db.transactions.unshift(newTrx);
     await DB.save(db);
 
+    // Send email notification to member
+    if (user && user.email) {
+      DB.dispatchMailApi('withdraw', {
+        status: 'pending',
+        user: { email: user.email, username: user.username, fullName: user.fullName },
+        transaction: newTrx
+      });
+    }
+
     return {
       success: true,
       transaction: newTrx,

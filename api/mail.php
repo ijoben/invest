@@ -532,5 +532,486 @@ HTML;
     exit();
 }
 
+// 4. ACTION: WELCOME EMAIL FOR NEWLY REGISTERED MEMBER
+if ($action === 'welcome') {
+    $u = $data['user'] ?? $data;
+    $email = strtolower(trim($u['email'] ?? ''));
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Alamat email member tidak valid!']);
+        exit();
+    }
+    $username = htmlspecialchars($u['username'] ?? 'Investor');
+    $fullName = htmlspecialchars($u['fullName'] ?? $username);
+    $city = htmlspecialchars($u['city'] ?? 'Indonesia');
+    $refCode = htmlspecialchars($u['referralCode'] ?? '-');
+    $upline = htmlspecialchars($u['referredBy'] ?? 'Organik / Tanpa Sponsor');
+    $loginUrl = 'https://' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id');
+
+    $subject = "[AUTOTRADING] Selamat Bergabung! Akun Anda Telah Aktif: @{$username}";
+    $innerContent = <<<HTML
+      <h2 style="font-size: 19px; font-weight: 800; color: #F8FAFC; margin: 0 0 10px 0;">Selamat Datang, {$fullName}! 👋</h2>
+      <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 18px 0;">
+        Akun investasi Anda di platform resmi <strong>AUTOTRADING Indonesia</strong> telah berhasil dibuat dan siap digunakan untuk menghasilkan profit harian otomatis.
+      </p>
+
+      <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155; width: 38%;">Username Anda</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #38BDF8; border-bottom: 1px solid #334155;">@{$username}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Kota / Domisili</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 600; color: #F8FAFC; border-bottom: 1px solid #334155;">{$city}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Kode Referral Anda</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #E5A83B; border-bottom: 1px solid #334155;">{$refCode}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Sponsor / Upline</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 600; color: #10B981; border-bottom: 1px solid #334155;">{$upline}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">Status Akun</td>
+          <td style="padding: 10px 14px; font-size: 12px; font-weight: 700; color: #22C55E;">🟢 AKTIF & AMAN</td>
+        </tr>
+      </table>
+
+      <div style="background: rgba(200, 147, 56, 0.1); border-left: 4px solid #C89338; border-radius: 6px; padding: 12px 14px; margin-bottom: 22px; font-size: 12px; color: #E2E8F0; line-height: 1.5;">
+        <strong>Langkah Selanjutnya:</strong> Silakan login, isi saldo (deposit), dan aktifkan paket investasi AI untuk mulai menikmati profit otomatis harian serta bonus referral.
+      </div>
+
+      <div style="text-align: center;">
+        <a href="{$loginUrl}" style="background: linear-gradient(135deg, #E5A83B 0%, #C89338 100%); color: #080C14; font-weight: 800; font-size: 13px; padding: 12px 28px; border-radius: 8px; text-decoration: none; display: inline-block;">
+          Masuk ke Member Area &rarr;
+        </a>
+      </div>
+HTML;
+
+    $html = getEmailWrapper($subject, $innerContent);
+    $sent = dispatchEmail($email, $subject, $html, $emailSettings);
+    echo json_encode(['success' => true, 'sent' => $sent, 'email' => $email, 'message' => "Email selamat datang dikirim ke {$email}."]);
+    exit();
+}
+
+// 5. ACTION: WITHDRAWAL NOTIFICATION EMAIL (MEMBER)
+if ($action === 'withdraw') {
+    $u = $data['user'] ?? [];
+    $trx = $data['transaction'] ?? $data;
+    $email = strtolower(trim($u['email'] ?? $trx['email'] ?? ''));
+
+    if (empty($email) && !empty($trx['userId'])) {
+        $pdo = getDbConnection();
+        if ($pdo) {
+            $st = $pdo->prepare("SELECT email, username, full_name FROM users WHERE id = :id LIMIT 1");
+            $st->execute([':id' => $trx['userId']]);
+            $usrRow = $st->fetch();
+            if ($usrRow) {
+                $email = strtolower(trim($usrRow['email'] ?? ''));
+                if (empty($u['username'])) $u['username'] = $usrRow['username'];
+                if (empty($u['fullName'])) $u['fullName'] = $usrRow['full_name'];
+            }
+        }
+    }
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Alamat email tujuan penarikan tidak valid!']);
+        exit();
+    }
+
+    $username = htmlspecialchars($u['username'] ?? $trx['username'] ?? 'Member');
+    $txId = htmlspecialchars($trx['id'] ?? '-');
+    $status = strtolower(trim($trx['status'] ?? $data['status'] ?? 'pending'));
+    $amount = number_format(floatval($trx['amount'] ?? 0), 0, ',', '.');
+    $netAmount = number_format(floatval($trx['netAmount'] ?? $trx['amount'] ?? 0), 0, ',', '.');
+    $fee = number_format(floatval($trx['fee'] ?? 0), 0, ',', '.');
+    $dest = htmlspecialchars($trx['destinationAccount'] ?? $trx['paymentMethod'] ?? '-');
+    $reason = htmlspecialchars($trx['rejectReason'] ?? $trx['reason'] ?? 'Data rekening tidak sesuai');
+    $timeStr = date('d M Y - H:i:s') . ' WIB';
+
+    if ($status === 'approved') {
+        $subject = "[AUTOTRADING] Penarikan Dana Berhasil Ditransfer: IDR {$netAmount} [{$txId}]";
+        $headerBadge = '<span style="background: #10B981; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">BERHASIL DITRANSFER</span>';
+        $leadText = "Permintaan penarikan dana Anda telah <strong>disetujui oleh Finance Administrator</strong> dan dana telah berhasil ditransfer ke rekening tujuan Anda:";
+    } elseif ($status === 'rejected') {
+        $subject = "[AUTOTRADING] Pemberitahuan Penarikan Dana Ditolak: [{$txId}]";
+        $headerBadge = '<span style="background: #EF4444; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">DITOLAK / DIKEMBALIKAN</span>';
+        $leadText = "Permintaan penarikan dana Anda ditolak dan <strong>saldo telah dikembalikan secara utuh ke akun Anda</strong>. Keterangan: <em>{$reason}</em>.";
+    } else {
+        $subject = "[AUTOTRADING] Pengajuan Penarikan Dana: IDR {$amount} [{$txId}]";
+        $headerBadge = '<span style="background: #F59E0B; color: #080C14; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">MENUNGGU PROSES</span>';
+        $leadText = "Permintaan penarikan dana Anda telah berhasil diajukan ke sistem dan sedang dalam antrean verifikasi transfer oleh Tim Finance:";
+    }
+
+    $innerContent = <<<HTML
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        {$headerBadge}
+        <h2 style="font-size: 18px; font-weight: 800; color: #F8FAFC; margin: 0;">Status Penarikan Dana (Withdrawal)</h2>
+      </div>
+
+      <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 18px 0;">
+        Halo, <strong>@{$username}</strong>. {$leadText}
+      </p>
+
+      <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155; width: 38%;">ID Transaksi</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #38BDF8; border-bottom: 1px solid #334155;">{$txId}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Nominal Pengajuan</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #F8FAFC; border-bottom: 1px solid #334155;">IDR {$amount}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Biaya Layanan Admin</td>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">IDR {$fee}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Nominal Bersih Diterima</td>
+          <td style="padding: 10px 14px; font-size: 14px; font-weight: 800; color: #10B981; border-bottom: 1px solid #334155;">IDR {$netAmount}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Tujuan Transfer</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 600; color: #F8FAFC; border-bottom: 1px solid #334155;">{$dest}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">Waktu Pembaruan</td>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">{$timeStr}</td>
+        </tr>
+      </table>
+HTML;
+
+    $html = getEmailWrapper($subject, $innerContent);
+    $sent = dispatchEmail($email, $subject, $html, $emailSettings);
+    echo json_encode(['success' => true, 'sent' => $sent, 'email' => $email, 'message' => "Notifikasi penarikan diproses ke {$email}."]);
+    exit();
+}
+
+// 6. ACTION: DEPOSIT APPROVED NOTIFICATION (MEMBER)
+if ($action === 'deposit') {
+    $u = $data['user'] ?? [];
+    $trx = $data['transaction'] ?? $data;
+    $email = strtolower(trim($u['email'] ?? $trx['email'] ?? ''));
+
+    if (empty($email) && !empty($trx['userId'])) {
+        $pdo = getDbConnection();
+        if ($pdo) {
+            $st = $pdo->prepare("SELECT email, username, full_name FROM users WHERE id = :id LIMIT 1");
+            $st->execute([':id' => $trx['userId']]);
+            $usrRow = $st->fetch();
+            if ($usrRow) {
+                $email = strtolower(trim($usrRow['email'] ?? ''));
+                if (empty($u['username'])) $u['username'] = $usrRow['username'];
+            }
+        }
+    }
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Alamat email member tidak valid!']);
+        exit();
+    }
+
+    $username = htmlspecialchars($u['username'] ?? $trx['username'] ?? 'Member');
+    $txId = htmlspecialchars($trx['id'] ?? '-');
+    $amount = number_format(floatval($trx['amount'] ?? 0), 0, ',', '.');
+    $method = htmlspecialchars($trx['paymentMethod'] ?? 'Transfer Bank');
+    $timeStr = date('d M Y - H:i:s') . ' WIB';
+
+    $subject = "[AUTOTRADING] Deposit Berhasil Diterima: IDR {$amount} [{$txId}]";
+    $innerContent = <<<HTML
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="background: #10B981; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">DEPOSIT BERHASIL</span>
+        <h2 style="font-size: 18px; font-weight: 800; color: #F8FAFC; margin: 0;">Saldo Berhasil Masuk!</h2>
+      </div>
+
+      <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 18px 0;">
+        Halo, <strong>@{$username}</strong>. Pembayaran deposit Anda telah diverifikasi oleh sistem dan <strong>telah ditambahkan ke Saldo Utama Anda</strong>:
+      </p>
+
+      <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155; width: 38%;">ID Transaksi</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #38BDF8; border-bottom: 1px solid #334155;">{$txId}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Nominal Deposit</td>
+          <td style="padding: 10px 14px; font-size: 14px; font-weight: 800; color: #22C55E; border-bottom: 1px solid #334155;">+IDR {$amount}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Metode Pembayaran</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 600; color: #F8FAFC; border-bottom: 1px solid #334155;">{$method}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">Waktu Masuk</td>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">{$timeStr}</td>
+        </tr>
+      </table>
+
+      <div style="background: rgba(34, 197, 94, 0.1); border-left: 4px solid #22C55E; border-radius: 6px; padding: 12px 14px; margin-bottom: 20px; font-size: 12px; color: #E2E8F0; line-height: 1.5;">
+        Saldo ini kini dapat Anda gunakan langsung untuk mengaktifkan paket portofolio AI Trading yang tersedia.
+      </div>
+HTML;
+
+    $html = getEmailWrapper($subject, $innerContent);
+    $sent = dispatchEmail($email, $subject, $html, $emailSettings);
+    echo json_encode(['success' => true, 'sent' => $sent, 'email' => $email, 'message' => "Notifikasi deposit diproses ke {$email}."]);
+    exit();
+}
+
+// 7. ACTION: DAILY PROFIT CLAIM NOTIFICATION (MEMBER)
+if ($action === 'profit_claim') {
+    $u = $data['user'] ?? [];
+    $email = strtolower(trim($u['email'] ?? ''));
+    if (empty($email) && !empty($data['userId'])) {
+        $pdo = getDbConnection();
+        if ($pdo) {
+            $st = $pdo->prepare("SELECT email, username, full_name FROM users WHERE id = :id LIMIT 1");
+            $st->execute([':id' => $data['userId']]);
+            $usrRow = $st->fetch();
+            if ($usrRow) {
+                $email = strtolower(trim($usrRow['email'] ?? ''));
+                if (empty($u['username'])) $u['username'] = $usrRow['username'];
+            }
+        }
+    }
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Alamat email member tidak valid!']);
+        exit();
+    }
+
+    $username = htmlspecialchars($u['username'] ?? 'Investor');
+    $amount = number_format(floatval($data['amount'] ?? 0), 0, ',', '.');
+    $bal = number_format(floatval($data['walletBalance'] ?? 0), 0, ',', '.');
+    $txId = htmlspecialchars($data['transaction']['id'] ?? ('TRX-PRF-' . rand(100000, 999999)));
+    $timeStr = date('d M Y - H:i:s') . ' WIB';
+
+    $subject = "[AUTOTRADING] Profit Harian Berhasil Diklaim: +IDR {$amount}";
+    $innerContent = <<<HTML
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="background: #22C55E; color: #080C14; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">PROFIT CLAIMED</span>
+        <h2 style="font-size: 18px; font-weight: 800; color: #F8FAFC; margin: 0;">Dividen Profit Harian Berhasil Diklaim!</h2>
+      </div>
+
+      <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 18px 0;">
+        Halo, <strong>@{$username}</strong>. Dividen hasil trading portofolio AI Anda untuk hari ini telah berhasil diklaim dan langsung masuk ke Saldo Utama:
+      </p>
+
+      <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155; width: 38%;">ID Transaksi</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #38BDF8; border-bottom: 1px solid #334155;">{$txId}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Profit Diterima</td>
+          <td style="padding: 10px 14px; font-size: 15px; font-weight: 900; color: #22C55E; border-bottom: 1px solid #334155;">+IDR {$amount}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Saldo Utama Terkini</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #F8FAFC; border-bottom: 1px solid #334155;">IDR {$bal}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">Waktu Klaim</td>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">{$timeStr}</td>
+        </tr>
+      </table>
+
+      <div style="background: rgba(200, 147, 56, 0.1); border-left: 4px solid #C89338; border-radius: 6px; padding: 12px 14px; margin-bottom: 20px; font-size: 12px; color: #E2E8F0; line-height: 1.5;">
+        Siklus dividen profit berikutnya akan dihitung otomatis dalam 24 jam ke depan pada hari bursa aktif (Senin-Jumat).
+      </div>
+HTML;
+
+    $html = getEmailWrapper($subject, $innerContent);
+    $sent = dispatchEmail($email, $subject, $html, $emailSettings);
+    echo json_encode(['success' => true, 'sent' => $sent, 'email' => $email, 'message' => "Notifikasi klaim profit diproses ke {$email}."]);
+    exit();
+}
+
+// 8. ACTION: RABAT & SPONSOR BONUS NOTIFICATION (UPLINE MEMBER)
+if ($action === 'rabat' || $action === 'bonus') {
+    $u = $data['user'] ?? [];
+    $email = strtolower(trim($u['email'] ?? ''));
+    if (empty($email) && !empty($data['userId'])) {
+        $pdo = getDbConnection();
+        if ($pdo) {
+            $st = $pdo->prepare("SELECT email, username, full_name FROM users WHERE id = :id LIMIT 1");
+            $st->execute([':id' => $data['userId']]);
+            $usrRow = $st->fetch();
+            if ($usrRow) {
+                $email = strtolower(trim($usrRow['email'] ?? ''));
+                if (empty($u['username'])) $u['username'] = $usrRow['username'];
+            }
+        }
+    }
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Alamat email upline tidak valid!']);
+        exit();
+    }
+
+    $username = htmlspecialchars($u['username'] ?? 'Leader');
+    $downline = htmlspecialchars($data['downline'] ?? $data['fromMember'] ?? 'Member Tim');
+    $level = intval($data['level'] ?? 1);
+    $amount = number_format(floatval($data['amount'] ?? 0), 0, ',', '.');
+    $timeStr = date('d M Y - H:i:s') . ' WIB';
+
+    $subject = "[AUTOTRADING] Selamat! Bonus Rabat Level {$level} Masuk: +IDR {$amount}";
+    $innerContent = <<<HTML
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="background: #C89338; color: #080C14; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">RABAT LEVEL {$level}</span>
+        <h2 style="font-size: 18px; font-weight: 800; color: #F8FAFC; margin: 0;">Bonus Jaringan Masuk ke Akun Anda!</h2>
+      </div>
+
+      <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 18px 0;">
+        Halo, <strong>@{$username}</strong>. Selamat! Anda baru saja menerima pembagian bonus rabat hasil profit trading downline jaringan Anda:
+      </p>
+
+      <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155; width: 38%;">Jenis Bonus</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #E5A83B; border-bottom: 1px solid #334155;">Bonus Rabat Matching Level {$level}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Dari Downline</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #38BDF8; border-bottom: 1px solid #334155;">{$downline}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Nominal Diterima</td>
+          <td style="padding: 10px 14px; font-size: 14px; font-weight: 900; color: #10B981; border-bottom: 1px solid #334155;">+IDR {$amount}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Dompet Penerima</td>
+          <td style="padding: 10px 14px; font-size: 12px; font-weight: 600; color: #F8FAFC; border-bottom: 1px solid #334155;">Wallet Tambah Teman (Komisi Afiliasi)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">Waktu Masuk</td>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">{$timeStr}</td>
+        </tr>
+      </table>
+
+      <div style="background: rgba(34, 197, 94, 0.1); border-left: 4px solid #10B981; border-radius: 6px; padding: 12px 14px; margin-bottom: 20px; font-size: 12px; color: #E2E8F0; line-height: 1.5;">
+        Saldo komisi ini dapat langsung Anda tarik ke rekening bank atau dikonversi ke saldo utama tanpa potongan.
+      </div>
+HTML;
+
+    $html = getEmailWrapper($subject, $innerContent);
+    $sent = dispatchEmail($email, $subject, $html, $emailSettings);
+    echo json_encode(['success' => true, 'sent' => $sent, 'email' => $email, 'message' => "Notifikasi bonus rabat diproses ke {$email}."]);
+    exit();
+}
+
+// 9. ACTION: PPOB CONVERSION / PULSA & TOKEN PLN NOTIFICATION (MEMBER)
+if ($action === 'ppob') {
+    $u = $data['user'] ?? [];
+    $trx = $data['transaction'] ?? $data;
+    $email = strtolower(trim($u['email'] ?? $trx['email'] ?? ''));
+
+    if (empty($email) && !empty($trx['userId'])) {
+        $pdo = getDbConnection();
+        if ($pdo) {
+            $st = $pdo->prepare("SELECT email, username, full_name FROM users WHERE id = :id LIMIT 1");
+            $st->execute([':id' => $trx['userId']]);
+            $usrRow = $st->fetch();
+            if ($usrRow) {
+                $email = strtolower(trim($usrRow['email'] ?? ''));
+                if (empty($u['username'])) $u['username'] = $usrRow['username'];
+            }
+        }
+    }
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Alamat email member tidak valid!']);
+        exit();
+    }
+
+    $username = htmlspecialchars($u['username'] ?? $trx['username'] ?? 'Member');
+    $txId = htmlspecialchars($trx['id'] ?? '-');
+    $status = strtolower(trim($trx['status'] ?? $data['status'] ?? 'pending'));
+    $cat = strtolower(trim($trx['category'] ?? 'pulsa'));
+    $isPln = ($cat === 'pln') || stripos($trx['note'] ?? '', 'listrik') !== false || stripos($trx['destinationAccount'] ?? '', 'pln') !== false;
+    $serviceName = $isPln ? 'Token Listrik PLN' : 'Pulsa Seluler';
+    $targetNumber = htmlspecialchars($trx['targetNumber'] ?? $trx['destinationAccount'] ?? '-');
+    $nominal = number_format(floatval($trx['nominal'] ?? $trx['amount'] ?? 0), 0, ',', '.');
+    $price = number_format(floatval($trx['amount'] ?? $trx['netAmount'] ?? 0), 0, ',', '.');
+    $sn = htmlspecialchars($trx['serialNumber'] ?? $trx['sn'] ?? '-');
+    $reason = htmlspecialchars($trx['rejectReason'] ?? $trx['adminNote'] ?? 'Nomor tidak valid / gangguan server provider');
+    $timeStr = date('d M Y - H:i:s') . ' WIB';
+
+    if ($status === 'approved' || ($trx['ppobStatus'] ?? '') === 'Selesai') {
+        $subject = "[AUTOTRADING] {$serviceName} Sukses Diproses: [{$txId}]";
+        $headerBadge = '<span style="background: #10B981; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">SUKSES / SELESAI</span>';
+        $leadText = "Pembelian <strong>{$serviceName}</strong> Anda telah berhasil diproses oleh sistem:";
+    } elseif ($status === 'rejected' || ($trx['ppobStatus'] ?? '') === 'Gangguan') {
+        $subject = "[AUTOTRADING] Pengajuan {$serviceName} Gagal / Gangguan - Saldo Dikembalikan";
+        $headerBadge = '<span style="background: #EF4444; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">GANGGUAN / DITOLAK</span>';
+        $leadText = "Pengajuan {$serviceName} mengalami gangguan dan <strong>saldo telah dikembalikan utuh ke akun Anda</strong>. Keterangan: <em>{$reason}</em>.";
+    } else {
+        $subject = "[AUTOTRADING] Pengajuan {$serviceName} Sebesar IDR {$nominal} Sedang Diproses";
+        $headerBadge = '<span style="background: #F59E0B; color: #080C14; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">DALAM PROSES</span>';
+        $leadText = "Pengajuan konversi saldo ke <strong>{$serviceName}</strong> telah diterima dan sedang diproses manual oleh Admin:";
+    }
+
+    $innerContent = <<<HTML
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        {$headerBadge}
+        <h2 style="font-size: 18px; font-weight: 800; color: #F8FAFC; margin: 0;">Layanan PPOB ({$serviceName})</h2>
+      </div>
+
+      <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 18px 0;">
+        Halo, <strong>@{$username}</strong>. {$leadText}
+      </p>
+
+      <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155; width: 38%;">ID Transaksi</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #38BDF8; border-bottom: 1px solid #334155;">{$txId}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Jenis Layanan</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #F8FAFC; border-bottom: 1px solid #334155;">{$serviceName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Nomor / ID Tujuan</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #10B981; border-bottom: 1px solid #334155;">{$targetNumber}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Nominal Produk</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #E5A83B; border-bottom: 1px solid #334155;">IDR {$nominal}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Pemotongan Saldo</td>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">IDR {$price}</td>
+        </tr>
+HTML;
+
+    if ($sn !== '-' && $sn !== '') {
+        $innerContent .= <<<HTML
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Kode Token / Serial (SN)</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 800; color: #F8FAFC; border-bottom: 1px solid #334155; font-family: monospace;">{$sn}</td>
+        </tr>
+HTML;
+    }
+
+    $innerContent .= <<<HTML
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">Waktu Pembaruan</td>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">{$timeStr}</td>
+        </tr>
+      </table>
+HTML;
+
+    $html = getEmailWrapper($subject, $innerContent);
+    $sent = dispatchEmail($email, $subject, $html, $emailSettings);
+    echo json_encode(['success' => true, 'sent' => $sent, 'email' => $email, 'message' => "Notifikasi PPOB diproses ke {$email}."]);
+    exit();
+}
+
 // Fallback
 echo json_encode(['success' => false, 'message' => "Action '{$action}' tidak dikenali."]);

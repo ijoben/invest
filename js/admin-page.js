@@ -407,6 +407,7 @@ export const AdminPage = {
             <div class="btn-action-group">
               <button class="btn-admin-action approve" onclick="AdminPage.approveDeposit('${escapeHtml(t.id)}')">✓ Setujui</button>
               <button class="btn-admin-action reject" onclick="AdminPage.rejectDeposit('${escapeHtml(t.id)}')">✕ Tolak</button>
+              <button class="btn-admin-action" style="background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 11px; padding: 4px 6px; border-radius: 6px; cursor: pointer; white-space: nowrap;" title="Blokir/Buka Blokir Member SPAM Deposit" onclick="AdminPage.quickBlockSpamDeposit('${escapeHtml(t.userId || '')}', '${escapeHtml(t.username || '')}')">🚫 Blokir SPAM</button>
             </div>
           ` : '<span style="color:#64748B;">Selesai</span>'}
         </td>
@@ -1388,9 +1389,9 @@ export const AdminPage = {
       let blockActionBtn = '';
       if (!isAdmin) {
         if (isBlocked) {
-          blockActionBtn = `<button class="btn-admin-action approve" onclick="AdminPage.confirmToggleBlock('${u.id}', '${u.username}', true)" style="background:#16A34A; color:#FFFFFF; border-color:#15803D; font-weight:700;" title="Buka blokir akun member ini">✅ Buka Blokir</button>`;
+          blockActionBtn = `<button class="btn-admin-action approve" onclick="AdminPage.confirmToggleBlock('${u.id}', '${escapeHtml(u.username)}', true)" style="background:#16A34A; color:#FFFFFF; border-color:#15803D; font-weight:700; white-space:nowrap;" title="Buka blokir akun member ini (Matikan Blokir / OFF)">✅ Buka Blokir (OFF)</button>`;
         } else {
-          blockActionBtn = `<button class="btn-admin-action delete" onclick="AdminPage.confirmToggleBlock('${u.id}', '${u.username}', false)" style="background:#DC2626; color:#FFFFFF; border-color:#B91C1C; font-weight:700;" title="Blokir akses member ini">🚫 Blokir</button>`;
+          blockActionBtn = `<button class="btn-admin-action delete" onclick="AdminPage.confirmToggleBlock('${u.id}', '${escapeHtml(u.username)}', false)" style="background:#DC2626; color:#FFFFFF; border-color:#B91C1C; font-weight:700; white-space:nowrap;" title="Blokir akses member ini jika SPAM deposit dll (Aktifkan Blokir / ON)">🚫 Blokir (ON)</button>`;
         }
       }
 
@@ -1446,10 +1447,10 @@ export const AdminPage = {
 
   async confirmToggleBlock(userId, username, isCurrentlyBlocked) {
     if (isCurrentlyBlocked) {
-      if (confirm(`Apakah Anda yakin ingin MEMBUKA BLOKIR akun member "${username}"?\n\nMember akan diizinkan login dan mengakses kembali semua fitur sistem.`)) {
+      if (confirm(`Status Blokir Saat Ini: AKTIF (ON)\n\nApakah Anda yakin ingin MEMBUKA BLOKIR akun member "${username}" (OFF)?\n\nMember akan diizinkan login dan mengakses kembali semua fitur sistem.`)) {
         const res = await Admin.toggleBlockUser(userId);
         if (res.success) {
-          this.showToast(res.message, 'success');
+          this.showToast(`Blokir member "${username}" berhasil dinonaktifkan (OFF).`, 'success');
           await DB.syncFromCloud();
           this.renderAll();
         } else {
@@ -1457,11 +1458,11 @@ export const AdminPage = {
         }
       }
     } else {
-      const reason = prompt(`Masukkan alasan pemblokiran untuk member "${username}" (opsional):\n\nCatatan: Alasan ini akan tampil saat member mencoba login.`, 'Terindikasi pelanggaran ketentuan sistem');
+      const reason = prompt(`Status Blokir Saat Ini: NONAKTIF (OFF)\n\nAktifkan BLOKIR (ON) untuk member "${username}" (misal: SPAM deposit, manipulasi bukti transfer, akun ganda):\n\nMasukkan alasan pemblokiran:`, 'SPAM deposit berulang / manipulasi bukti transfer');
       if (reason !== null) {
-        const res = await Admin.toggleBlockUser(userId, reason);
+        const res = await Admin.toggleBlockUser(userId, reason.trim() || 'SPAM deposit / pelanggaran aturan sistem');
         if (res.success) {
-          this.showToast(res.message, 'success');
+          this.showToast(`Blokir member "${username}" berhasil diaktifkan (ON)! Akses & sesi member telah diputus.`, 'success');
           await DB.syncFromCloud();
           this.renderAll();
         } else {
@@ -1469,6 +1470,17 @@ export const AdminPage = {
         }
       }
     }
+  },
+
+  async quickBlockSpamDeposit(userId, username) {
+    const db = DB.get();
+    const targetUser = (db.users || []).find(u => (userId && u.id === userId) || (username && u.username === username));
+    if (!targetUser) {
+      this.showToast('Data member tidak ditemukan dalam sistem.', 'error');
+      return;
+    }
+    const isCurrentlyBlocked = !!targetUser.isBlocked;
+    await this.confirmToggleBlock(targetUser.id, targetUser.username, isCurrentlyBlocked);
   },
 
   // 8. Signals Table

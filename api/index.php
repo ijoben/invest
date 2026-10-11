@@ -2539,6 +2539,7 @@ if ($action === 'register') {
     $fullName = trim($uData['fullName'] ?? $uData['full_name'] ?? $username);
     $email = strtolower(trim($uData['email'] ?? ''));
     $phone = trim($uData['phone'] ?? '');
+    $city = trim($uData['city'] ?? '');
     $password = $uData['password'] ?? $uData['password_hash'] ?? '';
     $referralCode = trim($uData['referralCode'] ?? $uData['referral_code'] ?? '');
     $referredBy = trim($uData['referredBy'] ?? $uData['referred_by'] ?? '') ?: null;
@@ -2614,8 +2615,8 @@ if ($action === 'register') {
             `id`, `username`, `password_hash`, `full_name`, `email`, `phone`, `city`,
             `wallet_balance`, `affiliate_balance`, `points`, `referral_code`, `referred_by`,
             `status`, `is_blocked`, `role`, `created_at`
-        )        VALUES (
-            :id, :username, :password_hash, :full_name, :email, :phone, '',
+        ) VALUES (
+            :id, :username, :password_hash, :full_name, :email, :phone, :city,
             0, 0, 10, :referral_code, :referred_by,
             :status, 0, 'user', NOW()
         )
@@ -2627,6 +2628,7 @@ if ($action === 'register') {
         ':full_name' => $fullName,
         ':email' => $email,
         ':phone' => $phone,
+        ':city' => $city,
         ':referral_code' => $referralCode,
         ':referred_by' => $referredBy,
         ':status' => $verifyRequired ? 'pending' : 'active'
@@ -2639,7 +2641,7 @@ if ($action === 'register') {
         'fullName' => $fullName,
         'email' => $email,
         'phone' => $phone,
-        'city' => '',
+        'city' => $city,
         'walletBalance' => 0,
         'affiliateBalance' => 0,
         'points' => 10,
@@ -3398,7 +3400,7 @@ if ($action === 'admin_save_signals') {
 }
 
 // 6. Action: Send Email / Mailer forwarding
-if ($action === 'send_email' || in_array($action, ['send_otp', 'admin_notification', 'test', 'welcome'])) {
+if ($action === 'send_email' || in_array($action, ['send_otp', 'admin_notification', 'test', 'welcome', 'withdraw', 'deposit', 'profit_claim', 'rabat', 'bonus', 'ppob'])) {
     require_once __DIR__ . '/mail.php';
     exit();
 }
