@@ -87,7 +87,7 @@
             document.documentElement.style.setProperty('--primary-gold-hover', ws.colorPrimary);
             document.documentElement.style.setProperty('--primary-gold-gradient', 'linear-gradient(135deg, ' + ws.colorPrimary + ' 0%, ' + ws.colorPrimary + ' 100%)');
           }
-          if (ws.colorBg) {
+          if (ws.colorBg && t === 'dark') {
             document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
             document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
           }
@@ -303,24 +303,24 @@
                   <polyline points="16 9.5 20 9.5 20 13.5" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </div>
-              <div class="wallet-val" id="valTodayProfit" style="color: #0F172A; font-weight: 800; font-size: 14.5px;">+0.00%</div>
+              <div class="wallet-val" id="valTodayProfit" style="font-weight: 800; font-size: 14.5px;">+0.00%</div>
               <div class="wallet-lbl">Profit Hari Ini</div>
             </div>
           </div>
         </section>
 
         <!-- Quick PPOB Pulsa Banner (Konversi Saldo Utama Manual) -->
-        <div class="quick-ppob-banner" onclick="App.openMainWalletPpobModal()" style="margin: 0 14px 12px 14px; cursor: pointer;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 38px; height: 38px; border-radius: 11px; background: rgba(245, 158, 11, 0.18); display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0;">
+        <div class="quick-ppob-banner" onclick="App.openMainWalletPpobModal()">
+          <div class="quick-ppob-content">
+            <div class="quick-ppob-icon">
               📱⚡
             </div>
             <div>
-              <div style="font-size: 12.5px; font-weight: 800; color: #92400E;">Konversi Saldo ke PPOB (Pulsa &amp; PLN)</div>
-              <div style="font-size: 10px; color: #B45309;">Tukar Saldo Utama ke Pulsa &amp; Token PLN (10k, 20k, 50k, 100k) · Manual Admin</div>
+              <div class="quick-ppob-title">Konversi Saldo ke PPOB (Pulsa &amp; PLN)</div>
+              <div class="quick-ppob-sub">Tukar Saldo Utama ke Pulsa &amp; Token PLN (10k, 20k, 50k, 100k) · Manual Admin</div>
             </div>
           </div>
-          <span style="font-size: 10.5px; font-weight: 800; color: #92400E; background: #FFFFFF; padding: 4px 10px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-shrink: 0;">
+          <span class="quick-ppob-badge">
             Beli PPOB ›
           </span>
         </div>

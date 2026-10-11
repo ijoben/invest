@@ -396,14 +396,14 @@ html, body {
 }
 
 .announcement-ticker-card {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(200, 147, 56, 0.22);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(200, 147, 56, 0.3);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   cursor: pointer;
   overflow: hidden;
   position: relative;
@@ -411,8 +411,8 @@ html, body {
 }
 
 .announcement-ticker-card:hover {
-  border-color: rgba(200, 147, 56, 0.45);
-  box-shadow: 0 4px 12px rgba(200, 147, 56, 0.12);
+  border-color: rgba(200, 147, 56, 0.55);
+  box-shadow: 0 4px 12px rgba(200, 147, 56, 0.16);
 }
 
 .ticker-speaker-icon {
@@ -445,9 +445,9 @@ html, body {
 .ticker-track {
   display: inline-block;
   white-space: nowrap;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
   animation: marqueeTicker 48s linear infinite;
   padding-left: 100%;
 }
@@ -6018,14 +6018,15 @@ body.theme-dark .header-btn:active {
 /* Announcement Ticker */
 html[data-theme="dark"] .announcement-ticker-card,
 body.theme-dark .announcement-ticker-card {
-  background: rgba(21, 29, 47, 0.94) !important;
-  border-color: rgba(229, 168, 59, 0.25) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+  background: rgba(21, 29, 47, 0.96) !important;
+  border-color: rgba(229, 168, 59, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
 }
 
 html[data-theme="dark"] .ticker-track,
 body.theme-dark .ticker-track {
-  color: #E2E8F0 !important;
+  color: #F8FAFC !important;
+  font-weight: 700 !important;
 }
 
 /* Wallet Summary & Balance Cards */
@@ -6806,10 +6807,10 @@ body.theme-dark .notif-empty-icon {
 }
 .public-stat-box {
   background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  border: 1px solid rgba(200, 147, 56, 0.22);
   border-radius: 12px;
   padding: 9px 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -6818,12 +6819,14 @@ body.theme-dark .notif-empty-icon {
 }
 .public-stat-box:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(200, 147, 56, 0.12);
 }
-.dark-mode .public-stat-box {
-  background: #1E293B;
-  border-color: #334155;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+.dark-mode .public-stat-box,
+html[data-theme="dark"] .public-stat-box,
+body.theme-dark .public-stat-box {
+  background: #151D2F !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
 }
 .stat-box-icon {
   width: 32px;
@@ -6856,8 +6859,10 @@ body.theme-dark .notif-empty-icon {
   text-overflow: ellipsis;
   margin-bottom: 2px;
 }
-.dark-mode .stat-box-label {
-  color: #94A3B8;
+.dark-mode .stat-box-label,
+html[data-theme="dark"] .stat-box-label,
+body.theme-dark .stat-box-label {
+  color: #94A3B8 !important;
 }
 .stat-box-value-row {
   display: flex;
@@ -6874,14 +6879,18 @@ body.theme-dark .notif-empty-icon {
   letter-spacing: -0.2px;
   white-space: nowrap;
 }
-.dark-mode .stat-box-value {
-  color: #F8FAFC;
+.dark-mode .stat-box-value,
+html[data-theme="dark"] .stat-box-value,
+body.theme-dark .stat-box-value {
+  color: #F8FAFC !important;
 }
 .stat-box-value.text-green {
   color: #16A34A;
 }
-.dark-mode .stat-box-value.text-green {
-  color: #22C55E;
+.dark-mode .stat-box-value.text-green,
+html[data-theme="dark"] .stat-box-value.text-green,
+body.theme-dark .stat-box-value.text-green {
+  color: #22C55E !important;
 }
 .stat-box-chip {
   font-size: 8px;
@@ -6892,9 +6901,11 @@ body.theme-dark .notif-empty-icon {
   color: #475569;
   white-space: nowrap;
 }
-.dark-mode .stat-box-chip {
-  background: #334155;
-  color: #CBD5E1;
+.dark-mode .stat-box-chip,
+html[data-theme="dark"] .stat-box-chip,
+body.theme-dark .stat-box-chip {
+  background: #1E293B !important;
+  color: #CBD5E1 !important;
 }
 .stat-box-chip-active {
   font-size: 8px;
@@ -6906,10 +6917,170 @@ body.theme-dark .notif-empty-icon {
   border: 1px solid #BBF7D0;
   white-space: nowrap;
 }
-.dark-mode .stat-box-chip-active {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ADE80;
-  border-color: rgba(34, 197, 94, 0.3);
+.dark-mode .stat-box-chip-active,
+html[data-theme="dark"] .stat-box-chip-active,
+body.theme-dark .stat-box-chip-active {
+  background: rgba(34, 197, 94, 0.2) !important;
+  color: #4ADE80 !important;
+  border-color: rgba(34, 197, 94, 0.35) !important;
+}
+
+/* ==========================================================================
+   QUICK PPOB BANNER (Ultra-Crisp Contrast in Both Light & Dark Modes)
+   ========================================================================== */
+.quick-ppob-banner {
+  margin: 0 14px 12px 14px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+  border: 1px solid #FDE68A;
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
+  transition: all 0.2s ease;
+}
+.quick-ppob-banner:hover {
+  border-color: #F59E0B;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.16);
+}
+.quick-ppob-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.quick-ppob-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: rgba(245, 158, 11, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  flex-shrink: 0;
+}
+.quick-ppob-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #78350F;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quick-ppob-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: #92400E;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quick-ppob-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #78350F;
+  background: #FFFFFF;
+  padding: 5px 12px;
+  border-radius: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+
+html[data-theme="dark"] .quick-ppob-banner,
+body.theme-dark .quick-ppob-banner {
+  background: linear-gradient(135deg, #1A2234 0%, #151D2F 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+html[data-theme="dark"] .quick-ppob-title,
+body.theme-dark .quick-ppob-title {
+  color: #FBBF24 !important;
+}
+html[data-theme="dark"] .quick-ppob-sub,
+body.theme-dark .quick-ppob-sub {
+  color: #CBD5E1 !important;
+}
+html[data-theme="dark"] .quick-ppob-badge,
+body.theme-dark .quick-ppob-badge {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #FDE68A !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+/* ==========================================================================
+   PORTFOLIO GROWTH & WEEKLY PROFIT CARDS (High-Contrast Dark Mode)
+   ========================================================================== */
+html[data-theme="dark"] .portfolio-growth-card,
+body.theme-dark .portfolio-growth-card,
+html[data-theme="dark"] .weekly-profit-card,
+body.theme-dark .weekly-profit-card {
+  background: #151D2F !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: var(--card-shadow) !important;
+}
+html[data-theme="dark"] .portfolio-growth-title,
+body.theme-dark .portfolio-growth-title,
+html[data-theme="dark"] .weekly-profit-title,
+body.theme-dark .weekly-profit-title {
+  color: #F8FAFC !important;
+}
+html[data-theme="dark"] .portfolio-total-val,
+body.theme-dark .portfolio-total-val {
+  color: #F8FAFC !important;
+}
+html[data-theme="dark"] .portfolio-growth-sub,
+body.theme-dark .portfolio-growth-sub {
+  color: #94A3B8 !important;
+}
+html[data-theme="dark"] .weekly-day-card,
+body.theme-dark .weekly-day-card {
+  background: #1A2234 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+html[data-theme="dark"] .weekly-day-name,
+body.theme-dark .weekly-day-name {
+  color: #94A3B8 !important;
+}
+html[data-theme="dark"] .weekly-meta-label,
+body.theme-dark .weekly-meta-label {
+  color: #94A3B8 !important;
+}
+html[data-theme="dark"] .weekly-meta-val,
+body.theme-dark .weekly-meta-val {
+  color: #F8FAFC !important;
+}
+html[data-theme="dark"] .weekly-ai-banner-text,
+body.theme-dark .weekly-ai-banner-text {
+  color: #E2E8F0 !important;
+}
+html[data-theme="dark"] .portfolio-stat-pill,
+body.theme-dark .portfolio-stat-pill {
+  color: #CBD5E1 !important;
+}
+html[data-theme="dark"] .portfolio-stat-pill strong,
+body.theme-dark .portfolio-stat-pill strong {
+  color: #F8FAFC !important;
+}
+html[data-theme="dark"] .weekly-summary-badge,
+body.theme-dark .weekly-summary-badge {
+  background: rgba(34, 197, 94, 0.12) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+}
+html[data-theme="dark"] .weekly-package-active-date,
+body.theme-dark .weekly-package-active-date {
+  color: #CBD5E1 !important;
+}
+html[data-theme="dark"] #weeklyPackageActiveDateText,
+body.theme-dark #weeklyPackageActiveDateText {
+  color: #F8FAFC !important;
+}
+html[data-theme="dark"] .weekly-today-profit-nominal,
+body.theme-dark .weekly-today-profit-nominal {
+  color: #FBBF24 !important;
 }
 
 /* Bottom Small Subtle IP Detection Strip (Paling Bawah Kecil & Rapi) */

@@ -211,13 +211,21 @@ const App = {
         document.documentElement.style.setProperty('--primary-gold-gradient', `linear-gradient(135deg, ${ws.colorPrimary} 0%, ${ws.colorPrimary} 100%)`);
       }
       if (ws.colorBg) {
-        document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
-        document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
-        const appWrapper = document.querySelector('.app-wrapper');
-        if (appWrapper) appWrapper.style.backgroundColor = ws.colorBg;
-        const appContainer = document.querySelector('.app-container');
-        if (appContainer && (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark') {
-          appContainer.style.background = ws.colorBg;
+        const isDark = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
+        if (isDark) {
+          document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
+          document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
+          const appWrapper = document.querySelector('.app-wrapper');
+          if (appWrapper) appWrapper.style.backgroundColor = ws.colorBg;
+          const appContainer = document.querySelector('.app-container');
+          if (appContainer) appContainer.style.background = ws.colorBg;
+        } else {
+          document.documentElement.style.removeProperty('--bg-gradient-top');
+          document.documentElement.style.removeProperty('--bg-gradient-bottom');
+          const appWrapper = document.querySelector('.app-wrapper');
+          if (appWrapper) appWrapper.style.backgroundColor = '';
+          const appContainer = document.querySelector('.app-container');
+          if (appContainer) appContainer.style.background = '';
         }
       }
     }
@@ -314,6 +322,26 @@ const App = {
       localStorage.setItem('autotrading_theme', theme);
     } catch (e) {}
 
+    const db = DB.get();
+    const ws = (db && db.settings && db.settings.webSettings) || {};
+    if (isDark) {
+      if (ws.colorBg) {
+        document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
+        document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
+        const appWrapper = document.querySelector('.app-wrapper');
+        if (appWrapper) appWrapper.style.backgroundColor = ws.colorBg;
+        const appContainer = document.querySelector('.app-container');
+        if (appContainer) appContainer.style.background = ws.colorBg;
+      }
+    } else {
+      document.documentElement.style.removeProperty('--bg-gradient-top');
+      document.documentElement.style.removeProperty('--bg-gradient-bottom');
+      const appWrapper = document.querySelector('.app-wrapper');
+      if (appWrapper) appWrapper.style.backgroundColor = '';
+      const appContainer = document.querySelector('.app-container');
+      if (appContainer) appContainer.style.background = '';
+    }
+
     // Update Header Theme Toggle Button
     const headerBtn = document.getElementById('headerThemeToggleBtn');
     if (headerBtn) {
@@ -406,18 +434,21 @@ const App = {
       document.documentElement.style.setProperty('--primary-gold-gradient', `linear-gradient(135deg, ${ws.colorPrimary} 0%, ${ws.colorPrimary} 100%)`);
     }
     if (ws.colorBg) {
-      document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
-      document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
-      const appWrapper = document.querySelector('.app-wrapper');
-      if (appWrapper) {
-        appWrapper.style.backgroundColor = ws.colorBg;
-      }
-      const appContainer = document.querySelector('.app-container');
-      if (appContainer) {
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        if (currentTheme === 'dark') {
-          appContainer.style.background = ws.colorBg;
-        }
+      const isDark = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
+      if (isDark) {
+        document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
+        document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
+        const appWrapper = document.querySelector('.app-wrapper');
+        if (appWrapper) appWrapper.style.backgroundColor = ws.colorBg;
+        const appContainer = document.querySelector('.app-container');
+        if (appContainer) appContainer.style.background = ws.colorBg;
+      } else {
+        document.documentElement.style.removeProperty('--bg-gradient-top');
+        document.documentElement.style.removeProperty('--bg-gradient-bottom');
+        const appWrapper = document.querySelector('.app-wrapper');
+        if (appWrapper) appWrapper.style.backgroundColor = '';
+        const appContainer = document.querySelector('.app-container');
+        if (appContainer) appContainer.style.background = '';
       }
     }
     if (ws.fontFamily && ws.fontFamily !== 'Inter') {
