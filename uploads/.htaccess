@@ -1,0 +1,11 @@
+# Allow direct public image downloads and previews
+<IfModule mod_rewrite.c>
+    RewriteEngine Off
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Cache-Control "max-age=2592000, public"
+</IfModule>
+
+Options -Indexes

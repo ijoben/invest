@@ -76,6 +76,22 @@
           document.documentElement.setAttribute('data-theme', 'light');
           document.documentElement.classList.remove('theme-dark');
         }
+        var localDb = localStorage.getItem('autotrading_db');
+        if (localDb) {
+          var parsed = JSON.parse(localDb);
+          var ws = (parsed && parsed.settings && parsed.settings.webSettings) || {};
+          if (ws.colorPrimary) {
+            document.documentElement.style.setProperty('--color-primary', ws.colorPrimary);
+            document.documentElement.style.setProperty('--gold-primary', ws.colorPrimary);
+            document.documentElement.style.setProperty('--primary-gold', ws.colorPrimary);
+            document.documentElement.style.setProperty('--primary-gold-hover', ws.colorPrimary);
+            document.documentElement.style.setProperty('--primary-gold-gradient', 'linear-gradient(135deg, ' + ws.colorPrimary + ' 0%, ' + ws.colorPrimary + ' 100%)');
+          }
+          if (ws.colorBg) {
+            document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
+            document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
+          }
+        }
       } catch (e) {}
     })();
   </script>

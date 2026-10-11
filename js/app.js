@@ -200,6 +200,28 @@ const App = {
     // Realtime update public member & active statistics on every sync cycle
     this.renderPublicWebStats(dbData);
 
+    // Sync web settings, branding & colors if updated in freshDb
+    if (freshDb && freshDb.settings && freshDb.settings.webSettings) {
+      const ws = freshDb.settings.webSettings;
+      if (ws.colorPrimary) {
+        document.documentElement.style.setProperty('--color-primary', ws.colorPrimary);
+        document.documentElement.style.setProperty('--gold-primary', ws.colorPrimary);
+        document.documentElement.style.setProperty('--primary-gold', ws.colorPrimary);
+        document.documentElement.style.setProperty('--primary-gold-hover', ws.colorPrimary);
+        document.documentElement.style.setProperty('--primary-gold-gradient', `linear-gradient(135deg, ${ws.colorPrimary} 0%, ${ws.colorPrimary} 100%)`);
+      }
+      if (ws.colorBg) {
+        document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
+        document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
+        const appWrapper = document.querySelector('.app-wrapper');
+        if (appWrapper) appWrapper.style.backgroundColor = ws.colorBg;
+        const appContainer = document.querySelector('.app-container');
+        if (appContainer && (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark') {
+          appContainer.style.background = ws.colorBg;
+        }
+      }
+    }
+
     if (!Auth.isLoggedIn()) {
       const activeEl = document.activeElement;
       const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
@@ -375,10 +397,28 @@ const App = {
       }
     }
 
-    // Dynamic Theme Primary Color & Typography
+    // Dynamic Theme Primary Color, Gradients, Background & Typography
     if (ws.colorPrimary) {
       document.documentElement.style.setProperty('--color-primary', ws.colorPrimary);
       document.documentElement.style.setProperty('--gold-primary', ws.colorPrimary);
+      document.documentElement.style.setProperty('--primary-gold', ws.colorPrimary);
+      document.documentElement.style.setProperty('--primary-gold-hover', ws.colorPrimary);
+      document.documentElement.style.setProperty('--primary-gold-gradient', `linear-gradient(135deg, ${ws.colorPrimary} 0%, ${ws.colorPrimary} 100%)`);
+    }
+    if (ws.colorBg) {
+      document.documentElement.style.setProperty('--bg-gradient-top', ws.colorBg);
+      document.documentElement.style.setProperty('--bg-gradient-bottom', ws.colorBg);
+      const appWrapper = document.querySelector('.app-wrapper');
+      if (appWrapper) {
+        appWrapper.style.backgroundColor = ws.colorBg;
+      }
+      const appContainer = document.querySelector('.app-container');
+      if (appContainer) {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        if (currentTheme === 'dark') {
+          appContainer.style.background = ws.colorBg;
+        }
+      }
     }
     if (ws.fontFamily && ws.fontFamily !== 'Inter') {
       document.body.style.fontFamily = `"${ws.fontFamily}", var(--font-main, sans-serif)`;

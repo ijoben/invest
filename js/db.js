@@ -573,6 +573,13 @@ export const DB = {
   // Upload Image File or Base64 or Blob URL to Server uploads/ directory
   async uploadImage(fileOrBase64) {
     try {
+      await this.ensureServerSession();
+      let token = null;
+      try {
+        if (typeof localStorage !== 'undefined') token = localStorage.getItem('autotrading_session_token');
+        if (!token && typeof sessionStorage !== 'undefined') token = sessionStorage.getItem('autotrading_session_token');
+      } catch (e) {}
+
       const url = this.getApiUrl('upload_image');
       if (typeof fileOrBase64 === 'string' && fileOrBase64.startsWith('blob:')) {
         try {
@@ -582,22 +589,45 @@ export const DB = {
           console.warn('Failed to convert blob URL to Blob object:', e);
         }
       }
+
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        headers['X-Session-Token'] = token;
+        headers['X-Auth-Token'] = token;
+      }
+
       if (typeof window !== 'undefined' && (fileOrBase64 instanceof File || fileOrBase64 instanceof Blob)) {
         const formData = new FormData();
         formData.append('image', fileOrBase64);
+        formData.append('file', fileOrBase64);
+        if (token) formData.append('sessionToken', token);
         const res = await fetch(url, {
           method: 'POST',
+          credentials: 'include',
+          headers, // Do NOT manually set Content-Type so browser sets boundary
           body: formData
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error((errData && errData.message) || `HTTP ${res.status}`);
+        }
         return await res.json();
       } else if (typeof fileOrBase64 === 'string') {
+        const jsonHeaders = {
+          'Content-Type': 'application/json',
+          ...headers
+        };
         const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: fileOrBase64 })
+          credentials: 'include',
+          headers: jsonHeaders,
+          body: JSON.stringify({ image: fileOrBase64, sessionToken: token })
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error((errData && errData.message) || `HTTP ${res.status}`);
+        }
         return await res.json();
       }
     } catch (e) {
@@ -1107,6 +1137,48 @@ export const DB = {
       return json;
     } catch (e) {
       console.error('adminSaveRewards error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Admin Trading Signals Save (Persists customized signals to MySQL settings)
+  async adminSaveSignals(signals) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_save_signals');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ signals })
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ signals })
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menyimpan sinyal (HTTP ${res.status})` };
+      }
+
+      const db = this.get();
+      db.signals = json.signals || signals;
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db)));
+        } catch (e) {}
+      }
+      return json;
+    } catch (e) {
+      console.error('adminSaveSignals error:', e);
       return { success: false, message: e.message };
     }
   },

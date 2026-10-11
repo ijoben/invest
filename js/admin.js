@@ -489,6 +489,13 @@ export const Admin = {
     const db = DB.get();
     db.signals = (db.signals || []).filter(s => s.id !== signalId);
     await DB.save(db);
+    try {
+      if (typeof DB.adminSaveSignals === 'function') {
+        await DB.adminSaveSignals(db.signals);
+      }
+    } catch (e) {
+      console.warn('adminSaveSignals error:', e);
+    }
     return { success: true, message: 'Sinyal berhasil dihapus.' };
   },
 

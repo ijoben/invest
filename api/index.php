@@ -604,6 +604,40 @@ function syncRelationalTables($pdo, $parsed) {
             ]);
         }
 
+        // Sync Signals to settings table (Permanent sync across Admin & Frontend)
+        if (isset($parsed['signals']) && is_array($parsed['signals'])) {
+            $setStmt = $pdo->prepare("
+                INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
+                VALUES ('platform_signals', :setting_value, 'Platform live trading signals feed')
+                ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`), `updated_at` = CURRENT_TIMESTAMP
+            ");
+            $setStmt->execute([
+                ':setting_value' => json_encode($parsed['signals'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            ]);
+        }
+
+        // Sync Settings to general_settings table (Permanent sync for branding, colors, webSettings)
+        if (isset($parsed['settings']) && is_array($parsed['settings']) && count($parsed['settings']) > 0) {
+            $curSettings = [];
+            try {
+                $stCur = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'general_settings' LIMIT 1");
+                $stCur->execute();
+                $rCur = $stCur->fetch();
+                if ($rCur && !empty($rCur['setting_value'])) {
+                    $curSettings = json_decode($rCur['setting_value'], true) ?: [];
+                }
+            } catch (Exception $eCur) {}
+            $mSettings = mergeSettingsData($curSettings, $parsed['settings']);
+            $setStmt = $pdo->prepare("
+                INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
+                VALUES ('general_settings', :setting_value, 'Platform global settings and web configuration')
+                ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`), `updated_at` = CURRENT_TIMESTAMP
+            ");
+            $setStmt->execute([
+                ':setting_value' => json_encode($mSettings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            ]);
+        }
+
         // Sync Banners
         if (isset($parsed['banners']) && is_array($parsed['banners'])) {
             $bannerStmt = $pdo->prepare("
@@ -1168,6 +1202,18 @@ if ($action === 'get') {
                 }
             } catch (Exception $eR) {}
 
+            try {
+                $sSigStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'platform_signals' LIMIT 1");
+                $sSigStmt->execute();
+                $sSigRow = $sSigStmt->fetch();
+                if ($sSigRow && !empty($sSigRow['setting_value'])) {
+                    $savedSignals = json_decode($sSigRow['setting_value'], true);
+                    if (is_array($savedSignals) && count($savedSignals) > 0) {
+                        $data['signals'] = $savedSignals;
+                    }
+                }
+            } catch (Exception $eSig) {}
+
             // Deduplicate any check-in transactions in $data['transactions'] (drop TX-CHK-392542 or same-day duplicates)
             if (isset($data['transactions']) && is_array($data['transactions'])) {
                 $seenCheckin = [];
@@ -1379,6 +1425,14 @@ if ($action === 'save') {
             }
         }
 
+        // Smart merge signals: Admin is authoritative source of truth.
+        // For non-admin visitor/user sessions, ensure signals are never wiped out.
+        if (!$isAdminSession) {
+            if (empty($parsed['signals']) && !empty($existing['signals'])) {
+                $parsed['signals'] = $existing['signals'];
+            }
+        }
+
         // Smart merge redemptions: preserve existing redemptions, update matching, append new
         $existingRedemptions = $existing['redemptions'] ?? [];
         $incomingRedemptions = $parsed['redemptions'] ?? [];
@@ -1482,6 +1536,22 @@ if ($action === 'upload_image') {
         exit();
     }
 
+    // Authenticate: check session or token in headers/POST/GET
+    $token = getRequestAuthToken();
+    if (empty($token) && !empty($_POST['sessionToken'])) {
+        $token = trim((string)$_POST['sessionToken']);
+    }
+    if (empty($token) && !empty($_GET['sessionToken'])) {
+        $token = trim((string)$_GET['sessionToken']);
+    }
+    if (!empty($token)) {
+        $parsedToken = parseSessionToken($token);
+        if ($parsedToken && !empty($parsedToken['uid'])) {
+            $_SESSION['uid'] = (string)$parsedToken['uid'];
+            $_SESSION['role'] = (string)($parsedToken['role'] ?? 'user');
+        }
+    }
+
     // Only authenticated members/admins may upload files
     requireLogin();
 
@@ -1489,6 +1559,7 @@ if ($action === 'upload_image') {
     if (!is_dir($uploadDir)) {
         @mkdir($uploadDir, 0755, true);
     }
+    @chmod($uploadDir, 0755);
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'autotrading.my.id';
@@ -3144,6 +3215,14 @@ if ($action === 'admin_save_settings') {
         exit();
     }
 
+    // Auto-convert any base64 logo or favicon into file saved in /uploads/
+    if (!empty($newSettings['webSettings']['logoUrl']) && is_string($newSettings['webSettings']['logoUrl']) && strpos($newSettings['webSettings']['logoUrl'], 'data:image') === 0) {
+        $newSettings['webSettings']['logoUrl'] = saveBase64ImageFile($newSettings['webSettings']['logoUrl'], 'logo_' . time());
+    }
+    if (!empty($newSettings['webSettings']['faviconUrl']) && is_string($newSettings['webSettings']['faviconUrl']) && strpos($newSettings['webSettings']['faviconUrl'], 'data:image') === 0) {
+        $newSettings['webSettings']['faviconUrl'] = saveBase64ImageFile($newSettings['webSettings']['faviconUrl'], 'favicon_' . time());
+    }
+
     $currentSettings = [];
     try {
         $sStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'general_settings' LIMIT 1");
@@ -3266,6 +3345,54 @@ if ($action === 'admin_save_rewards') {
         'success' => true,
         'message' => 'Katalog hadiah point berhasil disimpan permanen ke database!',
         'rewards' => $rewards
+    ]);
+    exit();
+}
+
+// --- action=admin_save_signals (admin only) -------------------------------
+if ($action === 'admin_save_signals') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method not allowed. Use POST.']);
+        exit();
+    }
+    requireAdmin();
+    if (!$pdo) {
+        http_response_code(503);
+        echo json_encode(['success' => false, 'message' => 'Database belum terhubung.']);
+        exit();
+    }
+    ensureTablesExist($pdo);
+
+    $raw = file_get_contents('php://input');
+    $in = json_decode($raw, true) ?: [];
+    $signals = isset($in['signals']) && is_array($in['signals']) ? $in['signals'] : (is_array($in) ? $in : []);
+
+    if (!is_array($signals)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Data sinyal tidak valid.']);
+        exit();
+    }
+
+    $setStmt = $pdo->prepare("
+        INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
+        VALUES ('platform_signals', :sv, 'Platform trading signals feed')
+        ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`), `updated_at` = CURRENT_TIMESTAMP
+    ");
+    $setStmt->execute([':sv' => json_encode($signals, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
+
+    try {
+        $stData = loadMainState($pdo);
+        if (is_array($stData)) {
+            $stData['signals'] = $signals;
+            saveMainState($pdo, $stData);
+        }
+    } catch (Exception $eSt) {}
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Daftar sinyal trading berhasil disimpan permanen ke database MySQL cPanel!',
+        'signals' => $signals
     ]);
     exit();
 }

@@ -46,8 +46,9 @@ export const Signals = {
   },
 
   // Add new signal (Admin feature)
-  addSignal({ pair, action, entry, tp, sl, confidence, flags }) {
+  async addSignal({ pair, action, entry, tp, sl, confidence, flags }) {
     const db = DB.get();
+    if (!Array.isArray(db.signals)) db.signals = [];
     const newSignal = {
       id: 'sig-' + Date.now(),
       pair: pair.toUpperCase(),
@@ -62,15 +63,29 @@ export const Signals = {
     };
 
     db.signals.unshift(newSignal);
-    DB.save(db);
+    await DB.save(db);
+    try {
+      if (typeof DB.adminSaveSignals === 'function') {
+        await DB.adminSaveSignals(db.signals);
+      }
+    } catch (e) {
+      console.warn('adminSaveSignals error:', e);
+    }
     return newSignal;
   },
 
   // Delete signal (Admin feature)
-  deleteSignal(id) {
+  async deleteSignal(id) {
     const db = DB.get();
     db.signals = (db.signals || []).filter(s => s.id !== id);
-    DB.save(db);
+    await DB.save(db);
+    try {
+      if (typeof DB.adminSaveSignals === 'function') {
+        await DB.adminSaveSignals(db.signals);
+      }
+    } catch (e) {
+      console.warn('adminSaveSignals error:', e);
+    }
     return true;
   }
 };

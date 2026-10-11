@@ -1841,6 +1841,21 @@ export const AdminPage = {
     });
   },
 
+  // Sub-Tab Switcher for Permintaan Penarikan (Antrean Penarikan vs Pengaturan PPOB)
+  switchWithdrawSubTab(subTab) {
+    const map = {
+      requests: { btn: 'wdSubTabBtnRequests', pane: 'wdSubTabContentRequests' },
+      ppob: { btn: 'wdSubTabBtnPpob', pane: 'wdSubTabContentPpob' }
+    };
+    Object.keys(map).forEach(key => {
+      const btn = document.getElementById(map[key].btn);
+      const pane = document.getElementById(map[key].pane);
+      const isActive = key === subTab;
+      if (btn) btn.classList.toggle('active', isActive);
+      if (pane) pane.classList.toggle('active', isActive);
+    });
+  },
+
   // Generic Reusable Pagination Controls Renderer
   renderPagination(containerId, currentPage, totalPages, totalItems, onPageChangeFnName) {
     const el = document.getElementById(containerId);
@@ -2664,6 +2679,7 @@ export const AdminPage = {
   async deleteSignal(id) {
     if (!confirm('Apakah Anda yakin ingin menghapus sinyal trading ini?')) return;
     await Admin.deleteSignal(id);
+    await DB.syncFromCloud();
     this.showToast('Sinyal trading berhasil dihapus!', 'success');
     this.renderAll();
   },
@@ -3145,7 +3161,7 @@ export const AdminPage = {
     this.openModal('adminSignalModal');
   },
 
-  publishSignal() {
+  async publishSignal() {
     const pair = document.getElementById('sigNewPair').value.trim();
     const action = document.getElementById('sigNewAction').value;
     const entry = document.getElementById('sigNewEntry').value.trim();
@@ -3158,7 +3174,8 @@ export const AdminPage = {
       return;
     }
 
-    Signals.addSignal({ pair, action, entry, tp, sl, confidence });
+    await Signals.addSignal({ pair, action, entry, tp, sl, confidence });
+    await DB.syncFromCloud();
     this.closeModal('adminSignalModal');
     this.showToast(`Sinyal ${pair} (${action}) berhasil diterbitkan!`, 'success');
     this.renderAll();
@@ -4224,6 +4241,7 @@ export const AdminPage = {
     this._setVal('cfgColorBgHex',      ws.colorBg         || '#0B0F19');
     this._setVal('cfgFontFamily',      ws.fontFamily      || 'Inter');
     this._setVal('cfgDisplayMode',     ws.displayMode     || 'dark');
+    this.applyThemeColors(ws.colorPrimary, ws.colorBg);
 
     // --- SEO ---
     this._setVal('cfgSeoTitle',        seo.title       || '');
@@ -4274,9 +4292,9 @@ export const AdminPage = {
 
     // Tab 2: Tampilan & Logo
     const logoUrl = document.getElementById('cfgLogoUrl')?.value.trim();
-    if (logoUrl !== undefined && logoUrl !== '') ws.logoUrl = logoUrl;
+    if (logoUrl !== undefined) ws.logoUrl = logoUrl;
     const faviconUrl = document.getElementById('cfgFaviconUrl')?.value.trim();
-    if (faviconUrl !== undefined && faviconUrl !== '') ws.faviconUrl = faviconUrl;
+    if (faviconUrl !== undefined) ws.faviconUrl = faviconUrl;
 
     ws.colorPrimary = document.getElementById('cfgColorPrimaryHex')?.value.trim() || document.getElementById('cfgColorPrimary')?.value || ws.colorPrimary || '#C89338';
     ws.colorBg = document.getElementById('cfgColorBgHex')?.value.trim() || document.getElementById('cfgColorBg')?.value || ws.colorBg || '#0B0F19';
@@ -4334,11 +4352,39 @@ export const AdminPage = {
         let link = document.querySelector("link[rel*='icon']");
         if (link) link.href = payload.webSettings.faviconUrl;
       }
+      this.applyThemeColors(payload.webSettings?.colorPrimary, payload.webSettings?.colorBg);
       await DB.syncFromCloud();
       this.renderWebSettings();
     } else {
       this.showToast((res && res.message) || 'Gagal menyimpan pengaturan web ke database!', 'error');
     }
+  },
+
+  /** Dynamic theme color applier */
+  applyThemeColors(primaryColor, bgColor) {
+    if (primaryColor) {
+      document.documentElement.style.setProperty('--gold-primary', primaryColor);
+      document.documentElement.style.setProperty('--color-primary', primaryColor);
+      document.documentElement.style.setProperty('--primary-gold', primaryColor);
+      document.documentElement.style.setProperty('--primary-gold-hover', primaryColor);
+      document.documentElement.style.setProperty('--primary-gold-gradient', `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor} 100%)`);
+      document.documentElement.style.setProperty('--admin-primary', primaryColor);
+      document.documentElement.style.setProperty('--admin-gold', primaryColor);
+    }
+    if (bgColor) {
+      if (document.body) {
+        document.body.style.backgroundColor = bgColor;
+      }
+      document.documentElement.style.setProperty('--admin-bg', bgColor);
+      document.documentElement.style.setProperty('--bg-dark', bgColor);
+    }
+  },
+
+  /** Live preview for color inputs */
+  applyThemeColorsPreview() {
+    const primary = document.getElementById('cfgColorPrimaryHex')?.value || document.getElementById('cfgColorPrimary')?.value;
+    const bg = document.getElementById('cfgColorBgHex')?.value || document.getElementById('cfgColorBg')?.value;
+    this.applyThemeColors(primary, bg);
   },
 
   /** Preview maintenance badge */
@@ -4382,12 +4428,13 @@ export const AdminPage = {
       const uploadRes = await DB.uploadImage(file);
       if (uploadRes && uploadRes.success && uploadRes.url) {
         if (urlInput) urlInput.value = uploadRes.url;
-        if (img) img.src = uploadRes.url;
+        if (img) { img.src = uploadRes.url; img.style.display = ''; }
+        if (ph)  { ph.style.display = 'none'; }
         if (statusEl) {
           statusEl.style.color = '#10B981';
-          statusEl.textContent = '✅ Berhasil diunggah ke server cPanel!';
+          statusEl.textContent = '✅ Berhasil disimpan di /uploads/ server!';
         }
-        this.showToast('✅ Gambar berhasil diunggah ke server cPanel!', 'success');
+        this.showToast('✅ Gambar berhasil diunggah ke folder /uploads!', 'success');
         return;
       } else {
         console.warn('Upload image API response error:', uploadRes);
