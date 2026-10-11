@@ -1175,7 +1175,7 @@ export const AdminPage = {
 
     // Collect current values from active form fields
     const methodEl = document.getElementById('emailCfgMethod');
-    const mailMethod = methodEl ? methodEl.value : 'cpanel';
+    const mailMethod = methodEl ? methodEl.value : 'smtp';
     const sHost = document.getElementById('emailCfgSmtpHost')?.value?.trim();
     const sPort = Number(document.getElementById('emailCfgSmtpPort')?.value) || 465;
     const sSec = document.getElementById('emailCfgSmtpSecure')?.value || 'ssl';
@@ -1186,15 +1186,15 @@ export const AdminPage = {
 
     const currentSettings = {
       email: {
-        mailMethod,
+        mailMethod: mailMethod || 'smtp',
         smtp: {
           host: sHost || 'mail.autotrading.my.id',
-          port: sPort,
-          secure: sSec,
-          user: sUser || '',
-          pass: sPass || '',
+          port: sPort || 465,
+          secure: sSec || 'ssl',
+          user: sUser || 'admin@autotrading.my.id',
+          pass: sPass || 'WSxYuJKO+idDc6?H',
           fromName: fromName || 'AUTOTRADING Official',
-          fromEmail: fromEmail || 'noreply@autotrading.my.id'
+          fromEmail: fromEmail || 'admin@autotrading.my.id'
         }
       }
     };

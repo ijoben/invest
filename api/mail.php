@@ -28,15 +28,17 @@ function sendViaPhpMail($to, $subject, $htmlContent, $fromName, $fromEmail) {
     $headers[] = "Return-Path: <{$cleanFromEmail}>";
     $headers[] = "MIME-Version: 1.0";
     $headers[] = "Content-Type: text/html; charset=UTF-8";
+    $headers[] = "Content-Transfer-Encoding: base64";
     $headers[] = "X-Mailer: AUTOTRADING-PHP/" . phpversion();
     $headers[] = "Date: " . date('r');
     $headers[] = "Message-ID: <" . time() . "." . uniqid() . "@" . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id') . ">";
 
     $headerStr = implode("\r\n", $headers);
+    $encodedBody = chunk_split(base64_encode($htmlContent));
     // 5th parameter -f sets Return-Path/Envelope-From in Exim so SPF/DMARC doesn't immediately drop
-    $res = @mail($to, $encodedSubject, $htmlContent, $headerStr, "-f " . escapeshellarg($cleanFromEmail));
+    $res = @mail($to, $encodedSubject, $encodedBody, $headerStr, "-f " . escapeshellarg($cleanFromEmail));
     if (!$res) {
-        $res = @mail($to, $encodedSubject, $htmlContent, $headerStr);
+        $res = @mail($to, $encodedSubject, $encodedBody, $headerStr);
     }
     return $res;
 }
@@ -102,9 +104,10 @@ function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) 
         return ['ok' => false, 'logs' => $logs, 'error' => 'Greeting 220 dari server SMTP tidak diterima.'];
     }
 
-    $write("EHLO " . gethostname());
+    $heloDomain = !empty($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : 'autotrading.my.id';
+    $write("EHLO " . $heloDomain);
     if (!$read(250)) {
-        $write("HELO " . gethostname());
+        $write("HELO " . $heloDomain);
         if (!$read(250)) {
             fclose($socket);
             return ['ok' => false, 'logs' => $logs, 'error' => 'Handshake EHLO/HELO ditolak server SMTP.'];
@@ -177,11 +180,13 @@ function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) 
     $headers[] = "Subject: {$encodedSubject}";
     $headers[] = "MIME-Version: 1.0";
     $headers[] = "Content-Type: text/html; charset=UTF-8";
+    $headers[] = "Content-Transfer-Encoding: base64";
     $headers[] = "X-Mailer: AUTOTRADING-SMTP";
     $headers[] = "Date: " . date('r');
     $headers[] = "Message-ID: <" . time() . "." . uniqid() . "@" . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id') . ">";
 
-    $body = implode("\r\n", $headers) . "\r\n\r\n" . $htmlContent . "\r\n.";
+    $encodedBody = chunk_split(base64_encode($htmlContent));
+    $body = implode("\r\n", $headers) . "\r\n\r\n" . $encodedBody . "\r\n.";
     $write($body);
     $ok = $read(250);
 
