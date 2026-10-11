@@ -3769,19 +3769,24 @@ function maskEmailAddr($email) {
 }
 
 function getEmailSettingsFromState($state) {
-    if (isset($state['settings']['email']) && is_array($state['settings']['email'])) {
-        return $state['settings']['email'];
-    }
+    $email = (isset($state['settings']['email']) && is_array($state['settings']['email']))
+        ? $state['settings']['email']
+        : [];
+    $smtp = $email['smtp'] ?? [];
     return [
-        'mailMethod' => 'cpanel',
+        'verificationRequired' => $email['verificationRequired'] ?? false,
+        'adminNotificationOnRegister' => $email['adminNotificationOnRegister'] ?? true,
+        'adminNotificationEmail' => !empty($email['adminNotificationEmail']) ? $email['adminNotificationEmail'] : 'admin@autotrading.my.id',
+        'welcomeEmailEnabled' => $email['welcomeEmailEnabled'] ?? true,
+        'mailMethod' => 'smtp',
         'smtp' => [
-            'host' => 'mail.' . ($_SERVER['SERVER_NAME'] ?? 'localhost'),
-            'port' => 465,
-            'secure' => 'ssl',
-            'user' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'localhost'),
-            'pass' => '',
-            'fromName' => 'AUTOTRADING Official',
-            'fromEmail' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id')
+            'host' => !empty($smtp['host']) ? $smtp['host'] : 'mail.autotrading.my.id',
+            'port' => !empty($smtp['port']) ? (int)$smtp['port'] : 465,
+            'secure' => !empty($smtp['secure']) ? $smtp['secure'] : 'ssl',
+            'user' => !empty($smtp['user']) ? $smtp['user'] : 'admin@autotrading.my.id',
+            'pass' => !empty($smtp['pass']) ? $smtp['pass'] : 'WSxYuJKO+idDc6?H',
+            'fromName' => !empty($smtp['fromName']) ? $smtp['fromName'] : 'AUTOTRADING Official',
+            'fromEmail' => !empty($smtp['fromEmail']) ? $smtp['fromEmail'] : 'admin@autotrading.my.id'
         ]
     ];
 }

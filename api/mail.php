@@ -199,8 +199,8 @@ function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) 
 // Master email dispatcher
 function dispatchEmail($to, $subject, $htmlContent, $emailSettings) {
     $fromName = !empty($emailSettings['smtp']['fromName']) ? $emailSettings['smtp']['fromName'] : 'AUTOTRADING Official';
-    $fromEmail = !empty($emailSettings['smtp']['fromEmail']) ? $emailSettings['smtp']['fromEmail'] : 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id');
-    $method = !empty($emailSettings['mailMethod']) ? strtolower($emailSettings['mailMethod']) : 'cpanel';
+    $fromEmail = !empty($emailSettings['smtp']['fromEmail']) ? $emailSettings['smtp']['fromEmail'] : (!empty($emailSettings['smtp']['user']) ? $emailSettings['smtp']['user'] : 'admin@autotrading.my.id');
+    $method = !empty($emailSettings['mailMethod']) ? strtolower($emailSettings['mailMethod']) : 'smtp';
 
     if ($method === 'smtp' && !empty($emailSettings['smtp']['host'])) {
         $res = sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $emailSettings['smtp']);
@@ -286,21 +286,39 @@ if (empty($action)) {
 
 $emailSettings = $data['currentSettings']['email'] ?? ($data['settings']['email'] ?? null);
 
-if (!$emailSettings) {
-    $pdo = getDbConnection();
-    if ($pdo) {
-        try {
-            $stmt = $pdo->prepare("SELECT setting_value FROM general_settings WHERE setting_key = 'general_settings' LIMIT 1");
-            $stmt->execute();
-            $row = $stmt->fetch();
-            if ($row && !empty($row['setting_value'])) {
-                $gs = json_decode($row['setting_value'], true);
-                if (!empty($gs['email'])) {
-                    $emailSettings = $gs['email'];
+$pdo = getDbConnection();
+if ($pdo) {
+    try {
+        $stmt = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_key = 'general_settings' LIMIT 1");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        if ($row && !empty($row['setting_value'])) {
+            $gs = json_decode($row['setting_value'], true);
+            if (is_array($gs)) {
+                $dbEmail = $gs['email'] ?? [];
+                // Auto-sync credentials if password empty, user empty, or mailMethod is cpanel
+                if (empty($dbEmail['smtp']['pass']) || ($dbEmail['mailMethod'] ?? '') !== 'smtp' || empty($dbEmail['smtp']['user'])) {
+                    $dbEmail['mailMethod'] = 'smtp';
+                    $dbEmail['adminNotificationEmail'] = 'admin@autotrading.my.id';
+                    $dbEmail['smtp'] = array_merge($dbEmail['smtp'] ?? [], [
+                        'host' => 'mail.autotrading.my.id',
+                        'port' => 465,
+                        'secure' => 'ssl',
+                        'user' => 'admin@autotrading.my.id',
+                        'pass' => 'WSxYuJKO+idDc6?H',
+                        'fromName' => 'AUTOTRADING Official',
+                        'fromEmail' => 'admin@autotrading.my.id'
+                    ]);
+                    $gs['email'] = $dbEmail;
+                    $up = $pdo->prepare("UPDATE settings SET setting_value = :val WHERE setting_key = 'general_settings'");
+                    $up->execute([':val' => json_encode($gs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
+                }
+                if (!$emailSettings) {
+                    $emailSettings = $dbEmail;
                 }
             }
-        } catch (Exception $e) {}
-    }
+        }
+    } catch (Exception $e) {}
 }
 
 if (!$emailSettings) {
@@ -309,17 +327,27 @@ if (!$emailSettings) {
         'adminNotificationOnRegister' => true,
         'adminNotificationEmail' => 'admin@autotrading.my.id',
         'welcomeEmailEnabled' => true,
-        'mailMethod' => 'cpanel',
+        'mailMethod' => 'smtp',
         'smtp' => [
-            'host' => 'mail.' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id'),
+            'host' => 'mail.autotrading.my.id',
             'port' => 465,
             'secure' => 'ssl',
-            'user' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id'),
-            'pass' => '',
+            'user' => 'admin@autotrading.my.id',
+            'pass' => 'WSxYuJKO+idDc6?H',
             'fromName' => 'AUTOTRADING Official',
-            'fromEmail' => 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'autotrading.my.id')
+            'fromEmail' => 'admin@autotrading.my.id'
         ]
     ];
+} else {
+    // Ensure all critical SMTP credentials have solid fallbacks
+    if (empty($emailSettings['smtp']['user'])) $emailSettings['smtp']['user'] = 'admin@autotrading.my.id';
+    if (empty($emailSettings['smtp']['pass'])) $emailSettings['smtp']['pass'] = 'WSxYuJKO+idDc6?H';
+    if (empty($emailSettings['smtp']['host'])) $emailSettings['smtp']['host'] = 'mail.autotrading.my.id';
+    if (empty($emailSettings['smtp']['port'])) $emailSettings['smtp']['port'] = 465;
+    if (empty($emailSettings['smtp']['secure'])) $emailSettings['smtp']['secure'] = 'ssl';
+    if (empty($emailSettings['smtp']['fromEmail'])) $emailSettings['smtp']['fromEmail'] = 'admin@autotrading.my.id';
+    if (empty($emailSettings['smtp']['fromName'])) $emailSettings['smtp']['fromName'] = 'AUTOTRADING Official';
+    if (empty($emailSettings['mailMethod'])) $emailSettings['mailMethod'] = 'smtp';
 }
 
 // 1. ACTION: SEND OTP VERIFICATION TO NEW USER

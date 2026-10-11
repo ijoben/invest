@@ -1062,13 +1062,13 @@ export const AdminPage = {
     if (wEmailEl) wEmailEl.value = String(emailCfg.welcomeEmailEnabled !== false);
 
     const mMethodEl = document.getElementById('emailCfgMethod');
-    if (mMethodEl) mMethodEl.value = emailCfg.mailMethod || 'cpanel';
+    if (mMethodEl) mMethodEl.value = emailCfg.mailMethod || 'smtp';
 
     const fNameEl = document.getElementById('emailCfgFromName');
     if (fNameEl) fNameEl.value = (emailCfg.smtp && emailCfg.smtp.fromName) || 'AUTOTRADING Official';
 
     const fEmailEl = document.getElementById('emailCfgFromEmail');
-    if (fEmailEl) fEmailEl.value = (emailCfg.smtp && emailCfg.smtp.fromEmail) || 'noreply@autotrading.my.id';
+    if (fEmailEl) fEmailEl.value = (emailCfg.smtp && emailCfg.smtp.fromEmail) || 'admin@autotrading.my.id';
 
     // SMTP specifics
     const smtp = emailCfg.smtp || {};
@@ -1082,10 +1082,10 @@ export const AdminPage = {
     if (sSecEl) sSecEl.value = smtp.secure || 'ssl';
 
     const sUserEl = document.getElementById('emailCfgSmtpUser');
-    if (sUserEl) sUserEl.value = smtp.user || '';
+    if (sUserEl) sUserEl.value = smtp.user || 'admin@autotrading.my.id';
 
     const sPassEl = document.getElementById('emailCfgSmtpPass');
-    if (sPassEl) sPassEl.value = smtp.pass || '';
+    if (sPassEl) sPassEl.value = smtp.pass || 'WSxYuJKO+idDc6?H';
 
     this.previewEmailBadge();
     this.toggleSmtpFields();

@@ -55,15 +55,15 @@ const defaultDB = {
       adminNotificationOnRegister: true, // Send alert to admin when a new user registers
       adminNotificationEmail: 'admin@autotrading.my.id',
       welcomeEmailEnabled: true,
-      mailMethod: 'cpanel', // 'cpanel' (PHP mail) or 'smtp'
+      mailMethod: 'smtp', // 'smtp' (Official authenticated SMTP)
       smtp: {
         host: 'mail.autotrading.my.id',
         port: 465,
         secure: 'ssl',
-        user: 'noreply@autotrading.my.id',
-        pass: '',
+        user: 'admin@autotrading.my.id',
+        pass: 'WSxYuJKO+idDc6?H',
         fromName: 'AUTOTRADING Official',
-        fromEmail: 'noreply@autotrading.my.id'
+        fromEmail: 'admin@autotrading.my.id'
       }
     },
     profitCycleDurationHours: 24, // Real 24-hour cycle

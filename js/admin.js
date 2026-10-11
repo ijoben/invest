@@ -697,15 +697,15 @@ export const Admin = {
       adminNotificationOnRegister: true,
       adminNotificationEmail: 'admin@autotrading.my.id',
       welcomeEmailEnabled: true,
-      mailMethod: 'cpanel',
+      mailMethod: 'smtp',
       smtp: {
         host: 'mail.autotrading.my.id',
         port: 465,
         secure: 'ssl',
-        user: 'noreply@autotrading.my.id',
-        pass: '',
+        user: 'admin@autotrading.my.id',
+        pass: 'WSxYuJKO+idDc6?H',
         fromName: 'AUTOTRADING Official',
-        fromEmail: 'noreply@autotrading.my.id'
+        fromEmail: 'admin@autotrading.my.id'
       }
     };
   },
