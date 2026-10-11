@@ -16,6 +16,20 @@ export const AdminPage = {
   userFilter: 'all',
   userSearchQuery: '',
   withdrawFilter: 'all',
+
+  // Pagination State for Admin Tables
+  paginationState: {
+    users: { page: 1, perPage: 10 },
+    deposits: { page: 1, perPage: 10 },
+    withdrawals: { page: 1, perPage: 10 },
+    redemptions: { page: 1, perPage: 10 },
+    announcements: { page: 1, perPage: 10 },
+    banners: { page: 1, perPage: 10 },
+    testimonials: { page: 1, perPage: 10 },
+    signals: { page: 1, perPage: 10 },
+    rewards: { page: 1, perPage: 10 },
+    memberTxs: { page: 1, perPage: 6 }
+  },
   tabTitles: {
     dashboard: 'Dashboard Overview',
     deposits: 'Konfirmasi Deposit',
@@ -358,11 +372,21 @@ export const AdminPage = {
       });
 
     if (deposits.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data deposit.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data deposit.</td></tr>';
+      this.renderPagination('depositPagination', 1, 0, 0, 'AdminPage.setDepositPage');
       return;
     }
 
-    tbody.innerHTML = deposits.map(t => `
+    const perPage = (this.paginationState && this.paginationState.deposits && this.paginationState.deposits.perPage) || 10;
+    const totalPages = Math.ceil(deposits.length / perPage);
+    if (this.paginationState && this.paginationState.deposits && this.paginationState.deposits.page > totalPages) {
+      this.paginationState.deposits.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.deposits && this.paginationState.deposits.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedDeposits = deposits.slice(startIdx, startIdx + perPage);
+
+    if (tbody) tbody.innerHTML = pagedDeposits.map(t => `
       <tr>
         <td><strong>${escapeHtml(t.id)}</strong></td>
         <td>${DB.formatWibDateTime(t.createdAt)} WIB</td>
@@ -388,10 +412,14 @@ export const AdminPage = {
         </td>
       </tr>
     `).join('');
+    this.renderPagination('depositPagination', curPage, totalPages, deposits.length, 'AdminPage.setDepositPage');
   },
 
   setWithdrawFilter(filter) {
     this.withdrawFilter = filter;
+    if (this.paginationState && this.paginationState.withdrawals) {
+      this.paginationState.withdrawals.page = 1;
+    }
     ['btnWdFilterAll', 'btnWdFilterWd', 'btnWdFilterPulsa', 'btnWdFilterPln'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.remove('active');
@@ -427,11 +455,21 @@ export const AdminPage = {
     }
 
     if (withdrawals.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data transaksi penarikan atau konversi PPOB untuk filter ini.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada data transaksi penarikan atau konversi PPOB untuk filter ini.</td></tr>';
+      this.renderPagination('withdrawPagination', 1, 0, 0, 'AdminPage.setWithdrawPage');
       return;
     }
 
-    tbody.innerHTML = withdrawals.map(t => {
+    const perPage = (this.paginationState && this.paginationState.withdrawals && this.paginationState.withdrawals.perPage) || 10;
+    const totalPages = Math.ceil(withdrawals.length / perPage);
+    if (this.paginationState && this.paginationState.withdrawals && this.paginationState.withdrawals.page > totalPages) {
+      this.paginationState.withdrawals.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.withdrawals && this.paginationState.withdrawals.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedWds = withdrawals.slice(startIdx, startIdx + perPage);
+
+    if (tbody) tbody.innerHTML = pagedWds.map(t => {
       const isPpob = t.type === 'ppob_conversion';
       let walletSourceHtml = escapeHtml(t.walletSource || 'Wallet Balance');
       let destHtml = escapeHtml(t.destinationAccount || t.paymentMethod || '-');
@@ -498,6 +536,7 @@ export const AdminPage = {
         </tr>
       `;
     }).join('');
+    this.renderPagination('withdrawPagination', curPage, totalPages, withdrawals.length, 'AdminPage.setWithdrawPage');
   },
 
   // 4. Plans Table
@@ -1318,10 +1357,20 @@ export const AdminPage = {
 
     if (filtered.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#94A3B8;">Tidak ada data pengguna yang sesuai dengan filter / pencarian.</td></tr>';
+      this.renderPagination('usersPagination', 1, 0, 0, 'AdminPage.setUserPage');
       return;
     }
 
-    tbody.innerHTML = filtered.map(u => {
+    const perPage = (this.paginationState && this.paginationState.users && this.paginationState.users.perPage) || 10;
+    const totalPages = Math.ceil(filtered.length / perPage);
+    if (this.paginationState && this.paginationState.users && this.paginationState.users.page > totalPages) {
+      this.paginationState.users.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.users && this.paginationState.users.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedUsers = filtered.slice(startIdx, startIdx + perPage);
+
+    tbody.innerHTML = pagedUsers.map(u => {
       const isAdmin = u.role === 'admin';
       const isBlocked = !!u.isBlocked;
 
@@ -1371,10 +1420,14 @@ export const AdminPage = {
         </tr>
       `;
     }).join('');
+    this.renderPagination('usersPagination', curPage, totalPages, filtered.length, 'AdminPage.setUserPage');
   },
 
   setUserFilter(filter) {
     this.userFilter = filter;
+    if (this.paginationState && this.paginationState.users) {
+      this.paginationState.users.page = 1;
+    }
     ['all', 'active', 'blocked'].forEach(f => {
       const btn = document.getElementById('userFilter' + f.charAt(0).toUpperCase() + f.slice(1));
       if (btn) btn.classList.toggle('active', f === filter);
@@ -1385,6 +1438,9 @@ export const AdminPage = {
   onUserSearchInput() {
     const input = document.getElementById('userSearchInput');
     this.userSearchQuery = input ? input.value : '';
+    if (this.paginationState && this.paginationState.users) {
+      this.paginationState.users.page = 1;
+    }
     this.renderUsers(DB.get());
   },
 
@@ -1418,12 +1474,24 @@ export const AdminPage = {
   // 8. Signals Table
   renderSignals(db) {
     const tbody = document.getElementById('signalsTableBody');
+    if (!tbody) return;
     const signals = db.signals || [];
     if (signals.length === 0) {
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94A3B8;">Tidak ada sinyal aktif.</td></tr>';
+      this.renderPagination('signalsPagination', 1, 0, 0, 'AdminPage.setSignalsPage');
       return;
     }
-    tbody.innerHTML = signals.map(s => `
+
+    const perPage = (this.paginationState && this.paginationState.signals && this.paginationState.signals.perPage) || 10;
+    const totalPages = Math.ceil(signals.length / perPage);
+    if (this.paginationState && this.paginationState.signals && this.paginationState.signals.page > totalPages) {
+      this.paginationState.signals.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.signals && this.paginationState.signals.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedSignals = signals.slice(startIdx, startIdx + perPage);
+
+    tbody.innerHTML = pagedSignals.map(s => `
       <tr>
         <td><strong>${s.pair}</strong></td>
         <td><span class="badge-signal-action ${s.action.toLowerCase()}">${s.action}</span></td>
@@ -1437,6 +1505,8 @@ export const AdminPage = {
         </td>
       </tr>
     `).join('');
+
+    this.renderPagination('signalsPagination', curPage, totalPages, signals.length, 'AdminPage.setSignalsPage');
   },
 
   // 9. Announcements / Running Text Table
@@ -1447,10 +1517,20 @@ export const AdminPage = {
 
     if (list.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#94A3B8;">Belum ada teks berjalan pengumuman. Klik "+ Tambah Teks Berjalan Baru" di atas.</td></tr>';
+      this.renderPagination('announcementsPagination', 1, 0, 0, 'AdminPage.setAnnouncementsPage');
       return;
     }
 
-    tbody.innerHTML = list.map(a => `
+    const perPage = (this.paginationState && this.paginationState.announcements && this.paginationState.announcements.perPage) || 10;
+    const totalPages = Math.ceil(list.length / perPage);
+    if (this.paginationState && this.paginationState.announcements && this.paginationState.announcements.page > totalPages) {
+      this.paginationState.announcements.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.announcements && this.paginationState.announcements.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedList = list.slice(startIdx, startIdx + perPage);
+
+    tbody.innerHTML = pagedList.map(a => `
       <tr>
         <td><strong style="font-family:var(--font-mono); font-size:11px;">${a.id}</strong></td>
         <td style="white-space:normal; max-width:400px; line-height:1.4;">
@@ -1477,6 +1557,7 @@ export const AdminPage = {
         </td>
       </tr>
     `).join('');
+    this.renderPagination('announcementsPagination', curPage, totalPages, list.length, 'AdminPage.setAnnouncementsPage');
   },
 
   // 10. Banner Slider Carousel Table
@@ -1487,10 +1568,20 @@ export const AdminPage = {
 
     if (banners.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#94A3B8;">Belum ada banner slide. Silakan klik tombol "Upload / Tambah Banner Baru" di atas.</td></tr>';
+      this.renderPagination('bannersPagination', 1, 0, 0, 'AdminPage.setBannersPage');
       return;
     }
 
-    tbody.innerHTML = banners.map(b => {
+    const perPage = (this.paginationState && this.paginationState.banners && this.paginationState.banners.perPage) || 10;
+    const totalPages = Math.ceil(banners.length / perPage);
+    if (this.paginationState && this.paginationState.banners && this.paginationState.banners.page > totalPages) {
+      this.paginationState.banners.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.banners && this.paginationState.banners.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedBanners = banners.slice(startIdx, startIdx + perPage);
+
+    tbody.innerHTML = pagedBanners.map(b => {
       const imgUrl = b.imageUrl || 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80';
       const statusBadge = b.active
         ? '<span class="badge-status approved">AKTIF</span>'
@@ -1528,6 +1619,7 @@ export const AdminPage = {
         </tr>
       `;
     }).join('');
+    this.renderPagination('bannersPagination', curPage, totalPages, banners.length, 'AdminPage.setBannersPage');
   },
 
   // 11. Redemptions Table
@@ -1538,10 +1630,20 @@ export const AdminPage = {
 
     if (redemptions.length === 0) {
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#94A3B8;">Belum ada riwayat klaim tukar poin hadiah dari user.</td></tr>';
+      this.renderPagination('redemptionsPagination', 1, 0, 0, 'AdminPage.setRedemptionsPage');
       return;
     }
 
-    tbody.innerHTML = redemptions.map(r => {
+    const perPage = (this.paginationState && this.paginationState.redemptions && this.paginationState.redemptions.perPage) || 10;
+    const totalPages = Math.ceil(redemptions.length / perPage);
+    if (this.paginationState && this.paginationState.redemptions && this.paginationState.redemptions.page > totalPages) {
+      this.paginationState.redemptions.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.redemptions && this.paginationState.redemptions.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedRedemptions = redemptions.slice(startIdx, startIdx + perPage);
+
+    tbody.innerHTML = pagedRedemptions.map(r => {
       let statusBadge = `<span class="badge-status ${r.status}">${r.status.toUpperCase()}</span>`;
       if (r.status === 'pending') {
         statusBadge = `<span class="badge-status" style="background:rgba(217, 119, 6, 0.2); color:#F59E0B; border:1px solid rgba(217, 119, 6, 0.4);">MENUNGGU</span>`;
@@ -1604,6 +1706,7 @@ export const AdminPage = {
         </tr>
       `;
     }).join('');
+    this.renderPagination('redemptionsPagination', curPage, totalPages, redemptions.length, 'AdminPage.setRedemptionsPage');
   },
 
   // 12. Rewards Catalog Table
@@ -1614,10 +1717,20 @@ export const AdminPage = {
 
     if (rewards.length === 0) {
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#94A3B8;">Belum ada hadiah di katalog. Klik "➕ Tambah Hadiah Baru" untuk membuat hadiah.</td></tr>';
+      this.renderPagination('rewardsPagination', 1, 0, 0, 'AdminPage.setRewardsPage');
       return;
     }
 
-    tbody.innerHTML = rewards.map(r => {
+    const perPage = (this.paginationState && this.paginationState.rewards && this.paginationState.rewards.perPage) || 10;
+    const totalPages = Math.ceil(rewards.length / perPage);
+    if (this.paginationState && this.paginationState.rewards && this.paginationState.rewards.page > totalPages) {
+      this.paginationState.rewards.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.rewards && this.paginationState.rewards.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedRewards = rewards.slice(startIdx, startIdx + perPage);
+
+    tbody.innerHTML = pagedRewards.map(r => {
       const imgUrl = r.imageUrl || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
       const statusBadge = r.active
         ? '<span class="badge-status approved">AKTIF</span>'
@@ -1661,6 +1774,8 @@ export const AdminPage = {
         </tr>
       `;
     }).join('');
+
+    this.renderPagination('rewardsPagination', curPage, totalPages, rewards.length, 'AdminPage.setRewardsPage');
   },
 
   // Sidebar Drawer Controls
@@ -1687,6 +1802,185 @@ export const AdminPage = {
     } else {
       this.openSidebar();
     }
+  },
+
+  // Sub-Tab Switcher for Plan Investasi
+  switchPlansSubTab(subTab) {
+    const map = {
+      list: { btn: 'plansSubTabBtnList', pane: 'plansSubTabContentList' },
+      market: { btn: 'plansSubTabBtnMarket', pane: 'plansSubTabContentMarket' },
+      loss: { btn: 'plansSubTabBtnLoss', pane: 'plansSubTabContentLoss' },
+      weekend: { btn: 'plansSubTabBtnWeekend', pane: 'plansSubTabContentWeekend' }
+    };
+    Object.keys(map).forEach(key => {
+      const btn = document.getElementById(map[key].btn);
+      const pane = document.getElementById(map[key].pane);
+      const isActive = key === subTab;
+      if (btn) btn.classList.toggle('active', isActive);
+      if (pane) pane.classList.toggle('active', isActive);
+    });
+  },
+
+  // Sub-Tab Switcher for Gateway & Rekening
+  switchGatewaysSubTab(subTab) {
+    const map = {
+      banks: { btn: 'gwSubTabBtnBanks', pane: 'gwSubTabContentBanks' },
+      qris: { btn: 'gwSubTabBtnQris', pane: 'gwSubTabContentQris' },
+      crypto: { btn: 'gwSubTabBtnCrypto', pane: 'gwSubTabContentCrypto' },
+      wd_rules: { btn: 'gwSubTabBtnWd', pane: 'gwSubTabContentWd' },
+      apk_download: { btn: 'gwSubTabBtnApk', pane: 'gwSubTabContentApk' },
+      checkin: { btn: 'gwSubTabBtnCheckin', pane: 'gwSubTabContentCheckin' },
+      ppob: { btn: 'gwSubTabBtnPpob', pane: 'gwSubTabContentPpob' }
+    };
+    Object.keys(map).forEach(key => {
+      const btn = document.getElementById(map[key].btn);
+      const pane = document.getElementById(map[key].pane);
+      const isActive = key === subTab;
+      if (btn) btn.classList.toggle('active', isActive);
+      if (pane) pane.classList.toggle('active', isActive);
+    });
+  },
+
+  // Generic Reusable Pagination Controls Renderer
+  renderPagination(containerId, currentPage, totalPages, totalItems, onPageChangeFnName) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (totalPages <= 1) {
+      if (totalItems > 0) {
+        el.innerHTML = `
+          <div class="pagination-info">Menampilkan ${totalItems} data (Semua di halaman 1)</div>
+          <div class="pagination-controls">
+            <button class="pagination-btn active" disabled>1</button>
+          </div>
+        `;
+      } else {
+        el.innerHTML = '';
+      }
+      return;
+    }
+
+    const startItem = (currentPage - 1) * 10 + 1;
+    const endItem = Math.min(currentPage * 10, totalItems);
+
+    let buttonsHtml = '';
+    buttonsHtml += `<button class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="${onPageChangeFnName}(${currentPage - 1})" title="Halaman Sebelumnya">‹</button>`;
+
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+    if (currentPage <= 3) {
+      endPage = Math.min(totalPages, 5);
+    }
+    if (currentPage >= totalPages - 2) {
+      startPage = Math.max(1, totalPages - 4);
+    }
+
+    if (startPage > 1) {
+      buttonsHtml += `<button class="pagination-btn" onclick="${onPageChangeFnName}(1)">1</button>`;
+      if (startPage > 2) {
+        buttonsHtml += `<span class="pagination-btn" style="border:none; background:none; cursor:default; color:#64748B;">...</span>`;
+      }
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+      buttonsHtml += `<button class="pagination-btn ${p === currentPage ? 'active' : ''}" onclick="${onPageChangeFnName}(${p})">${p}</button>`;
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        buttonsHtml += `<span class="pagination-btn" style="border:none; background:none; cursor:default; color:#64748B;">...</span>`;
+      }
+      buttonsHtml += `<button class="pagination-btn" onclick="${onPageChangeFnName}(${totalPages})">${totalPages}</button>`;
+    }
+
+    buttonsHtml += `<button class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="${onPageChangeFnName}(${currentPage + 1})" title="Halaman Berikutnya">›</button>`;
+
+    el.innerHTML = `
+      <div class="pagination-info">Menampilkan ${startItem}-${endItem} dari total ${totalItems} data</div>
+      <div class="pagination-controls">
+        ${buttonsHtml}
+      </div>
+    `;
+  },
+
+  setDepositPage(p) {
+    this.paginationState.deposits.page = p;
+    this.renderDeposits(DB.get());
+  },
+  setWithdrawPage(p) {
+    this.paginationState.withdrawals.page = p;
+    this.renderWithdrawals(DB.get());
+  },
+  setUserPage(p) {
+    this.paginationState.users.page = p;
+    this.renderUsers(DB.get());
+  },
+  setAnnouncementsPage(p) {
+    this.paginationState.announcements.page = p;
+    this.renderAnnouncements(DB.get());
+  },
+  setBannersPage(p) {
+    this.paginationState.banners.page = p;
+    this.renderBanners(DB.get());
+  },
+  setRedemptionsPage(p) {
+    this.paginationState.redemptions.page = p;
+    this.renderRedemptions(DB.get());
+  },
+  setTestimonialsPage(p) {
+    this.paginationState.testimonials.page = p;
+    this.renderTestimonials(DB.get());
+  },
+  setSignalsPage(p) {
+    if (!this.paginationState.signals) this.paginationState.signals = { page: 1, perPage: 10 };
+    this.paginationState.signals.page = p;
+    this.renderSignals(DB.get());
+  },
+  setRewardsPage(p) {
+    if (!this.paginationState.rewards) this.paginationState.rewards = { page: 1, perPage: 10 };
+    this.paginationState.rewards.page = p;
+    this.renderRewards(DB.get());
+  },
+  setMemberTxsPage(p) {
+    if (!this.paginationState.memberTxs) this.paginationState.memberTxs = { page: 1, perPage: 6 };
+    this.paginationState.memberTxs.page = p;
+    this.renderMemberTxsTable();
+  },
+  renderMemberTxsTable() {
+    const txBody = document.getElementById('admMemTxsTableBody');
+    if (!txBody) return;
+    const sortedTxs = this._currentModalTxs || [];
+    if (sortedTxs.length === 0) {
+      txBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:#94A3B8;">Belum ada riwayat transaksi.</td></tr>';
+      this.renderPagination('admMemTxsPagination', 1, 0, 0, 'AdminPage.setMemberTxsPage');
+      return;
+    }
+
+    const perPage = (this.paginationState && this.paginationState.memberTxs && this.paginationState.memberTxs.perPage) || 6;
+    const totalPages = Math.ceil(sortedTxs.length / perPage);
+    if (this.paginationState && this.paginationState.memberTxs && this.paginationState.memberTxs.page > totalPages) {
+      this.paginationState.memberTxs.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.memberTxs && this.paginationState.memberTxs.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedTxs = sortedTxs.slice(startIdx, startIdx + perPage);
+
+    txBody.innerHTML = pagedTxs.map(t => {
+      let isPlus = t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
+      let color = isPlus ? '#4ADE80' : '#F87171';
+      let sign = isPlus ? '+' : '-';
+      return `
+        <tr>
+          <td><strong style="font-family:var(--font-mono); font-size:11px; color:#38BDF8;">${t.id}</strong></td>
+          <td><span class="badge-status ${t.status || 'approved'}">${(t.type || 'trx').toUpperCase()}</span></td>
+          <td><strong style="color:${color}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</strong></td>
+          <td style="font-size:11px; max-width:220px; line-height:1.3; color:#E2E8F0;">${t.note || t.paymentMethod || '-'}</td>
+          <td><span class="badge-status ${t.status || 'approved'}">${t.status || 'approved'}</span></td>
+          <td style="font-size:10.5px; color:#94A3B8;">${DB.formatWibDateTime(t.createdAt)} WIB</td>
+        </tr>
+      `;
+    }).join('');
+
+    this.renderPagination('admMemTxsPagination', curPage, totalPages, sortedTxs.length, 'AdminPage.setMemberTxsPage');
   },
 
   // Actions
@@ -2626,14 +2920,14 @@ export const AdminPage = {
     const isBlocked = !!user.isBlocked;
 
     if (isAdmRole) {
-      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status approved" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; font-weight:800;">👑 ADMINISTRATOR</span>';
-      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#1D4ED8;">👑 ADMIN (Dilindungi)</span>';
+      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status approved" style="background:rgba(59,130,246,0.2); color:#60A5FA; border:1px solid rgba(59,130,246,0.45); font-weight:800;">👑 ADMINISTRATOR</span>';
+      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#60A5FA; font-weight:800;">👑 ADMIN (Dilindungi)</span>';
       if (blockInfoBox) blockInfoBox.style.display = 'none';
       if (blockInputWrap) blockInputWrap.style.display = 'none';
       if (blockBtn) blockBtn.style.display = 'none';
     } else if (isBlocked) {
-      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status blocked" style="background:#FEE2E2; color:#DC2626; border:1px solid #FCA5A5; font-weight:800; font-size:11px;">🔴 DIBLOKIR</span>';
-      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#DC2626; background:#FFE4E6; padding:2px 8px; border-radius:6px; border:1px solid #FDA4AF;">🔴 DIBLOKIR</span>';
+      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status blocked" style="background:rgba(239,68,68,0.2); color:#F87171; border:1px solid rgba(239,68,68,0.45); font-weight:800; font-size:11px;">🔴 DIBLOKIR</span>';
+      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#F87171; background:rgba(239,68,68,0.2); padding:2px 8px; border-radius:6px; border:1px solid rgba(239,68,68,0.45);">🔴 DIBLOKIR</span>';
       if (blockInfoBox) {
         blockInfoBox.style.display = 'block';
         document.getElementById('admMemBlockedAtText').textContent = user.blockedAt ? new Date(user.blockedAt).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) + ' WIB' : '-';
@@ -2649,8 +2943,8 @@ export const AdminPage = {
         blockBtn.textContent = '✅ Buka Blokir & Aktifkan Kembali Akun Member';
       }
     } else {
-      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status approved" style="background:#DCFCE7; color:#166534; border:1px solid #86EFAC; font-weight:800; font-size:11px;">🟢 AKTIF</span>';
-      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#16A34A; background:#DCFCE7; padding:2px 8px; border-radius:6px; border:1px solid #86EFAC;">🟢 AKTIF / NORMAL</span>';
+      if (statusBadgeEl) statusBadgeEl.innerHTML = '<span class="badge-status approved" style="background:rgba(34,197,94,0.2); color:#4ADE80; border:1px solid rgba(34,197,94,0.45); font-weight:800; font-size:11px;">🟢 AKTIF</span>';
+      if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#4ADE80; background:rgba(34,197,94,0.2); padding:2px 8px; border-radius:6px; border:1px solid rgba(34,197,94,0.45);">🟢 AKTIF / NORMAL</span>';
       if (blockInfoBox) blockInfoBox.style.display = 'none';
       if (blockInputWrap) blockInputWrap.style.display = 'block';
       if (reasonInput) reasonInput.value = '';
@@ -2670,32 +2964,17 @@ export const AdminPage = {
     document.getElementById('admMemBankNumber').textContent = bank.accountNumber || '-';
     document.getElementById('admMemBankHolder').textContent = bank.accountHolder || '-';
 
-    // Render Transactions Table
-    const txBody = document.getElementById('admMemTxsTableBody');
-    const sortedTxs = (transactions || []).slice().sort((a, b) => {
+    // Render Transactions Table with Pagination
+    this._currentModalTxs = (transactions || []).slice().sort((a, b) => {
       const tA = new Date(a.createdAt || a.date || 0).getTime();
       const tB = new Date(b.createdAt || b.date || 0).getTime();
       return tB - tA;
     });
-    if (sortedTxs.length === 0) {
-      txBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:18px; color:#94A3B8;">Belum ada riwayat transaksi.</td></tr>';
-    } else {
-      txBody.innerHTML = sortedTxs.map(t => {
-        let isPlus = t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
-        let color = isPlus ? '#16A34A' : '#DC2626';
-        let sign = isPlus ? '+' : '-';
-        return `
-          <tr>
-            <td><strong style="font-family:var(--font-mono); font-size:11px;">${t.id}</strong></td>
-            <td><span class="badge-status ${t.status || 'approved'}">${(t.type || 'trx').toUpperCase()}</span></td>
-            <td><strong style="color:${color}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</strong></td>
-            <td style="font-size:11px; max-width:220px; line-height:1.3;">${t.note || t.paymentMethod || '-'}</td>
-            <td><span class="badge-status ${t.status || 'approved'}">${t.status || 'approved'}</span></td>
-            <td style="font-size:10.5px; color:#64748B;">${DB.formatWibDateTime(t.createdAt)} WIB</td>
-          </tr>
-        `;
-      }).join('');
+    if (!this.paginationState.memberTxs) {
+      this.paginationState.memberTxs = { page: 1, perPage: 6 };
     }
+    this.paginationState.memberTxs.page = 1;
+    this.renderMemberTxsTable();
 
     // Render Plans Table
     const planBody = document.getElementById('admMemPlansTableBody');
@@ -2704,11 +2983,11 @@ export const AdminPage = {
     } else {
       planBody.innerHTML = investments.map(inv => `
         <tr>
-          <td><strong style="font-family:var(--font-mono); font-size:11px;">${inv.id}</strong></td>
-          <td><strong>Paket ${inv.planName}</strong></td>
-          <td><strong style="color:#0F172A;">${DB.formatIDR(inv.capital)}</strong></td>
-          <td><strong style="color:#16A34A;">+${DB.formatIDR(inv.totalProfitEarned || 0)}</strong></td>
-          <td>Hari ke-${inv.daysElapsed || 0} dari ${inv.durationDays || 30} Hari</td>
+          <td><strong style="font-family:var(--font-mono); font-size:11px; color:#38BDF8;">${inv.id}</strong></td>
+          <td><strong style="color:#F8FAFC;">Paket ${inv.planName}</strong></td>
+          <td><strong style="color:#F8FAFC;">${DB.formatIDR(inv.capital)}</strong></td>
+          <td><strong style="color:#4ADE80;">+${DB.formatIDR(inv.totalProfitEarned || 0)}</strong></td>
+          <td style="color:#CBD5E1;">Hari ke-${inv.daysElapsed || 0} dari ${inv.durationDays || 30} Hari</td>
           <td><span class="badge-status ${inv.status === 'active' ? 'approved' : 'rejected'}">${(inv.status || 'active').toUpperCase()}</span></td>
         </tr>
       `).join('');
@@ -2728,10 +3007,10 @@ export const AdminPage = {
       netBody.innerHTML = allNetMembers.map(m => `
         <tr>
           <td><span class="network-level-badge lvl-${m.level}">L${m.level}</span></td>
-          <td><strong>${m.username}</strong></td>
-          <td>${m.fullName || '-'}</td>
-          <td>${m.uplineUsername || '-'}</td>
-          <td><strong>${DB.formatIDR(m.personalTurnover || 0)}</strong></td>
+          <td><strong style="color:#F8FAFC;">${m.username}</strong></td>
+          <td style="color:#E2E8F0;">${m.fullName || '-'}</td>
+          <td style="color:#94A3B8;">${m.uplineUsername || '-'}</td>
+          <td><strong style="color:#F59E0B;">${DB.formatIDR(m.personalTurnover || 0)}</strong></td>
           <td><span class="badge-status ${m.activeInvsCount > 0 ? 'approved' : 'active'}">${m.activeInvsCount > 0 ? `${m.activeInvsCount} Paket Aktif` : 'Terdaftar'}</span></td>
         </tr>
       `).join('');
@@ -2750,6 +3029,29 @@ export const AdminPage = {
       if (contentEl) contentEl.style.display = (t === tabName) ? 'block' : 'none';
       if (btnEl) btnEl.classList.toggle('active', t === tabName);
     });
+  },
+
+  async clearBrowserCache() {
+    try {
+      this.showToast('🧹 Membersihkan cache browser & temporary buffer...', 'info');
+      // Clear sessions except auth
+      const authUser = sessionStorage.getItem('autotrading_admin_user');
+      const authRole = sessionStorage.getItem('autotrading_admin_role');
+      sessionStorage.clear();
+      if (authUser) sessionStorage.setItem('autotrading_admin_user', authUser);
+      if (authRole) sessionStorage.setItem('autotrading_admin_role', authRole);
+
+      // Re-fetch backend
+      if (typeof DB !== 'undefined' && DB.fetchFromBackend) {
+        await DB.fetchFromBackend();
+      }
+      this.renderAll();
+      this.showToast('✅ Cache browser & storage lokal berhasil dibersihkan!', 'success');
+    } catch (e) {
+      console.error('Error clearing cache:', e);
+      this.showToast('Cache berhasil dibersihkan! Memuat ulang...', 'success');
+      this.renderAll();
+    }
   },
 
   generateRandomPassword() {
@@ -3230,10 +3532,20 @@ export const AdminPage = {
 
     if (testimonials.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:#94A3B8;">Belum ada testimoni penarikan member. Klik tombol Tambah Testimoni Baru untuk membuat testimoni baru.</td></tr>';
+      this.renderPagination('testimonialsPagination', 1, 0, 0, 'AdminPage.setTestimonialsPage');
       return;
     }
 
-    tbody.innerHTML = testimonials.map(t => {
+    const perPage = (this.paginationState && this.paginationState.testimonials && this.paginationState.testimonials.perPage) || 10;
+    const totalPages = Math.ceil(testimonials.length / perPage);
+    if (this.paginationState && this.paginationState.testimonials && this.paginationState.testimonials.page > totalPages) {
+      this.paginationState.testimonials.page = totalPages;
+    }
+    const curPage = Math.max(1, (this.paginationState && this.paginationState.testimonials && this.paginationState.testimonials.page) || 1);
+    const startIdx = (curPage - 1) * perPage;
+    const pagedTestis = testimonials.slice(startIdx, startIdx + perPage);
+
+    tbody.innerHTML = pagedTestis.map(t => {
       const avatarSrc = t.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=C89338&color=fff`;
       const receiptSrc = t.receiptImage || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
       const isAktif = t.active !== false;
@@ -3312,6 +3624,7 @@ export const AdminPage = {
         </tr>
       `;
     }).join('');
+    this.renderPagination('testimonialsPagination', curPage, totalPages, testimonials.length, 'AdminPage.setTestimonialsPage');
   },
 
   approveMemberTesti(id) {
@@ -3859,6 +4172,9 @@ export const AdminPage = {
       pane.classList.toggle('active', isActive);
       pane.style.display = isActive ? 'block' : 'none';
     });
+    if (tab === 'backup') {
+      this.refreshBackupStats();
+    }
   },
 
   /** Load current settings values into Pengaturan form fields */

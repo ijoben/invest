@@ -60,6 +60,13 @@ const App = {
   bannersData: [],
   currentTestimonialFilter: 'all',
   testimonialsData: [],
+  paginationState: {
+    walletTx: { page: 1, perPage: 8, filter: 'all' },
+    riwayatFull: { page: 1, perPage: 8, filter: 'all' },
+    downlines: { page: 1, perPage: 8, level: 'all' },
+    myRedemptions: { page: 1, perPage: 6 },
+    testimonials: { page: 1, perPage: 6, filter: 'all' }
+  },
   uploadedDepositProofBase64: null,
   aiChartPoints: [
     1.1528, 1.1531, 1.1529, 1.1535, 1.1532, 1.1538, 1.1541, 1.1539,
@@ -1939,12 +1946,23 @@ const App = {
       return;
     }
 
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.myRedemptions) this.paginationState.myRedemptions = { page: 1, perPage: 6 };
+    this.paginationState.myRedemptions.page = 1;
+
+    this.renderMyRedemptionsList();
+    this.openModal('myRedemptionsModal');
+  },
+
+  renderMyRedemptionsList() {
+    const user = Auth.getUser();
+    if (!user) return;
     const listContainer = document.getElementById('myRedemptionsList');
     if (!listContainer) return;
 
     const redemptions = Rewards.getUserRedemptions(user.id);
 
-    if (redemptions.length === 0) {
+    if (!redemptions || redemptions.length === 0) {
       listContainer.innerHTML = `
         <div style="text-align: center; padding: 30px 15px; color: #94A3B8;">
           <div style="font-size: 32px; margin-bottom: 8px;">🎁</div>
@@ -1952,35 +1970,45 @@ const App = {
           <div style="font-size: 11.5px; margin-top: 4px;">Kumpulkan poin dari profit dan ajak teman untuk menukarkan hadiah menarik di atas!</div>
         </div>
       `;
-    } else {
-      listContainer.innerHTML = redemptions.map(r => {
-        let statusLabel = 'MENUNGGU VERIFIKASI';
-        if (r.status === 'processing') statusLabel = 'SEDANG DIPROSES';
-        if (r.status === 'completed') statusLabel = 'SELESAI / TERKIRIM';
-        if (r.status === 'rejected') statusLabel = 'DITOLAK (POIN REFUND)';
-
-        return `
-          <div class="redemption-history-item">
-            <div class="redemption-history-header">
-              <span class="redemption-id">${r.id}</span>
-              <span class="redemption-badge-status ${r.status}">${statusLabel}</span>
-            </div>
-            <div class="redemption-title-bold">${r.rewardTitle}</div>
-            <div class="redemption-meta-row">
-              <span>Poin Digunakan: <strong style="color: #B8822A;">${r.pointsSpent} Poin</strong></span>
-              <span>${new Date(r.createdAt).toLocaleDateString('id-ID')}</span>
-            </div>
-            <div style="font-size: 11px; color: #64748B; background: #FFFFFF; padding: 6px 8px; border-radius: 8px; border: 1px solid #F1F5F9;">
-              <div><strong>Tujuan:</strong> ${r.targetContact}</div>
-              ${r.deliveryAddress ? `<div><strong>Alamat:</strong> ${r.deliveryAddress}</div>` : ''}
-              ${r.adminNote ? `<div style="color: #2563EB; margin-top: 2px;"><strong>Catatan Admin:</strong> ${r.adminNote}</div>` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
+      this.renderUserPagination('myRedemptionsPagination', 1, 1, 0, 'App.setMyRedemptionsPage');
+      return;
     }
 
-    this.openModal('myRedemptionsModal');
+    const perPage = (this.paginationState && this.paginationState.myRedemptions && this.paginationState.myRedemptions.perPage) || 6;
+    const totalPages = Math.ceil(redemptions.length / perPage);
+    let curPage = Math.max(1, Math.min((this.paginationState && this.paginationState.myRedemptions && this.paginationState.myRedemptions.page) || 1, totalPages));
+    if (this.paginationState && this.paginationState.myRedemptions) this.paginationState.myRedemptions.page = curPage;
+
+    const startIdx = (curPage - 1) * perPage;
+    const pagedRedemptions = redemptions.slice(startIdx, startIdx + perPage);
+
+    listContainer.innerHTML = pagedRedemptions.map(r => {
+      let statusLabel = 'MENUNGGU VERIFIKASI';
+      if (r.status === 'processing') statusLabel = 'SEDANG DIPROSES';
+      if (r.status === 'completed') statusLabel = 'SELESAI / TERKIRIM';
+      if (r.status === 'rejected') statusLabel = 'DITOLAK (POIN REFUND)';
+
+      return `
+        <div class="redemption-history-item">
+          <div class="redemption-history-header">
+            <span class="redemption-id">${r.id}</span>
+            <span class="redemption-badge-status ${r.status}">${statusLabel}</span>
+          </div>
+          <div class="redemption-title-bold">${r.rewardTitle}</div>
+          <div class="redemption-meta-row">
+            <span>Poin Digunakan: <strong style="color: #B8822A;">${r.pointsSpent} Poin</strong></span>
+            <span>${new Date(r.createdAt).toLocaleDateString('id-ID')}</span>
+          </div>
+          <div style="font-size: 11px; color: #64748B; background: #FFFFFF; padding: 6px 8px; border-radius: 8px; border: 1px solid #F1F5F9;">
+            <div><strong>Tujuan:</strong> ${r.targetContact}</div>
+            ${r.deliveryAddress ? `<div><strong>Alamat:</strong> ${r.deliveryAddress}</div>` : ''}
+            ${r.adminNote ? `<div style="color: #2563EB; margin-top: 2px;"><strong>Catatan Admin:</strong> ${r.adminNote}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    this.renderUserPagination('myRedemptionsPagination', curPage, totalPages, redemptions.length, 'App.setMyRedemptionsPage');
   },
 
   // ====================================================================
@@ -2012,10 +2040,15 @@ const App = {
     this.renderTestimonials(bankCategory);
   },
 
-  renderTestimonials(filter = 'all') {
+  renderTestimonials(filter = 'all', resetPage = true) {
     const listContainer = document.getElementById('testimonialCardsList');
     const totalCountBadge = document.getElementById('testiTotalWdCount');
     if (!listContainer) return;
+
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.testimonials) this.paginationState.testimonials = { page: 1, perPage: 6, filter: 'all' };
+    if (resetPage) this.paginationState.testimonials.page = 1;
+    this.paginationState.testimonials.filter = filter;
 
     const allTestimonials = DB.getActiveTestimonials();
     this.testimonialsData = allTestimonials;
@@ -2043,10 +2076,19 @@ const App = {
           <div style="font-size: 11.5px; margin-top: 4px;">Pilih kategori "Semua Bank" untuk melihat seluruh bukti penarikan member AUTOTRADING.</div>
         </div>
       `;
+      this.renderUserPagination('testimonialPagination', 1, 1, 0, 'App.setTestimonialsPage');
       return;
     }
 
-    listContainer.innerHTML = filtered.map(t => {
+    const perPage = this.paginationState.testimonials.perPage || 6;
+    const totalPages = Math.ceil(filtered.length / perPage);
+    let curPage = Math.max(1, Math.min(this.paginationState.testimonials.page || 1, totalPages));
+    this.paginationState.testimonials.page = curPage;
+
+    const startIdx = (curPage - 1) * perPage;
+    const pagedFiltered = filtered.slice(startIdx, startIdx + perPage);
+
+    listContainer.innerHTML = pagedFiltered.map(t => {
       const avatarSrc = t.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=C89338&color=fff`;
       const receiptImgSrc = t.receiptImage || 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=600&auto=format&fit=crop&q=80';
       const starsHtml = this.renderStarRating(t.rating || 5);
@@ -2100,6 +2142,8 @@ const App = {
         </div>
       `;
     }).join('');
+
+    this.renderUserPagination('testimonialPagination', curPage, totalPages, filtered.length, 'App.setTestimonialsPage');
   },
 
   renderStarRating(rating = 5) {
@@ -2113,6 +2157,83 @@ const App = {
       `;
     }
     return starsHtml;
+  },
+
+  renderUserPagination(containerId, curPage, totalPages, totalItems, onPageChangeFnName) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (totalPages <= 1) {
+      el.innerHTML = '';
+      return;
+    }
+
+    let html = `<div class="pagination-info" style="font-size:11px; color:#64748B; font-weight:600; margin-bottom:6px; text-align:center;">Hal ${curPage} dari ${totalPages} (${totalItems} data)</div>`;
+    html += `<div style="display:flex; justify-content:center; align-items:center; gap:4px; flex-wrap:wrap;">`;
+
+    // Prev button
+    html += `<button class="pagination-btn" ${curPage === 1 ? 'disabled' : ''} onclick="${onPageChangeFnName}(${curPage - 1})">‹</button>`;
+
+    // Page buttons
+    let startPage = Math.max(1, curPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+      html += `<button class="pagination-btn" onclick="${onPageChangeFnName}(1)">1</button>`;
+      if (startPage > 2) html += `<span style="padding:0 4px; color:#94A3B8;">...</span>`;
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+      html += `<button class="pagination-btn ${p === curPage ? 'active' : ''}" onclick="${onPageChangeFnName}(${p})">${p}</button>`;
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += `<span style="padding:0 4px; color:#94A3B8;">...</span>`;
+      html += `<button class="pagination-btn" onclick="${onPageChangeFnName}(${totalPages})">${totalPages}</button>`;
+    }
+
+    // Next button
+    html += `<button class="pagination-btn" ${curPage === totalPages ? 'disabled' : ''} onclick="${onPageChangeFnName}(${curPage + 1})">›</button>`;
+    html += `</div>`;
+
+    el.innerHTML = html;
+  },
+
+  setWalletTxPage(p) {
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.walletTx) this.paginationState.walletTx = { page: 1, perPage: 8, filter: 'all' };
+    this.paginationState.walletTx.page = p;
+    this.renderWalletTransactionList(this.paginationState.walletTx.filter || 'all', false);
+  },
+
+  setRiwayatFullPage(p) {
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.riwayatFull) this.paginationState.riwayatFull = { page: 1, perPage: 8, filter: 'all' };
+    this.paginationState.riwayatFull.page = p;
+    this.filterRiwayat(this.paginationState.riwayatFull.filter || 'all', false);
+  },
+
+  setDownlinePage(p) {
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 8, level: 'all' };
+    this.paginationState.downlines.page = p;
+    this.renderDownlineList(this.paginationState.downlines.level || 'all', false);
+  },
+
+  setMyRedemptionsPage(p) {
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.myRedemptions) this.paginationState.myRedemptions = { page: 1, perPage: 6 };
+    this.paginationState.myRedemptions.page = p;
+    this.renderMyRedemptionsList();
+  },
+
+  setTestimonialsPage(p) {
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.testimonials) this.paginationState.testimonials = { page: 1, perPage: 6, filter: 'all' };
+    this.paginationState.testimonials.page = p;
+    this.renderTestimonials(this.paginationState.testimonials.filter || 'all', false);
   },
 
   previewTestimonialReceipt(testiId) {
@@ -2298,9 +2419,13 @@ const App = {
     this.renderWalletTransactionList(filterType);
   },
 
-  renderWalletTransactionList(filterType = 'all') {
+  renderWalletTransactionList(filterType = 'all', resetPage = true) {
     const txListEl = document.getElementById('walletTransactionList');
     if (!txListEl) return;
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.walletTx) this.paginationState.walletTx = { page: 1, perPage: 8, filter: 'all' };
+    if (resetPage) this.paginationState.walletTx.page = 1;
+    this.paginationState.walletTx.filter = filterType;
 
     let txs = (this.cachedWalletTransactions || []).slice().sort((a, b) => {
       const tA = new Date(a.createdAt || a.date || 0).getTime();
@@ -2319,10 +2444,19 @@ const App = {
 
     if (txs.length === 0) {
       txListEl.innerHTML = '<div style="text-align:center; padding:20px; color:#94A3B8; font-size:12px;">Tidak ada riwayat transaksi pada kategori ini.</div>';
+      this.renderUserPagination('walletTxPagination', 1, 1, 0, 'App.setWalletTxPage');
       return;
     }
 
-    txListEl.innerHTML = txs.map(t => {
+    const perPage = this.paginationState.walletTx.perPage || 8;
+    const totalPages = Math.ceil(txs.length / perPage);
+    let curPage = Math.max(1, Math.min(this.paginationState.walletTx.page || 1, totalPages));
+    this.paginationState.walletTx.page = curPage;
+
+    const startIdx = (curPage - 1) * perPage;
+    const pagedTxs = txs.slice(startIdx, startIdx + perPage);
+
+    txListEl.innerHTML = pagedTxs.map(t => {
       let title = t.paymentMethod || t.type;
       let badgeHtml = '';
       let isInvest = t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-'));
@@ -2449,6 +2583,8 @@ const App = {
         </div>
       `;
     }).join('');
+
+    this.renderUserPagination('walletTxPagination', curPage, totalPages, txs.length, 'App.setWalletTxPage');
   },
 
   // Render Trade View Page (with Enhanced Detail Box Cards & AI Chart)
@@ -2800,13 +2936,19 @@ const App = {
     this.renderDownlineList(level);
   },
 
-  renderDownlineList(level = 'all') {
+  renderDownlineList(level = 'all', resetPage = true) {
     const listEl = document.getElementById('affDownlineList');
     if (!listEl) return;
+
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 8, level: 'all' };
+    if (resetPage) this.paginationState.downlines.page = 1;
+    this.paginationState.downlines.level = level;
 
     const downlines = this.cachedDownlines;
     if (!downlines || downlines.totalMembers === 0) {
       listEl.innerHTML = '<div style="text-align:center; padding:18px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:12px;">Belum ada anggota di tim Anda. Bagikan kode referral Anda untuk mendapatkan bonus sponsor & rabat multi-level.</div>';
+      this.renderUserPagination('affDownlinePagination', 1, 1, 0, 'App.setDownlinePage');
       return;
     }
 
@@ -2818,10 +2960,19 @@ const App = {
 
     if (members.length === 0) {
       listEl.innerHTML = `<div style="text-align:center; padding:16px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:12px;">Belum ada anggota di Level ${level}.</div>`;
+      this.renderUserPagination('affDownlinePagination', 1, 1, 0, 'App.setDownlinePage');
       return;
     }
 
-    listEl.innerHTML = members.map(m => {
+    const perPage = this.paginationState.downlines.perPage || 8;
+    const totalPages = Math.ceil(members.length / perPage);
+    let curPage = Math.max(1, Math.min(this.paginationState.downlines.page || 1, totalPages));
+    this.paginationState.downlines.page = curPage;
+
+    const startIdx = (curPage - 1) * perPage;
+    const pagedMembers = members.slice(startIdx, startIdx + perPage);
+
+    listEl.innerHTML = pagedMembers.map(m => {
       const displayUsername = m.maskedUsername || maskAffiliateUsername(m.username);
       const displayFullName = m.maskedFullName || maskAffiliateFullName(m.fullName);
       const displayUpline = (m.maskedUplineUsername && m.maskedUplineUsername !== '-')
@@ -2858,6 +3009,8 @@ const App = {
       </div>
     `;
     }).join('');
+
+    this.renderUserPagination('affDownlinePagination', curPage, totalPages, members.length, 'App.setDownlinePage');
   },
 
   maskUsername: maskAffiliateUsername,
@@ -3745,12 +3898,17 @@ const App = {
     if (tabWdTrack) tabWdTrack.innerHTML = renderWdHtml + renderWdHtml;
   },
 
-  filterRiwayat(type) {
+  filterRiwayat(type, resetPage = true) {
     const allBtn = document.getElementById('riwayatFilterAll');
     const depBtn = document.getElementById('riwayatFilterDep');
     const wdBtn = document.getElementById('riwayatFilterWd');
     const listEl = document.getElementById('riwayatFullFeedList');
     if (!listEl) return;
+
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.riwayatFull) this.paginationState.riwayatFull = { page: 1, perPage: 8, filter: 'all' };
+    if (resetPage) this.paginationState.riwayatFull.page = 1;
+    this.paginationState.riwayatFull.filter = type;
 
     if (allBtn) allBtn.classList.toggle('active', type === 'all');
     if (depBtn) depBtn.classList.toggle('active', type === 'deposit');
@@ -3771,7 +3929,21 @@ const App = {
       }
     }
 
-    listEl.innerHTML = combined.map(item => {
+    if (combined.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center; padding:18px; color:#94A3B8; font-size:12px;">Belum ada riwayat pada kategori ini.</div>';
+      this.renderUserPagination('riwayatFullPagination', 1, 1, 0, 'App.setRiwayatFullPage');
+      return;
+    }
+
+    const perPage = this.paginationState.riwayatFull.perPage || 8;
+    const totalPages = Math.ceil(combined.length / perPage);
+    let curPage = Math.max(1, Math.min(this.paginationState.riwayatFull.page || 1, totalPages));
+    this.paginationState.riwayatFull.page = curPage;
+
+    const startIdx = (curPage - 1) * perPage;
+    const pagedCombined = combined.slice(startIdx, startIdx + perPage);
+
+    listEl.innerHTML = pagedCombined.map(item => {
       const isDep = item.trxType === 'deposit';
       const color = isDep ? '#15803D' : '#B45309';
       const bg = isDep ? '#F0FDF4' : '#FFFBEB';
@@ -3809,6 +3981,8 @@ const App = {
         </div>
       `;
     }).join('');
+
+    this.renderUserPagination('riwayatFullPagination', curPage, totalPages, combined.length, 'App.setRiwayatFullPage');
   },
 
   // 3. Leaderboard Modal Controller (Requirement 5)
