@@ -1339,10 +1339,27 @@
               <button class="network-tab-btn" id="btnNetLvl3" onclick="App.filterDownlineLevel(3)">Level 3 (<span id="affTabL3Count">0</span>)</button>
             </div>
 
+            <!-- Toolbar Pencarian & Jumlah Tampil Per Halaman (Profile Levels) -->
+            <div class="downline-toolbar" id="affDownlineToolbar">
+              <div style="flex: 1; min-width: 130px; position: relative;">
+                <input type="text" id="affDownlineSearchInput" class="form-input downline-search-input" placeholder="Cari nama / username anggota..." style="font-size: 11px; padding: 7px 10px 7px 32px; border-radius: 9px; height: 34px; box-sizing: border-box; width: 100%;" oninput="App.searchDownlines(this.value)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.2" style="position: absolute; left: 10px; top: 11px; pointer-events: none;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="downline-perpage-label" style="font-size: 10.5px; color: #64748B; font-weight: 700; white-space: nowrap;">Tampil:</span>
+                <select id="affDownlinePerPageSelect" class="form-input downline-perpage-select" style="font-size: 11px; padding: 4px 8px; border-radius: 8px; height: 34px; width: auto; font-weight: 700; cursor: pointer;" onchange="App.setDownlinePerPage(this.value)">
+                  <option value="5">5 / hal</option>
+                  <option value="10" selected>10 / hal</option>
+                  <option value="25">25 / hal</option>
+                  <option value="50">50 / hal</option>
+                </select>
+              </div>
+            </div>
+
             <div id="affDownlineList" style="display: flex; flex-direction: column; gap: 8px;">
               <!-- Downline list rendered via JS -->
             </div>
-            <div class="user-pagination" id="affDownlinePagination" style="margin-top: 12px;"></div>
+            <div class="user-pagination" id="affDownlinePagination" style="margin-top: 10px;"></div>
           </div>
 
           <!-- Account Settings & Logout -->

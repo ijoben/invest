@@ -2233,7 +2233,7 @@ const App = {
   renderUserPagination(containerId, curPage, totalPages, totalItems, onPageChangeFnName) {
     const el = document.getElementById(containerId);
     if (!el) return;
-    if (totalPages <= 1) {
+    if (totalPages <= 1 && totalItems === 0) {
       el.innerHTML = '';
       return;
     }
@@ -2241,8 +2241,10 @@ const App = {
     let html = `<div class="pagination-info" style="font-size:11px; color:#64748B; font-weight:600; margin-bottom:6px; text-align:center;">Hal ${curPage} dari ${totalPages} (${totalItems} data)</div>`;
     html += `<div style="display:flex; justify-content:center; align-items:center; gap:4px; flex-wrap:wrap;">`;
 
+    // First button
+    html += `<button type="button" class="pagination-btn pagination-nav" ${curPage === 1 ? 'disabled' : ''} onclick="${onPageChangeFnName}(1)" title="Awal">«</button>`;
     // Prev button
-    html += `<button class="pagination-btn" ${curPage === 1 ? 'disabled' : ''} onclick="${onPageChangeFnName}(${curPage - 1})">‹</button>`;
+    html += `<button type="button" class="pagination-btn pagination-nav" ${curPage === 1 ? 'disabled' : ''} onclick="${onPageChangeFnName}(${curPage - 1})" title="Sebelumnya">‹</button>`;
 
     // Page buttons
     let startPage = Math.max(1, curPage - 2);
@@ -2252,21 +2254,23 @@ const App = {
     }
 
     if (startPage > 1) {
-      html += `<button class="pagination-btn" onclick="${onPageChangeFnName}(1)">1</button>`;
+      html += `<button type="button" class="pagination-btn" onclick="${onPageChangeFnName}(1)">1</button>`;
       if (startPage > 2) html += `<span style="padding:0 4px; color:#94A3B8;">...</span>`;
     }
 
     for (let p = startPage; p <= endPage; p++) {
-      html += `<button class="pagination-btn ${p === curPage ? 'active' : ''}" onclick="${onPageChangeFnName}(${p})">${p}</button>`;
+      html += `<button type="button" class="pagination-btn ${p === curPage ? 'active' : ''}" onclick="${onPageChangeFnName}(${p})">${p}</button>`;
     }
 
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) html += `<span style="padding:0 4px; color:#94A3B8;">...</span>`;
-      html += `<button class="pagination-btn" onclick="${onPageChangeFnName}(${totalPages})">${totalPages}</button>`;
+      html += `<button type="button" class="pagination-btn" onclick="${onPageChangeFnName}(${totalPages})">${totalPages}</button>`;
     }
 
     // Next button
-    html += `<button class="pagination-btn" ${curPage === totalPages ? 'disabled' : ''} onclick="${onPageChangeFnName}(${curPage + 1})">›</button>`;
+    html += `<button type="button" class="pagination-btn pagination-nav" ${curPage === totalPages ? 'disabled' : ''} onclick="${onPageChangeFnName}(${curPage + 1})" title="Berikutnya">›</button>`;
+    // Last button
+    html += `<button type="button" class="pagination-btn pagination-nav" ${curPage === totalPages ? 'disabled' : ''} onclick="${onPageChangeFnName}(${totalPages})" title="Akhir">»</button>`;
     html += `</div>`;
 
     el.innerHTML = html;
@@ -2288,9 +2292,90 @@ const App = {
 
   setDownlinePage(p) {
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all' };
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
     this.paginationState.downlines.page = p;
     this.renderDownlineList(this.paginationState.downlines.level || 'all', false);
+    const target = document.getElementById('affDownlineToolbar') || document.getElementById('affDownlineList');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  },
+
+  setDownlinePerPage(perPage) {
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
+    this.paginationState.downlines.perPage = Number(perPage) || 10;
+    this.paginationState.downlines.page = 1;
+    this.renderDownlineList(this.paginationState.downlines.level || 'all', false);
+  },
+
+  searchDownlines(keyword) {
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
+    this.paginationState.downlines.search = (keyword || '').trim().toLowerCase();
+    this.paginationState.downlines.page = 1;
+    this.renderDownlineList(this.paginationState.downlines.level || 'all', false);
+  },
+
+  renderDownlinePagination(curPage, totalPages, totalItems, startIdx, endIdx) {
+    const el = document.getElementById('affDownlinePagination');
+    if (!el) return;
+
+    if (totalItems === 0) {
+      el.innerHTML = '';
+      return;
+    }
+
+    const showingStart = totalItems > 0 ? startIdx + 1 : 0;
+    const showingEnd = Math.min(totalItems, endIdx);
+
+    let html = `
+      <div class="downline-pagination-container">
+        <div class="downline-pagination-summary">
+          <div class="downline-summary-text">
+            Menampilkan <strong class="hl-text">${showingStart} - ${showingEnd}</strong> dari <strong class="hl-text">${totalItems}</strong> anggota
+          </div>
+          <div class="downline-page-indicator">
+            Halaman <span class="badge-cur-page">${curPage}</span> dari <strong>${totalPages}</strong>
+          </div>
+        </div>
+
+        <div class="pagination-controls">
+          <button type="button" class="pagination-btn pagination-nav" ${curPage === 1 ? 'disabled' : ''} onclick="App.setDownlinePage(1)" title="Halaman Pertama">«</button>
+          <button type="button" class="pagination-btn pagination-nav" ${curPage === 1 ? 'disabled' : ''} onclick="App.setDownlinePage(${curPage - 1})" title="Halaman Sebelumnya">‹</button>
+    `;
+
+    // Smart windowing for page buttons
+    let startPage = Math.max(1, curPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+      html += `<button type="button" class="pagination-btn" onclick="App.setDownlinePage(1)">1</button>`;
+      if (startPage > 2) {
+        html += `<span class="pagination-dots">...</span>`;
+      }
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+      html += `<button type="button" class="pagination-btn ${p === curPage ? 'active' : ''}" onclick="App.setDownlinePage(${p})">${p}</button>`;
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        html += `<span class="pagination-dots">...</span>`;
+      }
+      html += `<button type="button" class="pagination-btn" onclick="App.setDownlinePage(${totalPages})">${totalPages}</button>`;
+    }
+
+    html += `
+          <button type="button" class="pagination-btn pagination-nav" ${curPage === totalPages ? 'disabled' : ''} onclick="App.setDownlinePage(${curPage + 1})" title="Halaman Selanjutnya">›</button>
+          <button type="button" class="pagination-btn pagination-nav" ${curPage === totalPages ? 'disabled' : ''} onclick="App.setDownlinePage(${totalPages})" title="Halaman Terakhir">»</button>
+        </div>
+      </div>
+    `;
+
+    el.innerHTML = html;
   },
 
   setMyRedemptionsPage(p) {
@@ -3004,59 +3089,107 @@ const App = {
       if (btn) btn.classList.toggle('active', String(lvl) === String(level));
     });
 
-    this.renderDownlineList(level);
+    if (!this.paginationState) this.paginationState = {};
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
+    this.paginationState.downlines.page = 1;
+    this.paginationState.downlines.level = level;
+
+    this.renderDownlineList(level, true);
   },
 
-  renderDownlineList(level = 'all', resetPage = true) {
+  renderDownlineList(level = 'all', resetPage = false) {
     const listEl = document.getElementById('affDownlineList');
     if (!listEl) return;
 
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all' };
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
     if (resetPage) this.paginationState.downlines.page = 1;
     this.paginationState.downlines.level = level;
 
+    // Sync perPage select if it exists
+    const perPageSelect = document.getElementById('affDownlinePerPageSelect');
+    if (perPageSelect && this.paginationState.downlines.perPage) {
+      perPageSelect.value = String(this.paginationState.downlines.perPage);
+    }
+
     const downlines = this.cachedDownlines;
     if (!downlines || downlines.totalMembers === 0) {
-      listEl.innerHTML = '<div style="text-align:center; padding:18px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:12px;">Belum ada anggota di tim Anda. Bagikan kode referral Anda untuk mendapatkan bonus sponsor & rabat multi-level.</div>';
-      this.renderUserPagination('affDownlinePagination', 1, 1, 0, 'App.setDownlinePage');
+      listEl.innerHTML = `
+        <div class="downline-empty-state" style="text-align:center; padding:24px 16px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:14px; border:1px dashed #CBD5E1;">
+          <div style="font-size:24px; margin-bottom:6px;">👥</div>
+          <div style="font-weight:700; color:#475569; margin-bottom:4px;">Belum Ada Anggota di Tim Anda</div>
+          <div>Bagikan kode referral Anda untuk mulai membangun tim dan menikmati bonus sponsor & rabat multi-level hingga Level 3.</div>
+        </div>
+      `;
+      this.renderDownlinePagination(1, 1, 0, 0, 0);
       return;
     }
 
     let members = [];
-    if (level === 1 || level === '1') members = downlines.level1;
-    else if (level === 2 || level === '2') members = downlines.level2;
-    else if (level === 3 || level === '3') members = downlines.level3;
-    else members = [...downlines.level1, ...downlines.level2, ...downlines.level3];
+    if (level === 1 || level === '1') members = downlines.level1 || [];
+    else if (level === 2 || level === '2') members = downlines.level2 || [];
+    else if (level === 3 || level === '3') members = downlines.level3 || [];
+    else members = [...(downlines.level1 || []), ...(downlines.level2 || []), ...(downlines.level3 || [])];
+
+    const searchKeyword = (this.paginationState.downlines.search || '').trim().toLowerCase();
+    if (searchKeyword) {
+      members = members.filter(m => {
+        const u = (m.username || '').toLowerCase();
+        const fn = (m.fullName || '').toLowerCase();
+        const mu = (m.maskedUsername || '').toLowerCase();
+        const mfn = (m.maskedFullName || '').toLowerCase();
+        return u.includes(searchKeyword) || fn.includes(searchKeyword) || mu.includes(searchKeyword) || mfn.includes(searchKeyword);
+      });
+    }
 
     if (members.length === 0) {
-      listEl.innerHTML = `<div style="text-align:center; padding:16px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:12px;">Belum ada anggota di Level ${level}.</div>`;
-      this.renderUserPagination('affDownlinePagination', 1, 1, 0, 'App.setDownlinePage');
+      if (searchKeyword) {
+        listEl.innerHTML = `
+          <div class="downline-empty-state" style="text-align:center; padding:20px 14px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:14px; border:1px dashed #CBD5E1;">
+            <div style="font-size:20px; margin-bottom:4px;">🔍</div>
+            <div style="font-weight:700; color:#475569;">Tidak Ada Hasil Pencarian</div>
+            <div style="margin-top:2px;">Tidak ditemukan anggota dengan kata kunci "<strong>${escapeHtml(searchKeyword)}</strong>".</div>
+            <button type="button" class="pagination-btn" style="margin-top:10px; display:inline-block;" onclick="document.getElementById('affDownlineSearchInput').value=''; App.searchDownlines('');">Reset Pencarian</button>
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = `
+          <div class="downline-empty-state" style="text-align:center; padding:20px 14px; color:#94A3B8; font-size:12px; background:#F8FAFC; border-radius:14px; border:1px dashed #CBD5E1;">
+            <div style="font-size:20px; margin-bottom:4px;">🌱</div>
+            <div style="font-weight:700; color:#475569;">Belum Ada Anggota di Level ${level}</div>
+            <div style="margin-top:2px;">Ajak member untuk mendaftar agar jaringan Level ${level} Anda berkembang.</div>
+          </div>
+        `;
+      }
+      this.renderDownlinePagination(1, 1, 0, 0, 0);
       return;
     }
 
     const perPage = this.paginationState.downlines.perPage || 10;
-    const totalPages = Math.ceil(members.length / perPage);
+    const totalPages = Math.max(1, Math.ceil(members.length / perPage));
     let curPage = Math.max(1, Math.min(this.paginationState.downlines.page || 1, totalPages));
     this.paginationState.downlines.page = curPage;
 
     const startIdx = (curPage - 1) * perPage;
-    const pagedMembers = members.slice(startIdx, startIdx + perPage);
+    const endIdx = Math.min(members.length, startIdx + perPage);
+    const pagedMembers = members.slice(startIdx, endIdx);
 
-    listEl.innerHTML = pagedMembers.map(m => {
+    listEl.innerHTML = pagedMembers.map((m, idx) => {
       const displayUsername = m.maskedUsername || maskAffiliateUsername(m.username);
       const displayFullName = m.maskedFullName || maskAffiliateFullName(m.fullName);
       const displayUpline = (m.maskedUplineUsername && m.maskedUplineUsername !== '-')
         ? m.maskedUplineUsername
         : (m.uplineUsername && m.uplineUsername !== '-' ? maskAffiliateUsername(m.uplineUsername) : '-');
+      const itemNumber = startIdx + idx + 1;
 
       return `
       <div class="downline-member-card">
         <div class="downline-card-header">
           <div class="downline-card-user">
+            <span class="downline-index-badge">#${itemNumber}</span>
             <span class="network-level-badge lvl-${m.level}">L${m.level}</span>
-            <span>${escapeHtml(displayUsername)}</span>
-            <span style="font-size:11px; color:#64748B; font-weight:500;">(${escapeHtml(displayFullName)})</span>
+            <span class="downline-uname">${escapeHtml(displayUsername)}</span>
+            <span class="downline-fullname">(${escapeHtml(displayFullName)})</span>
           </div>
           <span class="badge-status ${m.activeInvsCount > 0 ? 'approved' : 'active'}">
             ${m.activeInvsCount > 0 ? `● ${m.activeInvsCount} Paket Aktif` : 'Terdaftar'}
@@ -3064,24 +3197,24 @@ const App = {
         </div>
 
         <div class="downline-card-stats">
-          <div>
-            <div style="color:#64748B;">Omset Pribadi</div>
-            <div style="font-weight:800; font-family:var(--font-mono); color:#1E293B;">${DB.formatIDR(m.personalTurnover || 0)}</div>
+          <div class="downline-stat-item">
+            <div class="downline-stat-label">Omset Pribadi</div>
+            <div class="downline-stat-value turnover">${DB.formatIDR(m.personalTurnover || 0)}</div>
           </div>
-          <div>
-            <div style="color:#64748B;">Sponsor Langsung</div>
-            <div style="font-weight:700; color:#475569;">${escapeHtml(displayUpline)}</div>
+          <div class="downline-stat-item">
+            <div class="downline-stat-label">Sponsor Langsung</div>
+            <div class="downline-stat-value sponsor">${escapeHtml(displayUpline)}</div>
           </div>
-          <div>
-            <div style="color:#64748B;">Bergabung</div>
-            <div style="font-weight:600; color:#475569;">${m.joinedDateStr || '-'}</div>
+          <div class="downline-stat-item">
+            <div class="downline-stat-label">Bergabung</div>
+            <div class="downline-stat-value date">${m.joinedDateStr || '-'}</div>
           </div>
         </div>
       </div>
     `;
     }).join('');
 
-    this.renderUserPagination('affDownlinePagination', curPage, totalPages, members.length, 'App.setDownlinePage');
+    this.renderDownlinePagination(curPage, totalPages, members.length, startIdx, endIdx);
   },
 
   maskUsername: maskAffiliateUsername,
