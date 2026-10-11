@@ -5844,7 +5844,6 @@ const App = {
 
     const btnAff = document.getElementById('btnTransferTypeAffiliate');
     const btnMem = document.getElementById('btnTransferTypeMember');
-    const btnPpob = document.getElementById('btnTransferTypePpob');
     const mainTitle = document.getElementById('transferModalMainTitle');
     const subTitle = document.getElementById('transferModalSubTitle');
     const srcTitle = document.getElementById('transferSourceTitleText');
