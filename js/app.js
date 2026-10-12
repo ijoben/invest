@@ -2298,7 +2298,7 @@ const App = {
 
   setDownlinePage(p) {
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 5, level: 'all', search: '' };
     this.paginationState.downlines.page = p;
     this.renderDownlineList(this.paginationState.downlines.level || 'all', false);
     const target = document.getElementById('affDownlineToolbar') || document.getElementById('affDownlineList');
@@ -2307,15 +2307,15 @@ const App = {
 
   setDownlinePerPage(perPage) {
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
-    this.paginationState.downlines.perPage = Number(perPage) || 10;
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 5, level: 'all', search: '' };
+    this.paginationState.downlines.perPage = Number(perPage) || 5;
     this.paginationState.downlines.page = 1;
     this.renderDownlineList(this.paginationState.downlines.level || 'all', false);
   },
 
   searchDownlines(keyword) {
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 5, level: 'all', search: '' };
     this.paginationState.downlines.search = (keyword || '').trim().toLowerCase();
     this.paginationState.downlines.page = 1;
     this.renderDownlineList(this.paginationState.downlines.level || 'all', false);
@@ -3096,7 +3096,7 @@ const App = {
     });
 
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 5, level: 'all', search: '' };
     this.paginationState.downlines.page = 1;
     this.paginationState.downlines.level = level;
 
@@ -3108,7 +3108,7 @@ const App = {
     if (!listEl) return;
 
     if (!this.paginationState) this.paginationState = {};
-    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 10, level: 'all', search: '' };
+    if (!this.paginationState.downlines) this.paginationState.downlines = { page: 1, perPage: 5, level: 'all', search: '' };
     if (resetPage) this.paginationState.downlines.page = 1;
     this.paginationState.downlines.level = level;
 
@@ -3171,7 +3171,7 @@ const App = {
       return;
     }
 
-    const perPage = this.paginationState.downlines.perPage || 10;
+    const perPage = this.paginationState.downlines.perPage || 5;
     const totalPages = Math.max(1, Math.ceil(members.length / perPage));
     let curPage = Math.max(1, Math.min(this.paginationState.downlines.page || 1, totalPages));
     this.paginationState.downlines.page = curPage;

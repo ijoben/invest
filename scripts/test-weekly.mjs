@@ -121,11 +121,11 @@ if (!Number.isFinite(totalRate) || !Number.isFinite(avgRate)) {
   failures++;
 }
 const weekdayRates = records.slice(0, 5)
-  .filter(r => !r.isFuture && typeof r.rate === 'number')
+  .filter(r => typeof r.rate === 'number')
   .map(r => r.rate);
 const recomputedTotal = weekdayRates.reduce((a, b) => a + b, 0);
 if (Math.abs(recomputedTotal - totalRate) > 0.05) {
-  console.error(`[FAIL] totalRate ${totalRate} does not match sum of active weekday rates ${recomputedTotal.toFixed(2)}`);
+  console.error(`[FAIL] totalRate ${totalRate} does not match sum of all 5 weekday rates ${recomputedTotal.toFixed(2)}`);
   failures++;
 }
 

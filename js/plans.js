@@ -464,9 +464,12 @@ export const Plans = {
             : defaultRates[idx];
         }
       } else {
-        // Requirement: Untuk hari berikutnya yang bertuliskan 'Next', angka profit jangan dimunculkan dulu.
-        // Setelah berganti hari dan menjadi 'Hari Ini', barulah angka profit muncul.
-        rate = null;
+        // Future weekdays: Plan expected rate for 1-week calculation
+        const avgUserRate = activeInvs.reduce((acc, inv) => {
+          const range = this.getRateRange(inv);
+          return acc + (range.min + range.max) / 2;
+        }, 0) / activeInvs.length;
+        rate = parseFloat(avgUserRate.toFixed(2));
       }
 
       const isFuture = !isPast && !isToday && !isWeekend;
@@ -484,6 +487,7 @@ export const Plans = {
         statusLabel = '⏳ Menunggu Jadwal (Next)';
         pillText = 'Next';
         pillClass = 'pill-next';
+        // Angka profit di card harian disembunyikan (-) sampai hari tersebut tiba dan menjadi HARI INI
         displayRate = '-';
       } else if (isLoss) {
         statusLabel = '🔴 Loss 0%';
@@ -522,13 +526,13 @@ export const Plans = {
       };
     });
 
-    // Sum and average only over the trading days that have elapsed or are active today
+    // Requirement 2: Keterangan 1 minggu hasil profit persentase dan bagi hasil tetap dihitung selama 1 minggu totalnya (5 hari bursa), tidak terpotong hanya berdasarkan hari ini
     let totalRate = 0;
     let countActiveDays = 0;
 
     if (!isGuest && hasActivePackage) {
       records.forEach(r => {
-        if (!r.isWeekend && !r.isFuture && typeof r.rate === 'number') {
+        if (!r.isWeekend && typeof r.rate === 'number') {
           totalRate += r.rate;
           countActiveDays++;
         }
