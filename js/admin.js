@@ -738,6 +738,14 @@ export const Admin = {
 
   async manuallyVerifyUser(userId) {
     return await DB.adminVerifyUserEmail(userId);
+  },
+
+  getAnnouncementSpeed() {
+    return DB.getAnnouncementSpeed();
+  },
+
+  async saveAnnouncementSpeed(seconds) {
+    return await DB.setAnnouncementSpeed(seconds);
   }
 };
 

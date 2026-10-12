@@ -76,14 +76,26 @@ if (records.length !== 7) {
 if (records.length === 7) {
   records.forEach((r, idx) => {
     if (idx < 5) {
-      // Senin s/d Jumat must show a percentage rate for an active member
-      if (!r.displayRate || !r.displayRate.includes('%')) {
-        console.error(`[FAIL] Day ${r.dayName} does not display percentage rate! got: ${r.displayRate}`);
-        failures++;
-      }
-      if (!r.pillText || String(r.pillText).trim() === '') {
-        console.error(`[FAIL] Day ${r.dayName} is missing its status pill text`);
-        failures++;
+      if (r.isFuture) {
+        // Requirement: Future days with Next must show '-' instead of percentage
+        if (r.displayRate !== '-') {
+          console.error(`[FAIL] Future day ${r.dayName} must not show profit rate yet! got: ${r.displayRate}`);
+          failures++;
+        }
+        if (r.pillText !== 'Next') {
+          console.error(`[FAIL] Future day ${r.dayName} must have Next pill! got: ${r.pillText}`);
+          failures++;
+        }
+      } else {
+        // Past or Today must show percentage rate
+        if (!r.displayRate || !r.displayRate.includes('%')) {
+          console.error(`[FAIL] Day ${r.dayName} does not display percentage rate! got: ${r.displayRate}`);
+          failures++;
+        }
+        if (!r.pillText || String(r.pillText).trim() === '') {
+          console.error(`[FAIL] Day ${r.dayName} is missing its status pill text`);
+          failures++;
+        }
       }
       if (r.isWeekend) {
         console.error(`[FAIL] Weekday ${r.dayName} must not be flagged as weekend`);
@@ -109,10 +121,11 @@ if (!Number.isFinite(totalRate) || !Number.isFinite(avgRate)) {
   failures++;
 }
 const weekdayRates = records.slice(0, 5)
-  .map(r => (typeof r.rate === 'number' ? r.rate : 0));
+  .filter(r => !r.isFuture && typeof r.rate === 'number')
+  .map(r => r.rate);
 const recomputedTotal = weekdayRates.reduce((a, b) => a + b, 0);
 if (Math.abs(recomputedTotal - totalRate) > 0.05) {
-  console.error(`[FAIL] totalRate ${totalRate} does not match sum of weekday rates ${recomputedTotal.toFixed(2)}`);
+  console.error(`[FAIL] totalRate ${totalRate} does not match sum of active weekday rates ${recomputedTotal.toFixed(2)}`);
   failures++;
 }
 

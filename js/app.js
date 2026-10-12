@@ -666,6 +666,12 @@ const App = {
     const el = document.getElementById('frontendRunningText');
     if (!el) return;
 
+    // Apply configured ticker speed from settings (default: 75s - slower & easily readable)
+    const db = DB.get();
+    const speedSeconds = (db && db.settings && Number(db.settings.announcementSpeed)) || 75;
+    el.style.animationDuration = `${speedSeconds}s`;
+    el.style.setProperty('--ticker-speed', `${speedSeconds}s`);
+
     const announcements = DB.getActiveAnnouncements();
     if (announcements.length === 0) {
       el.textContent = 'Selamat datang di AUTOTRADING Platform Investasi AI Trading Resmi 2026.';

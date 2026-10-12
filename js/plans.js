@@ -464,38 +464,42 @@ export const Plans = {
             : defaultRates[idx];
         }
       } else {
-        // Future weekdays: Plan expected rate
-        const avgUserRate = activeInvs.reduce((acc, inv) => {
-          const range = this.getRateRange(inv);
-          return acc + (range.min + range.max) / 2;
-        }, 0) / activeInvs.length;
-        rate = parseFloat(avgUserRate.toFixed(2));
+        // Requirement: Untuk hari berikutnya yang bertuliskan 'Next', angka profit jangan dimunculkan dulu.
+        // Setelah berganti hari dan menjadi 'Hari Ini', barulah angka profit muncul.
+        rate = null;
       }
 
-      rate = parseFloat(Number(rate || 0).toFixed(2));
+      const isFuture = !isPast && !isToday && !isWeekend;
+      if (typeof rate === 'number') {
+        rate = parseFloat(Number(rate || 0).toFixed(2));
+      }
       isLoss = rate === 0 && (todayLossMode || (isToday && todayLossMode));
 
       let pillText = 'Progress';
       let pillClass = 'pill-progress';
-      let statusLabel = `🟢 +${rate.toFixed(2)}%`;
+      let statusLabel = `🟢 +${Number(rate || 0).toFixed(2)}%`;
+      let displayRate = '-';
 
-      if (isLoss) {
+      if (isFuture) {
+        statusLabel = '⏳ Menunggu Jadwal (Next)';
+        pillText = 'Next';
+        pillClass = 'pill-next';
+        displayRate = '-';
+      } else if (isLoss) {
         statusLabel = '🔴 Loss 0%';
         pillText = 'Loss 0%';
         pillClass = 'pill-loss';
+        displayRate = '0.00%';
       } else if (isPast) {
-        statusLabel = `✓ +${rate.toFixed(2)}% (Selesai)`;
+        statusLabel = `✓ +${Number(rate || 0).toFixed(2)}% (Selesai)`;
         pillText = 'Selesai';
         pillClass = 'pill-selesai';
+        displayRate = `+${Number(rate || 0).toFixed(2)}%`;
       } else if (isToday) {
-        statusLabel = `🟡 +${rate.toFixed(2)}% (Progress)`;
+        statusLabel = `🟡 +${Number(rate || 0).toFixed(2)}% (Progress)`;
         pillText = 'Progress';
         pillClass = 'pill-progress';
-      } else {
-        // Future weekdays
-        statusLabel = `⏳ +${rate.toFixed(2)}% (Next)`;
-        pillText = 'Next';
-        pillClass = 'pill-next';
+        displayRate = `+${Number(rate || 0).toFixed(2)}%`;
       }
 
       return {
@@ -508,23 +512,23 @@ export const Plans = {
         isLoss,
         isToday,
         isPast,
-        isFuture: !isPast && !isToday && !isWeekend,
+        isFuture,
         isGuest: false,
         hasActivePackage: true,
-        displayRate: isLoss ? '0.00%' : `+${rate.toFixed(2)}%`,
+        displayRate,
         statusLabel,
         pillText,
         pillClass
       };
     });
 
-    // Sum and average only over the 5 trading days (Senin - Jumat)
+    // Sum and average only over the trading days that have elapsed or are active today
     let totalRate = 0;
     let countActiveDays = 0;
 
     if (!isGuest && hasActivePackage) {
       records.forEach(r => {
-        if (!r.isWeekend && typeof r.rate === 'number') {
+        if (!r.isWeekend && !r.isFuture && typeof r.rate === 'number') {
           totalRate += r.rate;
           countActiveDays++;
         }

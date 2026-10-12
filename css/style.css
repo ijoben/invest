@@ -448,7 +448,7 @@ html, body {
   font-size: 12px;
   font-weight: 700;
   color: #0F172A;
-  animation: marqueeTicker 48s linear infinite;
+  animation: marqueeTicker var(--ticker-speed, 75s) linear infinite;
   padding-left: 100%;
 }
 

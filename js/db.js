@@ -140,7 +140,8 @@ const defaultDB = {
         trc20Address: 'TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1',
         bep20Address: '0x71C4982aF12B76295328B83716d1029C837A5982'
       }
-    }
+    },
+    announcementSpeed: 75 // Durasi perputaran teks berjalan (detik, default: 75s - santai & mudah dibaca)
   },
 
   // Investment Plans with Daily Random Profit Ranges
@@ -729,6 +730,7 @@ export const DB = {
       if (!parsed.redemptions) parsed.redemptions = [];
       if (!parsed.testimonials) parsed.testimonials = [];
       if (!parsed.settings) parsed.settings = defaultDB.settings;
+      if (!parsed.settings.announcementSpeed) parsed.settings.announcementSpeed = 75;
       if (!parsed.settings.paymentGateways) {
         parsed.settings.paymentGateways = JSON.parse(JSON.stringify(defaultDB.settings.paymentGateways));
       } else {
@@ -2095,6 +2097,21 @@ export const DB = {
     db.announcements = (db.announcements || []).filter(a => a.id !== id);
     this.save(db);
     return true;
+  },
+
+  getAnnouncementSpeed() {
+    const db = this.get();
+    const speed = (db.settings && Number(db.settings.announcementSpeed));
+    return (speed && speed > 0) ? speed : 75;
+  },
+
+  async setAnnouncementSpeed(seconds) {
+    const db = this.get();
+    db.settings = db.settings || {};
+    const s = Math.max(10, Math.min(600, Number(seconds) || 75));
+    db.settings.announcementSpeed = s;
+    await this.save(db);
+    return s;
   },
 
   // Daily Check-In / Absensi Harian (Point 6 & Bug 12 Fix)

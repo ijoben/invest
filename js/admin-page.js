@@ -1523,6 +1523,26 @@ export const AdminPage = {
 
   // 9. Announcements / Running Text Table
   renderAnnouncements(db) {
+    // 9.1 Render Running Text Speed Setting Controls
+    const curSpeed = (db && db.settings && Number(db.settings.announcementSpeed)) || 75;
+    const speedBadge = document.getElementById('announcementSpeedBadge');
+    if (speedBadge) {
+      speedBadge.textContent = `Durasi: ${curSpeed} Detik / Putaran`;
+    }
+    const speedInput = document.getElementById('announcementSpeedInput');
+    if (speedInput && document.activeElement !== speedInput) {
+      speedInput.value = curSpeed;
+    }
+    const speedPreset = document.getElementById('announcementSpeedPreset');
+    if (speedPreset) {
+      const standardPresets = ['120', '90', '75', '55', '35'];
+      if (standardPresets.includes(String(curSpeed))) {
+        speedPreset.value = String(curSpeed);
+      } else {
+        speedPreset.value = 'custom';
+      }
+    }
+
     const tbody = document.getElementById('announcementsTableBody');
     if (!tbody) return;
     const list = db.announcements || [];
@@ -3251,6 +3271,40 @@ export const AdminPage = {
     await DB.deleteAnnouncement(id);
     this.showToast('Teks berjalan berhasil dihapus.', 'success');
     this.renderAll();
+  },
+
+  onAnnouncementSpeedPresetChange(val) {
+    const input = document.getElementById('announcementSpeedInput');
+    if (!input) return;
+    if (val !== 'custom') {
+      input.value = val;
+    } else {
+      input.focus();
+      input.select();
+    }
+  },
+
+  async saveAnnouncementSpeed() {
+    const input = document.getElementById('announcementSpeedInput');
+    if (!input) return;
+    let sec = parseInt(input.value, 10);
+    if (isNaN(sec) || sec < 10) {
+      this.showToast('Harap masukkan durasi kecepatan minimal 10 detik!', 'error');
+      return;
+    }
+    if (sec > 600) {
+      sec = 600;
+      input.value = 600;
+    }
+
+    try {
+      await DB.setAnnouncementSpeed(sec);
+      this.showToast(`Kecepatan teks berjalan berhasil disimpan: ${sec} detik per putaran!`, 'success');
+      this.renderAll();
+    } catch (err) {
+      console.error('Failed to save announcement speed:', err);
+      this.showToast('Gagal menyimpan kecepatan teks berjalan: ' + (err.message || err), 'error');
+    }
   },
 
   // Modal Banners (Slider Carousel CRUD with Upload & Preview)
