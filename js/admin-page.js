@@ -1085,7 +1085,7 @@ export const AdminPage = {
     if (sUserEl) sUserEl.value = smtp.user || 'admin@autotrading.my.id';
 
     const sPassEl = document.getElementById('emailCfgSmtpPass');
-    if (sPassEl) sPassEl.value = smtp.pass || 'WSxYuJKO+idDc6?H';
+    if (sPassEl) sPassEl.value = smtp.pass || '';
 
     this.previewEmailBadge();
     this.toggleSmtpFields();
@@ -1192,7 +1192,7 @@ export const AdminPage = {
           port: sPort || 465,
           secure: sSec || 'ssl',
           user: sUser || 'admin@autotrading.my.id',
-          pass: sPass || 'WSxYuJKO+idDc6?H',
+          pass: sPass || '',
           fromName: fromName || 'AUTOTRADING Official',
           fromEmail: fromEmail || 'admin@autotrading.my.id'
         }

@@ -62,12 +62,15 @@ Options -Indexes
     AddType font/woff .woff
 </IfModule>
 
-# 5. Security Headers
+# 5. Security Headers (Modern HSTS, CSP, XFO, nosniff, Referrer & Permissions Policy)
 <IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-XSS-Protection "1; mode=block"
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set Content-Security-Policy "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-ancestors 'self';"
 </IfModule>
 
 # 6. Gzip / Brotli Compression for Fast Loading
@@ -111,4 +114,7 @@ Options -Indexes
     ExpiresByType font/woff2 "access plus 30 days"
     ExpiresByType font/woff "access plus 30 days"
 </IfModule>
+
+# 9. Custom Error Document
+ErrorDocument 404 /404.html
 

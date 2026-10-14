@@ -1,10 +1,13 @@
 User-agent: *
+Allow: /
 Disallow: /api/
 Disallow: /downloads/
 Disallow: /uploads/
 Disallow: /admin.html
 Disallow: /admin
 Disallow: /appautotrading.apk
+Disallow: /scripts/
+Disallow: /scratch/
 
 # Block aggressive AI crawlers and bandwidth-draining bots
 User-agent: Bytespider
@@ -36,3 +39,5 @@ Disallow: /
 
 User-agent: CCBot
 Disallow: /
+
+Sitemap: https://autotrading.my.id/sitemap.xml

@@ -4,13 +4,13 @@
  * Premium Fintech Edition: Vector SVG Icons & Polished UI.
  */
 
-import { DB, createReceiptBase64, escapeHtml } from './db.js';
-import { Auth } from './auth.js';
-import { Plans } from './plans.js';
-import { Affiliate, maskAffiliateUsername, maskAffiliateFullName } from './affiliate.js';
-import { Payment } from './payment.js';
-import { Signals } from './signals.js';
-import { Rewards } from './rewards.js';
+import { DB, createReceiptBase64, escapeHtml } from './db.js?v=20261014_claim_meta';
+import { Auth } from './auth.js?v=20261014_claim_meta';
+import { Plans } from './plans.js?v=20261014_claim_meta';
+import { Affiliate, maskAffiliateUsername, maskAffiliateFullName } from './affiliate.js?v=20261014_claim_meta';
+import { Payment } from './payment.js?v=20261014_claim_meta';
+import { Signals } from './signals.js?v=20261014_claim_meta';
+import { Rewards } from './rewards.js?v=20261014_claim_meta';
 
 // Helper: Clean up nested or duplicate parentheses from bank/method descriptions
 export function cleanParentheses(str) {
@@ -245,14 +245,13 @@ const App = {
     if (!current) return;
 
     // Strict status & existence check against fresh database
-    if (Array.isArray(freshDb.users) && freshDb.users.length > 0) {
-      const freshUser = freshDb.users.find(u => u.id === current.id || (u.username && u.username.toLowerCase() === current.username.toLowerCase()));
-      if (!freshUser) {
-        Auth.logout();
-        this.renderAll();
-        return;
-      }
-
+    let freshUser = null;
+    if (freshDb && freshDb.currentUser && (String(freshDb.currentUser.id) === String(current.id) || (freshDb.currentUser.username && freshDb.currentUser.username.toLowerCase() === current.username.toLowerCase()))) {
+      freshUser = freshDb.currentUser;
+    } else if (Array.isArray(freshDb.users) && freshDb.users.length > 0) {
+      freshUser = freshDb.users.find(u => String(u.id) === String(current.id) || (u.username && u.username.toLowerCase() === current.username.toLowerCase()));
+    }
+    if (freshUser) {
       // Check if account status has been blocked / suspended in database
       const isBlocked = freshUser.isBlocked || freshUser.is_blocked || freshUser.status === 'blocked';
       if (isBlocked) {
@@ -261,6 +260,9 @@ const App = {
         this.renderAll();
         return;
       }
+      DB.setSession(freshUser);
+    } else {
+      freshUser = current;
     }
 
     // Balance update notification
@@ -288,6 +290,7 @@ const App = {
     this._cachedInvCount = freshInvCount;
 
     this.renderHeader(freshUser);
+    this.renderWalletSummary(freshUser);
     this.updateHeaderNotifBadge(freshUser);
 
     if (hasStateChange && !isTyping && !activeModal) {
@@ -590,14 +593,21 @@ const App = {
     const ipEl = document.getElementById('publicDetectedIpText');
     if (!totalEl && !activeEl && !ipEl) return;
 
-    if (db) {
+    if (db && db.publicStats) {
+      if (totalEl && typeof db.publicStats.totalMembers === 'number') {
+        totalEl.textContent = `${db.publicStats.totalMembers} Member`;
+      }
+      if (activeEl && typeof db.publicStats.activeMembers === 'number') {
+        activeEl.textContent = `${db.publicStats.activeMembers} Aktif`;
+      }
+    } else if (db && Array.isArray(db.users) && db.users.length > 0) {
       const allUsers = (db.users || []).filter(u => u.role !== 'admin');
       const totalCount = allUsers.length;
-      if (totalEl) totalEl.textContent = `${totalCount} Member`;
+      if (totalEl && totalCount > 0) totalEl.textContent = `${totalCount} Member`;
 
       const activeUserIds = new Set((db.investments || []).filter(inv => inv.status === 'active').map(inv => inv.userId));
       const activeCount = activeUserIds.size > 0 ? activeUserIds.size : allUsers.filter(u => !u.isBlocked && u.status !== 'blocked').length;
-      if (activeEl) activeEl.textContent = `${activeCount} Aktif`;
+      if (activeEl && activeCount > 0) activeEl.textContent = `${activeCount} Aktif`;
     }
 
     // Direct Realtime Synchronizer with MySQL Database
@@ -1311,7 +1321,21 @@ const App = {
     if (!user) return;
 
     const userInvs = Plans.getUserInvestments(user.id);
-    const totalPendingProfit = userInvs.reduce((sum, i) => sum + (i.pendingProfitClaim || 0), 0);
+    const todayWib = DB.getWibDateStr();
+    const totalPendingProfit = userInvs.reduce((sum, inv) => {
+      let pending = 0;
+      if (Array.isArray(inv.history)) {
+        pending = inv.history
+          .filter(h => {
+            const hIso = DB.parseDateToIso(h.date);
+            return hIso && hIso < todayWib && h.status === 'pending_claim';
+          })
+          .reduce((s, h) => s + (Number(h.amount) || 0), 0);
+      } else {
+        pending = Number(inv.pendingProfitClaim) || 0;
+      }
+      return sum + pending;
+    }, 0);
 
     const cardEl = document.getElementById('profitCountdownCard');
     const statusTitleEl = document.getElementById('countdownStatusTitle');
@@ -1365,7 +1389,6 @@ const App = {
     };
 
     const db = DB.get();
-    const todayWib = DB.getWibDateStr();
     const now = Date.now();
 
     // Check if user has already claimed profit today
@@ -1376,11 +1399,7 @@ const App = {
       return DB.getWibDateStr(t.createdAt) === todayWib;
     });
 
-    const todayClaimInv = userInvs.find(inv => {
-      return inv.lastProfitYieldDate && DB.getWibDateStr(inv.lastProfitYieldDate) === todayWib;
-    });
-
-    const hasClaimedToday = Boolean(todayClaimTx || (todayClaimInv && totalPendingProfit <= 0));
+    const hasClaimedToday = Boolean(todayClaimTx);
 
     // Check weekend market status
     const marketStatus = Plans.isWeekendMarketClosed();
@@ -1415,17 +1434,13 @@ const App = {
 
     const cycleDurationMs = 24 * 3600 * 1000;
 
-    // SCENARIO 1: User has already claimed profit today -> Count down until the next 24-hour cycle
+    // SCENARIO 1: User has already claimed profit today -> Count down until tomorrow
     if (hasClaimedToday) {
       let claimTs = 0;
       if (todayClaimTx && todayClaimTx.createdAt) {
         claimTs = parseSafeTs(todayClaimTx.createdAt);
       }
-      if (!claimTs && todayClaimInv && todayClaimInv.lastProfitYieldDate) {
-        claimTs = parseSafeTs(todayClaimInv.lastProfitYieldDate);
-      }
       if (!claimTs) {
-        // Fallback: cycle anchor
         const midToday = new Date();
         midToday.setHours(0, 0, 0, 0);
         claimTs = midToday.getTime();
@@ -1445,8 +1460,7 @@ const App = {
       const minStr = String(nextDate.getMinutes()).padStart(2, '0');
 
       if (remainingMs > 0) {
-        // Within active 24h wait period
-        if (statusTitleEl) statusTitleEl.textContent = 'Sudah Diklaim (Waktu Tunggu 24 Jam):';
+        if (statusTitleEl) statusTitleEl.textContent = 'Sudah Diklaim (Siklus Besok):';
         if (timerValEl) {
           timerValEl.textContent = timeFormatted;
           timerValEl.style.color = '#38BDF8';
@@ -1461,7 +1475,7 @@ const App = {
           progressBarEl.style.background = 'linear-gradient(90deg, #0284C7 0%, #38BDF8 60%, #22C55E 100%)';
           progressBarEl.style.boxShadow = '0 0 10px rgba(56, 189, 248, 0.5)';
         }
-        if (footerHintEl) footerHintEl.textContent = 'Klaim profit harian Anda telah berhasil. Waktu tunggu 24 jam sedang berjalan menuju siklus klaim berikutnya.';
+        if (footerHintEl) footerHintEl.textContent = 'Klaim profit Anda telah selesai. Profit hari ini sedang berjalan dan dapat diklaim besok.';
         if (nextYieldEl) nextYieldEl.textContent = `Siklus: ${hourStr}:${minStr} WIB`;
 
         if (claimBtn) {
@@ -1475,12 +1489,11 @@ const App = {
         }
         return;
       }
-      // If remainingMs === 0, 24 hours have elapsed: drops through to ready-to-claim below!
     }
 
-    // SCENARIO 2: Ready to Claim (either totalPendingProfit > 0, or 24-hour cycle completed)
+    // SCENARIO 2: Ready to Claim (Profit from past days is waiting to be claimed)
     if (totalPendingProfit > 0) {
-      if (statusTitleEl) statusTitleEl.textContent = 'Profit Siap Diklaim:';
+      if (statusTitleEl) statusTitleEl.textContent = 'Profit Kemarin Siap Diklaim:';
       if (timerValEl) {
         timerValEl.textContent = '100% SELESAI';
         timerValEl.style.color = '#22C55E';
@@ -1495,7 +1508,7 @@ const App = {
         progressBarEl.style.background = 'linear-gradient(90deg, #E5A83B 0%, #22C55E 100%)';
         progressBarEl.style.boxShadow = '0 0 14px rgba(34, 197, 94, 0.7)';
       }
-      if (footerHintEl) footerHintEl.textContent = `Profit harian ${DB.formatIDR(totalPendingProfit)} siap diklaim ke saldo`;
+      if (footerHintEl) footerHintEl.textContent = `Profit harian kemarin ${DB.formatIDR(totalPendingProfit)} siap diklaim ke saldo`;
       if (nextYieldEl) nextYieldEl.textContent = 'Siap Klaim';
 
       if (claimBtn) {
@@ -1509,7 +1522,7 @@ const App = {
       return;
     }
 
-    // SCENARIO 3: Active plan running cycle (not claimed today yet)
+    // SCENARIO 3: Active plan running cycle (Today's profit in progress, claimable tomorrow)
     let lastYieldTime = 0;
     userInvs.forEach(inv => {
       const time = parseSafeTs(inv.lastProfitYieldDate) || parseSafeTs(inv.startDate);
@@ -1521,73 +1534,42 @@ const App = {
     let elapsed = now - lastYieldTime;
     if (elapsed < 0) elapsed = 0;
 
-    if (elapsed >= cycleDurationMs) {
-      // 24 Hours cycle finished -> Button becomes alive ("hidup lagi kalau sudah 24jam waktu mau klaim")
-      if (statusTitleEl) statusTitleEl.textContent = 'Profit Siap Diklaim:';
-      if (timerValEl) {
-        timerValEl.textContent = 'SIAP KLAIM';
-        timerValEl.style.color = '#22C55E';
-      }
-      if (percentBadgeEl) {
-        percentBadgeEl.textContent = '100%';
-        percentBadgeEl.style.background = 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)';
-        percentBadgeEl.style.boxShadow = '0 0 14px rgba(34, 197, 94, 0.6)';
-      }
-      if (progressBarEl) {
-        progressBarEl.style.width = '100%';
-        progressBarEl.style.background = 'linear-gradient(90deg, #E5A83B 0%, #22C55E 100%)';
-        progressBarEl.style.boxShadow = '0 0 14px rgba(34, 197, 94, 0.7)';
-      }
-      if (footerHintEl) footerHintEl.textContent = 'Siklus 24 jam selesai. Klik tombol di bawah untuk klaim profit harian.';
-      if (nextYieldEl) nextYieldEl.textContent = 'Siap Klaim';
+    const remainingMs = Math.max(0, cycleDurationMs - (elapsed % cycleDurationMs));
+    const percent = Math.min(100, Math.max(0, (((cycleDurationMs - remainingMs) / cycleDurationMs) * 100)));
 
-      if (claimBtn) {
-        claimBtn.classList.remove('claimed-today');
-        claimBtn.classList.add('live-active');
-        claimBtn.removeAttribute('disabled');
-        claimBtn.disabled = false;
-        claimBtn.onclick = () => App.claimProfit();
-        claimBtn.innerHTML = `<span>⚡ Klaim Profit Harian</span>`;
-      }
-    } else {
-      // Countdown running
-      const remainingMs = Math.max(0, cycleDurationMs - elapsed);
-      const percent = Math.min(100, Math.max(0, (elapsed / cycleDurationMs) * 100));
+    const hours = Math.floor(remainingMs / 3600000);
+    const minutes = Math.floor((remainingMs % 3600000) / 60000);
+    const seconds = Math.floor((remainingMs % 60000) / 1000);
+    const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-      const hours = Math.floor(remainingMs / 3600000);
-      const minutes = Math.floor((remainingMs % 3600000) / 60000);
-      const seconds = Math.floor((remainingMs % 60000) / 1000);
-      const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    if (statusTitleEl) statusTitleEl.textContent = 'Proses Profit Hari Ini:';
+    if (timerValEl) {
+      timerValEl.textContent = timeFormatted;
+      timerValEl.style.color = '#FDE89C';
+    }
+    if (percentBadgeEl) {
+      percentBadgeEl.textContent = `${Math.round(percent)}%`;
+      percentBadgeEl.style.background = 'linear-gradient(135deg, #E5A83B 0%, #C89338 100%)';
+      percentBadgeEl.style.boxShadow = '0 0 10px rgba(229, 168, 59, 0.4)';
+    }
+    if (progressBarEl) {
+      progressBarEl.style.width = `${Math.max(6, Math.round(percent))}%`;
+      progressBarEl.style.background = 'linear-gradient(90deg, #C89338 0%, #E5A83B 60%, #22C55E 100%)';
+      progressBarEl.style.boxShadow = '0 0 10px rgba(229, 168, 59, 0.5)';
+    }
+    if (footerHintEl) footerHintEl.textContent = 'Profit trading hari ini sedang berjalan. Klaim dividen profit dilakukan besok di tanggal berikutnya.';
 
-      if (statusTitleEl) statusTitleEl.textContent = 'Proses Profit Berjalan:';
-      if (timerValEl) {
-        timerValEl.textContent = timeFormatted;
-        timerValEl.style.color = '#FDE89C';
-      }
-      if (percentBadgeEl) {
-        percentBadgeEl.textContent = `${Math.round(percent)}%`;
-        percentBadgeEl.style.background = 'linear-gradient(135deg, #E5A83B 0%, #C89338 100%)';
-        percentBadgeEl.style.boxShadow = '0 0 10px rgba(229, 168, 59, 0.4)';
-      }
-      if (progressBarEl) {
-        progressBarEl.style.width = `${Math.max(6, Math.round(percent))}%`;
-        progressBarEl.style.background = 'linear-gradient(90deg, #C89338 0%, #E5A83B 60%, #22C55E 100%)';
-        progressBarEl.style.boxShadow = '0 0 10px rgba(229, 168, 59, 0.5)';
-      }
-      if (footerHintEl) footerHintEl.textContent = 'Siklus profit berjalan otomatis 24 jam realtime';
+    const nextResetDate = new Date(now + remainingMs);
+    const hourStr = String(nextResetDate.getHours()).padStart(2, '0');
+    const minStr = String(nextResetDate.getMinutes()).padStart(2, '0');
+    if (nextYieldEl) nextYieldEl.textContent = `Klaim Besok: ${hourStr}:${minStr} WIB`;
 
-      const nextResetDate = new Date(now + remainingMs);
-      const hourStr = String(nextResetDate.getHours()).padStart(2, '0');
-      const minStr = String(nextResetDate.getMinutes()).padStart(2, '0');
-      if (nextYieldEl) nextYieldEl.textContent = `Siklus: ${hourStr}:${minStr} WIB`;
-
-      if (claimBtn) {
-        claimBtn.classList.remove('claimed-today', 'live-active');
-        claimBtn.disabled = true;
-        claimBtn.setAttribute('disabled', 'true');
-        claimBtn.innerHTML = `<span>Proses Profit Berjalan (${timeFormatted})</span>`;
-        claimBtn.style.opacity = '0.85';
-      }
+    if (claimBtn) {
+      claimBtn.classList.remove('claimed-today', 'live-active');
+      claimBtn.disabled = true;
+      claimBtn.setAttribute('disabled', 'true');
+      claimBtn.innerHTML = `<span>Proses Profit Berjalan (Klaim Besok)</span>`;
+      claimBtn.style.opacity = '0.85';
     }
   },
 
@@ -2131,7 +2113,9 @@ const App = {
     this.testimonialsData = allTestimonials;
 
     const db = DB.get();
-    const realApprovedWd = (db.transactions || []).filter(t => t.type === 'withdraw' && t.status === 'approved').length;
+    const realApprovedWd = (db.publicStats && typeof db.publicStats.totalWithdrawals === 'number')
+      ? db.publicStats.totalWithdrawals
+      : ((allTestimonials && allTestimonials.length > 0) ? allTestimonials.length : (db.transactions || []).filter(t => t.type === 'withdraw' && t.status === 'approved').length);
     if (totalCountBadge) {
       totalCountBadge.textContent = realApprovedWd > 0 ? `${realApprovedWd}` : '0';
     }
@@ -4551,7 +4535,7 @@ const App = {
           });
         }
         this.cachedWalletTransactions = null;
-        this.triggerClaimCelebration(res.amount, res.message);
+        this.triggerClaimCelebration(res.amount, res.message, res);
         this.renderAll();
       } else {
         this.showToast(res.message, res.alreadyClaimed ? 'info' : 'warning');
@@ -4576,9 +4560,36 @@ const App = {
   },
 
   // Celebration with Animated Trumpets & Confetti (Point 2)
-  triggerClaimCelebration(amount, message) {
+  triggerClaimCelebration(amount, message, claimData = {}) {
     const amtEl = document.getElementById('celebrationProfitAmount');
     if (amtEl) amtEl.textContent = DB.formatIDR(amount || 0);
+
+    const pctEl = document.getElementById('celebrationProfitPercent');
+    if (pctEl) {
+      if (claimData && claimData.profitPercent) {
+        pctEl.textContent = claimData.profitPercent;
+      } else if (claimData && claimData.profitRate) {
+        const rateVal = String(claimData.profitRate).replace('.', ',');
+        const planTxt = claimData.planName ? ` (${claimData.planName})` : '';
+        pctEl.textContent = `Profit ${rateVal}%${planTxt}`;
+      } else {
+        pctEl.textContent = 'Profit Harian AI';
+      }
+    }
+
+    const dateEl = document.getElementById('celebrationProfitDate');
+    if (dateEl) {
+      if (claimData && claimData.profitDate) {
+        dateEl.textContent = claimData.profitDate;
+      } else if (typeof Plans !== 'undefined' && typeof Plans.formatIndoDayDate === 'function') {
+        dateEl.textContent = Plans.formatIndoDayDate(null);
+      } else {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        dateEl.textContent = `${days[yesterday.getDay()]}, ${String(yesterday.getDate()).padStart(2, '0')}/${String(yesterday.getMonth() + 1).padStart(2, '0')}/${yesterday.getFullYear()}`;
+      }
+    }
 
     this.playCelebratoryFanfare();
     this.spawnConfetti();
@@ -4671,6 +4682,14 @@ const App = {
     if (this._isClaimingCheckIn) return;
     const user = Auth.getUser();
     if (!user) return;
+
+    // Instant local pre-guard: if already checked in today, do not process
+    const status = DB.getDailyCheckInStatus(user.id);
+    if (status && status.hasCheckedInToday) {
+      this.showToast('Anda sudah mengklaim bonus absen hari ini! Silakan kembali besok.', 'info');
+      this.renderDailyCheckInUI();
+      return;
+    }
 
     this._isClaimingCheckIn = true;
     const btnEl = document.getElementById('btnClaimDailyCheckIn');
@@ -5213,6 +5232,9 @@ const App = {
         setTimeout(() => { window.location.href = 'admin'; }, 600);
       } else {
         this.showToast(res.message, 'success');
+        try {
+          await DB.syncFromCloud();
+        } catch (e) {}
         this.renderAll();
         this.checkAutoOpenDailyCheckIn();
       }

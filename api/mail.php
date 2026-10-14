@@ -48,7 +48,7 @@ function sendViaSmtp($to, $subject, $htmlContent, $fromName, $fromEmail, $smtp) 
     $host = !empty($smtp['host']) ? trim($smtp['host']) : 'localhost';
     $port = !empty($smtp['port']) ? intval($smtp['port']) : 465;
     $user = !empty($smtp['user']) ? trim($smtp['user']) : '';
-    $pass = !empty($smtp['pass']) ? trim($smtp['pass']) : '';
+    $pass = !empty($smtp['pass']) ? trim($smtp['pass']) : (defined('DEFAULT_SMTP_PASS') ? DEFAULT_SMTP_PASS : '');
     $secure = !empty($smtp['secure']) ? strtolower(trim($smtp['secure'])) : 'ssl';
     $logs = [];
 

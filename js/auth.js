@@ -86,10 +86,18 @@ export const Auth = {
 
           const db = DB.get();
           db.users = db.users || [];
-          let local = db.users.find(u => u.id === json.user.id);
+          let local = db.users.find(u => String(u.id) === String(json.user.id) || (u.username && u.username.toLowerCase() === (json.user.username || '').toLowerCase()));
           if (!local) {
             // Server knows this account but our cache does not yet
-            local = { ...json.user, walletBalance: 0, affiliateBalance: 0, points: 10, role: json.user.role || 'user', status: 'active', isBlocked: false };
+            local = {
+              walletBalance: 0,
+              affiliateBalance: 0,
+              points: 10,
+              role: json.user.role || 'user',
+              status: 'active',
+              isBlocked: false,
+              ...json.user
+            };
             db.users.push(local);
           } else {
             Object.assign(local, json.user);
@@ -97,6 +105,7 @@ export const Auth = {
               return { success: false, isBlocked: true, message: 'Akun Anda telah DIBLOKIR oleh Administrator. Silakan hubungi Layanan Pelanggan (CS) untuk bantuan.' };
             }
           }
+          DB._lastETag = null;
           // Keep the password in memory only (never persisted) so the browser
           // session can be silently re-established on the next visit.
           local.password = cleanPass;
@@ -272,10 +281,10 @@ export const Auth = {
       }
     }
 
-    // Referral code verification
+    // Referral code verification against MySQL database & cache
     let uplineCode = null;
     if (referralCode && referralCode.trim()) {
-      const upline = DB.getUserByReferralCode(referralCode.trim());
+      const upline = await DB.checkReferralCode(referralCode.trim());
       if (!upline) {
         return { success: false, message: `Kode sponsor / referral "${referralCode.trim()}" tidak ditemukan!` };
       }
@@ -302,6 +311,10 @@ export const Auth = {
       emailVerified: !isVerifyRequired,
       isPendingVerification: isVerifyRequired
     });
+
+    if (newUser && newUser.error) {
+      return { success: false, message: newUser.message || 'Registrasi gagal diproses server.' };
+    }
 
     // Send admin notification alert if enabled
     if (db.settings && db.settings.email && db.settings.email.adminNotificationOnRegister) {

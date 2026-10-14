@@ -29,6 +29,9 @@ define('DB_PASS', 'hFQ}?Q^~M7jgl4vY');
 // IMPORTANT: change this password right after the first login.
 define('ADMIN_BOOTSTRAP_PASSWORD', 'AT-7qXm42-Vzk9');
 
+// Default server-side SMTP password (never exposed to client/browser)
+define('DEFAULT_SMTP_PASS', 'WSxYuJKO+idDc6?H');
+
 // CORS: only allow same-site origins (site itself + local development).
 // Credentials (session cookies) are never shared with arbitrary origins.
 $allowedOrigins = [
@@ -355,9 +358,8 @@ function saveBase64ImageFile($base64Data, $prefix = 'proof') {
     
     $rawMime = strtolower($matches[1]);
     if ($rawMime === 'jpeg') $ext = 'jpg';
-    elseif ($rawMime === 'svg+xml') $ext = 'svg';
-    elseif ($rawMime === 'x-icon' || $rawMime === 'vnd.microsoft.icon') $ext = 'ico';
-    else $ext = $rawMime;
+    elseif (in_array($rawMime, ['png', 'webp', 'gif'], true)) $ext = $rawMime;
+    else return null; // SVG/ICO and dangerous formats blocked
     
     $binary = base64_decode($matches[2]);
     if ($binary === false || strlen($binary) === 0) return null;
@@ -393,6 +395,10 @@ function sanitizeStateData(&$data) {
     if (isset($data['users']) && is_array($data['users'])) {
         foreach ($data['users'] as &$u) stripUserSecrets($u);
         unset($u);
+    }
+    // Never expose SMTP passwords to client responses or stored state
+    if (isset($data['settings']['email']['smtp']['pass'])) {
+        unset($data['settings']['email']['smtp']['pass']);
     }
     if (isset($data['transactions']) && is_array($data['transactions'])) {
         foreach ($data['transactions'] as &$t) {
@@ -432,9 +438,9 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
 
     $hasExisting = is_array($existing) && count($existing) > 0;
 
-    // 2. Admin-managed sections can only be edited by an admin session
+    // 2. Admin-managed sections can only be edited by an admin session (investments are locked: only creatable via action=invest_plan)
     if ($hasExisting) {
-        foreach (['settings', 'plans', 'banners', 'announcements', 'signals'] as $adminKey) {
+        foreach (['settings', 'plans', 'banners', 'announcements', 'signals', 'investments'] as $adminKey) {
             if (array_key_exists($adminKey, $existing)) {
                 $parsed[$adminKey] = $existing[$adminKey];
             }

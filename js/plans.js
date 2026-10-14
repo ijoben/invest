@@ -146,8 +146,31 @@ export const Plans = {
     const marketStatus = this.isMarketOpen();
 
     userInvs.forEach(inv => {
-      // 1. Check if investment duration has expired
-      // Contract is completed, but capital remains locked until member clicks 'Proses refundkan ke saldo saya'
+      inv.history = Array.isArray(inv.history) ? inv.history : [];
+
+      // 1. Transition past in_progress rows (date < todayWib) to pending_claim (ready to claim today)
+      inv.history.forEach(h => {
+        const hIso = DB.parseDateToIso(h.date);
+        if (hIso && hIso < todayWib && h.status === 'in_progress') {
+          h.status = 'pending_claim';
+          modified = true;
+        }
+      });
+
+      // 2. Strict T-1 rule: pendingProfitClaim ONLY includes yields from past days (date < todayWib) that have not been claimed
+      const pastPendingAmount = inv.history
+        .filter(h => {
+          const hIso = DB.parseDateToIso(h.date);
+          return hIso && hIso < todayWib && h.status === 'pending_claim';
+        })
+        .reduce((sum, h) => sum + (Number(h.amount) || 0), 0);
+
+      if (inv.pendingProfitClaim !== pastPendingAmount) {
+        inv.pendingProfitClaim = pastPendingAmount;
+        modified = true;
+      }
+
+      // 3. Check if investment duration has expired
       if (inv.daysElapsed >= inv.durationDays) {
         inv.status = 'completed';
         inv.completedAt = inv.completedAt || new Date().toISOString();
@@ -166,45 +189,28 @@ export const Plans = {
         modified = true;
       }
 
-      // 2. If market is closed or user already claimed profit today, skip generating new profit claim
-      if (!marketStatus.isOpen || hasClaimedToday) {
+      // 4. If market is closed, skip generating new profit claim
+      if (!marketStatus.isOpen) {
         return;
       }
 
-      // 3. Check if a real 24-hour cycle has passed and no profit is pending claim
-      let lastYieldStr = inv.lastProfitYieldDate || inv.startDate;
-      if (typeof lastYieldStr === 'string' && lastYieldStr.includes(' ')) {
-        lastYieldStr = lastYieldStr.replace(' ', 'T');
-      }
-      const lastYieldDateWib = lastYieldStr ? DB.getWibDateStr(lastYieldStr) : null;
-      if (lastYieldDateWib === todayWib) {
-        // Already yielded/claimed for today
-        return;
-      }
-
-      const lastYieldTime = lastYieldStr ? new Date(lastYieldStr).getTime() : now;
-      const elapsedMs = now - lastYieldTime;
-
-      if (elapsedMs >= cycleDurationMs && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
-        // Yield exactly 1 day profit for this completed cycle
+      // 5. Ensure today's yield is present in history with status 'in_progress'
+      const hasTodayYield = inv.history.some(h => DB.parseDateToIso(h.date) === todayWib);
+      if (!hasTodayYield) {
         const range = this.getRateRange(inv);
-        const rate = this.generateRandomDailyRate(range.min, range.max);
+        const isTodayLoss = db.settings && db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
+        const rate = isTodayLoss ? 0.0 : this.generateRandomDailyRate(range.min, range.max);
         const profitAmount = Math.floor((inv.capital * rate) / 100);
-
-        inv.pendingProfitClaim = profitAmount;
-        // Advance the yield clock
-        inv.lastProfitYieldDate = new Date().toISOString();
         const dayNo = (inv.daysElapsed || 0) + 1;
-        if (!this._hasPendingHistoryForDay(inv, dayNo)) {
-          inv.history = inv.history || [];
-          inv.history.push({
-            day: dayNo,
-            date: new Date().toLocaleDateString('id-ID'),
-            rate: rate,
-            amount: profitAmount,
-            status: 'pending_claim'
-          });
-        }
+
+        inv.history.push({
+          day: dayNo,
+          date: new Date().toLocaleDateString('id-ID'),
+          rate: rate,
+          amount: profitAmount,
+          status: 'in_progress' // PROFIT HARI INI SEDANG BERJALAN, BARU DIKLAIM BESOK
+        });
+        inv.lastProfitYieldDate = new Date().toISOString();
         modified = true;
       }
     });
@@ -555,7 +561,7 @@ export const Plans = {
     };
   },
 
-  // Buy / Activate Plan
+  // Buy / Activate Plan (Authoritative Server Endpoint - BUG-003)
   async invest({ userId, planId, amount }) {
     const db = DB.get();
     const user = db.users.find(u => u.id === userId);
@@ -586,9 +592,47 @@ export const Plans = {
     }
     this._recentInvestments[investKey] = Date.now();
 
-    // Deduct user balance
+    // Call Authoritative Server API
+    if (typeof fetch === 'function') {
+      try {
+        await DB.ensureServerSession();
+        const res = await fetch(DB.getApiUrl('invest_plan'), {
+          method: 'POST',
+          credentials: 'include',
+          headers: DB.getAuthHeaders(),
+          body: JSON.stringify({
+            userId: user.id,
+            planId: plan.id,
+            amount: parsedAmount
+          })
+        });
+
+        const json = await res.json().catch(() => null);
+        if (json) {
+          if (!json.success) {
+            return {
+              success: false,
+              message: json.message || 'Gagal mengaktifkan paket investasi di server.'
+            };
+          }
+
+          // Refresh state from server
+          await DB.loadFromMySQL().catch(() => {});
+
+          return {
+            success: true,
+            message: json.message || `Sukses mengaktifkan paket ${plan.name} sebesar ${DB.formatIDR(parsedAmount)}!`,
+            investment: json.investment
+          };
+        }
+      } catch (err) {
+        console.warn('invest_plan API network error, falling back locally:', err);
+      }
+    }
+
+    // Fallback for offline testing or when server is unavailable
     user.walletBalance -= parsedAmount;
-    user.points = (user.points || 0) + 50; // Loyalty points reward for new investment
+    user.points = (user.points || 0) + 50;
 
     // Create active investment record
     const newInvestment = {
@@ -723,6 +767,32 @@ export const Plans = {
     return { success: true, updatedCount, totalYielded };
   },
 
+  // Format Date to Indonesian format: Hari, DD/MM/YYYY (e.g. Selasa, 13/10/2026)
+  formatIndoDayDate(dateInput) {
+    let d;
+    if (!dateInput) {
+      d = new Date();
+      d.setDate(d.getDate() - 1);
+    } else if (typeof dateInput === 'string' && /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/.test(dateInput.trim())) {
+      const parts = dateInput.trim().split(/[\/\-]/);
+      d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+    } else {
+      d = new Date(dateInput);
+    }
+
+    if (isNaN(d.getTime())) {
+      d = new Date();
+      d.setDate(d.getDate() - 1);
+    }
+
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const dayName = days[d.getDay()];
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dayName}, ${dd}/${mm}/${yyyy}`;
+  },
+
   // Claim pending daily profit for a specific user (Strictly Once Per Day)
   _claimLocks: {},
   async claimProfit(userId) {
@@ -752,9 +822,57 @@ export const Plans = {
           message: 'Paket investasi Anda baru diaktifkan hari ini. Perhitungan dividen profit dimulai pada siklus hari berikutnya.'
         };
       }
-      const totalPending = userInvs.reduce((sum, inv) => sum + (Number(inv.pendingProfitClaim) || 0), 0);
+      // Strict T-1 calculation: only past yields (date < todayWib) can be claimed today
+      let totalPending = 0;
+      let pendingDates = [];
+      let pendingRates = [];
+      let pendingPlanNames = [];
+      let pendingCapital = 0;
 
-      // 1. Strict local pre-guard: Check if already claimed profit today in transactions OR investments
+      userInvs.forEach(inv => {
+        let hasInvPending = false;
+        if (Array.isArray(inv.history)) {
+          inv.history.forEach(h => {
+            const hIso = DB.parseDateToIso(h.date);
+            if (hIso && hIso < todayWib && h.status === 'pending_claim') {
+              const amt = Number(h.amount) || 0;
+              totalPending += amt;
+              hasInvPending = true;
+              if (h.date) pendingDates.push(h.date);
+              if (h.rate !== undefined && h.rate !== null) pendingRates.push(Number(h.rate));
+            }
+          });
+        } else if (Number(inv.pendingProfitClaim) > 0) {
+          totalPending += Number(inv.pendingProfitClaim);
+          hasInvPending = true;
+        }
+
+        if (hasInvPending) {
+          pendingCapital += Number(inv.capital || 0);
+          if (inv.planName) pendingPlanNames.push(inv.planName);
+        }
+      });
+
+      let computedRate = 0;
+      if (pendingRates.length > 0) {
+        computedRate = parseFloat((pendingRates.reduce((a, b) => a + b, 0) / pendingRates.length).toFixed(2));
+      } else if (pendingCapital > 0 && totalPending > 0) {
+        computedRate = parseFloat(((totalPending / pendingCapital) * 100).toFixed(2));
+      }
+      const computedRateStr = 'Profit ' + String(computedRate || 0).replace('.', ',') + '%';
+      const computedPlanName = pendingPlanNames.length > 0 ? Array.from(new Set(pendingPlanNames)).join(', ') : 'Paket AI Trading';
+      const lastPendingDate = pendingDates.length > 0 ? pendingDates[pendingDates.length - 1] : null;
+      const computedDateStr = this.formatIndoDayDate(lastPendingDate);
+
+      if (totalPending <= 0) {
+        return {
+          success: false,
+          inProgress: true,
+          message: 'Profit trading hari ini sedang berjalan (in progress). Klaim profit harian baru dapat dilakukan besok pada tanggal berikutnya.'
+        };
+      }
+
+      // 1. Strict local pre-guard: Check if already claimed profit today in transactions
       const todayClaimTx = (db.transactions || []).some(t => {
         if (t.userId !== userId) return false;
         const isPrf = t.type === 'profit_claim' || (t.id && String(t.id).startsWith('TRX-PRF-'));
@@ -762,13 +880,7 @@ export const Plans = {
         return DB.getWibDateStr(t.createdAt) === todayWib;
       });
 
-      const todayClaimInv = totalPending <= 0 && userInvs.some(inv => {
-        return inv.lastProfitYieldDate && DB.getWibDateStr(inv.lastProfitYieldDate) === todayWib;
-      });
-
-      const hasClaimedToday = todayClaimTx || todayClaimInv;
-
-      if (hasClaimedToday) {
+      if (todayClaimTx) {
         return {
           success: false,
           alreadyClaimed: true,
@@ -823,8 +935,15 @@ export const Plans = {
               user.walletBalance = json.walletBalance;
               (db.investments || []).forEach(inv => {
                 if (inv.userId === userId && inv.status === 'active') {
+                  if (Array.isArray(inv.history)) {
+                    inv.history.forEach(h => {
+                      const hIso = DB.parseDateToIso(h.date);
+                      if (hIso && hIso < todayWib && h.status === 'pending_claim') {
+                        h.status = 'claimed';
+                      }
+                    });
+                  }
                   inv.pendingProfitClaim = 0;
-                  inv.lastProfitYieldDate = new Date().toISOString();
                   inv.daysElapsed = (inv.daysElapsed || 0) + 1;
                   if (inv.daysElapsed >= inv.durationDays) {
                     inv.status = 'completed';
@@ -841,6 +960,10 @@ export const Plans = {
                 }
               }
               await DB.save(db);
+              if (!json.profitPercent) json.profitPercent = computedRateStr;
+              if (!json.profitRate) json.profitRate = computedRate;
+              if (!json.profitDate) json.profitDate = computedDateStr;
+              if (!json.planName) json.planName = computedPlanName;
               return json;
             } else if (json.alreadyClaimed) {
               (db.investments || []).forEach(inv => {
@@ -872,28 +995,39 @@ export const Plans = {
         let totalClaimed = 0;
 
         userInvs.forEach(inv => {
-          let profit = Number(inv.pendingProfitClaim) || 0;
-          if (profit <= 0) {
-            const minR = Number(inv.minRate) || 1.0;
-            const maxR = Number(inv.maxRate) || 2.0;
-            const rate = minR + Math.random() * (maxR - minR);
-            profit = Math.floor((Number(inv.capital) * rate) / 100);
+          let invClaimed = 0;
+          if (Array.isArray(inv.history)) {
+            inv.history.forEach(h => {
+              const hIso = DB.parseDateToIso(h.date);
+              if (hIso && hIso < todayWib && h.status === 'pending_claim') {
+                invClaimed += (Number(h.amount) || 0);
+                h.status = 'claimed';
+              }
+            });
+          } else if (Number(inv.pendingProfitClaim) > 0) {
+            invClaimed = Number(inv.pendingProfitClaim);
           }
-          totalClaimed += profit;
-          inv.totalProfitEarned = (inv.totalProfitEarned || 0) + profit;
-          inv.pendingProfitClaim = 0;
-          inv.lastProfitYieldDate = nowIso;
-          inv.daysElapsed = (inv.daysElapsed || 0) + 1;
-          if (inv.daysElapsed >= inv.durationDays) {
-            inv.status = 'completed';
-            inv.completedAt = nowIso;
-            inv.refundReady = true;
-            if (inv.capitalReturned === undefined) inv.capitalReturned = false;
+
+          if (invClaimed > 0) {
+            totalClaimed += invClaimed;
+            inv.totalProfitEarned = (inv.totalProfitEarned || 0) + invClaimed;
+            inv.pendingProfitClaim = 0;
+            inv.daysElapsed = (inv.daysElapsed || 0) + 1;
+            if (inv.daysElapsed >= inv.durationDays) {
+              inv.status = 'completed';
+              inv.completedAt = nowIso;
+              inv.refundReady = true;
+              if (inv.capitalReturned === undefined) inv.capitalReturned = false;
+            }
           }
         });
 
         if (totalClaimed <= 0) {
-          return { success: false, message: 'Belum ada dividen profit yang siap diklaim.' };
+          return {
+            success: false,
+            inProgress: true,
+            message: 'Profit trading hari ini sedang berjalan (in progress). Klaim profit harian baru dapat dilakukan besok pada tanggal berikutnya.'
+          };
         }
 
         user.walletBalance = (Number(user.walletBalance) || 0) + totalClaimed;
@@ -908,7 +1042,7 @@ export const Plans = {
           amount: totalClaimed,
           netAmount: totalClaimed,
           walletSource: 'Wallet Balance',
-          note: `Klaim profit harian paket investasi aktif (${DB.formatIDR(totalClaimed)})`,
+          note: `Klaim profit harian kemarin (${DB.formatIDR(totalClaimed)})`,
           status: 'approved',
           createdAt: nowIso
         };
@@ -935,6 +1069,10 @@ export const Plans = {
           success: true,
           amount: totalClaimed,
           walletBalance: user.walletBalance,
+          profitRate: computedRate,
+          profitPercent: computedRateStr,
+          profitDate: computedDateStr,
+          planName: computedPlanName,
           transaction: profitTrx,
           message: `Klaim profit harian sebesar ${DB.formatIDR(totalClaimed)} berhasil masuk ke Saldo Utama!`
         };

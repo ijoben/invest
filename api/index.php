@@ -295,6 +295,13 @@ function ensureTablesExist($pdo) {
             $pdo->exec("DELETE FROM `transactions` WHERE `id` = 'TX-CHK-392542'");
         } catch(Exception $eDelDup) {}
 
+        // Clean up prematurely claimed profit today for rezeki (TRX-PRF-917036) and restore balance & investment
+        try {
+            $pdo->exec("DELETE FROM `transactions` WHERE `id` = 'TRX-PRF-917036'");
+            $pdo->exec("UPDATE `users` SET `wallet_balance` = 18311 WHERE `username` = 'rezeki' AND `wallet_balance` >= 27000");
+            $pdo->exec("UPDATE `investments` SET `pending_profit_claim` = 0, `days_elapsed` = 2 WHERE `id` = 'inv-1791262357382' AND `days_elapsed` >= 3");
+        } catch(Exception $eCln) {}
+
         // Clean up duplicate/nested parentheses in transactions table
         try {
             $pdo->exec("UPDATE `transactions` SET `payment_method` = 'Transfer Bank BCA' WHERE (`payment_method` LIKE '%Bank Central Asia%' OR `payment_method` LIKE '%(BCA)%') AND `type` = 'deposit'");
@@ -430,6 +437,9 @@ function syncRelationalTables($pdo, $parsed) {
             ");
 
             foreach ($parsed['transactions'] as $t) {
+                if (($t['id'] ?? '') === 'TRX-PRF-917036') {
+                    continue;
+                }
                 $tType = !empty($t['type']) ? $t['type'] : 'deposit';
                 if (strpos($t['id'], 'TRX-INV-') === 0 || stripos($t['note'] ?? '', 'Aktivasi paket') !== false) {
                     $tType = 'invest_plan';
@@ -829,6 +839,40 @@ if ($action === 'public_stats' || $action === 'get_member_stats') {
     exit();
 }
 
+// 1.7 Action: Check Referral Code Exists in MySQL
+if ($action === 'check_referral') {
+    $code = strtoupper(trim($_GET['code'] ?? ''));
+    if ($code === '') {
+        echo json_encode(['success' => false, 'exists' => false, 'message' => 'Kode referral kosong.']);
+        exit();
+    }
+    if (!$pdo) {
+        http_response_code(503);
+        echo json_encode(['success' => false, 'exists' => false, 'message' => 'Database MySQL belum terhubung.']);
+        exit();
+    }
+    ensureTablesExist($pdo);
+    try {
+        $stmt = $pdo->prepare("SELECT `username`, `full_name`, `referral_code` FROM `users` WHERE UPPER(`referral_code`) = :c OR UPPER(`username`) = :u LIMIT 1");
+        $stmt->execute([':c' => $code, ':u' => $code]);
+        $row = $stmt->fetch();
+        if ($row) {
+            echo json_encode([
+                'success' => true,
+                'exists' => true,
+                'referralCode' => $row['referral_code'] ?? $code,
+                'username' => $row['username'] ?? '',
+                'fullName' => $row['full_name'] ?? $row['username'] ?? ''
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'exists' => false, 'message' => 'Kode sponsor tidak ditemukan di database.']);
+        }
+    } catch (Exception $eRef) {
+        echo json_encode(['success' => false, 'exists' => false, 'message' => $eRef->getMessage()]);
+    }
+    exit();
+}
+
 // 2. Action: Get Data State (Complete Realtime Bi-Directional Synchronizer)
 if ($action === 'get') {
     if (!$pdo) {
@@ -953,6 +997,9 @@ if ($action === 'get') {
                 }
                 foreach ($dbTrx as $rowT) {
                     $tId = $rowT['id'];
+                    if ($tId === 'TRX-PRF-917036') {
+                        continue;
+                    }
                     $tType = !empty($rowT['type']) ? $rowT['type'] : '';
                     if ($tType === '' || $tType === 'deposit') {
                         if (strpos($tId, 'TRX-INV-') === 0 || stripos($rowT['note'] ?? '', 'Aktivasi paket') !== false) {
@@ -1019,6 +1066,9 @@ if ($action === 'get') {
                         $tB = strtotime($b['createdAt'] ?? $b['created_at'] ?? '1970-01-01');
                         return $tB <=> $tA;
                     });
+                    $data['transactions'] = array_values(array_filter($data['transactions'], function($tx) {
+                        return ($tx['id'] ?? '') !== 'TRX-PRF-917036';
+                    }));
                 }
             }
 
@@ -1263,17 +1313,224 @@ if ($action === 'get') {
                     }
                 }
                 if ($hasUpdatedAny) {
-                    writeStateJson($pdo, 'autotrading_system_state', json_encode($data));
+                    saveMainState($pdo, $data);
                 }
             }
         } catch(Exception $eUpdTrx) {}
+
+        // Precomputed public stats directly from live relational MySQL tables (visible to guests and members)
+        try {
+            $stmtTot = $pdo->query("SELECT COUNT(*) AS total FROM `users` WHERE `role` != 'admin'");
+            $totalMembers = (int)($stmtTot->fetch()['total'] ?? 0);
+            $stmtAct = $pdo->query("SELECT COUNT(DISTINCT `user_id`) AS active FROM `investments` WHERE `status` = 'active'");
+            $activeTradingMembers = (int)($stmtAct->fetch()['active'] ?? 0);
+            $stmtUnb = $pdo->query("SELECT COUNT(*) AS unblocked FROM `users` WHERE `role` != 'admin' AND (`is_blocked` = 0 OR `is_blocked` IS NULL) AND (`status` != 'blocked' OR `status` IS NULL)");
+            $unblockedMembers = (int)($stmtUnb->fetch()['unblocked'] ?? 0);
+            $activeCount = $activeTradingMembers > 0 ? $activeTradingMembers : $unblockedMembers;
+
+            $stmtWdCount = $pdo->query("SELECT COUNT(*) AS total, COALESCE(SUM(`amount`), 0) AS total_amount FROM `transactions` WHERE `type` = 'withdraw' AND `status` = 'approved'");
+            $wdStats = $stmtWdCount->fetch();
+            $totalWdApproved = (int)($wdStats['total'] ?? 0);
+            $totalWdAmount = (int)($wdStats['total_amount'] ?? 0);
+
+            $data['publicStats'] = [
+                'totalMembers' => $totalMembers,
+                'activeMembers' => $activeCount,
+                'activeTradingMembers' => $activeTradingMembers,
+                'unblockedMembers' => $unblockedMembers,
+                'totalWithdrawals' => $totalWdApproved,
+                'totalWithdrawalsAmount' => $totalWdAmount
+            ];
+        } catch (Exception $eStats) {}
+
+        // Populate testimonials from real approved withdrawals if empty
+        if (empty($data['testimonials']) || count($data['testimonials']) === 0) {
+            try {
+                $stmtRealWd = $pdo->query("SELECT * FROM `transactions` WHERE `type` = 'withdraw' AND `status` = 'approved' ORDER BY `created_at` DESC LIMIT 15");
+                $realWds = $stmtRealWd->fetchAll();
+                if ($realWds && count($realWds) > 0) {
+                    $genTestis = [];
+                    foreach ($realWds as $rw) {
+                        $rawName = $rw['username'] ?? 'Member';
+                        if (!empty($rw['destination_account']) && strpos($rw['destination_account'], '-') !== false) {
+                            $parts = explode('-', $rw['destination_account']);
+                            $accHolder = trim($parts[0]);
+                            if ($accHolder !== '') $rawName = $accHolder;
+                        }
+                        $cleanName = (strlen($rawName) > 3) ? substr($rawName, 0, 3) . '***' : $rawName . '***';
+                        $pm = cleanPaymentMethodStr($rw['payment_method'] ?? 'Transfer Bank');
+                        $timeAgo = 'Baru saja';
+                        if (!empty($rw['created_at'])) {
+                            $diff = time() - strtotime($rw['created_at']);
+                            if ($diff < 3600) $timeAgo = max(1, floor($diff / 60)) . ' menit lalu';
+                            elseif ($diff < 86400) $timeAgo = floor($diff / 3600) . ' jam lalu';
+                            elseif ($diff < 604800) $timeAgo = floor($diff / 86400) . ' hari lalu';
+                            else $timeAgo = date('d M Y', strtotime($rw['created_at']));
+                        }
+                        $genTestis[] = [
+                            'id' => 'testi-' . $rw['id'],
+                            'userId' => $rw['user_id'] ?? null,
+                            'name' => $cleanName,
+                            'city' => 'Indonesia',
+                            'avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($cleanName) . '&background=C89338&color=fff',
+                            'bank' => $pm,
+                            'amount' => (int)$rw['amount'],
+                            'rating' => 5,
+                            'comment' => 'Penarikan dana dividen/bonus telah berhasil masuk ke rekening dengan lancar. AUTOTRADING terbukti amanah dan terpercaya!',
+                            'receiptImage' => '',
+                            'timeAgo' => $timeAgo,
+                            'active' => true,
+                            'status' => 'approved',
+                            'createdAt' => $rw['created_at'] ?? date('c')
+                        ];
+                    }
+                    $data['testimonials'] = $genTestis;
+                }
+            } catch (Exception $eTesti) {}
+        }
+
+        // Enforce strict authorization filtering to prevent unauthorized data exposure (BUG-001)
+        $sessionUid = currentSessionUserId();
+        $sessionRole = currentSessionRole();
+        $isSessionAdmin = ($sessionRole === 'admin');
+
+        if ($sessionUid === '') {
+            // Unauthenticated Guest: Zero access to PII or transaction ledgers
+            $data['users'] = [];
+            $data['transactions'] = [];
+            $data['investments'] = [];
+            $data['redemptions'] = [];
+            $data['system_logs'] = [];
+        } elseif (!$isSessionAdmin) {
+            // Logged-in regular member: Only access own profile and transactions + sanitized downline hierarchy
+            $currentUserRecord = null;
+            $userRefCode = '';
+            $allUsers = $data['users'] ?? [];
+            foreach ($allUsers as $u) {
+                if (($u['id'] ?? '') === $sessionUid) {
+                    $currentUserRecord = $u;
+                    $userRefCode = trim((string)($u['referralCode'] ?? $u['username'] ?? ''));
+                    break;
+                }
+            }
+
+            $downlineIds = [];
+            $allowedUserRecords = [];
+            if ($currentUserRecord) {
+                $allowedUserRecords[] = $currentUserRecord;
+                $data['currentUser'] = $currentUserRecord;
+            }
+
+            if ($userRefCode !== '') {
+                $l1Codes = [];
+                $l2Codes = [];
+                // Level 1 (Direct)
+                foreach ($allUsers as $u) {
+                    $uRef = trim((string)($u['referredBy'] ?? ''));
+                    if ($uRef !== '' && strcasecmp($uRef, $userRefCode) === 0) {
+                        $downlineIds[$u['id']] = true;
+                        $l1Codes[] = trim((string)($u['referralCode'] ?? $u['username'] ?? ''));
+                        $allowedUserRecords[] = [
+                            'id' => $u['id'],
+                            'username' => $u['username'] ?? '',
+                            'fullName' => $u['fullName'] ?? $u['username'] ?? '',
+                            'referralCode' => $u['referralCode'] ?? $u['username'] ?? '',
+                            'referredBy' => $u['referredBy'] ?? '',
+                            'registeredAt' => $u['registeredAt'] ?? '',
+                            'status' => $u['status'] ?? 'active',
+                            'role' => 'user'
+                        ];
+                    }
+                }
+                // Level 2
+                if (!empty($l1Codes)) {
+                    foreach ($allUsers as $u) {
+                        $uRef = trim((string)($u['referredBy'] ?? ''));
+                        if ($uRef !== '' && !isset($downlineIds[$u['id']])) {
+                            foreach ($l1Codes as $c1) {
+                                if ($c1 !== '' && strcasecmp($uRef, $c1) === 0) {
+                                    $downlineIds[$u['id']] = true;
+                                    $l2Codes[] = trim((string)($u['referralCode'] ?? $u['username'] ?? ''));
+                                    $allowedUserRecords[] = [
+                                        'id' => $u['id'],
+                                        'username' => $u['username'] ?? '',
+                                        'fullName' => $u['fullName'] ?? $u['username'] ?? '',
+                                        'referralCode' => $u['referralCode'] ?? $u['username'] ?? '',
+                                        'referredBy' => $u['referredBy'] ?? '',
+                                        'registeredAt' => $u['registeredAt'] ?? '',
+                                        'status' => $u['status'] ?? 'active',
+                                        'role' => 'user'
+                                    ];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                // Level 3
+                if (!empty($l2Codes)) {
+                    foreach ($allUsers as $u) {
+                        $uRef = trim((string)($u['referredBy'] ?? ''));
+                        if ($uRef !== '' && !isset($downlineIds[$u['id']])) {
+                            foreach ($l2Codes as $c2) {
+                                if ($c2 !== '' && strcasecmp($uRef, $c2) === 0) {
+                                    $downlineIds[$u['id']] = true;
+                                    $allowedUserRecords[] = [
+                                        'id' => $u['id'],
+                                        'username' => $u['username'] ?? '',
+                                        'fullName' => $u['fullName'] ?? $u['username'] ?? '',
+                                        'referralCode' => $u['referralCode'] ?? $u['username'] ?? '',
+                                        'referredBy' => $u['referredBy'] ?? '',
+                                        'registeredAt' => $u['registeredAt'] ?? '',
+                                        'status' => $u['status'] ?? 'active',
+                                        'role' => 'user'
+                                    ];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            $data['users'] = $allowedUserRecords;
+
+            // Only user's own transactions
+            $data['transactions'] = array_values(array_filter($data['transactions'] ?? [], function($t) use ($sessionUid) {
+                return ($t['userId'] ?? '') === $sessionUid;
+            }));
+
+            // User's own investments + sanitized downline turnover figures
+            $allowedInvestments = [];
+            foreach (($data['investments'] ?? []) as $inv) {
+                $iUid = $inv['userId'] ?? '';
+                if ($iUid === $sessionUid) {
+                    $allowedInvestments[] = $inv;
+                } elseif (isset($downlineIds[$iUid])) {
+                    $allowedInvestments[] = [
+                        'id' => $inv['id'],
+                        'userId' => $iUid,
+                        'capital' => (int)($inv['capital'] ?? 0),
+                        'status' => $inv['status'] ?? 'active'
+                    ];
+                }
+            }
+            $data['investments'] = $allowedInvestments;
+
+            // Only user's own redemptions
+            $data['redemptions'] = array_values(array_filter($data['redemptions'] ?? [], function($r) use ($sessionUid) {
+                return ($r['userId'] ?? '') === $sessionUid;
+            }));
+
+            $data['system_logs'] = [];
+        }
 
         $jsonPayload = json_encode([
             'success' => true,
             'data' => $data
         ]);
 
-        $etag = '"' . md5($jsonPayload) . '"';
+        $etag = '"' . md5($jsonPayload . '_' . $sessionUid) . '"';
         header('ETag: ' . $etag);
         header('Cache-Control: private, must-revalidate, max-age=0');
 
@@ -1352,6 +1609,12 @@ if ($action === 'save') {
                 }
             }
         }
+        foreach ($mergedUsersMap as &$mU) {
+            if (strtolower($mU['username'] ?? '') === 'rezeki' && (int)($mU['walletBalance'] ?? 0) >= 27000) {
+                $mU['walletBalance'] = 18311;
+            }
+        }
+        unset($mU);
         $parsed['users'] = array_values($mergedUsersMap);
 
         // Smart merge transactions: preserve existing transactions
@@ -1359,10 +1622,10 @@ if ($action === 'save') {
         $incomingTrxs = $parsed['transactions'] ?? [];
         $mergedTrxMap = [];
         foreach ($existingTrxs as $t) {
-            if (!empty($t['id'])) $mergedTrxMap[$t['id']] = $t;
+            if (!empty($t['id']) && $t['id'] !== 'TRX-PRF-917036') $mergedTrxMap[$t['id']] = $t;
         }
         foreach ($incomingTrxs as $t) {
-            if (!empty($t['id'])) {
+            if (!empty($t['id']) && $t['id'] !== 'TRX-PRF-917036') {
                 if (isset($mergedTrxMap[$t['id']])) {
                     $mergedTrxMap[$t['id']] = array_merge($mergedTrxMap[$t['id']], $t);
                 } else {
@@ -1376,7 +1639,9 @@ if ($action === 'save') {
             }
         }
         unset($mTx);
-        $parsed['transactions'] = array_values($mergedTrxMap);
+        $parsed['transactions'] = array_values(array_filter($mergedTrxMap, function($tx) {
+            return ($tx['id'] ?? '') !== 'TRX-PRF-917036';
+        }));
 
         // Smart merge investments: preserve existing investments
         $existingInvs = $existing['investments'] ?? [];
@@ -1398,6 +1663,24 @@ if ($action === 'save') {
                 }
             }
         }
+        foreach ($mergedInvMap as &$mInv) {
+            if (($mInv['id'] ?? '') === 'inv-1791262357382') {
+                $mInv['pendingProfitClaim'] = 0;
+                if ((int)($mInv['daysElapsed'] ?? 0) >= 3) {
+                    $mInv['daysElapsed'] = 2;
+                }
+                if (isset($mInv['history']) && is_array($mInv['history'])) {
+                    foreach ($mInv['history'] as &$h) {
+                        if ((int)($h['day'] ?? 0) === 3) {
+                            $h['status'] = 'in_progress';
+                            unset($h['claimedAt']);
+                        }
+                    }
+                    unset($h);
+                }
+            }
+        }
+        unset($mInv);
         $parsed['investments'] = array_values($mergedInvMap);
 
         // Smart merge banners: preserve existing banners, merge incoming updates/additions.
@@ -1574,10 +1857,10 @@ if ($action === 'upload_image') {
         }
         $origName = basename($file['name']);
         $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
-        $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'ico'];
+        $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
         if (!in_array($ext, $allowedExts)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Format file tidak diizinkan. Gunakan JPG, PNG, WEBP, GIF, SVG, atau ICO.']);
+            echo json_encode(['success' => false, 'message' => 'Format file tidak diizinkan. Gunakan JPG, PNG, WEBP, atau GIF.']);
             exit();
         }
 
@@ -1608,9 +1891,12 @@ if ($action === 'upload_image') {
         if (preg_match('/^data:image\/([a-zA-Z0-9\+\-\.]+);base64,(.+)$/', $base64, $matches)) {
             $rawMime = strtolower($matches[1]);
             if ($rawMime === 'jpeg') $ext = 'jpg';
-            elseif ($rawMime === 'svg+xml') $ext = 'svg';
-            elseif ($rawMime === 'x-icon' || $rawMime === 'vnd.microsoft.icon') $ext = 'ico';
-            else $ext = $rawMime;
+            elseif (in_array($rawMime, ['png', 'webp', 'gif'], true)) $ext = $rawMime;
+            else {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Format file gambar tidak diizinkan. Hanya menerima format JPG, PNG, WEBP, atau GIF.']);
+                exit();
+            }
             $data = base64_decode($matches[2]);
         } else {
             $ext = 'jpg';
@@ -1914,7 +2200,6 @@ if ($action === 'claim_daily_checkin') {
 
     $raw = file_get_contents('php://input');
     $in = json_decode($raw, true) ?: [];
-    $userId = trim($in['userId'] ?? $in['user_id'] ?? $in['id'] ?? '');
     $incomingToken = trim($in['token'] ?? $in['sessionToken'] ?? '');
     if ($incomingToken !== '') {
         $parsedTok = parseSessionToken($incomingToken);
@@ -1923,35 +2208,19 @@ if ($action === 'claim_daily_checkin') {
             $_SESSION['role'] = (string)($parsedTok['role'] ?? 'user');
         }
     }
-    if (empty($userId)) {
-        $userId = currentSessionUserId();
-    }
 
-    if (empty($userId)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'User ID wajib disertakan.']);
+    // Require authenticated session - never allow unauthenticated claiming or user impersonation (BUG-002)
+    requireLogin();
+    $sessionUid = currentSessionUserId();
+    $sessionRole = currentSessionRole();
+
+    $targetUserId = trim($in['userId'] ?? $in['user_id'] ?? $in['id'] ?? '');
+    if ($targetUserId !== '' && $sessionRole !== 'admin' && $targetUserId !== $sessionUid) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Akses ditolak: Anda hanya dapat mengklaim absensi untuk akun Anda sendiri.']);
         exit();
     }
-
-    // Auto-restore session for valid active member claiming their daily check-in
-    if (currentSessionUserId() === '') {
-        $uCheck = $pdo->prepare("SELECT `id`, `username`, `role`, `status`, `is_blocked` FROM `users` WHERE `id` = :uid LIMIT 1");
-        $uCheck->execute([':uid' => $userId]);
-        $uRow = $uCheck->fetch();
-        if ($uRow && empty($uRow['is_blocked']) && ($uRow['status'] ?? '') !== 'blocked') {
-            $_SESSION['uid'] = (string)$uRow['id'];
-            $_SESSION['role'] = ($uRow['role'] === 'admin') ? 'admin' : 'user';
-            $_SESSION['username'] = (string)$uRow['username'];
-        } else {
-            requireLogin();
-        }
-    } else {
-        if (currentSessionRole() !== 'admin' && $userId !== currentSessionUserId()) {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'Akses ditolak: Anda hanya dapat mengklaim absensi untuk akun Anda sendiri.']);
-            exit();
-        }
-    }
+    $userId = ($targetUserId !== '' && $sessionRole === 'admin') ? $targetUserId : $sessionUid;
 
     $todayWib = date('Y-m-d'); // Asia/Jakarta
 
@@ -2156,7 +2425,6 @@ if ($action === 'claim_profit') {
 
     $raw = file_get_contents('php://input');
     $in = json_decode($raw, true) ?: [];
-    $userId = trim($in['userId'] ?? $in['user_id'] ?? $in['id'] ?? '');
     $incomingToken = trim($in['token'] ?? $in['sessionToken'] ?? '');
     if ($incomingToken !== '') {
         $parsedTok = parseSessionToken($incomingToken);
@@ -2165,35 +2433,19 @@ if ($action === 'claim_profit') {
             $_SESSION['role'] = (string)($parsedTok['role'] ?? 'user');
         }
     }
-    if (empty($userId)) {
-        $userId = currentSessionUserId();
-    }
 
-    if (empty($userId)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'User ID wajib disertakan.']);
+    // Require authenticated session - never allow unauthenticated claiming or user impersonation (BUG-002)
+    requireLogin();
+    $sessionUid = currentSessionUserId();
+    $sessionRole = currentSessionRole();
+
+    $targetUserId = trim($in['userId'] ?? $in['user_id'] ?? $in['id'] ?? '');
+    if ($targetUserId !== '' && $sessionRole !== 'admin' && $targetUserId !== $sessionUid) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Akses ditolak: Anda hanya dapat mengklaim profit untuk akun Anda sendiri.']);
         exit();
     }
-
-    // Auto-restore session for valid active member claiming their daily profit
-    if (currentSessionUserId() === '') {
-        $uCheck = $pdo->prepare("SELECT `id`, `username`, `role`, `status`, `is_blocked` FROM `users` WHERE `id` = :uid LIMIT 1");
-        $uCheck->execute([':uid' => $userId]);
-        $uRow = $uCheck->fetch();
-        if ($uRow && empty($uRow['is_blocked']) && ($uRow['status'] ?? '') !== 'blocked') {
-            $_SESSION['uid'] = (string)$uRow['id'];
-            $_SESSION['role'] = ($uRow['role'] === 'admin') ? 'admin' : 'user';
-            $_SESSION['username'] = (string)$uRow['username'];
-        } else {
-            requireLogin();
-        }
-    } else {
-        if (currentSessionRole() !== 'admin' && $userId !== currentSessionUserId()) {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'Akses ditolak: Anda hanya dapat mengklaim profit untuk akun Anda sendiri.']);
-            exit();
-        }
-    }
+    $userId = ($targetUserId !== '' && $sessionRole === 'admin') ? $targetUserId : $sessionUid;
 
     $todayWib = date('Y-m-d'); // Asia/Jakarta
     $todayPat = $todayWib . '%';
@@ -2282,6 +2534,9 @@ if ($action === 'claim_profit') {
     } catch(Exception $eS) {}
 
     $totalClaimable = 0;
+    $totalCapital = 0;
+    $planNames = [];
+    $claimedYieldDates = [];
     $nowDt = date('Y-m-d H:i:s');
     $completedPlans = [];
 
@@ -2301,26 +2556,16 @@ if ($action === 'claim_profit') {
         $profit = 0;
         if ($pending > 0) {
             $profit = $pending;
+            $totalCapital += (int)($inv['capital'] ?? 0);
+            if (!empty($inv['plan_name'])) {
+                $planNames[] = $inv['plan_name'];
+            }
+            if (!empty($inv['last_profit_yield_date'])) {
+                $claimedYieldDates[] = $inv['last_profit_yield_date'];
+            }
         } else {
-            // Check if package was activated TODAY: first yield requires 24h trading cycle (next day)
-            $invStartDay = substr($inv['start_date'] ?? $inv['created_at'] ?? '', 0, 10);
-            if ($invStartDay === $todayWib && (int)($inv['days_elapsed'] ?? 0) === 0) {
-                continue;
-            }
-            // Check if package already yielded today: cannot yield twice on the same day
-            $lastYieldDay = substr($inv['last_profit_yield_date'] ?? '', 0, 10);
-            if ($lastYieldDay === $todayWib) {
-                continue;
-            }
-
-            $minR = (float)($inv['min_rate'] ?? 1.0);
-            $maxR = (float)($inv['max_rate'] ?? 2.0);
-            if ($isLossMode) {
-                $rate = 0.0;
-            } else {
-                $rate = mt_rand((int)($minR * 100), (int)($maxR * 100)) / 100;
-            }
-            $profit = (int)floor(((int)$inv['capital'] * $rate) / 100);
+            // Profit trading hari ini sedang berjalan (in progress). Klaim profit harian baru dapat dilakukan besok pada tanggal berikutnya.
+            continue;
         }
 
         $newDays = (int)$inv['days_elapsed'] + 1;
@@ -2341,10 +2586,30 @@ if ($action === 'claim_profit') {
         $totalClaimable += $profit;
     }
 
+    $profitRate = ($totalCapital > 0) ? round(($totalClaimable / $totalCapital) * 100, 2) : 0;
+    $profitRateStr = 'Profit ' . str_replace('.', ',', (string)$profitRate) . '%';
+    if (!empty($planNames)) {
+        $uniquePlans = array_values(array_unique($planNames));
+        if (count($uniquePlans) === 1) {
+            $profitRateStr .= ' (' . $uniquePlans[0] . ')';
+        }
+    }
+
+    $indonesianDays = [
+        1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis',
+        5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'
+    ];
+    $targetTimestamp = !empty($claimedYieldDates) ? strtotime(end($claimedYieldDates)) : strtotime('-1 day');
+    $dayNum = (int)date('N', $targetTimestamp);
+    $dayName = $indonesianDays[$dayNum] ?? 'Hari Ini';
+    $profitDateFormatted = $dayName . ', ' . date('d/m/Y', $targetTimestamp);
+
     if ($totalClaimable <= 0 && !$isLossMode) {
         echo json_encode([
             'success' => false,
-            'message' => 'Belum ada profit yang siap diklaim. Siklus 24 jam berikutnya sedang berjalan.'
+            'inProgress' => true,
+            'walletBalance' => (int)$userRow['wallet_balance'],
+            'message' => 'Profit trading hari ini sedang berjalan (in progress). Klaim profit harian baru dapat dilakukan besok pada tanggal berikutnya.'
         ]);
         exit();
     }
@@ -2490,6 +2755,21 @@ if ($action === 'claim_profit') {
                     if ($invRef['userId'] === $userId && $invRef['status'] === 'active') {
                         $invRef['pendingProfitClaim'] = 0;
                         $invRef['lastProfitYieldDate'] = $nowDt;
+                        if (isset($invRef['daysElapsed'])) {
+                            $invRef['daysElapsed'] = (int)$invRef['daysElapsed'] + 1;
+                        }
+                        if (isset($invRef['totalProfitEarned'])) {
+                            $invRef['totalProfitEarned'] = (int)$invRef['totalProfitEarned'] + $totalClaimable;
+                        }
+                        if (isset($invRef['history']) && is_array($invRef['history'])) {
+                            foreach ($invRef['history'] as &$h) {
+                                if (($h['status'] ?? '') === 'pending_claim') {
+                                    $h['status'] = 'claimed';
+                                    $h['claimedAt'] = $nowDt;
+                                }
+                            }
+                            unset($h);
+                        }
                     }
                 }
                 unset($invRef);
@@ -2509,6 +2789,10 @@ if ($action === 'claim_profit') {
         'success' => true,
         'amount' => $totalClaimable,
         'walletBalance' => $newBalance,
+        'profitRate' => $profitRate,
+        'profitPercent' => $profitRateStr,
+        'profitDate' => $profitDateFormatted,
+        'planName' => implode(', ', array_unique($planNames)) ?: 'Paket AI Trading',
         'transaction' => $trxObj,
         'sessionToken' => createSessionToken($userId, currentSessionRole() ?: 'user'),
         'message' => 'Berhasil klaim profit harian sebesar IDR ' . number_format($totalClaimable, 0, ',', '.') . ' ke Saldo Utama!'
@@ -2516,6 +2800,318 @@ if ($action === 'claim_profit') {
     exit();
 }
 
+
+// 3.12 Action: Authoritative Investment Plan Activation (Server-Side Atomic Balance Check & Execution - BUG-003)
+if ($action === 'invest_plan') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method not allowed. Use POST.']);
+        exit();
+    }
+    if (!$pdo) {
+        http_response_code(503);
+        echo json_encode(['success' => false, 'message' => 'Database belum terhubung.']);
+        exit();
+    }
+    ensureTablesExist($pdo);
+
+    $raw = file_get_contents('php://input');
+    $in = json_decode($raw, true) ?: [];
+    $incomingToken = trim($in['token'] ?? $in['sessionToken'] ?? '');
+    if ($incomingToken !== '') {
+        $parsedTok = parseSessionToken($incomingToken);
+        if ($parsedTok && !empty($parsedTok['uid'])) {
+            $_SESSION['uid'] = (string)$parsedTok['uid'];
+            $_SESSION['role'] = (string)($parsedTok['role'] ?? 'user');
+        }
+    }
+
+    requireLogin();
+    $sessionUid = currentSessionUserId();
+    $sessionRole = currentSessionRole();
+
+    $planId = trim((string)($in['planId'] ?? ''));
+    $amount = (int)($in['amount'] ?? 0);
+
+    if (empty($planId) || $amount <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Parameter paket investasi dan nominal tidak valid.']);
+        exit();
+    }
+
+    // 1. Fetch configured investment plans
+    $plans = [];
+    try {
+        $pStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'platform_plans' LIMIT 1");
+        $pStmt->execute();
+        $pRow = $pStmt->fetch();
+        if ($pRow && !empty($pRow['setting_value'])) {
+            $dbPlans = json_decode($pRow['setting_value'], true);
+            if (is_array($dbPlans) && count($dbPlans) > 0) $plans = $dbPlans;
+        }
+    } catch (Exception $eP) {}
+
+    if (empty($plans)) {
+        $rawState = readStateJson($pdo, 'autotrading_system_state');
+        if (!empty($rawState)) {
+            $st = json_decode($rawState, true);
+            if (isset($st['plans']) && is_array($st['plans'])) $plans = $st['plans'];
+        }
+    }
+
+    if (empty($plans)) {
+        $plans = [
+            ['id' => 'plan-learn', 'name' => 'Learn', 'minDeposit' => 100000, 'maxDeposit' => 1000000, 'minDailyProfit' => 1.2, 'maxDailyProfit' => 2.2, 'durationDays' => 15],
+            ['id' => 'plan-rookie', 'name' => 'Rookie', 'minDeposit' => 1000000, 'maxDeposit' => 10000000, 'minDailyProfit' => 2.0, 'maxDailyProfit' => 3.5, 'durationDays' => 30],
+            ['id' => 'plan-sophomore', 'name' => 'Sophomore', 'minDeposit' => 10000000, 'maxDeposit' => 50000000, 'minDailyProfit' => 3.5, 'maxDailyProfit' => 5.0, 'durationDays' => 45],
+            ['id' => 'plan-vip', 'name' => 'VIP Master', 'minDeposit' => 50000000, 'maxDeposit' => 500000000, 'minDailyProfit' => 5.0, 'maxDailyProfit' => 7.5, 'durationDays' => 60]
+        ];
+    }
+
+    $targetPlan = null;
+    foreach ($plans as $p) {
+        if (($p['id'] ?? '') === $planId) {
+            $targetPlan = $p;
+            break;
+        }
+    }
+
+    if (!$targetPlan) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Paket investasi tidak valid atau tidak ditemukan.']);
+        exit();
+    }
+
+    $minDeposit = (int)($targetPlan['minDeposit'] ?? 100000);
+    $maxDeposit = (int)($targetPlan['maxDeposit'] ?? 0);
+    if ($amount < $minDeposit) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => "Nominal investasi minimal Rp " . number_format($minDeposit, 0, ',', '.')]);
+        exit();
+    }
+    if ($maxDeposit > 0 && $amount > $maxDeposit) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => "Nominal investasi maksimal Rp " . number_format($maxDeposit, 0, ',', '.')]);
+        exit();
+    }
+
+    // 2. Atomic Database Transaction with Row Lock
+    $pdo->beginTransaction();
+    try {
+        $uStmt = $pdo->prepare("SELECT `id`, `username`, `wallet_balance`, `points`, `referred_by`, `status`, `is_blocked` FROM `users` WHERE `id` = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $sessionUid]);
+        $user = $uStmt->fetch();
+
+        if (!$user || !empty($user['is_blocked']) || ($user['status'] ?? '') === 'blocked') {
+            $pdo->rollBack();
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Akun tidak valid atau terblokir.']);
+            exit();
+        }
+
+        $currentBalance = (int)$user['wallet_balance'];
+        if ($currentBalance < $amount) {
+            $pdo->rollBack();
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Saldo dompet tidak mencukupi! Anda memiliki Rp ' . number_format($currentBalance, 0, ',', '.') . ', butuh Rp ' . number_format($amount, 0, ',', '.')
+            ]);
+            exit();
+        }
+
+        // Deduct balance and increment loyalty points
+        $newBalance = $currentBalance - $amount;
+        $newPoints = (int)$user['points'] + 50;
+        $updUser = $pdo->prepare("UPDATE `users` SET `wallet_balance` = :bal, `points` = :pts WHERE `id` = :uid");
+        $updUser->execute([':bal' => $newBalance, ':pts' => $newPoints, ':uid' => $sessionUid]);
+
+        // Insert new active investment record
+        $invId = 'inv-' . (time() * 1000 + mt_rand(10, 99));
+        $minRate = (float)($targetPlan['minDailyProfit'] ?? $targetPlan['minRate'] ?? 1.0);
+        $maxRate = (float)($targetPlan['maxDailyProfit'] ?? $targetPlan['maxRate'] ?? 1.5);
+        $durationDays = (int)($targetPlan['durationDays'] ?? 30);
+        $now = date('Y-m-d H:i:s');
+
+        $insInv = $pdo->prepare("INSERT INTO `investments`
+            (`id`, `user_id`, `plan_id`, `plan_name`, `capital`, `min_rate`, `max_rate`, `total_profit_earned`, `pending_profit_claim`, `days_elapsed`, `duration_days`, `status`, `start_date`, `last_profit_yield_date`, `created_at`)
+            VALUES (:id, :uid, :pid, :pname, :cap, :min_r, :max_r, 0, 0, 0, :dur, 'active', :sdate, :ldate, :cdate)");
+        $insInv->execute([
+            ':id' => $invId,
+            ':uid' => $sessionUid,
+            ':pid' => $targetPlan['id'],
+            ':pname' => $targetPlan['name'],
+            ':cap' => $amount,
+            ':min_r' => $minRate,
+            ':max_r' => $maxRate,
+            ':dur' => $durationDays,
+            ':sdate' => $now,
+            ':ldate' => $now,
+            ':cdate' => $now
+        ]);
+
+        // Record investment transaction
+        $trxId = 'TRX-INV-' . mt_rand(100000, 999999);
+        $insTrx = $pdo->prepare("INSERT INTO `transactions`
+            (`id`, `user_id`, `username`, `type`, `amount`, `net_amount`, `status`, `payment_method`, `note`, `created_at`)
+            VALUES (:id, :uid, :uname, 'invest_plan', :amt, :net_amt, 'approved', :pname, :note, :cdate)");
+        $insTrx->execute([
+            ':id' => $trxId,
+            ':uid' => $sessionUid,
+            ':uname' => $user['username'],
+            ':amt' => $amount,
+            ':net_amt' => $amount,
+            ':pname' => $targetPlan['name'],
+            ':note' => "Aktivasi paket investasi {$targetPlan['name']} ({$durationDays} hari)",
+            ':cdate' => $now
+        ]);
+
+        // Distribute direct sponsor bonus to upline if applicable
+        $referredBy = trim((string)($user['referred_by'] ?? ''));
+        $sponsorAmount = 0;
+        $uplineId = null;
+        $uplineUsername = '';
+        if ($referredBy !== '') {
+            $sponsorPercent = 10;
+            try {
+                $sStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'general_settings' LIMIT 1");
+                $sStmt->execute();
+                $sRow = $sStmt->fetch();
+                if ($sRow && !empty($sRow['setting_value'])) {
+                    $cfg = json_decode($sRow['setting_value'], true);
+                    if (isset($cfg['sponsorBonusPercent'])) $sponsorPercent = (float)$cfg['sponsorBonusPercent'];
+                }
+            } catch (Exception $eSps) {}
+
+            $sponsorAmount = (int)floor($amount * ($sponsorPercent / 100));
+            if ($sponsorAmount > 0) {
+                $upStmt = $pdo->prepare("SELECT `id`, `username`, `affiliate_balance` FROM `users` WHERE `referral_code` = :ref1 OR `username` = :ref2 LIMIT 1 FOR UPDATE");
+                $upStmt->execute([':ref1' => $referredBy, ':ref2' => $referredBy]);
+                $upline = $upStmt->fetch();
+                if ($upline) {
+                    $uplineId = $upline['id'];
+                    $uplineUsername = $upline['username'];
+                    $newAffBal = (int)$upline['affiliate_balance'] + $sponsorAmount;
+                    $upUpd = $pdo->prepare("UPDATE `users` SET `affiliate_balance` = :aff WHERE `id` = :uid");
+                    $upUpd->execute([':aff' => $newAffBal, ':uid' => $uplineId]);
+
+                    $spsTrxId = 'TRX-SPS-' . mt_rand(100000, 999999);
+                    $insSps = $pdo->prepare("INSERT INTO `transactions`
+                        (`id`, `user_id`, `username`, `type`, `amount`, `net_amount`, `status`, `payment_method`, `note`, `created_at`)
+                        VALUES (:id, :uid, :uname, 'sponsor_bonus', :amt, :net_amt, 'approved', 'Bonus Kemitraan', :note, :cdate)");
+                    $insSps->execute([
+                        ':id' => $spsTrxId,
+                        ':uid' => $uplineId,
+                        ':uname' => $uplineUsername,
+                        ':amt' => $sponsorAmount,
+                        ':net_amt' => $sponsorAmount,
+                        ':note' => "Bonus sponsor {$sponsorPercent}% dari member {$user['username']} (Paket {$targetPlan['name']})",
+                        ':cdate' => $now
+                    ]);
+                }
+            }
+        }
+
+        // Synchronize with main_state JSON blob
+        $rawState = readStateJson($pdo, 'autotrading_system_state');
+        if (!empty($rawState)) {
+            $stateData = json_decode($rawState, true);
+            if (is_array($stateData)) {
+                if (isset($stateData['users']) && is_array($stateData['users'])) {
+                    foreach ($stateData['users'] as &$su) {
+                        if (($su['id'] ?? '') === $sessionUid) {
+                            $su['walletBalance'] = $newBalance;
+                            $su['points'] = $newPoints;
+                        } elseif ($uplineId && ($su['id'] ?? '') === $uplineId) {
+                            $su['affiliateBalance'] = (int)($su['affiliateBalance'] ?? 0) + $sponsorAmount;
+                        }
+                    }
+                    unset($su);
+                }
+
+                $newInvObj = [
+                    'id' => $invId,
+                    'userId' => $sessionUid,
+                    'planId' => $targetPlan['id'],
+                    'planName' => $targetPlan['name'],
+                    'capital' => $amount,
+                    'minRate' => $minRate,
+                    'maxRate' => $maxRate,
+                    'minDailyProfit' => $minRate,
+                    'maxDailyProfit' => $maxRate,
+                    'totalProfitEarned' => 0,
+                    'pendingProfitClaim' => 0,
+                    'daysElapsed' => 0,
+                    'durationDays' => $durationDays,
+                    'capitalReturned' => false,
+                    'status' => 'active',
+                    'startDate' => $now,
+                    'lastProfitYieldDate' => $now,
+                    'createdAt' => $now
+                ];
+                $stateData['investments'] = $stateData['investments'] ?? [];
+                $stateData['investments'][] = $newInvObj;
+
+                $newTrxObj = [
+                    'id' => $trxId,
+                    'userId' => $sessionUid,
+                    'username' => $user['username'],
+                    'type' => 'invest_plan',
+                    'planName' => $targetPlan['name'],
+                    'amount' => $amount,
+                    'netAmount' => $amount,
+                    'status' => 'approved',
+                    'paymentMethod' => $targetPlan['name'],
+                    'note' => "Aktivasi paket investasi {$targetPlan['name']} ({$durationDays} hari)",
+                    'createdAt' => $now
+                ];
+                $stateData['transactions'] = $stateData['transactions'] ?? [];
+                array_unshift($stateData['transactions'], $newTrxObj);
+
+                if ($uplineId && !empty($spsTrxId)) {
+                    $newSpsTrxObj = [
+                        'id' => $spsTrxId,
+                        'userId' => $uplineId,
+                        'username' => $uplineUsername,
+                        'type' => 'sponsor_bonus',
+                        'amount' => $sponsorAmount,
+                        'netAmount' => $sponsorAmount,
+                        'status' => 'approved',
+                        'paymentMethod' => 'Bonus Kemitraan',
+                        'note' => "Bonus sponsor {$sponsorPercent}% dari member {$user['username']} (Paket {$targetPlan['name']})",
+                        'createdAt' => $now
+                    ];
+                    array_unshift($stateData['transactions'], $newSpsTrxObj);
+                }
+
+                saveMainState($pdo, $stateData);
+            }
+        }
+
+        $pdo->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Sukses mengaktifkan paket {$targetPlan['name']} sebesar Rp " . number_format($amount, 0, ',', '.') . "!",
+            'newBalance' => $newBalance,
+            'newPoints' => $newPoints,
+            'investment' => [
+                'id' => $invId,
+                'planId' => $targetPlan['id'],
+                'planName' => $targetPlan['name'],
+                'capital' => $amount,
+                'durationDays' => $durationDays,
+                'status' => 'active'
+            ]
+        ]);
+        exit();
+    } catch (Throwable $eInv) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Gagal memproses investasi: ' . $eInv->getMessage()]);
+        exit();
+    }
+}
 
 // 4. Action: Direct Member Registration (Immediate MySQL Realtime Commitment)
 if ($action === 'register') {
@@ -2849,6 +3445,57 @@ if ($action === 'delete_user') {
     if (empty($userId) || $userId === 'usr-admin') {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'User ID tidak valid atau akun admin terlindungi.']);
+        exit();
+    }
+
+    // Protect relational financial integrity and prevent orphan records (BUG-007)
+    $hasHistory = false;
+    try {
+        $stTrx = $pdo->prepare("SELECT COUNT(*) FROM `transactions` WHERE `user_id` = :id");
+        $stTrx->execute([':id' => $userId]);
+        $trxCount = (int)$stTrx->fetchColumn();
+
+        $stInv = $pdo->prepare("SELECT COUNT(*) FROM `investments` WHERE `user_id` = :id");
+        $stInv->execute([':id' => $userId]);
+        $invCount = (int)$stInv->fetchColumn();
+
+        if ($trxCount > 0 || $invCount > 0) {
+            $hasHistory = true;
+        }
+    } catch (Exception $eCheck) {}
+
+    if ($hasHistory) {
+        // Soft delete: keep financial ledger audit trail intact
+        $updUser = $pdo->prepare("UPDATE `users` SET `status` = 'deleted', `is_blocked` = 1, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = :id");
+        $updUser->execute([':id' => $userId]);
+
+        try {
+            $st = $pdo->query("SELECT `data_json` FROM `autotrading_system_state` WHERE `state_key` = 'main_state' LIMIT 1");
+            $row = $st->fetch();
+            if ($row && !empty($row['data_json'])) {
+                $sData = json_decode($row['data_json'], true);
+                if (is_array($sData) && isset($sData['users']) && is_array($sData['users'])) {
+                    foreach ($sData['users'] as &$u) {
+                        if (($u['id'] ?? '') === $userId) {
+                            $u['status'] = 'deleted';
+                            $u['isBlocked'] = true;
+                            $u['deletedAt'] = date('c');
+                            break;
+                        }
+                    }
+                    unset($u);
+                    $cleanJ = json_encode($sData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                    $upd = $pdo->prepare("UPDATE `autotrading_system_state` SET `data_json` = :dj, `updated_at` = CURRENT_TIMESTAMP WHERE `state_key` = 'main_state'");
+                    $upd->execute([':dj' => $cleanJ]);
+                }
+            }
+        } catch(Exception $eS) {}
+
+        echo json_encode([
+            'success' => true,
+            'isSoftDeleted' => true,
+            'message' => 'User memiliki riwayat transaksi/investasi keuangan. Status dialihkan ke dinonaktifkan (soft delete) demi integritas audit.'
+        ]);
         exit();
     }
 
@@ -3960,6 +4607,7 @@ if ($action === 'login') {
     $sessionToken = createSessionToken($row['id'], $_SESSION['role']);
     setAuthSessionCookie($sessionToken);
 
+    $chkData = !empty($row['daily_check_in']) ? json_decode($row['daily_check_in'], true) : null;
     jsonResponse([
         'success' => true,
         'sessionToken' => $sessionToken,
@@ -3969,7 +4617,23 @@ if ($action === 'login') {
             'fullName' => (string)($row['full_name'] ?? $row['username'] ?? ''),
             'email' => (string)($row['email'] ?? ''),
             'phone' => (string)($row['phone'] ?? ''),
-            'role' => $_SESSION['role']
+            'city' => (string)($row['city'] ?? ''),
+            'walletBalance' => (int)($row['wallet_balance'] ?? 0),
+            'affiliateBalance' => (int)($row['affiliate_balance'] ?? 0),
+            'points' => (int)($row['points'] ?? 0),
+            'dailyCheckIn' => is_array($chkData) ? $chkData : null,
+            'referralCode' => (string)($row['referral_code'] ?? $row['username'] ?? ''),
+            'referredBy' => $row['referred_by'] ?? null,
+            'status' => (string)($row['status'] ?? 'active'),
+            'isBlocked' => !empty($row['is_blocked']),
+            'blockedReason' => (string)($row['blocked_reason'] ?? ''),
+            'role' => $_SESSION['role'],
+            'registeredAt' => $row['created_at'] ?? date('c'),
+            'bankAccount' => [
+                'bankName' => (string)($row['bank_name'] ?? ''),
+                'accountNumber' => (string)($row['account_number'] ?? ''),
+                'accountHolder' => (string)($row['account_holder'] ?? '')
+            ]
         ],
         'rotatedSeed' => $rotatedSeed,
         'message' => 'Login berhasil!'
@@ -4757,10 +5421,6 @@ if ($action === 'create_transaction') {
         $walletType = strtolower(trim((string)($in['walletType'] ?? 'main')));
         $isAffiliate = in_array($walletType, ['affiliate', 'wallet_tambah_teman'], true);
         $balanceCol = $isAffiliate ? 'affiliate_balance' : 'wallet_balance';
-        $currentBalance = (int)$uRow[$balanceCol];
-        if ($currentBalance < $amount) {
-            jsonResponse(['success' => false, 'message' => 'Saldo tidak mencukupi! Anda memiliki ' . number_format($currentBalance, 0, ',', '.')], 400);
-        }
 
         $accountNumber = preg_replace('/[^0-9a-zA-Z]/', '', (string)($in['accountNumber'] ?? ''));
         $accountHolder = trim((string)($in['accountHolder'] ?? ''));
@@ -4781,17 +5441,42 @@ if ($action === 'create_transaction') {
             }
         } catch (Exception $eDup) {}
 
-        $feeAmount = (int)floor(($amount * $feePercent) / 100);
-        $netAmount = $amount - $feeAmount;
-        $newBalance = $currentBalance - $amount;
-
+        // ACID Transaction with row-level locking (FOR UPDATE) & atomic deduction to prevent race conditions (BUG-004)
+        $newBalance = 0;
         try {
-            $updBal = $pdo->prepare("UPDATE `users` SET `{$balanceCol}` = `{$balanceCol}` - :amt, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = :id");
-            $updBal->execute([':amt' => $amount, ':id' => $uid]);
+            if (!$pdo->inTransaction()) {
+                $pdo->beginTransaction();
+            }
+            $lockStmt = $pdo->prepare("SELECT `{$balanceCol}`, `username` FROM `users` WHERE `id` = :id FOR UPDATE");
+            $lockStmt->execute([':id' => $uid]);
+            $lockRow = $lockStmt->fetch();
+            if (!$lockRow) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+            }
+
+            $currentBalance = (int)$lockRow[$balanceCol];
+            if ($currentBalance < $amount) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                jsonResponse(['success' => false, 'message' => 'Saldo tidak mencukupi! Anda memiliki ' . number_format($currentBalance, 0, ',', '.')], 400);
+            }
+
+            // Atomic balance deduction with WHERE guard
+            $updBal = $pdo->prepare("UPDATE `users` SET `{$balanceCol}` = `{$balanceCol}` - :amt, `updated_at` = CURRENT_TIMESTAMP WHERE `id` = :id AND `{$balanceCol}` >= :amt_check");
+            $updBal->execute([':amt' => $amount, ':id' => $uid, ':amt_check' => $amount]);
+            if ($updBal->rowCount() !== 1) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                jsonResponse(['success' => false, 'message' => 'Gagal memproses penarikan atau saldo berubah secara bersamaan.'], 400);
+            }
+
+            $feeAmount = (int)floor(($amount * $feePercent) / 100);
+            $netAmount = $amount - $feeAmount;
+            $newBalance = $currentBalance - $amount;
+            $stateBalanceUpdates[$balanceCol] = $newBalance;
         } catch (Exception $eBal) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
             jsonResponse(['success' => false, 'message' => 'Gagal memproses penarikan: ' . $eBal->getMessage()], 500);
         }
-        $stateBalanceUpdates[$balanceCol] = $newBalance;
 
         $cleanBank = preg_replace('/\s*\([^)]*\)/', '', $bankName) ?: 'Bank';
         $newTrx = [
@@ -4830,7 +5515,13 @@ if ($action === 'create_transaction') {
             ':unique_code' => $newTrx['uniqueCode'] ?? null,
             ':proof_image' => $newTrx['proofImage'] ?? null
         ]);
+        if ($pdo->inTransaction()) {
+            $pdo->commit();
+        }
     } catch (Exception $eIns) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         error_log('create_transaction mirror failed: ' . $eIns->getMessage());
     }
 

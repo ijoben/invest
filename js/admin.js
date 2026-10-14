@@ -703,7 +703,7 @@ export const Admin = {
         port: 465,
         secure: 'ssl',
         user: 'admin@autotrading.my.id',
-        pass: 'WSxYuJKO+idDc6?H',
+        pass: '',
         fromName: 'AUTOTRADING Official',
         fromEmail: 'admin@autotrading.my.id'
       }

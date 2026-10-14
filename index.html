@@ -187,6 +187,7 @@
            TAB VIEW 1: HOME (Dashboard Identical to Screenshot)
            ==================================================================== -->
       <main id="tab-home" class="tab-content active">
+        <h1 class="sr-only">AUTOTRADING - Platform Investasi &amp; AI Trading Realtime 2026</h1>
 
         <!-- 1.5 ANNOUNCEMENT TICKER / RUNNING TEXT (Speaker Vector Icon) -->
         <section class="announcement-ticker-container">
@@ -840,7 +841,7 @@
       <section id="tab-markets" class="tab-content">
         <div class="section-page-header">
           <div>
-            <h1 class="section-page-title">Riwayat Transaksi Member</h1>
+            <h2 class="section-page-title">Riwayat Transaksi Member</h2>
             <p class="section-page-subtitle">Aktivitas Realtime Deposit & Penarikan Dana (WD) Member AUTOTRADING</p>
           </div>
           <button class="tier-btn btn-topup" onclick="App.openDepositModal()">+ Deposit</button>
@@ -918,7 +919,7 @@
       <section id="tab-trade" class="tab-content">
         <div class="section-page-header">
           <div>
-            <h1 class="section-page-title">Portofolio AI Trade</h1>
+            <h2 class="section-page-title">Portofolio AI Trade</h2>
             <p class="section-page-subtitle">Sistem Investasi dengan Random Daily Profit</p>
           </div>
         </div>
@@ -1012,7 +1013,7 @@
       <section id="tab-wallet" class="tab-content">
         <div class="section-page-header">
           <div>
-            <h1 class="section-page-title">Dompet Finansial</h1>
+            <h2 class="section-page-title">Dompet Finansial</h2>
             <p class="section-page-subtitle">Manajemen Deposit, Penarikan & Riwayat</p>
           </div>
         </div>
@@ -1072,7 +1073,7 @@
       <section id="tab-profile" class="tab-content">
         <div class="section-page-header">
           <div>
-            <h1 class="section-page-title">Profil & Afiliasi</h1>
+            <h2 class="section-page-title">Profil & Afiliasi</h2>
             <p class="section-page-subtitle">Program Kemitraan, Bonus Sponsor & Rabat Level</p>
           </div>
         </div>
@@ -1362,6 +1363,42 @@
             <div class="user-pagination" id="affDownlinePagination" style="margin-top: 10px;"></div>
           </div>
 
+          <!-- Legal, Privacy & Compliance Box -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 14px 12px; box-shadow: var(--card-shadow); border: 1px solid #E2E8F0; margin-bottom: 12px;">
+            <div class="flex-between mb-2">
+              <span style="font-weight: 800; font-size: 13.5px; color: #0F172A; display: flex; align-items: center; gap: 6px;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                Legalitas, Privasi &amp; Kepatuhan
+              </span>
+              <span class="badge-status approved" style="font-size: 9.5px; padding: 3px 8px;">Kepatuhan UU PDP</span>
+            </div>
+            <p style="font-size: 10.5px; color: #64748B; margin-bottom: 10px; line-height: 1.35;">
+              AUTOTRADING menjunjung tinggi transparansi, keamanan data pribadi sesuai standar UU No. 27/2022 (PDP), dan perlindungan privasi seluruh investor.
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+              <button type="button" class="profile-action-btn" style="width: 100%; border: 1px solid #CBD5E1; padding: 9px 8px;" onclick="App.openModal('termsModal')">
+                <div class="action-btn-icon" style="background: rgba(200, 147, 56, 0.15); color: #C89338;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div class="action-btn-text">
+                  <strong style="font-size: 11.5px;">Syarat &amp; Risiko</strong>
+                  <span style="font-size: 9.5px;">Ketentuan Layanan</span>
+                </div>
+              </button>
+              <button type="button" class="profile-action-btn" style="width: 100%; border: 1px solid #CBD5E1; padding: 9px 8px;" onclick="App.openModal('privacyModal')">
+                <div class="action-btn-icon" style="background: rgba(16, 185, 129, 0.15); color: #10B981;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="action-btn-text">
+                  <strong style="font-size: 11.5px;">Kebijakan Privasi</strong>
+                  <span style="font-size: 9.5px;">Perlindungan Data</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <!-- Account Settings & Logout -->
           <button class="btn-cta-gold" style="background: #EF4444;" onclick="
             Auth.logout();
@@ -1617,11 +1654,11 @@
         <div class="register-risk-box">
           <label class="register-risk-label" for="regRiskAgreement">
             <input type="checkbox" id="regRiskAgreement" class="register-risk-checkbox">
-            <span class="register-risk-text"><strong>Pernyataan Resiko :</strong> Saya sadar dan mengerti investasi mengandung resiko kerugian, saya tidak akan meminta ganti rugi apabila terjadi kerugian diakibatkan pasar forex di aplikasi ini</span>
+            <span class="register-risk-text"><strong>Pernyataan Resiko & Ketentuan :</strong> Saya sadar dan mengerti investasi mengandung resiko kerugian dan fluktuasi pasar, saya menyetujui <a href="javascript:void(0)" onclick="App.openModal('termsModal');" style="color: #C89338; text-decoration: underline; font-weight: 700;">Ketentuan Layanan</a> &amp; <a href="javascript:void(0)" onclick="App.openModal('privacyModal');" style="color: #C89338; text-decoration: underline; font-weight: 700;">Kebijakan Privasi</a> AUTOTRADING, serta tidak akan menuntut ganti rugi atas risiko pasar finansial.</span>
           </label>
         </div>
 
-        <button class="btn-cta-gold" onclick="App.submitRegister()">
+        <button id="btnSubmitRegister" class="btn-cta-gold" onclick="App.submitRegister()">
           <span>Buat Akun & Mulai</span>
         </button>
 
@@ -1679,6 +1716,14 @@
         </div>
 
         <div class="celebration-info-card">
+          <div class="celebration-info-row">
+            <span style="color: #64748B;">Keterangan Profit:</span>
+            <strong style="color: #10B981;" id="celebrationProfitPercent">Profit 1,66%</strong>
+          </div>
+          <div class="celebration-info-row">
+            <span style="color: #64748B;">Hari / Tanggal:</span>
+            <strong style="color: #0F172A;" id="celebrationProfitDate">Selasa, 13/10/2026</strong>
+          </div>
           <div class="celebration-info-row">
             <span style="color: #64748B;">Status Dividen:</span>
             <strong style="color: #10B981;">✓ 100% Berhasil Masuk Saldo</strong>
@@ -3393,11 +3438,104 @@
     </div>
   </div>
 
+  <!-- ======================================================================
+       MODAL: KETENTUAN LAYANAN & PERNYATAAN RISIKO (TERMS OF SERVICE)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="termsModal">
+    <div class="modal-sheet" style="max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="transfer-header-icon" style="background: rgba(200, 147, 56, 0.15);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div>
+            <h3 class="modal-title">Ketentuan Layanan &amp; Risiko</h3>
+            <p class="modal-subtitle">Syarat &amp; Kebijakan Operasional AUTOTRADING</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="App.closeModal('termsModal')">&times;</button>
+      </div>
+
+      <div style="overflow-y: auto; padding: 14px 6px; font-size: 12px; line-height: 1.6; color: #475569; flex: 1;">
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; color: #92400E;">
+          <strong>Pernyataan Risiko Pasar:</strong> Perdagangan valuta asing (forex), komoditas, dan aset digital memiliki tingkat volatilitas harga yang tinggi. Kinerja masa lalu tidak menjamin hasil di masa depan.
+        </div>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">1. Persyaratan Pengguna</h4>
+        <p>Pengguna platform wajib berusia sekurang-kurangnya 18 tahun atau telah cakap secara hukum. Pendaftaran akun bersifat pribadi dan pengguna bertanggung jawab penuh atas keamanan kredensial akun masing-masing.</p>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">2. Sistem Trading &amp; Bagi Hasil</h4>
+        <p>AUTOTRADING mengoperasikan teknologi AI kuantitatif yang dirancang untuk menganalisis dan mengeksekusi sinyal pasar secara otomatis. Pembagian hasil harian disalurkan sesuai dengan paket portofolio yang dipilih dan diklaim melalui dashboard aplikasi.</p>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">3. Ketentuan Penarikan Saldo (WD)</h4>
+        <p>Penarikan saldo diproses pada jam operasional perbankan (08:00 - 22:00 WIB). Batas penarikan minimum adalah Rp 50.000,-. Demi mematuhi prinsip anti-pencucian uang (AML), nomor rekening tujuan penarikan harus terdaftar atas nama pemilik akun yang sah.</p>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">4. Larangan &amp; Integritas Akun</h4>
+        <p>Dilarang keras melakukan manipulasi transaksi, rekayasa multi-akun untuk mengeksploitasi bonus kemitraan, atau tindakan yang membahayakan stabilitas sistem. Akun yang terbukti melanggar dapat dibekukan demi perlindungan komunitas.</p>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">5. Batasan Tanggung Jawab</h4>
+        <p>Platform tidak bertanggung jawab atas kerugian finansial yang diakibatkan oleh fluktuasi pasar global tak terduga, kelalaian pengguna dalam menjaga kerahasiaan kata sandi, atau gangguan koneksi internet dari sisi pengguna.</p>
+      </div>
+
+      <button type="button" class="btn-cta-gold" style="width: 100%; margin: 10px 0 0 0; padding: 11px;" onclick="App.closeModal('termsModal')">
+        <span>Saya Mengerti &amp; Setuju</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: KEBIJAKAN PRIVASI (PRIVACY POLICY) - UU No. 27/2022 PDP
+       ====================================================================== -->
+  <div class="modal-backdrop" id="privacyModal">
+    <div class="modal-sheet" style="max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="transfer-header-icon" style="background: rgba(16, 185, 129, 0.15);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <h3 class="modal-title">Kebijakan Privasi</h3>
+            <p class="modal-subtitle">Perlindungan Data Pribadi (UU PDP No. 27/2022)</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="App.closeModal('privacyModal')">&times;</button>
+      </div>
+
+      <div style="overflow-y: auto; padding: 14px 6px; font-size: 12px; line-height: 1.6; color: #475569; flex: 1;">
+        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; color: #166534;">
+          <strong>Komitmen Kerahasiaan Data:</strong> AUTOTRADING berkomitmen penuh melindungi privasi pengguna. Data pribadi Anda dienkripsi dan tidak akan pernah dijual atau dialihkan kepada pihak ketiga.
+        </div>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">1. Data Pribadi yang Dikumpulkan</h4>
+        <p>Kami mengumpulkan data yang diberikan secara sadar oleh pengguna saat registrasi dan pembaruan profil: username, nama lengkap, alamat email, nomor telepon/WhatsApp, domisili/kota, serta rincian nomor rekening bank tujuan penarikan dana.</p>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">2. Tujuan Penggunaan Data</h4>
+        <p>Data pribadi digunakan semata-mata untuk: (a) otentikasi login dan keamanan akun, (b) pemrosesan transaksi deposit dan penarikan hasil investasi, (c) penyampaian informasi resmi dan notifikasi transaksi, serta (d) pencegahan penipuan identitas.</p>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">3. Enkripsi &amp; Keamanan Tingkat Tinggi</h4>
+        <p>Kata sandi disimpan menggunakan fungsi hash kriptografi satu arah (one-way hashing) berstandar industri. Komunikasi data diamankan dengan sertifikat enkripsi TLS 256-Bit HTTPS. Token otentikasi menggunakan algoritma HMAC-SHA256 untuk menangkal pembajakan sesi.</p>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">4. Hak Akses &amp; Pembaruan Data</h4>
+        <p>Pengguna memiliki hak untuk memeriksa, memperbarui, atau memperbaiki data profil pribadi kapan saja melalui menu Profil di aplikasi. Untuk permintaan penutupan akun, pengguna dapat menghubungi Layanan Bantuan Resmi.</p>
+
+        <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">5. Kontak Pengaduan Privasi</h4>
+        <p>Pertanyaan, masukan, atau permohonan terkait data pribadi dapat disampaikan langsung ke tim Customer Service resmi AUTOTRADING melalui WhatsApp atau Telegram yang tercantum di menu Bantuan.</p>
+      </div>
+
+      <button type="button" class="btn-cta-gold" style="width: 100%; margin: 10px 0 0 0; padding: 11px;" onclick="App.closeModal('privacyModal')">
+        <span>Tutup</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Javascript Modules Entry Point -->
-  <script type="module" src="js/app.js?v=20261009_sig_v2"></script>
+  <script type="module" src="js/app.js?v=20261014_prod_ready"></script>
 
 </body>
 </html>
+

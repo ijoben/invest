@@ -61,7 +61,7 @@ const defaultDB = {
         port: 465,
         secure: 'ssl',
         user: 'admin@autotrading.my.id',
-        pass: 'WSxYuJKO+idDc6?H',
+        pass: '',
         fromName: 'AUTOTRADING Official',
         fromEmail: 'admin@autotrading.my.id'
       }
@@ -566,9 +566,36 @@ export const DB = {
         month: '2-digit',
         day: '2-digit'
       }).format(d);
-    } catch(e) {
-      return new Date().toISOString().slice(0, 10);
+    } catch (e) {
+      const now = new Date(dateInput);
+      const wibOffset = 7 * 60; // UTC+7 in minutes
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const wibDate = new Date(utc + (wibOffset * 60000));
+      return wibDate.toISOString().substring(0, 10);
     }
+  },
+
+  // Safely parse date strings (dd/mm/yyyy, ISO, yyyy-mm-dd) into YYYY-MM-DD in Asia/Jakarta timezone
+  parseDateToIso(dateInput) {
+    if (!dateInput) return '';
+    const s = String(dateInput).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      return s.substring(0, 10);
+    }
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (m) {
+      const day = m[1].padStart(2, '0');
+      const month = m[2].padStart(2, '0');
+      const year = m[3];
+      return `${year}-${month}-${day}`;
+    }
+    try {
+      const d = new Date(s.includes(' ') ? s.replace(' ', 'T') : s);
+      if (!isNaN(d.getTime())) {
+        return this.getWibDateStr(d);
+      }
+    } catch(e) {}
+    return '';
   },
 
   // Upload Image File or Base64 or Blob URL to Server uploads/ directory
@@ -1245,6 +1272,35 @@ export const DB = {
             return tB - tA;
           });
         }
+        // Preserve local active session investments & users if incoming payload is empty or missing current user data
+        const currentUserId = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_user_id') : null) ||
+                              (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_user_id') : null);
+        if (currentUserId && _activeDB) {
+          if (!Array.isArray(json.data.investments) || json.data.investments.length === 0) {
+            if (Array.isArray(_activeDB.investments) && _activeDB.investments.length > 0) {
+              json.data.investments = _activeDB.investments;
+            }
+          } else if (Array.isArray(_activeDB.investments)) {
+            const currentInvs = _activeDB.investments.filter(i => i.userId === currentUserId && i.status === 'active');
+            for (const cInv of currentInvs) {
+              if (!json.data.investments.some(i => i.id === cInv.id)) {
+                json.data.investments.push(cInv);
+              }
+            }
+          }
+
+          if (!Array.isArray(json.data.users) || json.data.users.length === 0) {
+            if (Array.isArray(_activeDB.users) && _activeDB.users.length > 0) {
+              json.data.users = _activeDB.users;
+            }
+          } else if (Array.isArray(_activeDB.users)) {
+            const currentUserObj = _activeDB.users.find(u => u.id === currentUserId);
+            if (currentUserObj && !json.data.users.some(u => u.id === currentUserId)) {
+              json.data.users.push(currentUserObj);
+            }
+          }
+        }
+
         _activeDB = json.data;
         if (typeof localStorage !== 'undefined') {
           try {
@@ -1382,7 +1438,14 @@ export const DB = {
       } catch (e) {}
     }
     if (!userId) return null;
-    const user = (db.users || []).find(u => u.id === userId) || null;
+    if (db.currentUser && (String(db.currentUser.id) === String(userId) || (db.currentUser.username && String(db.currentUser.username).toLowerCase() === String(userId).toLowerCase()))) {
+      if (db.currentUser.isBlocked || db.currentUser.status === 'blocked') {
+        this.clearSession();
+        return null;
+      }
+      return db.currentUser;
+    }
+    const user = (db.users || []).find(u => String(u.id) === String(userId) || (u.username && String(u.username).toLowerCase() === String(userId).toLowerCase())) || null;
     if (user && (user.isBlocked || user.status === 'blocked')) {
       this.clearSession();
       return null;
@@ -1394,11 +1457,11 @@ export const DB = {
     if (typeof sessionStorage !== 'undefined') {
       try {
         if (user && user.id) {
-          sessionStorage.setItem('autotrading_session_user_id', user.id);
+          sessionStorage.setItem('autotrading_session_user_id', String(user.id));
           if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('autotrading_session_user_id', user.id);
+            localStorage.setItem('autotrading_session_user_id', String(user.id));
           }
-          sessionStorage.setItem('fgt_session_user_id', user.id);
+          sessionStorage.setItem('fgt_session_user_id', String(user.id));
         } else {
           sessionStorage.removeItem('autotrading_session_user_id');
           if (typeof localStorage !== 'undefined') {
@@ -1409,6 +1472,9 @@ export const DB = {
       } catch (e) {}
     }
     const db = this.get();
+    if (user && user.id) {
+      db.currentUser = user;
+    }
     db.currentSession = user ? {
       userId: user.id,
       username: user.username,
@@ -1418,6 +1484,7 @@ export const DB = {
   },
 
   clearSession() {
+    this._lastETag = null;
     if (typeof sessionStorage !== 'undefined') {
       try {
         sessionStorage.removeItem('autotrading_session_user_id');
@@ -1431,6 +1498,7 @@ export const DB = {
     }
     const db = this.get();
     db.currentSession = null;
+    if (db.currentUser) delete db.currentUser;
   },
 
   // Users
@@ -1464,8 +1532,34 @@ export const DB = {
 
   getUserByReferralCode(code) {
     if (!code) return null;
+    const clean = String(code).trim().toUpperCase();
     const db = this.get();
-    return db.users.find(u => u.referralCode.toUpperCase() === code.toUpperCase());
+    return (db.users || []).find(u => (u.referralCode || '').toUpperCase() === clean || (u.username || '').toUpperCase() === clean) || null;
+  },
+
+  async checkReferralCode(code) {
+    if (!code) return null;
+    const clean = String(code).trim().toUpperCase();
+    const local = this.getUserByReferralCode(clean);
+    if (local) return local;
+
+    try {
+      if (typeof fetch === 'function') {
+        const url = this.getApiUrl('check_referral') + `&code=${encodeURIComponent(clean)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const json = await res.json();
+          if (json && json.success && json.exists) {
+            return {
+              referralCode: json.referralCode,
+              username: json.username,
+              fullName: json.fullName
+            };
+          }
+        }
+      }
+    } catch (e) {}
+    return null;
   },
 
   async addUser(userData) {
@@ -1502,6 +1596,7 @@ export const DB = {
             fullName: newUser.fullName,
             email: newUser.email,
             phone: newUser.phone,
+            city: newUser.city || '',
             password: newUser.password,
             referralCode: newUser.referralCode,
             referredBy: newUser.referredBy
@@ -1509,8 +1604,17 @@ export const DB = {
         });
         if (res.ok) {
           const json = await res.json();
+          if (json && json.success === false) {
+            return { error: true, message: json.message || 'Registrasi ditolak oleh database server.' };
+          }
           if (json && json.success && json.user) {
             newUser = { ...newUser, ...json.user };
+            if (json.sessionToken) {
+              try {
+                if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
+                if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
+              } catch(e) {}
+            }
           }
         }
       }
@@ -2200,7 +2304,7 @@ export const DB = {
       // Local pre-guard before network request
       const status = this.getDailyCheckInStatus(userId);
       if (status && status.hasCheckedInToday) {
-        return { success: false, message: 'Anda sudah mengklaim bonus absen hari ini! Silakan kembali besok.' };
+        return { success: false, alreadyClaimed: true, message: 'Anda sudah mengklaim bonus absen hari ini! Silakan kembali besok.' };
       }
 
       const todayWib = this.getWibDateStr();
@@ -2265,7 +2369,7 @@ export const DB = {
               if (typeof json.walletBalance === 'number') {
                 user.walletBalance = json.walletBalance;
               }
-              await this.save(db);
+              // Do NOT call this.save(db) on alreadyClaimed to prevent state storms and unauth downgrades
               return json;
             } else {
               return json;

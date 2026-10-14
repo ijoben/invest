@@ -1726,10 +1726,23 @@ html, body {
   justify-content: space-between;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .section-page-title {
   font-size: 20px;
   font-weight: 800;
   color: #0F172A;
+  margin: 0;
 }
 
 .section-page-subtitle {
@@ -5544,10 +5557,42 @@ body.dark-mode .weekly-ai-rate-highlight {
 .celebration-info-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 4px;
+  align-items: center;
+  margin-bottom: 5px;
 }
 .celebration-info-row:last-child {
   margin-bottom: 0;
+}
+.theme-dark .celebration-sheet {
+  background: radial-gradient(circle at 50% 20%, #1E293B 0%, #0F172A 100%);
+  border-color: rgba(200, 147, 56, 0.4);
+}
+.theme-dark .celebration-title {
+  color: #F8FAFC;
+}
+.theme-dark .celebration-subtitle {
+  color: #94A3B8;
+}
+.theme-dark .celebration-amount-box {
+  background: #1E293B;
+  border-color: #C89338;
+  box-shadow: 0 4px 14px rgba(200, 147, 56, 0.2);
+}
+.theme-dark .celebration-amount-val {
+  color: #F59E0B;
+}
+.theme-dark .celebration-info-card {
+  background: #141E33;
+  border-color: #334155;
+}
+.theme-dark .celebration-info-row span {
+  color: #94A3B8 !important;
+}
+.theme-dark .celebration-info-row strong {
+  color: #F1F5F9 !important;
+}
+.theme-dark #celebrationProfitPercent {
+  color: #34D399 !important;
 }
 .celebration-confetti-particle {
   position: absolute;
