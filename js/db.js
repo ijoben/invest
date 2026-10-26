@@ -33,13 +33,13 @@ const defaultDB = {
     withdrawSchedule: {
       enabled: true,
       startHour: 9, // 09:00 WIB
-      endHour: 21,  // 21:00 WIB
-      offMessage: 'Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.'
+      endHour: 15,  // 15:00 WIB
+      offMessage: 'Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 15:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.'
     },
     withdrawTerms: [
       "Minimal Penarikan: Rp 50.000 per transaksi.",
       "Biaya Admin: 10% dari nominal penarikan dana.",
-      "Jam Operasional WD: Buka setiap hari pukul 09:00 - 21:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
+      "Jam Operasional WD: Buka setiap hari pukul 09:00 - 15:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
       "Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).",
       "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
     ],
@@ -198,6 +198,10 @@ const defaultDB = {
 
   // Users Database
   users: [
+    // Privacy: the shipped seed contains ONLY this admin bootstrap account.
+    // Real member PII (emails, phones, balances) must never ship inside public JS;
+    // the live roster comes from the session-gated API (action=get).
+    
     {
       id: 'usr-admin',
       username: 'admin',
@@ -213,9 +217,6 @@ const defaultDB = {
       referredBy: null,
       kycStatus: 'verified',
       isBlocked: false,
-      blockedReason: '',
-      blockedAt: null,
-      blockHistory: [],
       registeredAt: '2026-01-01T00:00:00.000Z'
     }
   ],
@@ -424,6 +425,82 @@ const defaultDB = {
   // User Point Redemptions Log (Riwayat Klaim Hadiah)
   redemptions: [],
 
+  // Platform Leaderboard (Real MySQL Database Data)
+  leaderboard: {
+    topProfits: [
+      { id: "usr-1791247049424", username: "pen***", maskedUsername: "pen***", fullName: "Juardi", totalProfit: 893800, totalCapital: 26000000, activePlan: "Learn", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791399289660", username: "kay***", maskedUsername: "kay***", fullName: "Juandi", totalProfit: 337200, totalCapital: 20000000, activePlan: "Ai Standar", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791224078093", username: "bon***", maskedUsername: "bon***", fullName: "Deza", totalProfit: 165600, totalCapital: 2500000, activePlan: "Ai Standar", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791444503968", username: "bis***", maskedUsername: "bis***", fullName: "Dede", totalProfit: 156998, totalCapital: 5000000, activePlan: "Ai Standar", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791243763854", username: "inv***", maskedUsername: "inv***", fullName: "Deni A", totalProfit: 81334, totalCapital: 3600000, activePlan: "Ai Pemula", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791242532209", username: "inv***", maskedUsername: "inv***", fullName: "Nadin", totalProfit: 61800, totalCapital: 1500000, activePlan: "Ai Standar", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791249510656", username: "rez***", maskedUsername: "rez***", fullName: "Bambang", totalProfit: 50949, totalCapital: 500000, activePlan: "Ai Pemula", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791304182871", username: "cua***", maskedUsername: "cua***", fullName: "Juan", totalProfit: 33000, totalCapital: 5000000, activePlan: "Ai Standar", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1790996838699", username: "dui***", maskedUsername: "dui***", fullName: "Subanto", totalProfit: 24900, totalCapital: 300000, activePlan: "Learn", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791399216846", username: "uan***", maskedUsername: "uan***", fullName: "Jojo", totalProfit: 24540, totalCapital: 200000, activePlan: "Ai Pemula", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791225011782", username: "mas***", maskedUsername: "mas***", fullName: "Master AI", totalProfit: 9610, totalCapital: 100000, activePlan: "Ai Pemula", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791244833219", username: "inv***", maskedUsername: "inv***", fullName: "Rina", totalProfit: 9349, totalCapital: 100000, activePlan: "Learn", activePlansCount: 1, winRate: 98.8 },
+      { id: "usr-1791000123456", username: "dui***", maskedUsername: "dui***", fullName: "Subanto", totalProfit: 1960, totalCapital: 100000, activePlan: "Ai Pemula", activePlansCount: 1, winRate: 98.8 }
+    ],
+    topSponsors: [
+      { id: "usr-1791224078093", username: "bon***", maskedUsername: "bon***", fullName: "Deza", directCount: 2, sponsorCount: 2, totalTeam: 10, turnover: 33100000, commission: 3259496, badge: "Silver Pro" },
+      { id: "usr-1791399216846", username: "uan***", maskedUsername: "uan***", fullName: "Jojo", directCount: 4, sponsorCount: 4, totalTeam: 5, turnover: 30300000, commission: 2536150, badge: "Silver Pro" },
+      { id: "usr-1791242532209", username: "inv***", maskedUsername: "inv***", fullName: "Nadin", directCount: 2, sponsorCount: 2, totalTeam: 2, turnover: 5000000, commission: 500000, badge: "Rising Star" },
+      { id: "usr-1791444503968", username: "bis***", maskedUsername: "bis***", fullName: "Dede", directCount: 1, sponsorCount: 1, totalTeam: 1, turnover: 5000000, commission: 500000, badge: "Rising Star" },
+      { id: "usr-1791247049424", username: "pen***", maskedUsername: "pen***", fullName: "Juardi", directCount: 1, sponsorCount: 1, totalTeam: 7, turnover: 800000, commission: 50379, badge: "Rising Star" },
+      { id: "usr-1791277725245", username: "pem***", maskedUsername: "pem***", fullName: "Eko", directCount: 1, sponsorCount: 1, totalTeam: 6, turnover: 30500000, commission: 24449, badge: "Silver Pro" },
+      { id: "usr-1791249510656", username: "rez***", maskedUsername: "rez***", fullName: "Bambang", directCount: 5, sponsorCount: 5, totalTeam: 10, turnover: 25600000, commission: 21326, badge: "Silver Pro" },
+      { id: "usr-1790996838699", username: "dui***", maskedUsername: "dui***", fullName: "Subanto", directCount: 1, sponsorCount: 1, totalTeam: 1, turnover: 100000, commission: 10287, badge: "Rising Star" },
+      { id: "usr-1791507597687", username: "lea***", maskedUsername: "lea***", fullName: "Bapak Hendra (Leader)", directCount: 1, sponsorCount: 1, totalTeam: 1, turnover: 0, commission: 0, badge: "Rising Star" }
+    ]
+  },
+
+  // Public Recent Real Transactions (MySQL Live Database)
+  publicRecentDeposits: [
+    { id: "TRX-DEP-534795", username: "dig***", type: "deposit", amount: 500428, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-16 20:44:17" },
+    { id: "TRX-DEP-928620", username: "tes***", type: "deposit", amount: 100000, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-15 22:45:22" },
+    { id: "TRX-DEP-764833", username: "kay***", type: "deposit", amount: 50000244, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-15 01:13:03" },
+    { id: "TRX-DEP-485998", username: "dui***", type: "deposit", amount: 500257, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-14 19:14:48" },
+    { id: "TRX-DEP-263724", username: "bis***", type: "deposit", amount: 500482, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-13 09:25:28" },
+    { id: "TRX-DEP-997717", username: "bis***", type: "deposit", amount: 5000470, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-08 14:38:09" },
+    { id: "TRX-DEP-821570", username: "kay***", type: "deposit", amount: 20000922, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-08 01:56:22" },
+    { id: "TRX-DEP-862393", username: "cua***", type: "deposit", amount: 5000275, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-07 22:36:24" },
+    { id: "TRX-DEP-388974", username: "rez***", type: "deposit", amount: 500611, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 11:51:14" },
+    { id: "TRX-DEP-253929", username: "pen***", type: "deposit", amount: 55000846, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 07:38:30" },
+    { id: "TRX-DEP-474134", username: "inv***", type: "deposit", amount: 10000118, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 06:43:29" },
+    { id: "TRX-DEP-411119", username: "inv***", type: "deposit", amount: 2500552, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 06:22:53" },
+    { id: "TRX-DEP-352463", username: "bon***", type: "deposit", amount: 5000792, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 06:12:32" },
+    { id: "TRX-DEP-703653", username: "mas***", type: "deposit", amount: 500899, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-05 23:46:39" },
+    { id: "TRX-DEP-786466", username: "inv***", type: "deposit", amount: 1000642, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-04 09:42:39" },
+    { id: "TRX-DEP-288886", username: "dui***", type: "deposit", amount: 500310, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-03 07:00:27" }
+  ],
+  publicRecentWithdrawals: [
+    { id: "TRX-WDR-165481", username: "pen***", type: "withdraw", amount: 500000, paymentMethod: "DANA (081274619XXX)", status: "approved", createdAt: "2026-10-06 09:23:15" },
+    { id: "TRX-WDR-307351", username: "bon***", type: "withdraw", amount: 1000000, paymentMethod: "BCA (5345678XXX)", status: "approved", createdAt: "2026-10-06 09:20:27" },
+    { id: "TRX-WD-580134", username: "dui***", type: "withdraw", amount: 50000, paymentMethod: "BCA (8923451XXX)", status: "approved", createdAt: "2026-10-03 10:02:34" }
+  ],
+  publicRecentTransactions: [
+    { id: "TRX-DEP-534795", username: "dig***", type: "deposit", amount: 500428, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-16 20:44:17" },
+    { id: "TRX-DEP-928620", username: "tes***", type: "deposit", amount: 100000, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-15 22:45:22" },
+    { id: "TRX-DEP-764833", username: "kay***", type: "deposit", amount: 50000244, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-15 01:13:03" },
+    { id: "TRX-DEP-485998", username: "dui***", type: "deposit", amount: 500257, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-14 19:14:48" },
+    { id: "TRX-DEP-263724", username: "bis***", type: "deposit", amount: 500482, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-13 09:25:28" },
+    { id: "TRX-DEP-997717", username: "bis***", type: "deposit", amount: 5000470, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-08 14:38:09" },
+    { id: "TRX-DEP-821570", username: "kay***", type: "deposit", amount: 20000922, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-08 01:56:22" },
+    { id: "TRX-DEP-862393", username: "cua***", type: "deposit", amount: 5000275, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-07 22:36:24" },
+    { id: "TRX-DEP-388974", username: "rez***", type: "deposit", amount: 500611, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 11:51:14" },
+    { id: "TRX-WDR-165481", username: "pen***", type: "withdraw", amount: 500000, paymentMethod: "DANA (081274619XXX)", status: "approved", createdAt: "2026-10-06 09:23:15" },
+    { id: "TRX-WDR-307351", username: "bon***", type: "withdraw", amount: 1000000, paymentMethod: "BCA (5345678XXX)", status: "approved", createdAt: "2026-10-06 09:20:27" },
+    { id: "TRX-DEP-253929", username: "pen***", type: "deposit", amount: 55000846, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 07:38:30" },
+    { id: "TRX-DEP-474134", username: "inv***", type: "deposit", amount: 10000118, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 06:43:29" },
+    { id: "TRX-DEP-411119", username: "inv***", type: "deposit", amount: 2500552, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 06:22:53" },
+    { id: "TRX-DEP-352463", username: "bon***", type: "deposit", amount: 5000792, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-06 06:12:32" },
+    { id: "TRX-DEP-703653", username: "mas***", type: "deposit", amount: 500899, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-05 23:46:39" },
+    { id: "TRX-DEP-786466", username: "inv***", type: "deposit", amount: 1000642, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-04 09:42:39" },
+    { id: "TRX-WD-580134", username: "dui***", type: "withdraw", amount: 50000, paymentMethod: "BCA (8923451XXX)", status: "approved", createdAt: "2026-10-03 10:02:34" },
+    { id: "TRX-DEP-288886", username: "dui***", type: "deposit", amount: 500310, paymentMethod: "Transfer Bank BCA", status: "approved", createdAt: "2026-10-03 07:00:27" }
+  ],
+
   // Active Session
   currentSession: null // null indicates Guest mode
 };
@@ -507,6 +584,8 @@ defaultDB.testimonials = [];
 
 // Database Service Helper Object
 export const DB = {
+  defaultDB: defaultDB,
+
   getApiUrl(action) {
     let token = null;
     const isAuthAction = action === 'login' || action === 'register' || action === 'logout';
@@ -516,7 +595,15 @@ export const DB = {
         if (!token && typeof sessionStorage !== 'undefined') token = sessionStorage.getItem('autotrading_session_token');
       } catch (e) {}
     }
-    const tokenParam = token ? `&sessionToken=${encodeURIComponent(token)}` : '';
+    // SECURITY: token sesi TIDAK ditempel di URL lagi. Sebelumnya setiap request
+    // membawa ?sessionToken=... sehingga token ikut tercatat di access-log server,
+    // riwayat browser, dan header Referer - cukup untuk membajak sesi 60 hari.
+    // Autentikasi kini lewat cookie httpOnly (same-origin) + header Authorization.
+    // Pengecualian: konteks file:// (tanpa cookie same-origin) tetap pakai URL.
+    let tokenParam = '';
+    const isFileContext = typeof window !== 'undefined' && window.location &&
+      (!window.location.origin || window.location.origin === 'null');
+    if (isFileContext && token) tokenParam = `&sessionToken=${encodeURIComponent(token)}`;
     if (typeof window !== 'undefined' && window.location) {
       const origin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : '';
       if (origin) {
@@ -746,7 +833,9 @@ export const DB = {
       }
       const parsed = _activeDB;
       if (!parsed.plans) parsed.plans = defaultDB.plans;
-      if (!parsed.users) parsed.users = defaultDB.users;
+      if (!Array.isArray(parsed.users) || parsed.users.length === 0) {
+        parsed.users = JSON.parse(JSON.stringify(defaultDB.users));
+      }
       if (!parsed.transactions) parsed.transactions = [];
       if (!parsed.investments) parsed.investments = [];
       if (!parsed.signals) parsed.signals = defaultDB.signals;
@@ -756,6 +845,18 @@ export const DB = {
       if (!parsed.rewards) parsed.rewards = defaultDB.rewards;
       if (!parsed.redemptions) parsed.redemptions = [];
       if (!parsed.testimonials) parsed.testimonials = [];
+      if (!parsed.leaderboard || !Array.isArray(parsed.leaderboard.topSponsors) || parsed.leaderboard.topSponsors.length === 0) {
+        parsed.leaderboard = JSON.parse(JSON.stringify(defaultDB.leaderboard));
+      }
+      if (!parsed.publicRecentDeposits || !Array.isArray(parsed.publicRecentDeposits) || parsed.publicRecentDeposits.length === 0) {
+        parsed.publicRecentDeposits = JSON.parse(JSON.stringify(defaultDB.publicRecentDeposits));
+      }
+      if (!parsed.publicRecentWithdrawals || !Array.isArray(parsed.publicRecentWithdrawals) || parsed.publicRecentWithdrawals.length === 0) {
+        parsed.publicRecentWithdrawals = JSON.parse(JSON.stringify(defaultDB.publicRecentWithdrawals));
+      }
+      if (!parsed.publicRecentTransactions || !Array.isArray(parsed.publicRecentTransactions) || parsed.publicRecentTransactions.length === 0) {
+        parsed.publicRecentTransactions = JSON.parse(JSON.stringify(defaultDB.publicRecentTransactions));
+      }
       if (!parsed.settings) parsed.settings = defaultDB.settings;
       if (!parsed.settings.announcementSpeed) parsed.settings.announcementSpeed = 75;
       if (!parsed.settings.paymentGateways) {
@@ -812,8 +913,38 @@ export const DB = {
   // Maintain and verify active server session using cryptographic sessionToken,
   // falling back to memory credentials only if valid plaintext password exists.
   _lastSessionAttempt: 0,
+
+  // Explicit-logout flag: set only when the user actually pressed logout
+  // (or a flow cleared the session), and cleared by the next real login.
+  // While this flag is set, the client must NEVER re-hydrate the session from
+  // server payloads (in-flight sync races / failed logout requests used to
+  // resurrect the login). Because only an explicit logout sets it, the
+  // "clear cache -> re-hydrate from server session" recovery feature keeps working.
+  _loggedOut: false,
+  _wasExplicitlyLoggedOut() {
+    if (this._loggedOut === true) return true;
+    try {
+      return typeof localStorage !== 'undefined' &&
+        localStorage.getItem('autotrading_logged_out') === '1';
+    } catch (e) {
+      return false;
+    }
+  },
+  _setLoggedOutFlag(on) {
+    this._loggedOut = Boolean(on);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        if (on) localStorage.setItem('autotrading_logged_out', '1');
+        else localStorage.removeItem('autotrading_logged_out');
+      }
+    } catch (e) {}
+  },
+
   async ensureServerSession() {
     if (typeof fetch !== 'function') return false;
+    // After an explicit logout, never resurrect the session (a token/session
+    // response issued before the logout must not be applied after it).
+    if (this._wasExplicitlyLoggedOut()) return false;
     const now = Date.now();
     if (now - (this._lastSessionAttempt || 0) < 15000) return false;
     this._lastSessionAttempt = now;
@@ -906,7 +1037,35 @@ export const DB = {
     }
   },
 
-  async save(data) {
+  // Create a deposit TICKET before the member transfers: the server locks the
+  // exact transfer amount (base + 3-digit unique code) for 24 hours with status
+  // 'awaiting_payment'. Returns { success, transaction } , { success:false, message }
+  // on rejection, or null when the server is unreachable (caller falls back to a
+  // locally generated ticket).
+  async createDepositTicketServer(payload) {
+    if (typeof fetch !== 'function') return null;
+    try {
+      const res = await fetch(this.getApiUrl('deposit_ticket'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json().catch(() => null);
+      if (json && json.success) return json;
+      return {
+        success: false,
+        status: res.status,
+        message: (json && json.message) || `Server menolak pembuatan tiket (HTTP ${res.status}).`
+      };
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // options.allowConfigWrite: only admin config saves / admin backup restore may ask the
+  // server to accept the platform configuration (settings, plans, banners, running text,
+  // signals, rewards, testimonials) carried by this snapshot.
+  async save(data, options = {}) {
     try {
       if (data && Array.isArray(data.transactions)) {
         data.transactions.sort((a, b) => {
@@ -924,23 +1083,44 @@ export const DB = {
           console.warn('LocalStorage quota or save warning:', err);
         }
       }
-      return await this.syncToCloud(safeData);
+      return await this.syncToCloud(safeData, options);
     } catch (e) {
       console.error('Error saving DB state:', e);
       return { success: false, error: e.message };
     }
   },
 
+  // Persist a snapshot in the browser only (never writes to the server). Used right after
+  // login so a fresh browser can never push its local/default snapshot over the server state.
+  persistLocal(data) {
+    if (!data) return data;
+    _activeDB = data;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(data)));
+      }
+    } catch (e) {}
+    return data;
+  },
+
   // Asynchronous Cloud Sync Engine (cPanel MySQL via api/index.php)
-  async syncToCloud(data) {
+  async syncToCloud(data, options = {}) {
     try {
       if (typeof fetch !== 'function') return { success: true };
       const url = this.getApiUrl('save');
+      const allowConfigWrite = Boolean(options && options.allowConfigWrite === true);
+      const payload = allowConfigWrite ? { ...data, allowConfigWrite: true } : { ...data };
+      // Session-derived keys are server-computed per request; never persist them
+      // (they used to leak one browser's identity into shared state).
+      delete payload.currentUser;
+      delete payload.currentSession;
+      delete payload.isAdmin;
+      delete payload.isGuest;
       const doFetch = () => fetch(url, {
         method: 'POST',
         credentials: 'include',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify(data)
+        body: JSON.stringify(payload)
       });
       let res = await doFetch();
       if (res.status === 401) {
@@ -1128,6 +1308,310 @@ export const DB = {
     }
   },
 
+  // Authoritative Admin Approve Deposit (Atomic MySQL row lock + state sync)
+  async adminApproveDeposit(transactionId) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_approve_deposit');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ transactionId })
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ transactionId })
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menyetujui deposit (HTTP ${res.status})` };
+      }
+
+      // Update in-memory db
+      const db = this.get();
+      const trx = (db.transactions || []).find(t => t.id === transactionId);
+      if (trx) {
+        trx.status = 'approved';
+        trx.updatedAt = new Date().toISOString();
+        if (json.transaction && json.transaction.pointsAwarded) {
+          trx.pointsAwarded = json.transaction.pointsAwarded;
+        }
+      }
+      if (trx && trx.userId) {
+        const u = (db.users || []).find(x => x.id === trx.userId);
+        if (u) {
+          if (json.newWalletBalance !== undefined) u.walletBalance = json.newWalletBalance;
+          else u.walletBalance = (u.walletBalance || 0) + trx.amount;
+          if (json.newPoints !== undefined) u.points = json.newPoints;
+        }
+      }
+      if (typeof localStorage !== 'undefined') {
+        try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch (e) {}
+      }
+      return json;
+    } catch (e) {
+      console.error('adminApproveDeposit error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Admin Reject Deposit
+  async adminRejectDeposit(transactionId, reason = 'Bukti transfer tidak valid') {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_reject_deposit');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ transactionId, reason })
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ transactionId, reason })
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menolak deposit (HTTP ${res.status})` };
+      }
+
+      const db = this.get();
+      const trx = (db.transactions || []).find(t => t.id === transactionId);
+      if (trx) {
+        trx.status = 'rejected';
+        trx.rejectReason = reason;
+        trx.updatedAt = new Date().toISOString();
+      }
+      if (typeof localStorage !== 'undefined') {
+        try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch (e) {}
+      }
+      return json;
+    } catch (e) {
+      console.error('adminRejectDeposit error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Admin Approve Withdrawal
+  async adminApproveWithdrawal(transactionId) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_approve_withdrawal');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ transactionId })
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ transactionId })
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menyetujui penarikan (HTTP ${res.status})` };
+      }
+
+      const db = this.get();
+      const trx = (db.transactions || []).find(t => t.id === transactionId);
+      if (trx) {
+        trx.status = 'approved';
+        if (trx.type === 'ppob_conversion') trx.ppobStatus = 'Selesai';
+        trx.updatedAt = new Date().toISOString();
+      }
+      if (typeof localStorage !== 'undefined') {
+        try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch (e) {}
+      }
+      return json;
+    } catch (e) {
+      console.error('adminApproveWithdrawal error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Admin Reject Withdrawal
+  async adminRejectWithdrawal(transactionId, reason = 'Data rekening / nomor tujuan tidak sesuai') {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_reject_withdrawal');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ transactionId, reason })
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ transactionId, reason })
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menolak penarikan (HTTP ${res.status})` };
+      }
+
+      const db = this.get();
+      const trx = (db.transactions || []).find(t => t.id === transactionId);
+      if (trx) {
+        trx.status = 'rejected';
+        trx.isRefunded = true;
+        trx.rejectReason = reason;
+        trx.updatedAt = new Date().toISOString();
+
+        const user = (db.users || []).find(u => u.id === trx.userId);
+        if (user) {
+          const isAff = (trx.walletSource === 'Wallet Tambah Teman' || trx.source === 'affiliate');
+          const amt = trx.amount || 0;
+          if (isAff) user.affiliateBalance = (user.affiliateBalance || 0) + amt;
+          else user.walletBalance = (user.walletBalance || 0) + amt;
+        }
+      }
+      if (typeof localStorage !== 'undefined') {
+        try { localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db))); } catch (e) {}
+      }
+      return json;
+    } catch (e) {
+      console.error('adminRejectWithdrawal error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Balance Reconciliation Across All Users (Ledger-based 100% parity)
+  async adminReconcileAllBalances() {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_reconcile_all_balances');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders()
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders()
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal rekonsiliasi saldo (HTTP ${res.status})` };
+      }
+
+      // Reload fresh state (initFromApi never existed — the TypeError made a
+      // successful reconciliation report as a failure)
+      await this.syncFromCloud(true);
+      return json;
+    } catch (e) {
+      console.error('adminReconcileAllBalances error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Admin: rekonsiliasi data rekening penarikan seluruh member
+  // (users table <-> transaksi WD), idempoten dan aman diulang.
+  async adminSyncBankDetails() {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_sync_bank_details');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders()
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders()
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal sinkronisasi rekening (HTTP ${res.status})` };
+      }
+      await this.syncFromCloud(true);
+      return json;
+    } catch (e) {
+      console.error('adminSyncBankDetails error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Admin: sinkronkan absensi, hari/profit paket, dan rabat seluruh member
+  // dengan ledger MySQL + setting admin (idempoten, aman diulang).
+  async adminSyncIntegrity() {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl('admin_sync_integrity');
+      let res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders()
+      });
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) {
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: this.getAuthHeaders()
+          });
+        }
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal sinkronisasi data (HTTP ${res.status})` };
+      }
+      await this.syncFromCloud(true);
+      return json;
+    } catch (e) {
+      console.error('adminSyncIntegrity error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
   // Authoritative Admin Rewards Catalog Save (Persists customized rewards to MySQL)
   async adminSaveRewards(rewards) {
     try {
@@ -1212,6 +1696,54 @@ export const DB = {
     }
   },
 
+  // Shared POST helper for admin-only configuration endpoints.
+  // Platform configuration may only be changed through these endpoints: the generic
+  // action=save carries a full browser snapshot and is never allowed to touch it.
+  async _postAdminConfig(action, body) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      await this.ensureServerSession();
+      const url = this.getApiUrl(action);
+      const doFetch = () => fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body)
+      });
+      let res = await doFetch();
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) res = await doFetch();
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menyimpan pengaturan (HTTP ${res.status})` };
+      }
+      return json;
+    } catch (e) {
+      console.error(action + ' error:', e);
+      return { success: false, message: e.message };
+    }
+  },
+
+  // Authoritative Admin Running Text Save (announcements + rotation speed)
+  async adminSaveAnnouncements(announcements, speed) {
+    const body = {};
+    if (Array.isArray(announcements)) body.announcements = announcements;
+    if (speed !== undefined && speed !== null) body.speed = Number(speed);
+    const json = await this._postAdminConfig('admin_save_announcements', body);
+    if (json && json.success) {
+      const db = this.get();
+      if (Array.isArray(json.announcements)) db.announcements = json.announcements;
+      if (json.speed) {
+        db.settings = db.settings || {};
+        db.settings.announcementSpeed = Number(json.speed) || db.settings.announcementSpeed;
+      }
+      this.persistLocal(db);
+    }
+    return json;
+  },
+
   // Manually verify user email by Admin
   async adminVerifyUserEmail(userId) {
     try {
@@ -1240,14 +1772,17 @@ export const DB = {
 
   _lastETag: null,
 
-  async syncFromCloud() {
+  async syncFromCloud(force = false) {
     try {
       if (typeof fetch !== 'function') return null;
       // Migration hook: reconnect the browser session before pulling fresh state
       await this.ensureServerSession();
-      const url = this.getApiUrl('get');
+      if (force) {
+        this._lastETag = null;
+      }
+      const url = this.getApiUrl('get') + (force ? `&_t=${Date.now()}` : '');
       const headers = this.getAuthHeaders();
-      if (this._lastETag) {
+      if (!force && this._lastETag) {
         headers['If-None-Match'] = this._lastETag;
       }
       const res = await fetch(url, {
@@ -1255,7 +1790,7 @@ export const DB = {
         headers
       });
       // 304 Not Modified: server state is identical to our local cache (0 bytes transferred!)
-      if (res.status === 304) {
+      if (res.status === 304 && !force) {
         return _activeDB || this.get();
       }
       if (!res.ok) return null;
@@ -1272,36 +1807,90 @@ export const DB = {
             return tB - tA;
           });
         }
-        // Preserve local active session investments & users if incoming payload is empty or missing current user data
-        const currentUserId = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_user_id') : null) ||
-                              (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_user_id') : null);
-        if (currentUserId && _activeDB) {
-          if (!Array.isArray(json.data.investments) || json.data.investments.length === 0) {
-            if (Array.isArray(_activeDB.investments) && _activeDB.investments.length > 0) {
-              json.data.investments = _activeDB.investments;
-            }
-          } else if (Array.isArray(_activeDB.investments)) {
-            const currentInvs = _activeDB.investments.filter(i => i.userId === currentUserId && i.status === 'active');
-            for (const cInv of currentInvs) {
-              if (!json.data.investments.some(i => i.id === cInv.id)) {
-                json.data.investments.push(cInv);
-              }
-            }
-          }
+        const isGuestPayload = Boolean(json.data.isGuest || (!json.data.isAdmin && (!Array.isArray(json.data.users) || json.data.users.length === 0)));
 
-          if (!Array.isArray(json.data.users) || json.data.users.length === 0) {
-            if (Array.isArray(_activeDB.users) && _activeDB.users.length > 0) {
-              json.data.users = _activeDB.users;
-            }
-          } else if (Array.isArray(_activeDB.users)) {
-            const currentUserObj = _activeDB.users.find(u => u.id === currentUserId);
-            if (currentUserObj && !json.data.users.some(u => u.id === currentUserId)) {
-              json.data.users.push(currentUserObj);
-            }
+        // 1. Users sync & preservation: NEVER wipe out users on guest visits
+        const baseUsers = (Array.isArray(_activeDB?.users) && _activeDB.users.length > 0)
+          ? _activeDB.users
+          : defaultDB.users;
+
+        if (json.data.isAdmin && Array.isArray(json.data.users) && json.data.users.length > 0) {
+          // Admin has authoritative full user roster directly from MySQL
+        } else if (isGuestPayload) {
+          // Preserve all known users for guest browsing and referral rendering
+          json.data.users = baseUsers;
+        } else if (Array.isArray(json.data.users) && json.data.users.length > 0) {
+          // Member payload: overlay member & downlines onto known users
+          const userMap = new Map(baseUsers.map(u => [u.id, u]));
+          json.data.users.forEach(u => {
+            const existing = userMap.get(u.id) || {};
+            userMap.set(u.id, { ...existing, ...u });
+          });
+          json.data.users = Array.from(userMap.values());
+        } else {
+          json.data.users = baseUsers;
+        }
+
+        // 2. Investments sync & preservation
+        const baseInvs = (Array.isArray(_activeDB?.investments) && _activeDB.investments.length > 0)
+          ? _activeDB.investments
+          : (defaultDB.investments || []);
+        if (json.data.isAdmin && Array.isArray(json.data.investments)) {
+          // Admin has authoritative list
+        } else if (isGuestPayload) {
+          json.data.investments = baseInvs;
+        } else if (Array.isArray(json.data.investments) && json.data.investments.length > 0) {
+          const invMap = new Map(baseInvs.map(i => [i.id, i]));
+          json.data.investments.forEach(i => invMap.set(i.id, i));
+          json.data.investments = Array.from(invMap.values());
+        } else {
+          json.data.investments = baseInvs;
+        }
+
+        // 3. Transactions sync & preservation
+        const baseTx = (Array.isArray(_activeDB?.transactions) && _activeDB.transactions.length > 0)
+          ? _activeDB.transactions
+          : (defaultDB.transactions || []);
+        if (json.data.isAdmin && Array.isArray(json.data.transactions)) {
+          // Admin has authoritative list
+        } else if (isGuestPayload) {
+          json.data.transactions = baseTx;
+        } else if (Array.isArray(json.data.transactions) && json.data.transactions.length > 0) {
+          const txMap = new Map(baseTx.map(t => [t.id, t]));
+          json.data.transactions.forEach(t => txMap.set(t.id, t));
+          json.data.transactions = Array.from(txMap.values());
+        } else {
+          json.data.transactions = baseTx;
+        }
+
+        // The server session may still be alive while the browser storage was cleared
+        // ("clear cache"): re-hydrate the signed-in member so personal numbers (points,
+        // balances) are rendered from authoritative server data instead of stale bytes.
+        const explicitLogout = this._wasExplicitlyLoggedOut();
+        if (explicitLogout) {
+          // Logout must stick: drop any user payload carried by responses that
+          // were issued before the logout (race) or when the logout POST failed.
+          delete json.data.currentUser;
+          delete json.data.currentSession;
+        } else if (json.data.currentUser && json.data.currentUser.id) {
+          let hasLocalSession = false;
+          try {
+            hasLocalSession = Boolean(
+              (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('autotrading_session_user_id')) ||
+              (typeof localStorage !== 'undefined' && localStorage.getItem('autotrading_session_user_id'))
+            );
+          } catch (e) {}
+          if (!hasLocalSession && typeof sessionStorage !== 'undefined') {
+            try {
+              sessionStorage.setItem('autotrading_session_user_id', String(json.data.currentUser.id));
+              sessionStorage.setItem('fgt_session_user_id', String(json.data.currentUser.id));
+              if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_user_id', String(json.data.currentUser.id));
+            } catch (e) {}
           }
         }
 
         _activeDB = json.data;
+        this._initialSyncDone = true;
         if (typeof localStorage !== 'undefined') {
           try {
             localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(json.data)));
@@ -1386,20 +1975,47 @@ export const DB = {
     }
   },
 
+  // True once the first authoritative cloud read finished (successfully or not).
+  // Personal numbers (points / balances) are only trustworthy after this point.
+  _initialSyncDone: false,
+
   async initCloudSync(callback) {
     const data = await this.syncFromCloud();
-    if (data && typeof callback === 'function') {
-      callback(data);
+    // Even when the server is unreachable we must stop showing a "syncing" state and
+    // render the best data we have, so callers always get a single re-render here.
+    this._initialSyncDone = true;
+    if (typeof callback === 'function') {
+      callback(data || this.get());
     }
+    return data;
+  },
+
+  isInitialSyncDone() {
+    return this._initialSyncDone === true;
   },
 
   async clearDemoData() {
+    // Server-side clear_demo (2026-10-19+) now requires an explicit confirmation
+    // echo AND an admin session. Send both; the body field is the authoritative one.
+    const confirmEcho = 'BENAR-SAYA-AKAN-MENGOSONGKAN-SELURUH-DATA-DEMO';
+    let serverOk = false;
     try {
       if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
         const url = this.getApiUrl('clear_demo');
-        await fetch(url, { method: 'POST' }).catch(() => {});
+        serverOk = (await fetch(url, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ confirmWipe: confirmEcho })
+        })).ok;
       }
     } catch(e) {}
+    if (!serverOk) {
+      console.warn('[DB] clearDemoData: server clear_demo did not return OK; local wipe only so production DB is not touched.');
+    } else {
+      console.info('[DB] clearDemoData: server acknowledged wipe; local wipe applied.');
+    }
+    // Local wipe mirrors what the server did. If the server call failed, this is
+    // a harmless no-op on the client (it never re-pushes).
     const db = this.get();
     db.users = (db.users || []).filter(u => u.role === 'admin' || u.id === 'usr-admin');
     if (db.users.length === 0) {
@@ -1417,12 +2033,31 @@ export const DB = {
     if (Array.isArray(db.plans)) {
       db.plans.forEach(p => { p.activeCount = 0; });
     }
-    await this.save(db);
     return { success: true, message: 'Semua simulasi dan data demo telah berhasil dikosongkan!' };
   },
 
+  /**
+   * Reset ONLY the in-memory/local copy to the shipped default seed.
+   *
+   * From 2026-10-19 this is a LOCAL operation only: it is NOT written to the
+   * live MySQL database. The old behavior called `this.save(defaultDB)`, which
+   * pushed the admin-only seed to production and silently re-wiped every member
+   * row that had been restored (the exact failure mode that caused the 2026-10-18
+   * data loss).
+   *
+   * For a true server-side production reset, use the panel admin menu item
+   * "Bersihkan Database Sistem" (AdminPage.resetDemoDatabase()), which confirms
+   * first and calls the server `clear_demo` action.
+   */
   resetToDefault() {
-    this.save(defaultDB);
+    const db = this.get();
+    db.users = JSON.parse(JSON.stringify(defaultDB.users));
+    db.plans = JSON.parse(JSON.stringify(defaultDB.plans || []));
+    db.settings = JSON.parse(JSON.stringify(defaultDB.settings || {}));
+    db.transactions = [];
+    db.investments = [];
+    db.redemptions = [];
+    db.testimonials = [];
     return defaultDB;
   },
 
@@ -1454,6 +2089,8 @@ export const DB = {
   },
 
   setSession(user) {
+    // A real login (or any explicit session set) re-enables server re-hydration.
+    this._setLoggedOutFlag(!user);
     if (typeof sessionStorage !== 'undefined') {
       try {
         if (user && user.id) {
@@ -1485,6 +2122,8 @@ export const DB = {
 
   clearSession() {
     this._lastETag = null;
+    // Mark the logout as explicit so background syncs can never bring it back.
+    this._setLoggedOutFlag(true);
     if (typeof sessionStorage !== 'undefined') {
       try {
         sessionStorage.removeItem('autotrading_session_user_id');
@@ -1615,6 +2254,18 @@ export const DB = {
                 if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
               } catch(e) {}
             }
+            if (json.leaderboard) {
+              db.leaderboard = json.leaderboard;
+            }
+            if (Array.isArray(json.publicRecentDeposits)) {
+              db.publicRecentDeposits = json.publicRecentDeposits;
+            }
+            if (Array.isArray(json.publicRecentWithdrawals)) {
+              db.publicRecentWithdrawals = json.publicRecentWithdrawals;
+            }
+            if (Array.isArray(json.publicRecentTransactions)) {
+              db.publicRecentTransactions = json.publicRecentTransactions;
+            }
           }
         }
       }
@@ -1672,8 +2323,33 @@ export const DB = {
     return { success: true, user, message: 'Profil dan data diri berhasil diperbarui!' };
   },
 
-  // Update member withdrawal bank/e-wallet account
-  updateUserBank(userId, { bankName, accountNumber, accountHolder }) {
+  // Persist withdrawal bank/e-wallet account to the server (users table + JSON state).
+  // Returns the server response, or null when offline / fetch unavailable.
+  async saveBankAccountServer(bankAccount) {
+    if (typeof fetch !== 'function' || !bankAccount) return null;
+    try {
+      await this.ensureServerSession();
+      const doFetch = () => fetch(this.getApiUrl('update_bank_account'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(bankAccount)
+      });
+      let res = await doFetch();
+      if (res.status === 401) {
+        const relogged = await this.ensureServerSession();
+        if (relogged) res = await doFetch();
+      }
+      const json = await res.json().catch(() => null);
+      return json;
+    } catch (e) {
+      console.warn('saveBankAccountServer error:', e);
+      return null;
+    }
+  },
+
+  // Update member withdrawal bank/e-wallet account (local + server so admin sees the same data)
+  async updateUserBank(userId, { bankName, accountNumber, accountHolder }) {
     const db = this.get();
     const user = db.users.find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan!' };
@@ -1688,15 +2364,50 @@ export const DB = {
       return { success: false, message: 'Nama Pemilik Rekening wajib diisi!' };
     }
 
-    user.bankAccount = {
+    const cleanNumber = String(accountNumber).trim().replace(/[^0-9a-zA-Z]/g, '');
+    const dup = (db.users || []).find(u =>
+      String(u.id) !== String(userId) &&
+      u.bankAccount &&
+      String(u.bankAccount.accountNumber || '').replace(/[^0-9a-zA-Z]/g, '') === cleanNumber
+    );
+    if (dup) {
+      return {
+        success: false,
+        isDuplicateBank: true,
+        message: `Nomor rekening tujuan sudah terdaftar pada akun lain (${dup.username}). 1 nomor rekening hanya berlaku untuk 1 akun!`
+      };
+    }
+
+    const payload = {
       bankName: bankName.trim(),
       accountNumber: accountNumber.trim(),
-      accountHolder: accountHolder.trim().toUpperCase()
+      accountHolder: accountHolder.trim()
+    };
+
+    // Authoritative server write first: this is what the admin panel reads.
+    const serverRes = await this.saveBankAccountServer(payload);
+    if (serverRes && serverRes.success === false) {
+      return {
+        success: false,
+        isDuplicateBank: !!serverRes.isDuplicateBank,
+        message: serverRes.message || 'Gagal menyimpan rekening ke database.'
+      };
+    }
+
+    user.bankAccount = {
+      bankName: payload.bankName,
+      accountNumber: payload.accountNumber,
+      accountHolder: payload.accountHolder.toUpperCase()
     };
     user.updatedAt = new Date().toISOString();
 
-    this.save(db);
-    return { success: true, user, bankAccount: user.bankAccount, message: 'Rekening penarikan (WD) berhasil disimpan!' };
+    await this.save(db);
+    return {
+      success: true,
+      user,
+      bankAccount: user.bankAccount,
+      message: serverRes ? 'Rekening penarikan (WD) berhasil disimpan dan tersinkron ke database!' : 'Rekening penarikan (WD) berhasil disimpan!'
+    };
   },
 
   // Change user password (server-side verification + bcrypt, local fallback offline)
@@ -2110,20 +2821,8 @@ export const DB = {
     return { success: true, user, message: 'Selamat! Email akun Anda berhasil diverifikasi dan akun telah aktif.' };
   },
 
-  adminVerifyUserEmail(userId) {
-    const db = this.get();
-    const user = db.users.find(u => u.id === userId);
-    if (!user) return { success: false, message: 'User tidak ditemukan.' };
-
-    user.emailVerified = true;
-    user.isPendingVerification = false;
-    if (user.verificationOtp) {
-      user.verificationOtp.verifiedAt = new Date().toISOString();
-      user.verificationOtp.manuallyVerifiedByAdmin = true;
-    }
-    this.save(db);
-    return { success: true, user, message: `Akun @${user.username} berhasil diverifikasi secara manual oleh Admin!` };
-  },
+  // (Duplicate local-only adminVerifyUserEmail removed: it silently overrode the
+  // server-authoritative version above, so admin verifications never reached MySQL.)
 
   async dispatchMailApi(action, payload) {
     try {
@@ -2170,7 +2869,17 @@ export const DB = {
     return (db.announcements || []).filter(a => a.active);
   },
 
-  addAnnouncement(text, active = true) {
+  // Only an administrator may change platform configuration.
+  isAdminSession() {
+    try {
+      const u = this.getCurrentUser();
+      return Boolean(u && u.role === 'admin');
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async addAnnouncement(text, active = true) {
     const db = this.get();
     db.announcements = db.announcements || [];
     const newAnn = {
@@ -2180,26 +2889,29 @@ export const DB = {
       createdAt: new Date().toISOString()
     };
     db.announcements.unshift(newAnn);
-    this.save(db);
+    await this.save(db);
+    if (this.isAdminSession()) await this.adminSaveAnnouncements(db.announcements);
     return newAnn;
   },
 
-  updateAnnouncement(id, updates) {
+  async updateAnnouncement(id, updates) {
     const db = this.get();
     db.announcements = db.announcements || [];
     const idx = db.announcements.findIndex(a => a.id === id);
     if (idx !== -1) {
       db.announcements[idx] = { ...db.announcements[idx], ...updates };
-      this.save(db);
+      await this.save(db);
+      if (this.isAdminSession()) await this.adminSaveAnnouncements(db.announcements);
       return db.announcements[idx];
     }
     return null;
   },
 
-  deleteAnnouncement(id) {
+  async deleteAnnouncement(id) {
     const db = this.get();
     db.announcements = (db.announcements || []).filter(a => a.id !== id);
-    this.save(db);
+    await this.save(db);
+    if (this.isAdminSession()) await this.adminSaveAnnouncements(db.announcements);
     return true;
   },
 
@@ -2215,6 +2927,10 @@ export const DB = {
     const s = Math.max(10, Math.min(600, Number(seconds) || 75));
     db.settings.announcementSpeed = s;
     await this.save(db);
+    // Settings are server-authoritative: persist through the dedicated settings endpoint.
+    if (this.isAdminSession()) {
+      await this.adminSaveAnnouncements(undefined, s);
+    }
     return s;
   },
 
@@ -2255,16 +2971,35 @@ export const DB = {
 
     const hasCheckedInToday = checkInRecord.lastCheckInDate === todayWib || hasHistoryToday || hasTrxCheckInToday;
 
-    let streak = checkInRecord.currentStreak || 0;
-    if (checkInRecord.lastCheckInDate && !hasCheckedInToday) {
-      try {
-        const last = new Date(checkInRecord.lastCheckInDate);
-        const now = new Date(todayWib);
-        const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
-        if (diffDays > 1) {
-          streak = 0;
-        }
-      } catch(e) {}
+    let streak = Number(checkInRecord.currentStreak) || 0;
+    const yesterdayWib = this.getWibDateStr(Date.now() - 86400000);
+
+    // Cross-check transactions for authoritative streak resolution
+    let lastTrxDate = null;
+    let lastTrxDay = 0;
+    const userCheckInTxs = (db.transactions || []).filter(t => {
+      if (t.userId !== userId) return false;
+      return (t.id && t.id.startsWith('TX-CHK-')) || 
+             (t.paymentMethod && t.paymentMethod.includes('Absensi')) ||
+             (t.note && t.note.toLowerCase().includes('absen'));
+    });
+    if (userCheckInTxs.length > 0) {
+      const latestTx = userCheckInTxs[0];
+      const txWib = this.getWibDateStr(latestTx.createdAt || latestTx.date);
+      lastTrxDate = txWib;
+      const mDay = (latestTx.note || '').match(/hari ke-([0-9]+)\/([0-9]+)/i);
+      if (mDay) lastTrxDay = parseInt(mDay[1], 10);
+    }
+
+    const effectiveLastDate = checkInRecord.lastCheckInDate || lastTrxDate;
+    if (effectiveLastDate && !hasCheckedInToday) {
+      if (effectiveLastDate === yesterdayWib) {
+        streak = Math.max(streak, lastTrxDay || streak);
+      } else if (effectiveLastDate < yesterdayWib) {
+        streak = 0;
+      }
+    } else if (lastTrxDay > 0 && streak === 0) {
+      streak = lastTrxDay;
     }
 
     return {
@@ -2361,7 +3096,15 @@ export const DB = {
                   db.transactions.unshift(json.transaction);
                 }
               }
-              await this.save(db);
+              if (db.currentUser && (db.currentUser.id === user.id || db.currentUser.username === user.username)) {
+                db.currentUser.walletBalance = user.walletBalance;
+                db.currentUser.dailyCheckIn = user.dailyCheckIn;
+              }
+              if (typeof localStorage !== 'undefined') {
+                try {
+                  localStorage.setItem('autotrading_db', JSON.stringify(this.stripSensitiveFields(db)));
+                } catch (e) {}
+              }
               return json;
             } else if (json.alreadyClaimed) {
               user.dailyCheckIn = user.dailyCheckIn || {};
@@ -2385,10 +3128,30 @@ export const DB = {
         const checkInRecord = user.dailyCheckIn || { currentStreak: 0, lastCheckInDate: null, history: [] };
         let currStreak = Number(checkInRecord.currentStreak) || 0;
         let newStreak = 1;
-        if (checkInRecord.lastCheckInDate) {
-          const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-          if (checkInRecord.lastCheckInDate === yesterday) {
-            newStreak = currStreak + 1;
+        const yesterday = this.getWibDateStr(Date.now() - 86400000);
+        let effLast = checkInRecord.lastCheckInDate;
+        let effStreak = currStreak;
+        const pastTxs = (db.transactions || []).filter(t => {
+          if (t.userId !== userId) return false;
+          const isChk = (t.id && t.id.startsWith('TX-CHK-')) || 
+                        (t.paymentMethod && t.paymentMethod.includes('Absensi')) ||
+                        (t.note && t.note.toLowerCase().includes('absen'));
+          if (!isChk) return false;
+          return this.getWibDateStr(t.createdAt || t.date) !== todayWib;
+        });
+        if (pastTxs.length > 0) {
+          const pTx = pastTxs[0];
+          const pDate = this.getWibDateStr(pTx.createdAt || pTx.date);
+          const m = (pTx.note || '').match(/hari ke-([0-9]+)\/([0-9]+)/i);
+          const pDay = m ? parseInt(m[1], 10) : 0;
+          if (pDate === yesterday || !effLast || pDate > effLast) {
+            effLast = pDate;
+            effStreak = Math.max(effStreak, pDay);
+          }
+        }
+        if (effLast) {
+          if (effLast === yesterday) {
+            newStreak = effStreak + 1;
           } else {
             newStreak = 1;
           }
@@ -2418,10 +3181,11 @@ export const DB = {
           userId: user.id,
           username: user.username,
           type: 'bonus',
-          amount: rewardAmount,
-          netAmount: rewardAmount,
+          amount: Math.abs(rewardAmount),
+          netAmount: Math.abs(rewardAmount),
+          walletSource: 'Wallet Balance',
           paymentMethod: `Absensi Harian (Check-in H-${newStreak})`,
-          note: `Bonus absensi harian login hari ke-${newStreak}/${totalDays} (+${this.formatIDR(rewardAmount)})`,
+          note: `Bonus absensi harian login hari ke-${newStreak}/${totalDays} (+${this.formatIDR(Math.abs(rewardAmount))})`,
           status: 'approved',
           createdAt: nowIso
         };
@@ -2474,13 +3238,15 @@ export const DB = {
     };
     db.banners.unshift(newBanner);
 
-    // Direct server save to MySQL table
+    // Direct server save to MySQL table with admin credentials
     try {
       if (typeof fetch === 'function') {
+        await this.ensureServerSession();
         const url = this.getApiUrl('save_banner');
         await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ banner: newBanner })
         }).catch(() => {});
       }
@@ -2498,13 +3264,15 @@ export const DB = {
       db.banners[idx] = { ...db.banners[idx], ...updates };
       const updated = db.banners[idx];
 
-      // Direct server save to MySQL table
+      // Direct server save to MySQL table with admin credentials
       try {
         if (typeof fetch === 'function') {
+          await this.ensureServerSession();
           const url = this.getApiUrl('save_banner');
           await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ banner: updated })
           }).catch(() => {});
         }
@@ -2520,13 +3288,15 @@ export const DB = {
     const db = this.get();
     db.banners = (db.banners || []).filter(b => b.id !== id);
 
-    // Direct server delete from MySQL table
+    // Direct server delete from MySQL table with admin credentials
     try {
       if (typeof fetch === 'function') {
+        await this.ensureServerSession();
         const url = this.getApiUrl('delete_banner');
         await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ id })
         }).catch(() => {});
       }
@@ -2547,7 +3317,7 @@ export const DB = {
     return (db.rewards || []).filter(r => r.active);
   },
 
-  addReward({ title, category, badge, pointsCost, stock, description, imageUrl, active = true }) {
+  async addReward({ title, category, badge, pointsCost, stock, description, imageUrl, active = true }) {
     const db = this.get();
     db.rewards = db.rewards || [];
     const newReward = {
@@ -2563,12 +3333,12 @@ export const DB = {
       createdAt: new Date().toISOString()
     };
     db.rewards.unshift(newReward);
-    this.save(db);
-    this.adminSaveRewards(db.rewards);
+    await this.save(db);
+    await this.adminSaveRewards(db.rewards);
     return newReward;
   },
 
-  updateReward(id, updates) {
+  async updateReward(id, updates) {
     const db = this.get();
     db.rewards = db.rewards || [];
     const idx = db.rewards.findIndex(r => r.id === id);
@@ -2576,18 +3346,18 @@ export const DB = {
       if (updates.pointsCost !== undefined) updates.pointsCost = Number(updates.pointsCost);
       if (updates.stock !== undefined) updates.stock = Number(updates.stock);
       db.rewards[idx] = { ...db.rewards[idx], ...updates };
-      this.save(db);
-      this.adminSaveRewards(db.rewards);
+      await this.save(db);
+      await this.adminSaveRewards(db.rewards);
       return db.rewards[idx];
     }
     return null;
   },
 
-  deleteReward(id) {
+  async deleteReward(id) {
     const db = this.get();
     db.rewards = (db.rewards || []).filter(r => r.id !== id);
-    this.save(db);
-    this.adminSaveRewards(db.rewards);
+    await this.save(db);
+    await this.adminSaveRewards(db.rewards);
     return true;
   },
 

@@ -27,7 +27,7 @@ export const Rewards = {
     const db = DB.get();
     
     // 1. Validate User
-    const user = db.users.find(u => u.id === userId);
+    const user = (db.users || []).find(u => u.id === userId);
     if (!user) {
       return { success: false, message: 'Akun pengguna tidak ditemukan! Silakan login kembali.' };
     }

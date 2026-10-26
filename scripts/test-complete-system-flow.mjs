@@ -1,7 +1,29 @@
 const API_BASE = 'https://autotrading.my.id/api/index.php';
 
+// The user roster and write actions are session-gated (privacy hardening), so
+// verification/cleanup runs under an authenticated admin session (Bearer token).
+let adminToken = '';
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+});
+// Same channel as the production client: sessionToken as a query parameter
+// (getRequestAuthToken() reads $_GET['sessionToken'] first).
+const apiUrl = (action) => `${API_BASE}?action=${action}${adminToken ? `&sessionToken=${encodeURIComponent(adminToken)}` : ''}`;
+
+async function apiLogin(identifier, password) {
+  const res = await fetch(`${API_BASE}?action=login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password })
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(`Admin login failed: ${JSON.stringify(json)}`);
+  return json;
+}
+
 async function apiGet() {
-  const res = await fetch(`${API_BASE}?action=get`);
+  const res = await fetch(apiUrl('get'), { headers: authHeaders() });
   if (!res.ok) throw new Error(`GET failed HTTP ${res.status}`);
   const json = await res.json();
   if (!json.success || !json.data) throw new Error(`GET returned error: ${JSON.stringify(json)}`);
@@ -9,9 +31,9 @@ async function apiGet() {
 }
 
 async function apiSave(data) {
-  const res = await fetch(`${API_BASE}?action=save`, {
+  const res = await fetch(apiUrl('save'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error(`SAVE failed HTTP ${res.status}`);
@@ -32,9 +54,9 @@ async function apiRegister(user) {
 }
 
 async function apiUpdateStatus(userId, isBlocked, reason = '') {
-  const res = await fetch(`${API_BASE}?action=update_user_status`, {
+  const res = await fetch(apiUrl('update_user_status'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({
       userId,
       isBlocked,
@@ -47,9 +69,9 @@ async function apiUpdateStatus(userId, isBlocked, reason = '') {
 }
 
 async function apiDeleteUser(userId) {
-  const res = await fetch(`${API_BASE}?action=delete_user`, {
+  const res = await fetch(apiUrl('delete_user'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ userId })
   });
   return await res.json();
@@ -96,6 +118,13 @@ async function runFullSystemTest() {
       referredBy: uplineUser.referralCode
     });
     console.log(`   ✓ Downline registered: ID=${downlineUser.id}, username=${downlineUser.username}, referredBy=${downlineUser.referredBy}`);
+
+    // Establish an admin session: the roster verification & cleanup below are
+    // session-gated by the privacy hardening (BUG-001).
+    const adminLogin = await apiLogin('admin', 'admin');
+    adminToken = adminLogin.sessionToken || '';
+    if (!adminToken) throw new Error('Admin login did not return a sessionToken!');
+    console.log('   ✓ Admin session established for authenticated verification');
 
     // Verify in GET data
     const check1 = await apiGet();

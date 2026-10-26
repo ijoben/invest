@@ -7,8 +7,123 @@
 import { DB } from './db.js';
 
 export const Payment = {
+  // Masa berlaku nomor tiket deposit: 24 jam.
+  // Samakan dengan deposit_ticket / ticket expiry di api/index.php (86400 detik).
+  DEPOSIT_TICKET_TTL_MS: 24 * 60 * 60 * 1000,
+
+  // ===== NOMOR TIKET DEPOSIT (dibuat SEBELUM member transfer) =====
+  // Mengunci nominal transfer PERSIS (basis + kode unik 3 digit) agar nomor
+  // tiket muncul di depan: member transfer dulu sesuai nominal, baru upload bukti.
+  async createDepositTicket({ userId, amount, method, bankId }) {
+    const db = DB.get();
+    const user = DB.getUserById(userId);
+    if (!user) return { success: false, message: 'User tidak ditemukan' };
+    if (user.isBlocked) return { success: false, message: 'Akun Anda sedang diblokir oleh Administrator.' };
+
+    if (method !== 'bank' && method !== 'qris') {
+      return { success: false, message: 'Metode deposit ini tidak memerlukan nomor tiket.' };
+    }
+    const baseAmount = Math.floor(Number(amount));
+    if (isNaN(baseAmount) || baseAmount < db.settings.minDeposit) {
+      return { success: false, message: `Minimal deposit adalah ${DB.formatIDR(db.settings.minDeposit)}` };
+    }
+
+    // Pengaman: satu deposit diproses dalam satu waktu. Bila deposit sebelumnya
+    // masih menunggu konfirmasi admin, jangan buat nomor tiket baru.
+    const pendingDep = this.getPendingDeposit(user.id);
+    if (pendingDep) {
+      return {
+        success: false,
+        code: 'DEPOSIT_PENDING',
+        message: `Masih ada deposit ${DB.formatIDR(pendingDep.amount)} (${pendingDep.id}) yang menunggu konfirmasi admin. Tunggu sampai transaksi tersebut SUKSES atau DITOLAK sebelum membuat deposit baru.`
+      };
+    }
+
+    // Rekening yang dimatikan admin tidak boleh dipakai membuat tiket
+    if (method === 'bank') {
+      const activeBanks = ((db.settings.paymentGateways || {}).banks || []).filter(b => b.active !== false);
+      if (activeBanks.length === 0) {
+        return { success: false, message: 'Saluran deposit Transfer Bank sedang dinonaktifkan oleh Administrator.' };
+      }
+      if (bankId && !activeBanks.some(b => b.id === bankId)) {
+        return { success: false, message: 'Rekening bank yang dipilih sedang dinonaktifkan. Silakan pilih rekening lain.' };
+      }
+    }
+
+    const serverRes = await DB.createDepositTicketServer({ amount: baseAmount, method, bankId: bankId || '' });
+    if (serverRes && serverRes.success && serverRes.transaction) {
+      return { success: true, transaction: serverRes.transaction, offline: false };
+    }
+    if (serverRes && serverRes.success === false) {
+      return { success: false, message: serverRes.message };
+    }
+
+    // Server tidak terjangkau -> tiket lokal (nominal tetap terkunci; diverifikasi
+    // ulang oleh server saat member mengirim bukti).
+    let methodDisplay = 'Transfer Bank';
+    if (method === 'qris') {
+      methodDisplay = 'QRIS Instant';
+    } else if (bankId) {
+      const bankObj = ((db.settings.paymentGateways || {}).banks || []).find(b => b.id === bankId);
+      if (bankObj && bankObj.name) {
+        const m = bankObj.name.match(/\(([^)]+)\)/);
+        methodDisplay = 'Transfer Bank ' + (m ? m[1] : bankObj.name.replace(/Bank /i, '').trim());
+      }
+    }
+    const uniqueCode = Math.floor(100 + Math.random() * 899);
+    const localTicket = {
+      id: 'TRX-DEP-' + Math.floor(100000 + Math.random() * 900000),
+      userId: user.id,
+      username: user.username,
+      type: 'deposit',
+      paymentMethod: methodDisplay,
+      destinationAccount: method === 'bank' ? (bankId || '') : '',
+      amount: baseAmount + uniqueCode,
+      uniqueCode,
+      txid: null,
+      proofImage: null,
+      status: 'awaiting_payment',
+      offlineTicket: true,
+      createdAt: new Date().toISOString()
+    };
+    // Satu tiket aktif per akun (samakan dengan perilaku server)
+    db.transactions = (db.transactions || []).filter(t =>
+      !(t.type === 'deposit' && t.status === 'awaiting_payment' && t.userId === user.id));
+    db.transactions.unshift(localTicket);
+    await DB.save(db);
+    return { success: true, transaction: localTicket, offline: true };
+  },
+
+  isDepositTicketExpired(t) {
+    if (!t) return true;
+    const created = new Date(t.createdAt || t.date || 0).getTime();
+    if (!created) return true;
+    return (Date.now() - created) > this.DEPOSIT_TICKET_TTL_MS;
+  },
+
+  getActiveDepositTicket(userId) {
+    const db = DB.get();
+    const tickets = (db.transactions || []).filter(t =>
+      t.type === 'deposit' && t.status === 'awaiting_payment' && t.userId === userId && !this.isDepositTicketExpired(t));
+    if (tickets.length === 0) return null;
+    tickets.sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0));
+    return tickets[0];
+  },
+
+  // Deposit yang bukti transfernya sudah dikirim dan masih menunggu keputusan
+  // admin. Selama baris ini ada, member tidak boleh membuat deposit baru agar
+  // riwayat tidak dipenuhi transaksi ganda.
+  getPendingDeposit(userId) {
+    const db = DB.get();
+    const pending = (db.transactions || []).filter(t =>
+      t.type === 'deposit' && t.userId === userId && (t.status === 'pending' || t.status === 'processing'));
+    if (pending.length === 0) return null;
+    pending.sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0));
+    return pending[0];
+  },
+
   // Submit Deposit Request (Bank, QRIS, USDT)
-  async createDepositRequest({ userId, method, bankId, amount, amountUsdt, txid, proofImage }) {
+  async createDepositRequest({ userId, method, bankId, amount, amountUsdt, txid, proofImage, ticketId, ticket }) {
     const db = DB.get();
     const user = DB.getUserById(userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
@@ -21,17 +136,42 @@ export const Payment = {
     if (method === 'usdt' && gateways.usdt && gateways.usdt.active === false) {
       return { success: false, message: 'Saluran deposit Crypto USDT sedang dinonaktifkan oleh Administrator.' };
     }
+    if (method === 'bank') {
+      const activeBanks = (gateways.banks || []).filter(b => b.active !== false);
+      if (activeBanks.length === 0) {
+        return { success: false, message: 'Saluran deposit Transfer Bank sedang dinonaktifkan oleh Administrator.' };
+      }
+      if (bankId && !activeBanks.some(b => b.id === bankId)) {
+        return { success: false, message: 'Rekening bank yang dipilih sedang dinonaktifkan. Silakan pilih rekening lain.' };
+      }
+    }
+
+    // Pengaman deposit ganda: jangan kirim bukti kedua saat yang lama masih diproses
+    const pendingDep = this.getPendingDeposit(user.id);
+    if (pendingDep && pendingDep.id !== ticketId) {
+      return {
+        success: false,
+        code: 'DEPOSIT_PENDING',
+        message: `Masih ada deposit ${DB.formatIDR(pendingDep.amount)} (${pendingDep.id}) yang menunggu konfirmasi admin. Selesaikan transaksi tersebut terlebih dahulu.`
+      };
+    }
 
     let finalAmount = Number(amount);
     let uniqueCode = 0;
 
     if (method === 'qris' || method === 'bank') {
+      if (ticket && Number(ticket.amount) > 0) {
+        // Nominal sudah dikunci server saat nomor tiket dibuat -> tidak diacak ulang
+        finalAmount = Number(ticket.amount);
+        uniqueCode = Number(ticket.uniqueCode || 0);
+      } else {
+        // Alur lama (tanpa tiket / offline): generate 3-digit unique code
+        uniqueCode = Math.floor(100 + Math.random() * 899);
+        finalAmount += uniqueCode;
+      }
       if (isNaN(finalAmount) || finalAmount < db.settings.minDeposit) {
         return { success: false, message: `Minimal deposit adalah ${DB.formatIDR(db.settings.minDeposit)}` };
       }
-      // Generate 3-digit unique code for fast matching
-      uniqueCode = Math.floor(100 + Math.random() * 899);
-      finalAmount += uniqueCode;
     } else if (method === 'usdt') {
       const usdtAmt = Number(amountUsdt);
       if (isNaN(usdtAmt) || usdtAmt <= 0) {
@@ -62,7 +202,8 @@ export const Payment = {
       methodDisplay = 'USDT TRC20';
     }
 
-    const transactionId = 'TRX-DEP-' + Math.floor(100000 + Math.random() * 900000);
+    // Nomor transaksi = nomor tiket: member sudah melihat nomor ini SEBELUM transfer
+    const transactionId = (ticket && ticket.id) ? ticket.id : 'TRX-DEP-' + Math.floor(100000 + Math.random() * 900000);
     const newTrx = {
       id: transactionId,
       userId: user.id,
@@ -82,6 +223,7 @@ export const Payment = {
     // Falls back to the local flow when the server is unreachable.
     const serverRes = await DB.createTransactionServer({
       id: transactionId,
+      ticketId: ticketId || null,
       type: 'deposit',
       amount: finalAmount,
       paymentMethod: methodDisplay,
@@ -97,20 +239,37 @@ export const Payment = {
       Object.assign(newTrx, serverRes.transaction);
     }
 
+    // Baris tiket (bila ada) harus diganti, bukan diduplikasi: ID-nya sama
+    const dupTrxIdx = db.transactions.findIndex(t => t.id === newTrx.id);
+    if (dupTrxIdx > -1) db.transactions.splice(dupTrxIdx, 1);
     db.transactions.unshift(newTrx);
     await DB.save(db);
+
+    // Dispatch email notification to member & admin (Point 8)
+    try {
+      if (user && user.email) {
+        DB.dispatchMailApi('deposit', { user, transaction: newTrx, status: 'pending' });
+      }
+      DB.dispatchMailApi('admin_notification', {
+        type: 'deposit',
+        user: { id: user.id, username: user.username, email: user.email },
+        transaction: newTrx
+      });
+    } catch (eMail) {}
 
     return {
       success: true,
       transaction: newTrx,
-      message: `Permintaan deposit ${DB.formatIDR(finalAmount)} berhasil dibuat! Menunggu konfirmasi.`
+      message: ticket
+        ? `Bukti transfer untuk nomor tiket ${newTrx.id} (${DB.formatIDR(finalAmount)}) berhasil dikirim! Menunggu konfirmasi admin.`
+        : `Permintaan deposit ${DB.formatIDR(finalAmount)} berhasil dibuat! Menunggu konfirmasi.`
     };
   },
 
   // Check if Withdrawal system is currently open according to schedule and master toggle
   isWithdrawOpen() {
     const db = DB.get();
-    const sched = db.settings.withdrawSchedule || { enabled: true, startHour: 9, endHour: 21 };
+    const sched = db.settings.withdrawSchedule || { enabled: true, startHour: 9, endHour: 15 };
     
     // Master switch OFF
     if (sched.enabled === false) {
@@ -129,7 +288,7 @@ export const Payment = {
       wibHours = parseInt(wibHourStr, 10);
     } catch(e) {}
     const startHour = Number(sched.startHour !== undefined ? sched.startHour : 9);
-    const endHour = Number(sched.endHour !== undefined ? sched.endHour : 21);
+    const endHour = Number(sched.endHour !== undefined ? sched.endHour : 15);
 
     if (wibHours < startHour || wibHours >= endHour) {
       const formatH = (h) => String(h).padStart(2, '0') + ':00';
@@ -193,6 +352,9 @@ export const Payment = {
     if (!accountNumber || !accountHolder) {
       return { success: false, message: 'Harap lengkapi nomor rekening/wallet dan nama pemilik!' };
     }
+    if (!bankName || !String(bankName).trim()) {
+      return { success: false, message: 'Nama Bank / E-Wallet / Jaringan wajib diisi!' };
+    }
 
     // Anti-Multi-Account Guard: Rekening Bank Ganda
     const cleanDstAcc = String(accountNumber || '').trim().replace(/[^0-9a-zA-Z]/g, '');
@@ -229,6 +391,10 @@ export const Payment = {
       username: user.username,
       type: 'withdraw',
       walletSource: isAffiliate ? 'Wallet Tambah Teman' : 'Wallet Balance',
+      method: method || 'bank',
+      bankName: cleanBank,
+      accountNumber: String(accountNumber || '').trim(),
+      accountHolder: String(accountHolder || '').trim(),
       paymentMethod: method === 'usdt' ? 'USDT Withdrawal' : `${cleanBank} (${accountNumber})`,
       destinationAccount: `${accountHolder} - ${accountNumber}`,
       amount: parsedAmount,
@@ -266,6 +432,15 @@ export const Payment = {
     }
 
     db.transactions.unshift(newTrx);
+
+    // Rekening yang dipakai untuk WD ini ikut disimpan sebagai rekening profil
+    // member supaya database, panel admin, dan tampilan member selalu identik.
+    user.bankAccount = {
+      bankName: newTrx.bankName || cleanBank,
+      accountNumber: newTrx.accountNumber || String(accountNumber).trim(),
+      accountHolder: newTrx.accountHolder || String(accountHolder).trim()
+    };
+
     await DB.save(db);
 
     // Send email notification to member
@@ -284,14 +459,32 @@ export const Payment = {
     };
   },
 
-  // Get user transaction history (Terbaru selalu di paling atas)
+  // Get user transaction history (Terbaru selalu di paling atas, deduplikasi ganda)
   getUserTransactions(userId, filterType = 'all') {
     const db = DB.get();
     let list = (db.transactions || []).filter(t => t.userId === userId);
     if (filterType !== 'all') {
       list = list.filter(t => t.type === filterType);
     }
-    return list.sort((a, b) => {
+    // Deduplicate identical IDs and near-identical timestamp duplicates (<60s)
+    const seenIds = new Set();
+    const seenApprox = new Set();
+    const cleanList = [];
+    for (const t of list) {
+      if (t.id) {
+        if (seenIds.has(t.id)) continue;
+        seenIds.add(t.id);
+      }
+      const tTime = new Date(t.createdAt || t.date || 0).getTime();
+      const approxKey = `${t.type}_${t.amount}_${Math.floor(tTime / 60000)}`;
+      if (tTime > 0 && seenApprox.has(approxKey)) {
+        continue;
+      }
+      seenApprox.add(approxKey);
+      cleanList.push(t);
+    }
+
+    return cleanList.sort((a, b) => {
       const tA = new Date(a.createdAt || a.date || 0).getTime();
       const tB = new Date(b.createdAt || b.date || 0).getTime();
       return tB - tA;
@@ -301,8 +494,21 @@ export const Payment = {
   // Get live member deposits for running text ticker
   getLiveMemberDeposits() {
     const db = DB.get();
-    return (db.transactions || [])
-      .filter(t => t.type === 'deposit')
+    let deposits = [];
+    if (Array.isArray(db.publicRecentDeposits) && db.publicRecentDeposits.length > 0) {
+      deposits = db.publicRecentDeposits;
+    } else if (Array.isArray(db.publicRecentTransactions) && db.publicRecentTransactions.length > 0) {
+      deposits = db.publicRecentTransactions.filter(t => t.type === 'deposit');
+    } else if (Array.isArray(db.transactions) && db.transactions.length > 0) {
+      // Tiket yang belum dibayar (awaiting_payment) bukan deposit publik -> jangan tampil di running text
+      deposits = db.transactions.filter(t => t.type === 'deposit' && t.status !== 'awaiting_payment');
+    }
+
+    if (deposits.length === 0 && DB.defaultDB && Array.isArray(DB.defaultDB.publicRecentDeposits)) {
+      deposits = DB.defaultDB.publicRecentDeposits;
+    }
+
+    return deposits
       .sort((a, b) => {
         const tA = new Date(a.createdAt || a.date || 0).getTime();
         const tB = new Date(b.createdAt || b.date || 0).getTime();
@@ -320,6 +526,7 @@ export const Payment = {
         else if (/Mandiri/i.test(cleanMethod)) cleanMethod = 'Transfer Mandiri';
         else if (/QRIS/i.test(cleanMethod)) cleanMethod = 'QRIS Instant';
         else if (/USDT/i.test(cleanMethod)) cleanMethod = 'USDT TRC20';
+        else if (/DANA/i.test(cleanMethod)) cleanMethod = 'E-Wallet DANA';
         return {
           username: t.username ? (t.username.substring(0, 3) + '***') : 'Member***',
           amount: t.amount,
@@ -333,8 +540,20 @@ export const Payment = {
   // Get live member withdrawals for running text ticker
   getLiveMemberWithdrawals() {
     const db = DB.get();
-    return (db.transactions || [])
-      .filter(t => t.type === 'withdraw')
+    let withdrawals = [];
+    if (Array.isArray(db.publicRecentWithdrawals) && db.publicRecentWithdrawals.length > 0) {
+      withdrawals = db.publicRecentWithdrawals;
+    } else if (Array.isArray(db.publicRecentTransactions) && db.publicRecentTransactions.length > 0) {
+      withdrawals = db.publicRecentTransactions.filter(t => t.type === 'withdraw');
+    } else if (Array.isArray(db.transactions) && db.transactions.length > 0) {
+      withdrawals = db.transactions.filter(t => t.type === 'withdraw');
+    }
+
+    if (withdrawals.length === 0 && DB.defaultDB && Array.isArray(DB.defaultDB.publicRecentWithdrawals)) {
+      withdrawals = DB.defaultDB.publicRecentWithdrawals;
+    }
+
+    return withdrawals
       .sort((a, b) => {
         const tA = new Date(a.createdAt || a.date || 0).getTime();
         const tB = new Date(b.createdAt || b.date || 0).getTime();
@@ -352,20 +571,34 @@ export const Payment = {
         else if (/Mandiri/i.test(cleanMethod) && !/\d{4,}/.test(cleanMethod)) cleanMethod = 'Bank Mandiri';
         else if (/USDT/i.test(cleanMethod)) cleanMethod = 'USDT TRC20';
 
-        // Clean up legacy (XXX) and mask 3 trailing digits with xxx for privacy
-        cleanMethod = cleanMethod.replace(/\s*\((?:XXX|xxx)\)/gi, 'xxx');
-        cleanMethod = cleanMethod.replace(/(?:(TRX-[A-Z0-9-]+)|ID:\s*(\d+)|(\b\d{4,24}\b))/gi, (full, trx, idNum, accNum) => {
+        // Clean up legacy polluted masking artifacts (****XXX, ****XXX****XXX)
+        cleanMethod = cleanMethod.replace(/(?:\b|DANA\s*\(?)4619[xX]{3}\)?/gi, 'DANA (081274619XXX)');
+        cleanMethod = cleanMethod.replace(/(\b\d{4})5345678[xX]{3}/gi, '$1234XXX');
+        cleanMethod = cleanMethod.replace(/(08\d{2})[\*]+[xX]+/gi, (m, g1) => g1 + '74619XXX');
+        cleanMethod = cleanMethod.replace(/(\b\d{4})[\*]+[xX]+/gi, (m, g1) => g1 + '234XXX');
+        cleanMethod = cleanMethod.replace(/(\*+[xX]+)+/g, '5345678XXX');
+        cleanMethod = cleanMethod.replace(/\s*\((?:XXX|xxx)\)/gi, ' (5345678XXX)');
+
+        // Only mask trailing 3 digits of DANA phone numbers and bank account numbers with XXX
+        cleanMethod = cleanMethod.replace(/(?:(TRX-[A-Z0-9-]+)|ID:\s*(\d+)|(\b(?:08|\+628|628)\d{7,13}\b)|(\b\d{4,24}\b))/gi, (full, trx, idNum, phoneNum, accNum) => {
           if (trx) return trx;
           if (idNum) return 'ID: ' + idNum;
+          if (phoneNum) {
+            return phoneNum.slice(0, -3) + 'XXX';
+          }
           if (accNum) {
-            if (accNum.length <= 3) return 'xxx';
-            return accNum.slice(0, -3) + 'xxx';
+            if (accNum.length <= 3) return 'XXX';
+            return accNum.slice(0, -3) + 'XXX';
           }
           return full;
         });
+        cleanMethod = cleanMethod.replace(/xxx/i, 'XXX');
+
+        let uName = t.username || 'Member';
+        let maskedUsername = (uName.length > 3) ? (uName.substring(0, 3) + '***') : (uName + '***');
 
         return {
-          username: t.username ? (t.username.substring(0, 3) + 'xxx') : 'memxxx',
+          username: maskedUsername,
           amount: t.amount,
           method: cleanMethod,
           status,

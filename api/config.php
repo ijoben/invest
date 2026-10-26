@@ -51,6 +51,8 @@ if ($requestOrigin !== '' && in_array($requestOrigin, $allowedOrigins, true)) {
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Content-Type: application/json; charset=UTF-8');
+// Jangan bocorkan versi PHP (memudahkan pencarian exploit versi EOL).
+@header_remove('X-Powered-By');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -124,6 +126,12 @@ function parseSessionToken($token) {
 }
 
 function getRequestAuthToken() {
+    if (!empty($_GET['sessionToken'])) {
+        return trim((string)$_GET['sessionToken']);
+    }
+    if (!empty($_POST['sessionToken'])) {
+        return trim((string)$_POST['sessionToken']);
+    }
     $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
     if ($authHeader !== '' && preg_match('/Bearer\s+(\S+)/i', $authHeader, $m)) {
         return trim($m[1]);
@@ -151,9 +159,6 @@ function getRequestAuthToken() {
     if (!empty($_COOKIE['AT_TOKEN'])) {
         return trim((string)$_COOKIE['AT_TOKEN']);
     }
-    if (!empty($_GET['sessionToken'])) {
-        return trim((string)$_GET['sessionToken']);
-    }
     return '';
 }
 
@@ -161,10 +166,6 @@ function getRequestAuthToken() {
 // Auth helpers
 // ---------------------------------------------------------------------------
 function currentSessionUserId() {
-    if (isset($_SESSION['uid']) && is_string($_SESSION['uid']) && $_SESSION['uid'] !== '') {
-        return $_SESSION['uid'];
-    }
-    // Fallback to cryptographic Bearer / X-Session-Token header
     $token = getRequestAuthToken();
     if ($token !== '') {
         $parsed = parseSessionToken($token);
@@ -174,14 +175,22 @@ function currentSessionUserId() {
             return $_SESSION['uid'];
         }
     }
+    if (isset($_SESSION['uid']) && is_string($_SESSION['uid']) && $_SESSION['uid'] !== '') {
+        return $_SESSION['uid'];
+    }
     return '';
 }
 
 function currentSessionRole() {
+    $uid = currentSessionUserId();
+    // SECURITY: role tidak lagi ditentukan oleh ID yang di-hardcode. Dulu uid
+    // 'usr-admin' otomatis dianggap admin tanpa melihat database, sehingga
+    // siapa pun yang berhasil menaruh uid tersebut di sesi langsung mendapat
+    // hak administrator. Otoritas sekarang selalu berasal dari DB atau dari
+    // role yang melekat pada sesi hasil login (server-signed).
     if (isset($_SESSION['role']) && is_string($_SESSION['role']) && $_SESSION['role'] !== '') {
         return $_SESSION['role'];
     }
-    $uid = currentSessionUserId();
     if ($uid !== '') {
         global $pdo;
         if ($pdo) {
@@ -422,6 +431,54 @@ function safeUserPayload($u) {
 }
 
 // ---------------------------------------------------------------------------
+// Text sanitizer: member-supplied free text (testimoni & catatan transaksi)
+// ---------------------------------------------------------------------------
+// Nilai-nilai ini dirender ke tabel admin / kartu testimoni publik. Menyimpan
+// karakter '<' '>' memungkinkan stored XSS lintas-peran (member -> admin), jadi
+// dibersihkan di sumber sebelum state disimpan, bukan hanya di sisi tampilan.
+function sanitizeUserFreeText(&$data) {
+    if (!is_array($data)) return;
+
+    if (isset($data['testimonials']) && is_array($data['testimonials'])) {
+        foreach ($data['testimonials'] as &$t) {
+            if (!is_array($t)) continue;
+            foreach (['name', 'city', 'bank', 'comment'] as $k) {
+                if (isset($t[$k]) && is_string($t[$k])) {
+                    $clean = trim(preg_replace('/\s+/u', ' ', str_replace(['<', '>'], '', strip_tags($t[$k]))));
+                    if (function_exists('mb_substr') && mb_strlen($clean, 'UTF-8') > 400) {
+                        $clean = mb_substr($clean, 0, 400, 'UTF-8');
+                    } elseif (strlen($clean) > 400) {
+                        $clean = substr($clean, 0, 400);
+                    }
+                    $t[$k] = $clean;
+                }
+            }
+        }
+        unset($t);
+    }
+
+    if (isset($data['transactions']) && is_array($data['transactions'])) {
+        foreach ($data['transactions'] as &$trx) {
+            if (!is_array($trx) || !isset($trx['note']) || !is_string($trx['note'])) continue;
+            $trx['note'] = str_replace(['<', '>'], '', $trx['note']);
+        }
+        unset($trx);
+    }
+
+    if (isset($data['redemptions']) && is_array($data['redemptions'])) {
+        foreach ($data['redemptions'] as &$rd) {
+            if (!is_array($rd)) continue;
+            foreach (['note', 'deliveryAddress', 'targetContact', 'rewardTitle'] as $k) {
+                if (isset($rd[$k]) && is_string($rd[$k])) {
+                    $rd[$k] = str_replace(['<', '>'], '', $rd[$k]);
+                }
+            }
+        }
+        unset($rd);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Server-side save policy: non-admin sessions cannot mint money or privileges
 // ---------------------------------------------------------------------------
 function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo) {
@@ -434,16 +491,67 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
     foreach ($parsed['users'] as &$u) stripUserSecrets($u);
     unset($u);
 
+    // 1b. Session-derived keys are never client-writable state. Persisting them
+    // (admin "full trust" saves included) leaked one browser's currentUser/isAdmin
+    // into shared state that was then served to every guest on action=get.
+    foreach (['currentUser', 'currentSession', 'isAdmin', 'isGuest'] as $sessionStateKey) {
+        unset($parsed[$sessionStateKey]);
+    }
+
+    // 1c. Free text dari member dibersihkan dari payload HTML (anti stored XSS).
+    sanitizeUserFreeText($parsed);
+
     if ($isSessionAdmin) return; // Full trust for authenticated admin sessions
 
     $hasExisting = is_array($existing) && count($existing) > 0;
 
-    // 2. Admin-managed sections can only be edited by an admin session (investments are locked: only creatable via action=invest_plan)
+    // 2. Admin-managed sections can only be edited by an admin session
     if ($hasExisting) {
-        foreach (['settings', 'plans', 'banners', 'announcements', 'signals', 'investments'] as $adminKey) {
-            if (array_key_exists($adminKey, $existing)) {
+        $authoritativePlans = null;
+        if ($pdo) {
+            try {
+                $pStmt = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'platform_plans' LIMIT 1");
+                $pStmt->execute();
+                $pRow = $pStmt->fetch();
+                if ($pRow && !empty($pRow['setting_value'])) {
+                    $dbP = json_decode($pRow['setting_value'], true);
+                    if (is_array($dbP) && count($dbP) > 0) $authoritativePlans = $dbP;
+                }
+            } catch (Exception $eP) {}
+        }
+
+        foreach (['settings', 'plans', 'banners', 'announcements', 'signals'] as $adminKey) {
+            if ($adminKey === 'plans' && $authoritativePlans) {
+                $parsed['plans'] = $authoritativePlans;
+            } elseif (array_key_exists($adminKey, $existing)) {
                 $parsed[$adminKey] = $existing[$adminKey];
             }
+        }
+        // Protect investments from unauthorized creation/tampering, but preserve valid history updates for own investments
+        if (array_key_exists('investments', $existing)) {
+            $baseInvs = $existing['investments'];
+            if (is_array($baseInvs) && isset($parsed['investments']) && is_array($parsed['investments'])) {
+                $incomingMap = [];
+                foreach ($parsed['investments'] as $pi) {
+                    if (!empty($pi['id']) && ($pi['userId'] ?? '') === (string)$sessionUid) {
+                        $incomingMap[$pi['id']] = $pi;
+                    }
+                }
+                foreach ($baseInvs as &$bi) {
+                    $bid = $bi['id'] ?? '';
+                    if ($bid !== '' && isset($incomingMap[$bid])) {
+                        $inc = $incomingMap[$bid];
+                        if (isset($inc['history']) && is_array($inc['history'])) {
+                            $bi['history'] = $inc['history'];
+                        }
+                        if (isset($inc['lastProfitYieldDate'])) {
+                            $bi['lastProfitYieldDate'] = $inc['lastProfitYieldDate'];
+                        }
+                    }
+                }
+                unset($bi);
+            }
+            $parsed['investments'] = $baseInvs;
         }
         // Protect rewards catalog from non-admin modification while allowing legitimate stock decrement
         if (array_key_exists('rewards', $existing)) {
@@ -490,18 +598,29 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
             'hasVerification' => array_key_exists('emailVerified', $eu) || array_key_exists('isPendingVerification', $eu),
             'hasBank'     => array_key_exists('bankAccount', $eu),
             'hasBlockHistory' => array_key_exists('blockHistory', $eu),
+            // Identitas akun ikut dibekukan: snapshot client tidak boleh mengubah
+            // email/username akun lain (dipakai untuk takeover via reset password).
+            'identity' => [
+                'email'        => (string)($eu['email'] ?? ''),
+                'phone'        => (string)($eu['phone'] ?? ''),
+                'username'     => (string)($eu['username'] ?? ''),
+                'fullName'     => (string)($eu['fullName'] ?? ''),
+                'city'         => (string)($eu['city'] ?? ''),
+                'referralCode' => (string)($eu['referralCode'] ?? ''),
+                'referredBy'   => (string)($eu['referredBy'] ?? ''),
+            ],
         ];
     }
     if ($pdo) {
         try {
-            $rows = $pdo->query("SELECT `id`, `wallet_balance`, `affiliate_balance`, `points`, `role`, `status`, `is_blocked`, `blocked_reason` FROM `users`")->fetchAll();
+            $rows = $pdo->query("SELECT `id`, `username`, `full_name`, `email`, `phone`, `wallet_balance`, `affiliate_balance`, `points`, `role`, `status`, `is_blocked`, `blocked_reason` FROM `users`")->fetchAll();
             foreach ($rows as $r) {
                 $rid = (string)$r['id'];
                 if (!isset($baseline[$rid])) {
                     $baseline[$rid] = [
                         'wallet' => 0, 'affiliate' => 0, 'points' => 0,
                         'role' => 'user', 'status' => 'active', 'isBlocked' => false,
-                        'blockedReason' => '', 'blockHistory' => [], 'bankAccount' => null,
+                        'blockedReason' => '', 'blockHistory' => [], 'bankAccount' => null, 'identity' => [],
                         'emailVerified' => false, 'isPendingVerification' => false,
                         'hasVerification' => false, 'hasBank' => false, 'hasBlockHistory' => false,
                     ];
@@ -513,6 +632,20 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
                 $baseline[$rid]['isBlocked'] = !empty($r['is_blocked']);
                 $baseline[$rid]['blockedReason'] = (string)($r['blocked_reason'] ?? '');
                 if (($r['status'] ?? '') !== '') $baseline[$rid]['status'] = (string)$r['status'];
+                // Identitas akun dari tabel MySQL juga dibekukan, supaya user yang
+                // hanya ada di DB (belum ada di JSON state) tetap tidak bisa
+                // diubah emailnya lewat snapshot save milik member lain.
+                foreach (['username' => 'username', 'fullName' => 'full_name', 'email' => 'email', 'phone' => 'phone'] as $stateKey => $dbCol) {
+                    $dbVal = (string)($r[$dbCol] ?? '');
+                    if ($dbVal !== '') {
+                        if (!isset($baseline[$rid]['identity']) || !is_array($baseline[$rid]['identity'])) {
+                            $baseline[$rid]['identity'] = [];
+                        }
+                        if (empty($baseline[$rid]['identity'][$stateKey])) {
+                            $baseline[$rid]['identity'][$stateKey] = $dbVal;
+                        }
+                    }
+                }
             }
         } catch (Exception $eRelBase) {}
     }
@@ -527,18 +660,42 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
             if (!empty($t['id'])) $existingTrxIds[$t['id']] = true;
         }
     }
-    $creditTypes = ['profit_claim', 'capital_refund', 'capital_return', 'bonus', 'commission', 'referral_bonus',
-                    'rabat', 'rabat_bonus', 'leader_bonus', 'affiliate_transfer', 'member_transfer', 'reward', 'matching_bonus', 'sponsor_bonus', 'checkin', 'ppob_refund', 'adjustment', 'manual_adjustment'];
+    $creditTypes = ['deposit', 'profit_claim', 'capital_refund', 'capital_return', 'bonus', 'commission', 'referral_bonus',
+                    'rabat', 'rabat_bonus', 'leader_bonus', 'affiliate_transfer', 'member_transfer', 'member_transfer_in', 'reward', 'matching_bonus', 'sponsor_bonus', 'checkin', 'daily_checkin', 'check_in', 'ppob_refund', 'adjustment', 'manual_adjustment'];
+    $debitTypes = ['invest_plan', 'withdraw', 'ppob_conversion', 'member_transfer_out'];
     $creditByUser = [];
+    $debitByUser = [];
+    // Money that legitimately LEAVES the "Wallet Tambah Teman" (affiliate/team) wallet:
+    // affiliate -> main wallet transfers, plus withdrawals/PPOB paid from that wallet.
+    // Without this the affiliate balance could never go down (it was clamped back to the
+    // baseline), so a member kept their team balance even after transferring it to the
+    // main wallet - money appeared out of nowhere.
+    $affiliateOutByUser = [];
     $pointsByUser = [];
     $newTrxCount = [];
     if (isset($parsed['transactions']) && is_array($parsed['transactions'])) {
         foreach ($parsed['transactions'] as $t) {
             $tid = (string)($t['id'] ?? '');
             $uid = (string)($t['userId'] ?? '');
-            if ($tid === '' || $uid === '' || isset($existingTrxIds[$tid])) continue;
-            $newTrxCount[$uid] = ($newTrxCount[$uid] ?? 0) + 1;
+            if ($tid === '' || $uid === '') continue;
             $tType = (string)($t['type'] ?? '');
+            $amt = (int)($t['amount'] ?? 0);
+
+            if ((in_array($tType, $debitTypes, true) || strpos($tid, 'TRX-TRFO-') === 0) && $amt > 0) {
+                $debitByUser[$uid] = ($debitByUser[$uid] ?? 0) + $amt;
+            }
+
+            $src = (string)($t['walletSource'] ?? $t['source'] ?? '');
+            $isAffiliateOut = ($tType === 'affiliate_transfer' || strpos($tid, 'TRX-TRF-') === 0)
+                || (in_array($tType, ['withdraw', 'ppob_conversion'], true)
+                    && in_array($src, ['affiliate', 'Wallet Tambah Teman'], true));
+            // Only NEW ledger rows in this payload justify a fresh decrease (no replay).
+            if ($isAffiliateOut && $amt > 0 && !isset($existingTrxIds[$tid])) {
+                $affiliateOutByUser[$uid] = ($affiliateOutByUser[$uid] ?? 0) + $amt;
+            }
+
+            if (isset($existingTrxIds[$tid])) continue;
+            $newTrxCount[$uid] = ($newTrxCount[$uid] ?? 0) + 1;
             if ($tType === 'invest_plan') {
                 $pointsByUser[$uid] = ($pointsByUser[$uid] ?? 0) + 60;
             } elseif ($tType === 'deposit') {
@@ -548,7 +705,6 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
             }
             if (($t['status'] ?? 'pending') !== 'approved') continue;
             if (!in_array($tType, $creditTypes, true)) continue;
-            $amt = (int)($t['amount'] ?? 0);
             if ($amt > 0) $creditByUser[$uid] = ($creditByUser[$uid] ?? 0) + $amt;
         }
     }
@@ -618,27 +774,107 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
             $u['bankAccount'] = $b['bankAccount'];
         }
 
+        // SECURITY: identitas (email/telepon/username/nama/kota) akun LAIN tidak
+        // boleh diubah lewat snapshot save. Mengubah email korban ke mailbox
+        // penyerang akan mengalihkan kode reset password = account takeover.
+        if (!$isSelf && !empty($b['identity']) && is_array($b['identity'])) {
+            foreach ($b['identity'] as $idKey => $idVal) {
+                if ($idVal !== '') $u[$idKey] = $idVal;
+            }
+        }
+
         $inW = (int)($u['walletBalance'] ?? 0);
         $inA = (int)($u['affiliateBalance'] ?? 0);
         $inP = (int)($u['points'] ?? 0);
         $allowedCredit = (int)($creditByUser[$uid] ?? 0);
+        $allowedDebit = (int)($debitByUser[$uid] ?? 0);
         $allowedPoints = max(10 * (int)($newTrxCount[$uid] ?? 0), (int)($pointsByUser[$uid] ?? 0));
 
+        // Credit legitimate check-in bonus if checked in today
+        $dci = $u['dailyCheckIn'] ?? null;
+        if (is_array($dci) && !empty($dci['lastCheckInDate']) && $dci['lastCheckInDate'] === date('Y-m-d')) {
+            $allowedCredit += 1000;
+        }
+
         // Balances: increases must be justified by the transaction ledger
+        $userAllTxs = array_filter($parsed['transactions'] ?? [], function($tx) use ($uid) {
+            return ($tx['userId'] ?? '') === $uid && ($tx['status'] ?? 'approved') === 'approved';
+        });
+        $ledgerDep = 0; $ledgerInv = 0; $ledgerWd = 0; $ledgerProfit = 0; $ledgerBonus = 0; $ledgerRefund = 0;
+        $ledgerSps = 0; $ledgerRbt = 0; $ledgerWdAff = 0; $ledgerP2pIn = 0; $ledgerP2pOut = 0;
+        foreach ($userAllTxs as $ut) {
+            $uAmt = (int)($ut['amount'] ?? 0);
+            $uTyp = (string)($ut['type'] ?? '');
+            $uSrc = (string)($ut['walletSource'] ?? $ut['source'] ?? '');
+            $uNote = (string)($ut['note'] ?? '');
+            $uId = (string)($ut['id'] ?? '');
+            if ($uTyp === 'deposit') $ledgerDep += $uAmt;
+            elseif ($uTyp === 'invest_plan') $ledgerInv += $uAmt;
+            elseif ($uTyp === 'withdraw') {
+                if ($uSrc === 'Wallet Tambah Teman' || $uSrc === 'affiliate') $ledgerWdAff += $uAmt;
+                else $ledgerWd += $uAmt;
+            }
+            elseif ($uTyp === 'profit_claim') $ledgerProfit += $uAmt;
+            elseif ($uTyp === 'bonus' || $uTyp === 'checkin' || $uTyp === 'daily_checkin' || $uTyp === 'check_in' || strpos($uId, 'TX-CHK-') === 0 || stripos($uNote, 'absen') !== false) $ledgerBonus += $uAmt;
+            elseif ($uTyp === 'capital_refund') $ledgerRefund += $uAmt;
+            elseif ($uTyp === 'leader_bonus') {
+                if (stripos($uNote, 'Saldo Utama') !== false) $ledgerBonus += $uAmt;
+                else $ledgerSps += $uAmt;
+            }
+            elseif ($uTyp === 'sponsor_bonus') {
+                if (stripos($uNote, 'ditransfer ke Saldo Utama') !== false) $ledgerBonus += $uAmt;
+                else $ledgerSps += $uAmt;
+            }
+            elseif ($uTyp === 'rabat_bonus') $ledgerRbt += $uAmt;
+            elseif ($uTyp === 'ppob_conversion') {
+                if ($uSrc === 'Wallet Tambah Teman' || $uSrc === 'affiliate') $ledgerWdAff += $uAmt;
+                else $ledgerWd += $uAmt;
+            }
+            elseif ($uTyp === 'member_transfer' || $uTyp === 'member_transfer_in' || strpos($uId, 'TRX-TRFI-') === 0 || stripos($uNote, 'Terima transfer') !== false) {
+                $ledgerP2pIn += $uAmt;
+            }
+            elseif ($uTyp === 'member_transfer_out' || strpos($uId, 'TRX-TRFO-') === 0 || stripos($uNote, 'Transfer saldo ke member') !== false) {
+                $ledgerP2pOut += $uAmt;
+            }
+        }
+        $ledgerMaxW = max(0, $ledgerDep - $ledgerInv - $ledgerWd + $ledgerProfit + $ledgerBonus + $ledgerRefund + $ledgerP2pIn - $ledgerP2pOut);
+        $ledgerMaxA = max(0, $ledgerSps + $ledgerRbt - $ledgerWdAff);
+
         $incW = max(0, $inW - $b['wallet']);
         $incA = max(0, $inA - $b['affiliate']);
         $pos = $incW + $incA;
         if ($pos > $allowedCredit) {
-            $takeW = $pos > 0 ? (int)floor($incW * $allowedCredit / $pos) : 0;
-            $takeA = (int)min(max(0, $allowedCredit - $takeW), $incA);
-            $u['walletBalance'] = $b['wallet'] + $takeW;
-            $u['affiliateBalance'] = $b['affiliate'] + $takeA;
+            // Allow if justified by the full transaction ledger
+            if ($inW <= $ledgerMaxW && $inA <= $ledgerMaxA) {
+                $u['walletBalance'] = $inW;
+                $u['affiliateBalance'] = $inA;
+            } else {
+                $takeW = $pos > 0 ? (int)floor($incW * $allowedCredit / $pos) : 0;
+                $takeA = (int)min(max(0, $allowedCredit - $takeW), $incA);
+                $u['walletBalance'] = $b['wallet'] + $takeW;
+                $u['affiliateBalance'] = $b['affiliate'] + $takeA;
+            }
         }
-        if (!$isSelf) {
-            // Other people's balances can never decrease from a member session
-            if ((int)$u['walletBalance'] < $b['wallet']) $u['walletBalance'] = $b['wallet'];
-            if ((int)$u['affiliateBalance'] < $b['affiliate']) $u['affiliateBalance'] = $b['affiliate'];
-            if ($inP < $b['points']) $u['points'] = $b['points'];
+
+        // Never let wallet balance drop below baseline unless justified by debit transactions
+        if ((int)$u['walletBalance'] < $b['wallet']) {
+            $allowedMinW = max(0, $b['wallet'] - $allowedDebit);
+            if ((int)$u['walletBalance'] < $allowedMinW) {
+                $u['walletBalance'] = $b['wallet'];
+            }
+        }
+        // Affiliate balance may decrease, but only by the amount of the affiliate debits
+        // recorded in this payload (transfer to main wallet, affiliate withdrawal, PPOB)
+        // and only for the session's own account - nobody may debit someone else's wallet.
+        if ((int)$u['affiliateBalance'] < $b['affiliate']) {
+            $allowedAffiliateOut = $isSelf ? (int)($affiliateOutByUser[$uid] ?? 0) : 0;
+            $allowedMinA = max(0, $b['affiliate'] - $allowedAffiliateOut);
+            if ((int)$u['affiliateBalance'] < $allowedMinA) {
+                $u['affiliateBalance'] = $allowedMinA;
+            }
+        }
+        if ($inP < $b['points']) {
+            $u['points'] = $b['points'];
         }
 
         // Loyalty points: increase only with new recorded activity
@@ -649,6 +885,40 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
         stripUserSecrets($u);
     }
     unset($u);
+}
+
+// ---------------------------------------------------------------------------
+// Platform configuration freeze
+// ---------------------------------------------------------------------------
+// Platform configuration (settings, plans, banners, running text, signals,
+// reward catalog, testimonials, market tickers) may only be changed through the
+// dedicated admin endpoints:
+//   admin_save_settings / admin_save_plans / admin_save_rewards /
+//   admin_save_signals / admin_save_announcements / save_banner /
+//   delete_banner / toggle_banner
+//
+// action=save carries a COMPLETE browser snapshot. Without this guard any stale
+// tab (a fresh admin login, another phone, a browser whose local DB fell back to
+// the built-in defaults) silently rolls every admin edit back to whatever that
+// old snapshot contained - the real cause of banners / running text / signals /
+// rabat levels / bonus target OMSET reverting to their defaults hours later.
+function platformConfigSections() {
+    // NOTE: 'testimonials' is intentionally NOT frozen - members submit their own
+    // withdrawal testimonials through the normal save flow and the admin moderates them.
+    return ['settings', 'plans', 'banners', 'announcements', 'signals', 'rewards', 'marketTickers'];
+}
+
+function freezePlatformConfig(&$parsed, $existing, $allowConfigWrite = false) {
+    if (!is_array($parsed) || $allowConfigWrite) return;
+    if (!is_array($existing) || count($existing) === 0) return;
+    foreach (platformConfigSections() as $cfgKey) {
+        if (array_key_exists($cfgKey, $existing)) {
+            $parsed[$cfgKey] = $existing[$cfgKey];
+        } else {
+            // Never let a client introduce a configuration section the server does not own.
+            unset($parsed[$cfgKey]);
+        }
+    }
 }
 
 /**

@@ -1,0 +1,492 @@
+{
+  "generatedAt": "2026-10-22T02:56:25.859Z",
+  "target": "https://autotrading.my.id/admin.html",
+  "total": 69,
+  "pass": 67,
+  "fail": 2,
+  "steps": [
+    {
+      "no": 1,
+      "time": "02:44:40",
+      "name": "Pasar: OFF",
+      "result": "PASS",
+      "ms": 1431
+    },
+    {
+      "no": 2,
+      "time": "02:44:41",
+      "name": "Pasar: restore ON",
+      "result": "PASS",
+      "ms": 1352
+    },
+    {
+      "no": 3,
+      "time": "02:44:43",
+      "name": "Weekend profit: OFF",
+      "result": "PASS",
+      "ms": 1296
+    },
+    {
+      "no": 4,
+      "time": "02:44:44",
+      "name": "Weekend profit: restore ON",
+      "result": "PASS",
+      "ms": 1272
+    },
+    {
+      "no": 5,
+      "time": "02:44:55",
+      "name": "Mode Loss: ON",
+      "result": "PASS",
+      "ms": 1546
+    },
+    {
+      "no": 6,
+      "time": "02:44:57",
+      "name": "Mode Loss: restore OFF",
+      "result": "PASS",
+      "ms": 1426
+    },
+    {
+      "no": 7,
+      "time": "02:44:58",
+      "name": "Jadwal WD: OFF + jam 10",
+      "result": "PASS",
+      "ms": 1835
+    },
+    {
+      "no": 8,
+      "time": "02:45:00",
+      "name": "Jadwal WD: restore ON + jam 9",
+      "result": "PASS",
+      "ms": 1924
+    },
+    {
+      "no": 9,
+      "time": "02:45:13",
+      "name": "Afiliasi: sponsor 11 + rabat L3 1.5",
+      "result": "PASS",
+      "ms": 1565
+    },
+    {
+      "no": 10,
+      "time": "02:45:14",
+      "name": "Afiliasi: restore 10 / 1",
+      "result": "PASS",
+      "ms": 1693
+    },
+    {
+      "no": 11,
+      "time": "02:45:16",
+      "name": "Leader: rename Bronze",
+      "result": "PASS",
+      "ms": 1301
+    },
+    {
+      "no": 12,
+      "time": "02:45:17",
+      "name": "Leader: restore",
+      "result": "PASS",
+      "ms": 1313
+    },
+    {
+      "no": 13,
+      "time": "02:45:25",
+      "name": "QRIS: OFF + NMID QA",
+      "result": "PASS",
+      "ms": 1342
+    },
+    {
+      "no": 14,
+      "time": "02:45:26",
+      "name": "QRIS: restore ON + NMID",
+      "result": "PASS",
+      "ms": 1313
+    },
+    {
+      "no": 15,
+      "time": "02:45:27",
+      "name": "Gateway: kurs 16300",
+      "result": "PASS",
+      "ms": 1318
+    },
+    {
+      "no": 16,
+      "time": "02:45:28",
+      "name": "Gateway: restore kurs 16250",
+      "result": "PASS",
+      "ms": 1423
+    },
+    {
+      "no": 17,
+      "time": "02:45:37",
+      "name": "APK: versi QA",
+      "result": "PASS",
+      "ms": 1879
+    },
+    {
+      "no": 18,
+      "time": "02:45:39",
+      "name": "APK: restore versi",
+      "result": "PASS",
+      "ms": 1330
+    },
+    {
+      "no": 19,
+      "time": "02:45:40",
+      "name": "Absensi: reward 1200",
+      "result": "PASS",
+      "ms": 1368
+    },
+    {
+      "no": 20,
+      "time": "02:45:41",
+      "name": "Absensi: restore reward 1000",
+      "result": "PASS",
+      "ms": 1333
+    },
+    {
+      "no": 21,
+      "time": "02:45:51",
+      "name": "PPOB: adminFee 2500",
+      "result": "PASS",
+      "ms": 1849
+    },
+    {
+      "no": 22,
+      "time": "02:45:53",
+      "name": "PPOB: restore adminFee 0",
+      "result": "PASS",
+      "ms": 1403
+    },
+    {
+      "no": 23,
+      "time": "02:45:54",
+      "name": "CS: telegram QA",
+      "result": "PASS",
+      "ms": 1335
+    },
+    {
+      "no": 24,
+      "time": "02:45:56",
+      "name": "CS: restore telegram",
+      "result": "PASS",
+      "ms": 1337
+    },
+    {
+      "no": 25,
+      "time": "02:46:03",
+      "name": "Kelas Trading: desc QA",
+      "result": "PASS",
+      "ms": 1516
+    },
+    {
+      "no": 26,
+      "time": "02:46:04",
+      "name": "Kelas Trading: restore desc",
+      "result": "PASS",
+      "ms": 1350
+    },
+    {
+      "no": 27,
+      "time": "02:46:06",
+      "name": "Web general: appName QA",
+      "result": "PASS",
+      "ms": 1356
+    },
+    {
+      "no": 28,
+      "time": "02:46:07",
+      "name": "Web general: restore appName",
+      "result": "PASS",
+      "ms": 1354
+    },
+    {
+      "no": 29,
+      "time": "02:46:24",
+      "name": "Tampilan: primary #3B82F6",
+      "result": "PASS",
+      "ms": 1364
+    },
+    {
+      "no": 30,
+      "time": "02:46:25",
+      "name": "Tampilan: restore #C89338",
+      "result": "PASS",
+      "ms": 1345
+    },
+    {
+      "no": 31,
+      "time": "02:46:27",
+      "name": "SEO: title QA",
+      "result": "PASS",
+      "ms": 1200
+    },
+    {
+      "no": 32,
+      "time": "02:46:28",
+      "name": "SEO: clear title (fix empty-field)",
+      "result": "PASS",
+      "ms": 1241
+    },
+    {
+      "no": 33,
+      "time": "02:46:36",
+      "name": "Social: instagram QA",
+      "result": "PASS",
+      "ms": 1480
+    },
+    {
+      "no": 34,
+      "time": "02:46:37",
+      "name": "Social: restore instagram",
+      "result": "PASS",
+      "ms": 1397
+    },
+    {
+      "no": 35,
+      "time": "02:46:38",
+      "name": "Maintenance: ON",
+      "result": "PASS",
+      "ms": 1328
+    },
+    {
+      "no": 36,
+      "time": "02:46:40",
+      "name": "Maintenance: restore OFF",
+      "result": "PASS",
+      "ms": 1722
+    },
+    {
+      "no": 37,
+      "time": "02:46:46",
+      "name": "WD master: KUNCI (OFF)",
+      "result": "PASS",
+      "ms": 1675
+    },
+    {
+      "no": 38,
+      "time": "02:46:48",
+      "name": "WD master: BUKA (ON)",
+      "result": "PASS",
+      "ms": 1273
+    },
+    {
+      "no": 39,
+      "time": "02:46:49",
+      "name": "Profil admin: fullName QA",
+      "result": "PASS",
+      "ms": 951
+    },
+    {
+      "no": 40,
+      "time": "02:46:50",
+      "name": "Profil admin: restore fullName",
+      "result": "PASS",
+      "ms": 944
+    },
+    {
+      "no": 41,
+      "time": "02:46:58",
+      "name": "Running text: tambah QA",
+      "result": "PASS",
+      "ms": 1510
+    },
+    {
+      "no": 42,
+      "time": "02:46:59",
+      "name": "Running text: toggle OFF",
+      "result": "PASS",
+      "ms": 1514
+    },
+    {
+      "no": 43,
+      "time": "02:47:01",
+      "name": "Running text: speed 45s",
+      "result": "PASS",
+      "ms": 1330
+    },
+    {
+      "no": 44,
+      "time": "02:47:02",
+      "name": "Running text: speed restore 50s",
+      "result": "PASS",
+      "ms": 1316
+    },
+    {
+      "no": 45,
+      "time": "02:47:11",
+      "name": "Running text: hapus QA",
+      "result": "PASS",
+      "ms": 1581
+    },
+    {
+      "no": 46,
+      "time": "02:47:12",
+      "name": "Banner: tambah QA",
+      "result": "PASS",
+      "ms": 1319
+    },
+    {
+      "no": 47,
+      "time": "02:47:14",
+      "name": "Banner: toggle OFF",
+      "result": "PASS",
+      "ms": 1488
+    },
+    {
+      "no": 48,
+      "time": "02:47:15",
+      "name": "Banner: hapus QA",
+      "result": "PASS",
+      "ms": 1798
+    },
+    {
+      "no": 49,
+      "time": "02:47:24",
+      "name": "Reward: tambah QA",
+      "result": "PASS",
+      "ms": 1435
+    },
+    {
+      "no": 50,
+      "time": "02:47:25",
+      "name": "Reward: toggle OFF",
+      "result": "PASS",
+      "ms": 1790
+    },
+    {
+      "no": 51,
+      "time": "02:47:27",
+      "name": "Reward: hapus QA",
+      "result": "PASS",
+      "ms": 1524
+    },
+    {
+      "no": 52,
+      "time": "02:47:28",
+      "name": "Testimoni: tambah QA",
+      "result": "PASS",
+      "ms": 1058
+    },
+    {
+      "no": 53,
+      "time": "02:47:35",
+      "name": "Testimoni: toggle OFF",
+      "result": "PASS",
+      "ms": 1010
+    },
+    {
+      "no": 54,
+      "time": "02:47:36",
+      "name": "Testimoni: hapus QA",
+      "result": "PASS",
+      "ms": 1200
+    },
+    {
+      "no": 55,
+      "time": "02:47:37",
+      "name": "Bank: tambah QA",
+      "result": "PASS",
+      "ms": 1592
+    },
+    {
+      "no": 56,
+      "time": "02:47:39",
+      "name": "Bank: toggle OFF",
+      "result": "PASS",
+      "ms": 1501
+    },
+    {
+      "no": 57,
+      "time": "02:47:54",
+      "name": "Bank: hapus QA",
+      "result": "PASS",
+      "ms": 1640
+    },
+    {
+      "no": 58,
+      "time": "02:47:56",
+      "name": "Paket: tambah QA Plan",
+      "result": "PASS",
+      "ms": 1496
+    },
+    {
+      "no": 59,
+      "time": "02:47:57",
+      "name": "Paket: edit QA Plan (12 hari)",
+      "result": "PASS",
+      "ms": 1612
+    },
+    {
+      "no": 60,
+      "time": "02:48:05",
+      "name": "Paket: hapus QA Plan",
+      "result": "FAIL",
+      "ms": 1607
+    },
+    {
+      "no": 61,
+      "time": "02:48:07",
+      "name": "Sinyal: terbitkan QAUSD",
+      "result": "PASS",
+      "ms": 1665
+    },
+    {
+      "no": 62,
+      "time": "02:48:08",
+      "name": "Sinyal: hapus QAUSD",
+      "result": "PASS",
+      "ms": 1503
+    },
+    {
+      "no": 63,
+      "time": "02:48:10",
+      "name": "Sinkron data member (admin)",
+      "result": "PASS",
+      "ms": 1382
+    },
+    {
+      "no": 64,
+      "time": "02:50:26",
+      "name": "Paket: tambah QA Plan (retest)",
+      "result": "PASS",
+      "ms": 1524
+    },
+    {
+      "no": 65,
+      "time": "02:50:27",
+      "name": "Paket: edit QA Plan 12 hari (retest)",
+      "result": "PASS",
+      "ms": 3223
+    },
+    {
+      "no": 66,
+      "time": "02:50:30",
+      "name": "Paket: hapus QA Plan (retest)",
+      "result": "PASS",
+      "ms": 1577
+    },
+    {
+      "no": 67,
+      "time": "02:54:19",
+      "name": "Ketentuan WD: tambah baris QA",
+      "result": "PASS",
+      "ms": 2058
+    },
+    {
+      "no": 68,
+      "time": "02:54:21",
+      "name": "Ketentuan WD: restore 5 baris",
+      "result": "FAIL",
+      "ms": 1592
+    },
+    {
+      "no": 69,
+      "time": "02:54:32",
+      "name": "Ketentuan WD: restore 5 baris (fix)",
+      "result": "PASS",
+      "ms": 1557
+    }
+  ]
+}

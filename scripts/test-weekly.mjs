@@ -1,14 +1,15 @@
 const { DB } = await import('../js/db.js');
 const { Plans } = await import('../js/plans.js');
 
-console.log('=============================================');
-console.log('TESTING WEEKLY PROFIT HISTORY & STATUS PILLS');
-console.log('=============================================');
+console.log('===================================================');
+console.log('TESTING WEEKLY PROFIT — DUAL WEEKEND TOGGLE MODE');
+console.log('===================================================');
 
 // --- Fixture: a member with an active investment package -------------------
 // Guests and members without a package legitimately return an empty/label-only
 // breakdown, so the weekly spec can only be verified with an active member.
 const db = DB.get();
+
 db.users = db.users || [];
 db.investments = db.investments || [];
 
@@ -49,106 +50,146 @@ if (!db.investments.some(i => i.id === 'inv-weekly-test')) {
   });
 }
 
-const res = Plans.getWeeklyProfitHistory(fixtureUserId) || {};
-const records = Array.isArray(res.records) ? res.records : [];
-const totalRate = Number(res.totalRate || 0);
-const avgRate = Number(res.avgRate || 0);
-
-console.log(`Weekly Total: +${totalRate.toFixed(2)}% | Weekly Avg: +${avgRate.toFixed(2)}% / hari`);
-console.log(`Active Days Count: ${Number(res.countActiveDays || 0)}`);
-console.log('---------------------------------------------');
-
-records.forEach((r, idx) => {
-  const pillClass = String(r.pillClass || '-');
-  console.log(`[${idx}] ${String(r.dayName).padEnd(7)} (${r.date}): Rate=${String(r.displayRate).padEnd(8)} | Pill=${String(r.pillText).padEnd(12)} | PillClass=${pillClass.padEnd(16)} | Today=${!!r.isToday} | Weekend=${!!r.isWeekend}`);
-});
-
-console.log('---------------------------------------------');
-
-// Assertions
-let failures = 0;
-
-if (records.length !== 7) {
-  console.error(`[FAIL] Expected 7 day records (Senin-Minggu), got ${records.length}`);
-  failures++;
+function setWeekendMode(enabled) {
+  const d = DB.get();
+  d.settings.weekendProfit = {
+    enabled,
+    offMessage: 'Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin.'
+  };
+  d.settings.weekendProfitEnabled = enabled;
 }
 
-if (records.length === 7) {
+let totalFailures = 0;
+
+function runPass(label, weekendEnabled) {
+  console.log('\n---------------------------------------------');
+  console.log(`MODE: ${label}`);
+  setWeekendMode(weekendEnabled);
+
+  const res = Plans.getWeeklyProfitHistory(fixtureUserId) || {};
+  const records = Array.isArray(res.records) ? res.records : [];
+  const totalRate = Number(res.totalRate || 0);
+  const avgRate = Number(res.avgRate || 0);
+  let failures = 0;
+
+  console.log(`Weekly Total: +${totalRate.toFixed(2)}% | Weekly Avg: +${avgRate.toFixed(2)}% / hari`);
+  console.log(`Active Days Count: ${Number(res.countActiveDays || 0)}`);
+
   records.forEach((r, idx) => {
-    if (idx < 5) {
-      if (r.isFuture) {
-        // Requirement: Future days with Next must show '-' instead of percentage
-        if (r.displayRate !== '-') {
-          console.error(`[FAIL] Future day ${r.dayName} must not show profit rate yet! got: ${r.displayRate}`);
-          failures++;
-        }
-        if (r.pillText !== 'Next') {
-          console.error(`[FAIL] Future day ${r.dayName} must have Next pill! got: ${r.pillText}`);
-          failures++;
-        }
-      } else {
-        // Past or Today must show percentage rate
-        if (!r.displayRate || !r.displayRate.includes('%')) {
-          console.error(`[FAIL] Day ${r.dayName} does not display percentage rate! got: ${r.displayRate}`);
-          failures++;
-        }
-        if (!r.pillText || String(r.pillText).trim() === '') {
-          console.error(`[FAIL] Day ${r.dayName} is missing its status pill text`);
-          failures++;
-        }
-      }
-      if (r.isWeekend) {
-        console.error(`[FAIL] Weekday ${r.dayName} must not be flagged as weekend`);
-        failures++;
-      }
-    } else {
-      // Sabtu & Minggu
-      if (!r.isWeekend || r.pillText !== 'Pasar OFF') {
-        console.error(`[FAIL] Weekend day ${r.dayName} should be Pasar OFF! got: pill=${r.pillText}, isWeekend=${r.isWeekend}`);
+    console.log(`[${idx}] ${String(r.dayName).padEnd(7)} (${r.date}): Rate=${String(r.displayRate).padEnd(8)} | Pill=${String(r.pillText).padEnd(12)} | Weekend=${!!r.isWeekend} | Future=${!!r.isFuture}`);
+  });
+
+  if (records.length !== 7) {
+    console.error(`[FAIL] Expected 7 day records (Senin-Minggu), got ${records.length}`);
+    failures++;
+  }
+
+  records.forEach((r, idx) => {
+    const isCalendarWeekend = idx >= 5; // Senin-Jumat = idx 0-4
+    const marketOpenDay = !isCalendarWeekend || weekendEnabled;
+
+    if (isCalendarWeekend && !weekendEnabled) {
+      // LIBUR mode: Sabtu & Minggu must be Pasar OFF with no rate
+      if (!r.isOff || r.pillText !== 'Pasar OFF') {
+        console.error(`[FAIL] LIBUR mode: ${r.dayName} should be Pasar OFF! got: pill=${r.pillText}, isOff=${r.isOff}`);
         failures++;
       }
       if (r.displayRate !== '-') {
-        console.error(`[FAIL] Weekend day ${r.dayName} must not show a profit rate, got: ${r.displayRate}`);
+        console.error(`[FAIL] LIBUR mode: ${r.dayName} must not show a profit rate, got: ${r.displayRate}`);
         failures++;
+      }
+      return;
+    }
+
+    if (marketOpenDay) {
+      // Trading day (weekday, or weekend when "7 Hari Penuh Aktif").
+      // isWeekend stays a calendar fact; isOff must be false (market open).
+      if (r.isOff) {
+        console.error(`[FAIL] ${label}: trading day ${r.dayName} must not be flagged market-off (isOff)`);
+        failures++;
+      }
+      if (r.isFuture) {
+        if (r.displayRate !== '-') {
+          console.error(`[FAIL] ${label}: future day ${r.dayName} must not show profit rate yet! got: ${r.displayRate}`);
+          failures++;
+        }
+        if (r.pillText !== 'Next') {
+          console.error(`[FAIL] ${label}: future day ${r.dayName} must have Next pill! got: ${r.pillText}`);
+          failures++;
+        }
+      } else {
+        if (!r.displayRate || !r.displayRate.includes('%')) {
+          console.error(`[FAIL] ${label}: day ${r.dayName} does not display percentage rate! got: ${r.displayRate}`);
+          failures++;
+        }
+        if (!r.pillText || String(r.pillText).trim() === '') {
+          console.error(`[FAIL] ${label}: day ${r.dayName} is missing its status pill text`);
+          failures++;
+        }
       }
     }
   });
-}
 
-// Consistency: countActiveDays + totals are finite and derived from the records
-if (!Number.isFinite(totalRate) || !Number.isFinite(avgRate)) {
-  console.error(`[FAIL] totalRate/avgRate must be finite numbers, got ${res.totalRate}/${res.avgRate}`);
-  failures++;
-}
-const weekdayRates = records.slice(0, 5)
-  .filter(r => typeof r.rate === 'number')
-  .map(r => r.rate);
-const recomputedTotal = weekdayRates.reduce((a, b) => a + b, 0);
-if (Math.abs(recomputedTotal - totalRate) > 0.05) {
-  console.error(`[FAIL] totalRate ${totalRate} does not match sum of all 5 weekday rates ${recomputedTotal.toFixed(2)}`);
-  failures++;
-}
-
-// Guest view must return an empty/label-only breakdown (never crash)
-const guestRes = Plans.getWeeklyProfitHistory(null) || {};
-if (!Array.isArray(guestRes.records)) {
-  console.error('[FAIL] Guest weekly history must still return a records array');
-  failures++;
-} else {
-  const guestWeekday = guestRes.records.slice(0, 5)[0];
-  if (guestWeekday && guestWeekday.displayRate !== '-' && guestWeekday.isGuest) {
-    console.error(`[FAIL] Guest weekday must not expose a profit rate, got: ${guestWeekday.displayRate}`);
+  // Consistency: totals must be the sum of the days the market is open
+  if (!Number.isFinite(totalRate) || !Number.isFinite(avgRate)) {
+    console.error(`[FAIL] totalRate/avgRate must be finite numbers, got: ${res.totalRate}/${res.avgRate}`);
     failures++;
   }
-  if (guestRes.records.length !== 7) {
-    console.error(`[FAIL] Guest weekly history should have 7 records, got ${guestRes.records.length}`);
+  const openRates = records
+    .filter(r => !r.isOff && typeof r.rate === 'number')
+    .map(r => r.rate);
+  const recomputedTotal = openRates.reduce((a, b) => a + b, 0);
+  if (Math.abs(recomputedTotal - totalRate) > 0.05) {
+    console.error(`[FAIL] totalRate ${totalRate} does not match sum of open-market rates ${recomputedTotal.toFixed(2)}`);
     failures++;
+  }
+  const expectedActiveDays = weekendEnabled ? 7 : 5;
+  if (Number(res.countActiveDays || 0) !== expectedActiveDays) {
+    console.error(`[FAIL] countActiveDays should be ${expectedActiveDays} in ${label} mode, got ${res.countActiveDays}`);
+    failures++;
+  }
+
+  // Cross-check the toggle accessor used by app.js status pill
+  if (Plans.isWeekendProfitEnabled() !== weekendEnabled) {
+    console.error(`[FAIL] Plans.isWeekendProfitEnabled() should return ${weekendEnabled}`);
+    failures++;
+  }
+
+  console.log(failures === 0 ? `[PASS] MODE ${label}: all checks OK` : `[FAIL] MODE ${label}: ${failures} issue(s)`);
+  totalFailures += failures;
+  return failures;
+}
+
+runPass('LIBUR (Senin-Jumat Saja)', false);
+runPass('7 HARI PENUH AKTIF', true);
+
+// Guest view must return an empty/label-only breakdown in both modes (never crash)
+for (const mode of [false, true]) {
+  setWeekendMode(mode);
+  const guestRes = Plans.getWeeklyProfitHistory(null) || {};
+  if (!Array.isArray(guestRes.records)) {
+    console.error('[FAIL] Guest weekly history must still return a records array');
+    totalFailures++;
+  } else {
+    const guestWeekday = guestRes.records.slice(0, 5)[0];
+    if (guestWeekday && guestWeekday.displayRate !== '-' && guestWeekday.isGuest) {
+      console.error(`[FAIL] Guest weekday must not expose a profit rate, got: ${guestWeekday.displayRate}`);
+      totalFailures++;
+    }
+    if (guestRes.records.length !== 7) {
+      console.error(`[FAIL] Guest weekly history should have 7 records, got: ${guestRes.records.length}`);
+      totalFailures++;
+    }
   }
 }
 
-if (failures === 0) {
-  console.log('[ALL CHECKS PASSED] Weekly profit breakdown conforms 100% to user specification!');
+// Restore default mode so other harnesses importing this fixture stay predictable
+setWeekendMode(false);
+
+console.log('\n---------------------------------------------');
+if (totalFailures === 0) {
+  console.log('[ALL CHECKS PASSED] Weekly profit breakdown follows the admin weekend toggle in DB, admin UI, and frontend!');
 } else {
-  console.error(`[TEST FAILED] ${failures} issues detected!`);
+  console.error(`[TEST FAILED] ${totalFailures} issues detected!`);
   process.exit(1);
 }

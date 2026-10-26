@@ -15,8 +15,18 @@ export const Admin = {
     
     const nonAdminUsers = (db.users || []).filter(u => u.role !== 'admin');
     const totalUsers = nonAdminUsers.length;
-    const activeInvUsers = new Set((db.investments || []).filter(i => i.status === 'active').map(i => i.userId));
-    const activeUsers = activeInvUsers.size > 0 ? activeInvUsers.size : nonAdminUsers.filter(u => !u.isBlocked && u.status !== 'blocked').length;
+    // Member "sudah beli" = punya minimal satu record investasi (aktif maupun selesai).
+    // Member "aktif trading" = punya investasi berstatus active. Jangan pernah
+    // fallback ke jumlah akun tidak-diblokir: itu mencampur akun yang belum beli
+    // paket ke angka investor (dulu membuat dashboard menampilkan angka menyesatkan).
+    const investments = db.investments || [];
+    const nonAdminIds = new Set(nonAdminUsers.map(u => u.id));
+    const buyerIds = new Set(investments.map(i => i && i.userId).filter(id => id && nonAdminIds.has(id)));
+    const activeInvUsers = new Set(investments.filter(i => i.status === 'active').map(i => i.userId).filter(id => nonAdminIds.has(id)));
+    const activeUsers = activeInvUsers.size;
+    const buyerUsers = buyerIds.size;
+    const activeAccounts = nonAdminUsers.filter(u => !u.isBlocked && u.status !== 'blocked').length;
+    const blockedAccounts = nonAdminUsers.filter(u => u.isBlocked || u.status === 'blocked').length;
     
     const totalDeposits = db.transactions
       .filter(t => t.type === 'deposit' && t.status === 'approved')
@@ -48,6 +58,9 @@ export const Admin = {
     return {
       totalUsers,
       activeUsers,
+      buyerUsers,
+      activeAccounts,
+      blockedAccounts,
       totalDeposits,
       totalWithdrawals,
       activeCapital,
@@ -59,83 +72,56 @@ export const Admin = {
     };
   },
 
-  // Approve Deposit Request
+  // Approve Deposit Request (Calls Authoritative Server API)
   async approveDeposit(transactionId) {
+    const res = await DB.adminApproveDeposit(transactionId);
+    if (!res || !res.success) {
+      return { success: false, message: (res && res.message) || 'Gagal memproses deposit!' };
+    }
+
     const db = DB.get();
-    const trx = db.transactions.find(t => t.id === transactionId);
-    if (!trx || trx.status !== 'pending') {
-      return { success: false, message: 'Transaksi tidak valid atau sudah diproses!' };
-    }
+    const trx = (db.transactions || []).find(t => t.id === transactionId);
+    const user = trx ? (db.users || []).find(u => u.id === trx.userId) : null;
 
-    const user = db.users.find(u => u.id === trx.userId);
-    if (!user) {
-      return { success: false, message: 'User tidak ditemukan!' };
-    }
-
-    // Credit user's wallet balance
-    user.walletBalance = (user.walletBalance || 0) + trx.amount;
-
-    // Credit loyalty points reward for successful deposit (Requirement 8)
-    const pointsReward = Number(db.settings && db.settings.depositPointsReward !== undefined ? db.settings.depositPointsReward : 5);
-    if (pointsReward > 0) {
-      user.points = (user.points || 0) + pointsReward;
-      trx.pointsAwarded = pointsReward;
-    }
-
-    trx.status = 'approved';
-    trx.updatedAt = new Date().toISOString();
-
-    await DB.save(db);
-
-    // Send email notification to member
+    // Send email notification to member. Status WAJIB 'approved' di sini:
+    // template 'pending' dipakai saat member mengunggah bukti (belum masuk saldo),
+    // sedangkan email "saldo berhasil masuk" hanya boleh keluar setelah approve.
     if (user && user.email) {
       DB.dispatchMailApi('deposit', {
+        status: 'approved',
         user: { email: user.email, username: user.username, fullName: user.fullName },
-        transaction: trx
+        transaction: trx || { id: transactionId, amount: trx?.amount }
       });
     }
 
     return {
       success: true,
-      message: `Deposit ${DB.formatIDR(trx.amount)} untuk ${user.username} berhasil disetujui!${pointsReward > 0 ? ` (+${pointsReward} Poin ditambahkan)` : ''}`
+      message: res.message || `Deposit ${trx ? DB.formatIDR(trx.amount) : ''} berhasil disetujui!`
     };
   },
 
   // Reject Deposit Request
   async rejectDeposit(transactionId, reason = 'Bukti transfer tidak valid') {
-    const db = DB.get();
-    const trx = db.transactions.find(t => t.id === transactionId);
-    if (!trx || trx.status !== 'pending') {
-      return { success: false, message: 'Transaksi tidak valid atau sudah diproses!' };
+    const res = await DB.adminRejectDeposit(transactionId, reason);
+    if (!res || !res.success) {
+      return { success: false, message: (res && res.message) || 'Gagal menolak deposit!' };
     }
-
-    trx.status = 'rejected';
-    trx.rejectReason = reason;
-    trx.updatedAt = new Date().toISOString();
-
-    await DB.save(db);
-    return { success: true, message: `Deposit ${trx.id} berhasil ditolak.` };
+    return { success: true, message: res.message || `Deposit ${transactionId} berhasil ditolak.` };
   },
 
   // Approve Withdrawal / PPOB Request
   async approveWithdrawal(transactionId) {
+    const res = await DB.adminApproveWithdrawal(transactionId);
+    if (!res || !res.success) {
+      return { success: false, message: (res && res.message) || 'Gagal menyetujui penarikan!' };
+    }
+
     const db = DB.get();
-    const trx = db.transactions.find(t => t.id === transactionId);
-    if (!trx || trx.status !== 'pending') {
-      return { success: false, message: 'Transaksi tidak valid atau sudah diproses!' };
-    }
-
-    trx.status = 'approved';
-    if (trx.type === 'ppob_conversion') {
-      trx.ppobStatus = 'Selesai';
-    }
-    trx.updatedAt = new Date().toISOString();
-
-    await DB.save(db);
+    const trx = (db.transactions || []).find(t => t.id === transactionId);
+    const user = trx ? (db.users || []).find(u => u.id === trx.userId) : null;
 
     // Send email notification to member
-    const user = db.users.find(u => u.id === trx.userId);
-    if (user && user.email) {
+    if (user && user.email && trx) {
       if (trx.type === 'ppob_conversion') {
         DB.dispatchMailApi('ppob', {
           status: 'approved',
@@ -151,50 +137,33 @@ export const Admin = {
       }
     }
 
-    if (trx.type === 'ppob_conversion') {
-      const typeLabel = trx.category === 'pln' ? 'Token Listrik PLN' : 'Pulsa Seluler';
-      return {
-        success: true,
-        message: `Konversi PPOB ${typeLabel} ${DB.formatIDR(trx.amount)} ke ${trx.targetNumber || '-'} berhasil disetujui (Status: Selesai)!`
-      };
-    }
     return {
       success: true,
-      message: `Penarikan ${DB.formatIDR(trx.amount)} ke ${trx.destinationAccount} berhasil disetujui!`
+      message: res.message || 'Penarikan berhasil disetujui!'
     };
   },
 
-  // Reject Withdrawal / PPOB Request (Refunds user balance)
+  // Reject Withdrawal / PPOB Request (Refunds user balance atomically)
   async rejectWithdrawal(transactionId, reason = 'Data rekening / nomor tujuan tidak sesuai') {
+    // Client-side idempotency guard: a transaction already rejected & refunded
+    // (trx.isRefunded) must never trigger a second refund. Server guards too.
+    const preDb = DB.get();
+    const preTrx = (preDb.transactions || []).find(t => t.id === transactionId);
+    if (preTrx && (preTrx.isRefunded || preTrx.status === 'rejected')) {
+      return { success: true, message: 'Permintaan ini sudah pernah ditolak — refund tidak diulang.' };
+    }
+
+    const res = await DB.adminRejectWithdrawal(transactionId, reason);
+    if (!res || !res.success) {
+      return { success: false, message: (res && res.message) || 'Gagal menolak penarikan!' };
+    }
+
     const db = DB.get();
-    const trx = db.transactions.find(t => t.id === transactionId);
-    if (!trx || trx.status !== 'pending') {
-      return { success: false, message: 'Transaksi tidak valid atau sudah diproses!' };
-    }
-
-    const user = db.users.find(u => u.id === trx.userId);
-    if (user && !trx.isRefunded) {
-      // Refund balance to appropriate wallet
-      if (trx.walletSource === 'Wallet Tambah Teman' || trx.source === 'affiliate') {
-        user.affiliateBalance = (user.affiliateBalance || 0) + (trx.amount || trx.netAmount || 0);
-      } else {
-        user.walletBalance = (user.walletBalance || 0) + (trx.amount || trx.netAmount || 0);
-      }
-      trx.isRefunded = true;
-    }
-
-    trx.status = 'rejected';
-    if (trx.type === 'ppob_conversion') {
-      trx.ppobStatus = 'Gangguan';
-      trx.adminNote = reason;
-    }
-    trx.rejectReason = reason;
-    trx.updatedAt = new Date().toISOString();
-
-    await DB.save(db);
+    const trx = (db.transactions || []).find(t => t.id === transactionId);
+    const user = trx ? (db.users || []).find(u => u.id === trx.userId) : null;
 
     // Send email notification to member
-    if (user && user.email) {
+    if (user && user.email && trx) {
       if (trx.type === 'ppob_conversion') {
         DB.dispatchMailApi('ppob', {
           status: 'rejected',
@@ -210,37 +179,150 @@ export const Admin = {
       }
     }
 
-    return { success: true, message: `Transaksi ${trx.type === 'ppob_conversion' ? 'konversi PPOB' : 'penarikan'} ${trx.id} ditandai gangguan/ditolak dan saldo telah dikembalikan ke user.` };
+    return {
+      success: true,
+      message: res.message || 'Permintaan penarikan ditolak dan saldo berhasil dikembalikan ke akun member.'
+    };
+  },
+
+  // Reconcile All User Balances with Ledger
+  async reconcileAllBalances() {
+    return await DB.adminReconcileAllBalances();
+  },
+
+  // Reconcile every member's withdrawal bank/e-wallet details with the database
+  async syncBankDetails() {
+    return await DB.adminSyncBankDetails();
+  },
+
+  // --------------------------------------------------------------------------
+  // RESET DATA MEMBER (akun curang / tidak valid)
+  // Reset total dijalankan di server: saldo & poin dihapus, seluruh transaksi,
+  // paket investasi dan penukaran poin member ikut terhapus permanen.
+  // Profil, login, kode referral dan rekening bank tetap dipertahankan.
+  // Admin WAJIB mengetik persis username target + alasan (dicek juga di server).
+  // --------------------------------------------------------------------------
+  async resetMember(userId, confirmUsername, reason) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      const res = await fetch(DB.getApiUrl('admin_reset_member'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: DB.getAuthHeaders(),
+        body: JSON.stringify({
+          userId: userId,
+          confirmUsername: (confirmUsername || '').trim(),
+          reason: (reason || '').trim()
+        })
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal mereset data member (HTTP ${res.status})` };
+      }
+      return json;
+    } catch (e) {
+      return { success: false, message: e.message || 'Koneksi ke server gagal.' };
+    }
+  },
+
+  // Riwayat reset terakhir (log audit admin) untuk ditampilkan di modal reset
+  async getResetLogs() {
+    try {
+      if (typeof fetch !== 'function') return { success: false, logs: [] };
+      const res = await fetch(DB.getApiUrl('admin_reset_logs'), {
+        credentials: 'include',
+        headers: DB.getAuthHeaders()
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) return { success: false, logs: [] };
+      return { success: true, logs: Array.isArray(json.logs) ? json.logs : [] };
+    } catch (e) {
+      return { success: false, logs: [] };
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // AUDIT PERHITUNGAN PROFIT (semua member)
+  // Memeriksa apakah nominal profit harian = modal x rate paket, dan apakah
+  // nominal yang akan dibayar (pending) sama dengan yang tampil di kartu member.
+  // --------------------------------------------------------------------------
+  async profitAudit(userId = '') {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      const q = userId ? `&userId=${encodeURIComponent(userId)}` : '';
+      const res = await fetch(DB.getApiUrl('admin_profit_audit') + q, {
+        credentials: 'include',
+        headers: DB.getAuthHeaders()
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal memeriksa data profit (HTTP ${res.status})` };
+      }
+      return json;
+    } catch (e) {
+      return { success: false, message: e.message || 'Koneksi ke server gagal.' };
+    }
+  },
+
+  // Perbaiki rate/nominal riwayat profit agar selalu konsisten. TIDAK mengubah
+  // saldo, total profit, atau sisa hari paket — hanya menyelaraskan angka yang
+  // ditampilkan dengan nominal yang benar-benar dibayar.
+  async repairProfitData(userId = '') {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      const res = await fetch(DB.getApiUrl('admin_profit_repair'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: DB.getAuthHeaders(),
+        body: JSON.stringify({ userId: userId || '' })
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal memperbaiki data profit (HTTP ${res.status})` };
+      }
+      return json;
+    } catch (e) {
+      return { success: false, message: e.message || 'Koneksi ke server gagal.' };
+    }
   },
 
   // Save / Update Plan
   async savePlan(planData) {
     const db = DB.get();
-    const existingIdx = db.plans.findIndex(p => p.id === planData.id);
+    db.plans = db.plans || [];
+    const data = { ...(planData || {}) };
+    // A new plan must always get a real id: spreading planData after the default
+    // used to overwrite the generated id with undefined (JSON omitted it), so
+    // freshly added plans were saved without an id and could not be edited.
+    if (!data.id) delete data.id;
+    const existingIdx = data.id ? db.plans.findIndex(p => p.id === data.id) : -1;
 
     if (existingIdx !== -1) {
-      db.plans[existingIdx] = { ...db.plans[existingIdx], ...planData };
+      db.plans[existingIdx] = { ...db.plans[existingIdx], ...data };
     } else {
       db.plans.push({
-        id: 'plan-' + Date.now(),
         theme: 'theme-learn',
         activeCount: 0,
-        ...planData
+        ...data,
+        id: data.id || ('plan-' + Date.now())
       });
     }
 
-    await DB.save(db);
-    await DB.adminSavePlans(db.plans);
-    return { success: true, message: 'Paket investasi berhasil disimpan!' };
+    // The dedicated endpoint writes both platform_plans and state.plans.
+    // Do NOT follow it with a full-state save: a delayed/retried state push can
+    // carry an older plan list and silently roll back a just-saved edit.
+    const res = await DB.adminSavePlans(db.plans);
+    return res && res.success !== false ? res : { success: true, message: 'Paket investasi berhasil disimpan!' };
   },
 
   // Delete Plan
   async deletePlan(planId) {
     const db = DB.get();
     db.plans = db.plans.filter(p => p.id !== planId);
-    await DB.save(db);
-    await DB.adminSavePlans(db.plans);
-    return { success: true, message: 'Paket investasi berhasil dihapus.' };
+    // Authoritative endpoint only — see savePlan() above for why a full-state
+    // save here could resurrect a deleted plan from a stale snapshot.
+    const res = await DB.adminSavePlans(db.plans);
+    return res && res.success !== false ? res : { success: true, message: 'Paket investasi berhasil dihapus.' };
   },
 
   // Update Settings (Affiliate, Rates, Payment Details)
@@ -685,6 +767,27 @@ export const Admin = {
   // Admin Toggle Block / Unblock User
   async toggleBlockUser(userId, reason = '') {
     return await DB.toggleBlockUser(userId, reason);
+  },
+
+  // Admin Login As User (Impersonation Mode)
+  async loginAsUser(userId) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      const url = DB.getApiUrl('admin_login_as_user');
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: DB.getAuthHeaders(),
+        body: JSON.stringify({ userId })
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal login sebagai member (HTTP ${res.status})` };
+      }
+      return json;
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   },
 
   // --------------------------------------------------------------------------

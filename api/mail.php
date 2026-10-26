@@ -355,15 +355,104 @@ if (!$emailSettings) {
     if (empty($emailSettings['mailMethod'])) $emailSettings['mailMethod'] = 'smtp';
 }
 
+// ===========================================================================
+// SECURITY GATE - MAIL SERVICE
+// ---------------------------------------------------------------------------
+// Sebelumnya SEMUA action di file ini bisa dipanggil tanpa login: siapa pun
+// dapat memakai server sebagai relay email resmi (spam/phishing atas nama
+// AUTOTRADING) dan dapat mengarahkan smtp.host ke host internal (SSRF).
+// ===========================================================================
+$mailSessionUid = function_exists('currentSessionUserId') ? currentSessionUserId() : '';
+$mailIsAdmin = ($mailSessionUid !== '' && currentSessionRole() === 'admin');
+
+// 1) Kredensial SMTP hanya boleh berasal dari server untuk non-admin, supaya
+//    host/port/user tidak bisa diarahkan bebas oleh pemanggil.
+if (!$mailIsAdmin) {
+    $pdoMailCfg = $pdo ?: getDbConnection();
+    if ($pdoMailCfg) {
+        try {
+            $qMail = $pdoMailCfg->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'general_settings' LIMIT 1");
+            $qMail->execute();
+            $rMail = $qMail->fetch();
+            if ($rMail && !empty($rMail['setting_value'])) {
+                $gzMail = json_decode($rMail['setting_value'], true);
+                if (is_array($gzMail) && !empty($gzMail['email'])) {
+                    // Timpa (bukan kosongkan) supaya fallback default tetap hidup
+                    // bila DB belum menyimpan konfigurasi email.
+                    $emailSettings = $gzMail['email'];
+                }
+            }
+        } catch (Exception $eMailCfg) {}
+    }
+}
+
+// 2) Uji pengiriman email hanya untuk Administrator (sebelumnya open relay).
+if ($action === 'test' && !$mailIsAdmin) {
+    jsonResponse(['success' => false, 'message' => 'Akses ditolak: uji pengiriman email hanya untuk Administrator.'], 403);
+}
+
+// 3) Notifikasi transaksional wajib sesi login (mencegah blast anonim).
+$mailLoginRequired = ['deposit', 'withdraw', 'ppob', 'profit_claim', 'rabat', 'bonus'];
+if (in_array($action, $mailLoginRequired, true) && $mailSessionUid === '') {
+    jsonResponse(['success' => false, 'auth' => true, 'message' => 'Sesi login diperlukan untuk mengirim notifikasi email.'], 401);
+}
+
+// 4) Rate limit per IP per action.
+$mailRateCfg = [
+    'send_otp' => [8, 3600],
+    'welcome' => [8, 3600],
+    'admin_notification' => [20, 3600]
+];
+$mailLimit = $mailRateCfg[$action] ?? [60, 3600];
+if (!rateLimit('mail_' . $action, $mailLimit[0], $mailLimit[1])) {
+    jsonResponse(['success' => false, 'message' => 'Terlalu banyak permintaan email. Coba lagi beberapa saat lagi.'], 429);
+}
+
+// 5) send_otp / welcome hanya boleh ke alamat yang benar-benar terdaftar,
+//    sehingga server tidak bisa dipakai mengirim email ke sembarang orang.
+if (in_array($action, ['send_otp', 'welcome'], true)) {
+    $mailTo = ($action === 'send_otp')
+        ? strtolower(trim((string)($data['email'] ?? '')))
+        : strtolower(trim((string)($data['user']['email'] ?? $data['email'] ?? '')));
+    if ($mailTo === '' || !filter_var($mailTo, FILTER_VALIDATE_EMAIL)) {
+        jsonResponse(['success' => false, 'message' => 'Alamat email tidak valid.'], 400);
+    }
+    $pdoMailChk = $pdo ?: getDbConnection();
+    $mailKnown = false;
+    if ($pdoMailChk) {
+        try {
+            $stMailK = $pdoMailChk->prepare("SELECT COUNT(*) FROM `users` WHERE LOWER(`email`) = :em");
+            $stMailK->execute([':em' => $mailTo]);
+            $mailKnown = ((int)$stMailK->fetchColumn() > 0);
+        } catch (Exception $eMailK) {}
+    }
+    if (!$mailKnown) {
+        jsonResponse(['success' => false, 'message' => 'Alamat email ini belum terdaftar sebagai akun AUTOTRADING.'], 403);
+    }
+}
+
 // 1. ACTION: SEND OTP VERIFICATION TO NEW USER
 if ($action === 'send_otp') {
     $email = trim($data['email'] ?? '');
-    $name = trim($data['name'] ?? $data['fullName'] ?? 'Investor AUTOTRADING');
-    $otp = trim($data['code'] ?? $data['otp'] ?? '');
+    // SECURITY: nama & kode dipakai langsung di badan email HTML. Tanpa escape,
+    // pengirim anonim bisa menyisipkan HTML/tautan phishing ke email "resmi".
+    $rawName = trim((string)($data['name'] ?? $data['fullName'] ?? 'Investor AUTOTRADING'));
+    if (function_exists('mb_substr')) {
+        $rawName = mb_substr($rawName, 0, 60, 'UTF-8');
+    } else {
+        $rawName = substr($rawName, 0, 60);
+    }
+    $name = htmlspecialchars($rawName, ENT_QUOTES, 'UTF-8');
+    $otp = trim((string)($data['code'] ?? $data['otp'] ?? ''));
 
     if (empty($email) || empty($otp)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Email dan kode OTP wajib diisi!']);
+        exit();
+    }
+    if (!preg_match('/^[0-9]{6}$/', $otp)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Kode OTP harus 6 digit angka.']);
         exit();
     }
 
@@ -752,7 +841,65 @@ if ($action === 'deposit') {
     $amount = number_format(floatval($trx['amount'] ?? 0), 0, ',', '.');
     $method = htmlspecialchars($trx['paymentMethod'] ?? 'Transfer Bank');
     $timeStr = date('d M Y - H:i:s') . ' WIB';
+    $uniqueCode = !empty($trx['uniqueCode']) ? 'Rp ' . number_format((int)$trx['uniqueCode'], 0, ',', '.') : '-';
 
+    // Status transaksi menentukan template yang dikirim.
+    // Dulu hanya ada SATU template ("saldo sudah masuk"), sehingga email yang
+    // dikirim saat member baru mengunggah bukti transfer ikut mengklaim saldo
+    // sudah dikreditkan padahal admin belum memverifikasi. Sekarang:
+    //   pending  -> "sedang diverifikasi admin" (saldo BELUM bertambah)
+    //   lainnya  -> "berhasil masuk Saldo Utama" (hanya setelah admin approve)
+    $depStatus = strtolower(trim((string)($data['status'] ?? $trx['status'] ?? 'approved')));
+    $isDepositPending = in_array($depStatus, ['pending', 'awaiting_payment', 'processing', 'menunggu', 'in_review'], true);
+
+    if ($isDepositPending) {
+    $subject = "[AUTOTRADING] Deposit Sedang Diverifikasi Admin: IDR {$amount} [{$txId}]";
+    $innerContent = <<<HTML
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="background: #F59E0B; color: #080C14; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 20px;">MENUNGGU VERIFIKASI</span>
+        <h2 style="font-size: 18px; font-weight: 800; color: #F8FAFC; margin: 0;">Konfirmasi Deposit Diterima</h2>
+      </div>
+
+      <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 18px 0;">
+        Halo, <strong>@{$username}</strong>. Konfirmasi dan bukti transfer Anda sudah kami terima. Deposit sedang dalam antrean <strong>verifikasi Tim Admin</strong> — <strong>saldo utama Anda belum bertambah</strong> sampai deposit ini disetujui:
+      </p>
+
+      <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155; width: 38%;">ID Transaksi</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 700; color: #38BDF8; border-bottom: 1px solid #334155;">{$txId}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Nominal Deposit</td>
+          <td style="padding: 10px 14px; font-size: 14px; font-weight: 800; color: #F8FAFC; border-bottom: 1px solid #334155;">IDR {$amount}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Kode Unik</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 600; color: #F8FAFC; border-bottom: 1px solid #334155;">{$uniqueCode}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Metode Pembayaran</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 600; color: #F8FAFC; border-bottom: 1px solid #334155;">{$method}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8; border-bottom: 1px solid #334155;">Status</td>
+          <td style="padding: 10px 14px; font-size: 13px; font-weight: 800; color: #F59E0B; border-bottom: 1px solid #334155;">⏳ Menunggu verifikasi admin</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">Waktu Pengajuan</td>
+          <td style="padding: 10px 14px; font-size: 12px; color: #94A3B8;">{$timeStr}</td>
+        </tr>
+      </table>
+
+      <div style="background: rgba(245, 158, 11, 0.12); border-left: 4px solid #F59E0B; border-radius: 6px; padding: 12px 14px; margin-bottom: 20px; font-size: 12px; color: #FDE68A; line-height: 1.55;">
+        <strong>Belum ada saldo yang masuk.</strong> Anda akan menerima email konfirmasi kedua begitu Tim Admin menyetujui deposit ini dan saldo sudah dikreditkan ke Saldo Utama.
+      </div>
+
+      <p style="font-size: 12px; color: #64748B; margin: 0;">
+        Tidak perlu mengirim ulang bukti transfer. Simpan email ini sebagai bukti pengajuan deposit Anda.
+      </p>
+HTML;
+    } else {
     $subject = "[AUTOTRADING] Deposit Berhasil Diterima: IDR {$amount} [{$txId}]";
     $innerContent = <<<HTML
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
@@ -761,7 +908,7 @@ if ($action === 'deposit') {
       </div>
 
       <p style="font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin: 0 0 18px 0;">
-        Halo, <strong>@{$username}</strong>. Pembayaran deposit Anda telah diverifikasi oleh sistem dan <strong>telah ditambahkan ke Saldo Utama Anda</strong>:
+        Halo, <strong>@{$username}</strong>. Deposit Anda <strong>telah diverifikasi dan disetujui oleh Tim Admin</strong> dan <strong>telah ditambahkan ke Saldo Utama Anda</strong>:
       </p>
 
       <table width="100%" cellspacing="0" cellpadding="0" style="background: #1E293B; border-radius: 12px; overflow: hidden; border: 1px solid #334155; margin-bottom: 20px;">
@@ -787,6 +934,7 @@ if ($action === 'deposit') {
         Saldo ini kini dapat Anda gunakan langsung untuk mengaktifkan paket portofolio AI Trading yang tersedia.
       </div>
 HTML;
+    }
 
     $html = getEmailWrapper($subject, $innerContent);
     $sent = dispatchEmail($email, $subject, $html, $emailSettings);

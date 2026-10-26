@@ -20,7 +20,9 @@
   <meta property="og:site_name" content="AUTOTRADING">
   <meta property="og:title" content="AUTOTRADING - Platform Investasi & AI Trading Mobile Terpercaya">
   <meta property="og:description" content="Platform ekosistem investasi cerdas bertenaga AI dengan bagi hasil harian otomatis dan program afiliasi 3 level terpercaya.">
-  <meta property="og:image" content="https://autotrading.my.id/images/banner1.jpg">
+  <meta property="og:image" content="https://autotrading.my.id/uploads/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:locale" content="id_ID">
 
   <!-- Twitter Meta Tags -->
@@ -28,7 +30,7 @@
   <meta name="twitter:url" content="https://autotrading.my.id/">
   <meta name="twitter:title" content="AUTOTRADING - Platform Investasi & AI Trading Mobile Terpercaya">
   <meta name="twitter:description" content="Platform ekosistem investasi cerdas bertenaga AI dengan bagi hasil harian otomatis dan program afiliasi 3 level terpercaya.">
-  <meta name="twitter:image" content="https://autotrading.my.id/images/banner1.jpg">
+  <meta name="twitter:image" content="https://autotrading.my.id/uploads/og-image.png">
 
   <!-- Mobile App, PWA & Browser Theme Settings -->
   <meta name="theme-color" content="#C89338">
@@ -49,7 +51,7 @@
     "@type": "FinancialProduct",
     "name": "AUTOTRADING",
     "url": "https://autotrading.my.id/",
-    "logo": "https://autotrading.my.id/images/banner1.jpg",
+    "logo": "https://autotrading.my.id/uploads/logo-favicon.png",
     "description": "Platform ekosistem investasi dan trading otomatis berbasis kecerdasan buatan (AI) terpercaya dengan profit harian konsisten.",
     "brand": {
       "@type": "Brand",
@@ -97,10 +99,25 @@
   </script>
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261009_sig_v2">
-  <link rel="stylesheet" href="css/responsive.css?v=20261009_sig_v2">
+  <link rel="stylesheet" href="css/style.css?v=20261018_full_audit">
+  <link rel="stylesheet" href="css/responsive.css?v=20261018_full_audit">
 </head>
 <body>
+
+  <!-- ======================================================================
+       ADMIN IMPERSONATION BAR (MODE LOGIN SEBAGAI MEMBER)
+       ====================================================================== -->
+  <div id="impersonationBanner" class="impersonation-bar" style="display: none;">
+    <div class="impersonation-bar-content">
+      <span class="impersonation-bar-badge">👁️ MODE INSPEKSI ADMIN</span>
+      <span class="impersonation-bar-text">
+        Sedang memeriksa akun member: <strong id="impersonationTargetUsername">@member</strong>
+      </span>
+    </div>
+    <button class="impersonation-bar-btn" onclick="App.exitImpersonation()">
+      <span>Kembali ke Admin</span> ➔
+    </button>
+  </div>
 
   <!-- App Wrapper for Desktop Frame / Responsive Shell -->
   <div class="app-wrapper">
@@ -311,20 +328,22 @@
         </section>
 
         <!-- Quick PPOB Pulsa Banner (Konversi Saldo Utama Manual) -->
-        <div class="quick-ppob-banner" onclick="App.openMainWalletPpobModal()">
-          <div class="quick-ppob-content">
-            <div class="quick-ppob-icon">
-              📱⚡
+        <section class="quick-ppob-container">
+          <div class="quick-ppob-banner" onclick="App.openMainWalletPpobModal()">
+            <div class="quick-ppob-content">
+              <div class="quick-ppob-icon">
+                📱⚡
+              </div>
+              <div class="quick-ppob-text">
+                <div class="quick-ppob-title">Konversi Saldo ke PPOB (Pulsa &amp; PLN)</div>
+                <div class="quick-ppob-sub">Tukar Saldo Utama ke Pulsa &amp; Token PLN (10k, 20k, 50k, 100k) · Manual Admin</div>
+              </div>
             </div>
-            <div>
-              <div class="quick-ppob-title">Konversi Saldo ke PPOB (Pulsa &amp; PLN)</div>
-              <div class="quick-ppob-sub">Tukar Saldo Utama ke Pulsa &amp; Token PLN (10k, 20k, 50k, 100k) · Manual Admin</div>
-            </div>
+            <span class="quick-ppob-badge">
+              Beli PPOB ›
+            </span>
           </div>
-          <span class="quick-ppob-badge">
-            Beli PPOB ›
-          </span>
-        </div>
+        </section>
 
         <!-- 2B. GRAFIK PORTOFOLIO PERTUMBUHAN ASET & RINCIAN PROFIT 7 HARI (Requirement 2 & 3 & 4) -->
         <section class="portfolio-analytics-container">
@@ -703,7 +722,7 @@
                         <polyline points="12 6 12 12 16 14"></polyline>
                       </svg>
                     </span>
-                    <span class="countdown-title" id="countdownStatusTitle">Proses Profit Berjalan:</span>
+                    <span class="countdown-title" id="countdownStatusTitle">Ai Trading memproses profit untuk besok dalam waktu :</span>
                     <span class="countdown-timer-digits" id="countdownTimerValue">23:59:59</span>
                   </div>
                   <div class="countdown-percentage-badge" id="countdownPercentBadge">100%</div>
@@ -851,7 +870,7 @@
           <!-- Live Running Text Ticker: Member Deposit -->
           <div style="font-size: 11px; font-weight: 800; color: #15803D; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
             <span class="ai-pulse-dot" style="background:#22C55E;"></span>
-            <span>LIVE DEPOSIT MEMBER (TEXT BERJALAN):</span>
+            <span>LIVE DEPOSIT MEMBER:</span>
           </div>
           <div class="autotrading-marquee-wrap fgt-marquee-wrap" style="background:#0F291E; border-color:#166534; margin-bottom: 8px;">
             <div class="autotrading-marquee-track fgt-marquee-track" id="tabDepositMarqueeTrack">
@@ -862,7 +881,7 @@
           <!-- Live Running Text Ticker: Member WD -->
           <div style="font-size: 11px; font-weight: 800; color: #B45309; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
             <span class="ai-pulse-dot" style="background:#F59E0B;"></span>
-            <span>LIVE PENARIKAN (WD) MEMBER (TEXT BERJALAN):</span>
+            <span>LIVE PENARIKAN (WD) MEMBER:</span>
           </div>
           <div class="autotrading-marquee-wrap fgt-marquee-wrap" style="background:#2D1B08; border-color:#854D0E; margin-bottom: 14px;">
             <div class="autotrading-marquee-track fgt-marquee-track" id="tabWdMarqueeTrack">
@@ -1266,7 +1285,7 @@
                 <div class="network-level-card">
                   <span class="network-level-badge lvl-1">Level 1</span>
                   <div class="network-card-val" id="affL1BonusVal">IDR 0</div>
-                  <div class="network-card-sub" id="affL1SubTitle"><span id="affL1Count">0</span> Member (Sponsor 10% + Rabat 5%)</div>
+                  <div class="network-card-sub" id="affL1SubTitle"><span id="affL1Count">0</span> Member (Sponsor 10% + Rabat 3%)</div>
                   <div style="font-size: 8.5px; color: #60A5FA; margin-top: 3px;" id="affL1Turnover">Omset: IDR 0</div>
                 </div>
 
@@ -1274,7 +1293,7 @@
                 <div class="network-level-card">
                   <span class="network-level-badge lvl-2">Level 2</span>
                   <div class="network-card-val" id="affL2BonusVal">IDR 0</div>
-                  <div class="network-card-sub" id="affL2SubTitle"><span id="affL2Count">0</span> Member (Rabat 3%)</div>
+                  <div class="network-card-sub" id="affL2SubTitle"><span id="affL2Count">0</span> Member (Rabat 2%)</div>
                   <div style="font-size: 8.5px; color: #C084FC; margin-top: 3px;" id="affL2Turnover">Omset: IDR 0</div>
                 </div>
 
@@ -1282,7 +1301,7 @@
                 <div class="network-level-card">
                   <span class="network-level-badge lvl-3">Level 3</span>
                   <div class="network-card-val" id="affL3BonusVal">IDR 0</div>
-                  <div class="network-card-sub" id="affL3SubTitle"><span id="affL3Count">0</span> Member (Rabat 1.5%)</div>
+                  <div class="network-card-sub" id="affL3SubTitle"><span id="affL3Count">0</span> Member (Rabat 1%)</div>
                   <div style="font-size: 8.5px; color: #FDE047; margin-top: 3px;" id="affL3Turnover">Omset: IDR 0</div>
                 </div>
               </div>
@@ -1850,9 +1869,9 @@
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;" id="depBankInfoCard">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
             <div>
-              <div style="font-size: 11px; color: #64748B; font-weight: 600;" id="depBankSelectedName">Bank Central Asia (BCA)</div>
-              <div style="font-size: 16px; font-weight: 800; color: #0F172A; font-family: var(--font-mono, monospace); margin: 3px 0;" id="depBankAccountNo">8271928374</div>
-              <div style="font-size: 11.5px; color: #334155; font-weight: 700;">a/n <span id="depBankAccountName">PT AUTOTRADING INVESTASI</span></div>
+              <div style="font-size: 11px; color: #64748B; font-weight: 600;" id="depBankSelectedName">-</div>
+              <div style="font-size: 16px; font-weight: 800; color: #0F172A; font-family: var(--font-mono, monospace); margin: 3px 0;" id="depBankAccountNo">-</div>
+              <div style="font-size: 11.5px; color: #334155; font-weight: 700;">a/n <span id="depBankAccountName">-</span></div>
             </div>
             <button class="tier-btn btn-topup" style="padding: 5px 10px; font-size: 10.5px; flex-shrink: 0;" id="btnCopyBankAcc">
               Salin No. Rek
@@ -1899,6 +1918,39 @@
         <input type="number" class="form-input" id="depAmountInput" value="500000" placeholder="Minimal Rp 50.000">
       </div>
 
+      <!-- NOMOR TIKET: muncul SEBELUM transfer agar member bisa bayar sesuai nominal -->
+      <div class="form-group" id="depTicketWrap" style="display: none;">
+        <div class="dep-ticket-card">
+          <div class="dep-ticket-head">
+            <span class="dep-ticket-title">🎫 Nomor Tiket Deposit</span>
+            <span class="dep-ticket-timer" id="depTicketCountdown">--:--:--</span>
+          </div>
+          <div class="dep-ticket-row">
+            <span class="dep-ticket-label">No. Tiket</span>
+            <div class="dep-ticket-val">
+              <strong id="depTicketNo">-</strong>
+              <button type="button" class="dep-ticket-copy" onclick="App.copyText(document.getElementById('depTicketNo').textContent, 'Nomor Tiket')">Salin</button>
+            </div>
+          </div>
+          <div class="dep-ticket-row dep-ticket-amount-row">
+            <span class="dep-ticket-label">Transfer PERSIS</span>
+            <div class="dep-ticket-val">
+              <strong class="dep-ticket-amount" id="depTicketAmount">Rp 0</strong>
+              <button type="button" class="dep-ticket-copy" onclick="App.copyText(document.getElementById('depTicketAmount').textContent, 'Nominal Transfer')">Salin</button>
+            </div>
+          </div>
+          <div class="dep-ticket-breakdown" id="depTicketBreakdown">-</div>
+          <div class="dep-ticket-steps">
+            1️⃣ Transfer dulu sesuai nominal persis di atas<br>
+            2️⃣ Upload bukti transfer di bawah<br>
+            3️⃣ Klik tombol konfirmasi
+          </div>
+          <div class="dep-ticket-expiry">Tiket berlaku 24 jam sejak dibuat. Kode unik tidak akan berubah lagi — nominal wajib sama persis.</div>
+          <div class="dep-ticket-offline" id="depTicketOfflineNote" style="display: none;">⚠️ Server sedang tidak terjangkau — tiket dibuat lokal dan akan diverifikasi ulang saat bukti dikirim.</div>
+          <button type="button" class="dep-ticket-regen" id="btnRegenDepositTicket" style="display: none;" onclick="App.refreshDepositTicket(true)">🔄 Buat Ulang Nomor Tiket</button>
+        </div>
+      </div>
+
       <!-- Upload Bukti Transfer (Proof of Payment) -->
       <div class="form-group" id="depProofWrap">
         <div class="flex-between mb-1">
@@ -1926,7 +1978,7 @@
         </div>
       </div>
 
-      <button class="btn-cta-gold" onclick="App.submitDeposit()">
+      <button class="btn-cta-gold" id="btnSubmitDeposit" onclick="App.submitDeposit()">
         <span>Konfirmasi Deposit</span>
       </button>
     </div>
@@ -2140,7 +2192,7 @@
       <!-- Live Operational Hours & Schedule Status Badge -->
       <div id="wdScheduleStatusBadge" class="wd-status-badge open">
         <span class="ai-pulse-dot" style="background:#22C55E;"></span>
-        <span id="wdScheduleStatusText">🟢 Jam Operasional WD Buka (09:00 - 21:00 WIB)</span>
+        <span id="wdScheduleStatusText">🟢 Jam Operasional WD Buka (09:00 - 15:00 WIB)</span>
       </div>
 
       <!-- Balance & Locked Capital Breakdown -->
@@ -2235,7 +2287,7 @@
         <ul class="wd-terms-list" id="withdrawTermsList">
           <li><strong>Minimal Penarikan:</strong> Rp 50.000 per transaksi.</li>
           <li><strong>Biaya Admin:</strong> 10% dari nominal penarikan dana.</li>
-          <li><strong>Jam Operasional WD:</strong> Buka setiap hari pukul <strong>09:00 - 21:00 WIB</strong>. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.</li>
+          <li><strong>Jam Operasional WD:</strong> Buka setiap hari pukul <strong>09:00 - 15:00 WIB</strong>. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.</li>
           <li><strong>Waktu Proses:</strong> Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).</li>
           <li><strong>Proteksi Modal Terkunci:</strong> Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode.</li>
         </ul>
@@ -2751,7 +2803,7 @@
   </div>
 
   <!-- ======================================================================
-       MODAL: RIWAYAT MEMBER (TEXT BERJALAN) (Requirement 2)
+       MODAL: RIWAYAT MEMBER (Requirement 2)
        ====================================================================== -->
   <div class="modal-backdrop" id="riwayatModal">
     <div class="modal-sheet modal-sheet-large">
@@ -2759,7 +2811,7 @@
       <div class="modal-header">
         <div>
           <h3 class="modal-title">📑 Riwayat Transaksi Member</h3>
-          <p class="modal-subtitle">Text berjalan data WD & Deposit member realtime</p>
+          <p class="modal-subtitle">Data WD & Deposit member realtime</p>
         </div>
         <button class="modal-close-btn">&times;</button>
       </div>
@@ -2767,7 +2819,7 @@
       <!-- Running Text Ticker 1: Live Deposit Member -->
       <div style="font-size: 11px; font-weight: 800; color: #15803D; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
         <span class="ai-pulse-dot" style="background:#22C55E;"></span>
-        <span>LIVE DEPOSIT MEMBER (TEXT BERJALAN):</span>
+        <span>LIVE DEPOSIT MEMBER:</span>
       </div>
       <div class="autotrading-marquee-wrap fgt-marquee-wrap" style="background:#0F291E; border-color:#166534; margin-bottom: 8px;">
         <div class="autotrading-marquee-track fgt-marquee-track" id="modalDepositMarqueeTrack">
@@ -2778,7 +2830,7 @@
       <!-- Running Text Ticker 2: Live Withdrawal Member -->
       <div style="font-size: 11px; font-weight: 800; color: #B45309; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
         <span class="ai-pulse-dot" style="background:#F59E0B;"></span>
-        <span>LIVE PENARIKAN (WD) MEMBER (TEXT BERJALAN):</span>
+        <span>LIVE PENARIKAN (WD) MEMBER:</span>
       </div>
       <div class="autotrading-marquee-wrap fgt-marquee-wrap" style="background:#2D1B08; border-color:#854D0E; margin-bottom: 14px;">
         <div class="autotrading-marquee-track fgt-marquee-track" id="modalWdMarqueeTrack">
@@ -3469,7 +3521,7 @@
         <p>AUTOTRADING mengoperasikan teknologi AI kuantitatif yang dirancang untuk menganalisis dan mengeksekusi sinyal pasar secara otomatis. Pembagian hasil harian disalurkan sesuai dengan paket portofolio yang dipilih dan diklaim melalui dashboard aplikasi.</p>
 
         <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">3. Ketentuan Penarikan Saldo (WD)</h4>
-        <p>Penarikan saldo diproses pada jam operasional perbankan (08:00 - 22:00 WIB). Batas penarikan minimum adalah Rp 50.000,-. Demi mematuhi prinsip anti-pencucian uang (AML), nomor rekening tujuan penarikan harus terdaftar atas nama pemilik akun yang sah.</p>
+        <p>Penarikan saldo diproses pada jam operasional perbankan (09:00 - 15:00 WIB). Batas penarikan minimum adalah Rp 50.000,-. Demi mematuhi prinsip anti-pencucian uang (AML), nomor rekening tujuan penarikan harus terdaftar atas nama pemilik akun yang sah.</p>
 
         <h4 style="color: #0F172A; font-size: 13px; font-weight: 800; margin: 12px 0 6px 0;">4. Larangan &amp; Integritas Akun</h4>
         <p>Dilarang keras melakukan manipulasi transaksi, rekayasa multi-akun untuk mengeksploitasi bonus kemitraan, atau tindakan yang membahayakan stabilitas sistem. Akun yang terbukti melanggar dapat dibekukan demi perlindungan komunitas.</p>
@@ -3534,7 +3586,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Javascript Modules Entry Point -->
-  <script type="module" src="js/app.js?v=20261014_prod_ready"></script>
+  <script type="module" src="js/app.js?v=20261018_full_audit"></script>
 
 </body>
 </html>

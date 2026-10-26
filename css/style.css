@@ -377,6 +377,22 @@ html, body {
   justify-content: center;
 }
 
+/* Logo hasil upload admin menggantikan ikon + teks AUTOTRADING di header */
+.header-brand-badge .header-brand-logo {
+  display: block;
+  height: 24px;
+  width: auto;
+  max-width: 136px;
+  object-fit: contain;
+}
+
+@media (max-width: 420px) {
+  .header-brand-badge .header-brand-logo {
+    height: 20px;
+    max-width: 104px;
+  }
+}
+
 .header-brand-text {
   font-size: 11px;
   font-weight: 800;
@@ -4269,6 +4285,146 @@ html, body {
   border-color: #86EFAC;
 }
 
+/* ===== NOMOR TIKET DEPOSIT (transfer dulu sesuai nominal) ===== */
+.dep-ticket-card {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FFF7ED 100%);
+  border: 1.5px dashed #C89338;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.dep-ticket-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.dep-ticket-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #92400E;
+  letter-spacing: 0.3px;
+}
+
+.dep-ticket-timer {
+  font-size: 10px;
+  font-weight: 800;
+  color: #B45309;
+  background: rgba(200, 147, 56, 0.12);
+  border: 1px solid rgba(200, 147, 56, 0.35);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono, monospace);
+  white-space: nowrap;
+}
+
+.dep-ticket-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px dashed #FDE68A;
+}
+
+.dep-ticket-label {
+  font-size: 10.5px;
+  color: #78350F;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.dep-ticket-val {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dep-ticket-val strong {
+  font-family: var(--font-mono, monospace);
+  font-size: 12.5px;
+  color: #0F172A;
+  word-break: break-all;
+  text-align: right;
+}
+
+.dep-ticket-amount {
+  font-size: 17px !important;
+  color: #C2410C !important;
+  font-weight: 900 !important;
+}
+
+.dep-ticket-copy {
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid #C89338;
+  background: #FFFFFF;
+  color: #B45309;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s;
+}
+
+.dep-ticket-copy:active {
+  transform: scale(0.95);
+}
+
+.dep-ticket-breakdown {
+  font-size: 10.5px;
+  color: #92400E;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid #FDE68A;
+  border-radius: 8px;
+  padding: 5px 8px;
+  margin-top: 6px;
+  font-weight: 700;
+  text-align: center;
+  font-family: var(--font-mono, monospace);
+}
+
+.dep-ticket-steps {
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: #78350F;
+  line-height: 1.7;
+}
+
+.dep-ticket-expiry {
+  margin-top: 7px;
+  font-size: 9.5px;
+  color: #A16207;
+  line-height: 1.4;
+}
+
+.dep-ticket-offline {
+  margin-top: 7px;
+  font-size: 10px;
+  color: #B91C1C;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-weight: 700;
+}
+
+.dep-ticket-regen {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #C89338;
+  background: #FFFFFF;
+  color: #B45309;
+  font-weight: 800;
+  font-size: 11px;
+  cursor: pointer;
+}
+
 /* APK Download Modal & Card Styling */
 .apk-download-hero {
   background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%);
@@ -6973,8 +7129,17 @@ body.theme-dark .stat-box-chip-active {
 /* ==========================================================================
    QUICK PPOB BANNER (Ultra-Crisp Contrast in Both Light & Dark Modes)
    ========================================================================== */
+.quick-ppob-container {
+  padding: 0 14px;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
 .quick-ppob-banner {
-  margin: 0 14px 12px 14px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
   cursor: pointer;
   background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
   border: 1px solid #FDE68A;
@@ -6985,6 +7150,7 @@ body.theme-dark .stat-box-chip-active {
   justify-content: space-between;
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
   transition: all 0.2s ease;
+  overflow: hidden;
 }
 .quick-ppob-banner:hover {
   border-color: #F59E0B;
@@ -6995,6 +7161,13 @@ body.theme-dark .stat-box-chip-active {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.quick-ppob-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 .quick-ppob-icon {
   width: 38px;
@@ -7014,6 +7187,7 @@ body.theme-dark .stat-box-chip-active {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 .quick-ppob-sub {
   font-size: 10px;
@@ -7023,6 +7197,7 @@ body.theme-dark .stat-box-chip-active {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 .quick-ppob-badge {
   font-size: 10.5px;
@@ -7033,6 +7208,8 @@ body.theme-dark .stat-box-chip-active {
   border-radius: 20px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
   flex-shrink: 0;
+  white-space: nowrap;
+  margin-left: 8px;
 }
 
 html[data-theme="dark"] .quick-ppob-banner,
@@ -7677,4 +7854,105 @@ body.theme-dark .downline-empty-state {
   background: #151D2F !important;
   border-color: #334155 !important;
   color: #94A3B8 !important;
+}
+
+/* ==========================================================================
+   ADMIN IMPERSONATION BAR (MODE LOGIN SEBAGAI MEMBER)
+   ========================================================================== */
+.impersonation-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999999;
+  background: linear-gradient(135deg, #4C1D95 0%, #6D28D9 50%, #7C3AED 100%);
+  color: #FFFFFF;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(109, 40, 217, 0.45);
+  border-bottom: 2px solid #A78BFA;
+  font-family: var(--font-main, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+.impersonation-bar-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.impersonation-bar-badge {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #FFFFFF;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.impersonation-bar-text {
+  font-size: 12.5px;
+  color: #F5F3FF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.impersonation-bar-text strong {
+  color: #FDE047;
+  font-weight: 800;
+}
+
+.impersonation-bar-btn {
+  background: #FFFFFF;
+  color: #5B21B6;
+  border: 1px solid #DDD6FE;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s, background-color 0.15s;
+}
+
+.impersonation-bar-btn:hover {
+  background: #F3E8FF;
+  transform: scale(1.03);
+}
+
+body.has-impersonation-bar {
+  padding-top: 42px !important;
+}
+
+@media (max-width: 600px) {
+  .impersonation-bar {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  .impersonation-bar-badge {
+    display: none;
+  }
+  .impersonation-bar-text {
+    font-size: 11px;
+  }
+  .impersonation-bar-btn {
+    padding: 4px 10px;
+    font-size: 10.5px;
+  }
+  body.has-impersonation-bar {
+    padding-top: 38px !important;
+  }
 }

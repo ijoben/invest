@@ -21,7 +21,9 @@ body.admin-body {
 }
 
 body.admin-body.sidebar-open {
-  overflow: hidden;
+  /* `clip` (bukan `hidden`) supaya <body> tidak menjadi scroll container dan
+     header lengket tetap bekerja saat drawer admin terbuka di HP. */
+  overflow: clip;
 }
 
 .admin-standalone-container {
@@ -44,9 +46,10 @@ body.admin-body.sidebar-open {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: -webkit-sticky;
-  position: sticky;
-  top: 0;
+  /* Header lengket ditangani oleh wrapper .admin-sticky-header (satu-satunya
+     elemen sticky), sehingga topbar & breadcrumb selalu menempel sebagai
+     satu blok tanpa magic number offset yang bisa meleset. */
+  position: relative;
   z-index: 1000;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
@@ -227,8 +230,7 @@ body.admin-body.sidebar-open {
   background: #0B111E;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding: 8px 18px;
-  position: sticky;
-  top: 57px;
+  position: relative;
   z-index: 79;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -462,6 +464,25 @@ body.admin-body.sidebar-open {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Logo upload (settings) — tampil di sidebar & topbar menggantikan ikon/teks */
+.admin-sidebar-logo-img {
+  display: none;
+  width: auto;
+  max-width: 178px;
+  max-height: 38px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.admin-topbar-logo-img {
+  display: none;
+  width: auto;
+  max-width: 156px;
+  max-height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .sidebar-brand-name {
@@ -806,6 +827,7 @@ body.admin-body.sidebar-open {
 }
 
 .badge-status.pending { background: #78350F; color: #FDE68A; }
+.badge-status.awaiting_payment { background: #7C2D12; color: #FDBA74; border: 1px solid rgba(245, 158, 11, 0.45); }
 .badge-status.approved { background: #064E3B; color: #6EE7B7; }
 .badge-status.rejected { background: #7F1D1D; color: #FCA5A5; }
 .badge-status.active { background: #1E3A8A; color: #93C5FD; }
@@ -1415,7 +1437,6 @@ body.admin-body.sidebar-open {
   /* Dedicated Breadcrumb Bar on Mobile */
   .admin-breadcrumb-bar {
     padding: 6px 12px;
-    top: 50px;
   }
 
   .admin-breadcrumb-inner {
@@ -1488,7 +1509,6 @@ body.admin-body.sidebar-open {
 
   .admin-breadcrumb-bar {
     padding: 5px 8px;
-    top: 46px;
   }
 
   .breadcrumb-item.active {
@@ -1954,7 +1974,13 @@ body.admin-body.sidebar-open {
    ========================================================================== */
 html, body.admin-body {
   max-width: 100vw !important;
-  overflow-x: hidden !important;
+  /* PENTING: gunakan `clip`, BUKAN `hidden`.
+     `overflow-x: hidden` menjadikan <body> sebagai scroll container sehingga
+     `position: sticky` pada .admin-sticky-header tidak pernah aktif (header
+     ikut ter-scroll keluar layar). `clip` memotong overflow tanpa membuat
+     scroll container, sehingga header admin tetap lengket di viewport. */
+  overflow-x: clip !important;
+  overflow-y: visible !important;
 }
 
 .admin-standalone-container,
@@ -1981,6 +2007,23 @@ html, body.admin-body {
 .admin-table {
   min-width: 600px;
   width: 100%;
+}
+
+/* Manajemen Pengguna punya 10 kolom (termasuk Portofolio). Rapatkan padding
+   agar kolom + semua tombol aksi muat tanpa scroll horizontal di desktop. */
+#pane-users .admin-table th,
+#pane-users .admin-table td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+#pane-users .admin-table .btn-action-group {
+  gap: 3px;
+}
+
+#pane-users .admin-table .btn-admin-action {
+  padding-left: 7px;
+  padding-right: 7px;
 }
 
 .admin-subtabs,
@@ -2035,11 +2078,13 @@ html, body.admin-body {
   .user-controls-wrap .user-filter-tabs {
     width: 100% !important;
     display: flex !important;
+    flex-wrap: wrap !important;
     justify-content: space-between !important;
   }
 
+  /* 4 tab status (Semua / Sudah Beli / Aktif / Diblokir) -> grid 2x2 di HP */
   .user-controls-wrap .user-filter-tabs button {
-    flex: 1 !important;
+    flex: 1 1 calc(50% - 4px) !important;
     text-align: center !important;
     padding: 6px 8px !important;
     font-size: 10.5px !important;

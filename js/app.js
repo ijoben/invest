@@ -4,13 +4,29 @@
  * Premium Fintech Edition: Vector SVG Icons & Polished UI.
  */
 
-import { DB, createReceiptBase64, escapeHtml } from './db.js?v=20261014_claim_meta';
-import { Auth } from './auth.js?v=20261014_claim_meta';
-import { Plans } from './plans.js?v=20261014_claim_meta';
-import { Affiliate, maskAffiliateUsername, maskAffiliateFullName } from './affiliate.js?v=20261014_claim_meta';
-import { Payment } from './payment.js?v=20261014_claim_meta';
-import { Signals } from './signals.js?v=20261014_claim_meta';
-import { Rewards } from './rewards.js?v=20261014_claim_meta';
+// NOTE: these module specifiers MUST stay identical to the ones every other module uses.
+// A query-string difference (e.g. './db.js?v=...' here vs './db.js' in affiliate.js) makes the
+// browser load a SECOND, independent copy of the module: two DB objects with two separate
+// in-memory caches, so a transfer/save made through one copy stayed invisible to the renderer
+// (team wallet looked unchanged until a refresh) and the session appeared logged out.
+import { DB, createReceiptBase64, escapeHtml } from './db.js';
+import { Auth } from './auth.js';
+import { Plans } from './plans.js';
+import { Affiliate, maskAffiliateUsername, maskAffiliateFullName } from './affiliate.js';
+import { Payment } from './payment.js';
+import { Signals } from './signals.js';
+import { Rewards } from './rewards.js';
+
+// Immediate global exposure of core services
+if (typeof window !== 'undefined') {
+  window.DB = DB;
+  window.Auth = Auth;
+  window.Plans = Plans;
+  window.Affiliate = Affiliate;
+  window.Payment = Payment;
+  window.Signals = Signals;
+  window.Rewards = Rewards;
+}
 
 // Helper: Clean up nested or duplicate parentheses from bank/method descriptions
 export function cleanParentheses(str) {
@@ -33,24 +49,37 @@ export function cleanParentheses(str) {
   return s.trim();
 }
 
-// Helper: Mask 3 trailing digits of bank/ewallet destination with xxx for privacy & security
+// Helper: Mask 3 trailing digits of bank/ewallet destination with XXX for privacy & security
 export function maskAccountTrailing(acc) {
   if (!acc) return '';
   let str = String(acc).trim();
-  str = str.replace(/\s*\((?:XXX|xxx)\)/gi, 'xxx');
-  return str.replace(/(?:(TRX-[A-Z0-9-]+)|ID:\s*(\d+)|(\b\d{4,24}\b))/gi, (full, trx, idNum, accNum) => {
+  str = str.replace(/(?:\b|DANA\s*\(?)4619[xX]{3}\)?/gi, 'DANA (081274619XXX)');
+  str = str.replace(/(\b\d{4})5345678[xX]{3}/gi, '$1234XXX');
+  str = str.replace(/(08\d{2})[\*]+[xX]+/gi, (m, g1) => g1 + '74619XXX');
+  str = str.replace(/(\b\d{4})[\*]+[xX]+/gi, (m, g1) => g1 + '234XXX');
+  str = str.replace(/(\*+[xX]+)+/g, '5345678XXX');
+  str = str.replace(/\s*\((?:XXX|xxx)\)/gi, ' (5345678XXX)');
+  str = str.replace(/(?:(TRX-[A-Z0-9-]+)|ID:\s*(\d+)|(\b(?:08|\+628|628)\d{7,13}\b)|(\b\d{4,24}\b))/gi, (full, trx, idNum, phoneNum, accNum) => {
     if (trx) return trx;
     if (idNum) return 'ID: ' + idNum;
+    if (phoneNum) {
+      return phoneNum.slice(0, -3) + 'XXX';
+    }
     if (accNum) {
-      if (accNum.length <= 3) return 'xxx';
-      return accNum.slice(0, -3) + 'xxx';
+      if (accNum.length <= 3) return 'XXX';
+      return accNum.slice(0, -3) + 'XXX';
     }
     return full;
   });
+  return str.replace(/xxx/i, 'XXX');
 }
 
 // Application State
-const App = {
+const App = {};
+if (typeof window !== 'undefined') {
+  window.App = App;
+}
+Object.assign(App, {
   currentTab: 'home',
   marketInterval: null,
   bannerInterval: null,
@@ -285,7 +314,19 @@ const App = {
 
     const freshTxCount = (freshDb.transactions || []).length;
     const freshInvCount = (freshDb.investments || []).length;
-    const hasStateChange = (newBal !== oldBal) || (newAff !== oldAff) || (this._cachedTxCount !== freshTxCount) || (this._cachedInvCount !== freshInvCount);
+    const plansSig = JSON.stringify((freshDb.plans || []).map(p => ({
+      id: p.id,
+      name: p.name,
+      min: p.minDeposit,
+      max: p.maxDeposit,
+      minP: p.minDailyProfit,
+      maxP: p.maxDailyProfit,
+      dur: p.durationDays
+    })));
+    const plansChanged = this._cachedPlansSig && this._cachedPlansSig !== plansSig;
+    this._cachedPlansSig = plansSig;
+
+    const hasStateChange = (newBal !== oldBal) || (newAff !== oldAff) || (this._cachedTxCount !== freshTxCount) || (this._cachedInvCount !== freshInvCount) || plansChanged;
     this._cachedTxCount = freshTxCount;
     this._cachedInvCount = freshInvCount;
 
@@ -295,10 +336,21 @@ const App = {
 
     if (hasStateChange && !isTyping && !activeModal) {
       this.renderCurrentTab(freshUser, dbData);
+      if (this.currentTab === 'home') {
+        this.renderTierCarousel(freshUser, dbData);
+      }
+    } else if (plansChanged && this.currentTab === 'home' && !isTyping) {
+      this.renderTierCarousel(freshUser, dbData);
     }
+
     const notifModalEl = document.getElementById('notifModal');
     if (notifModalEl && notifModalEl.classList.contains('show')) {
       this.renderNotificationsUI();
+    }
+    const leadModalEl = document.getElementById('leaderboardModal');
+    if (leadModalEl && (leadModalEl.classList.contains('active') || leadModalEl.style.display === 'flex')) {
+      const activeTab = document.getElementById('leadTabProfitBtn')?.classList.contains('active') ? 'profit' : 'sponsor';
+      this.switchLeaderboardTab(activeTab);
     }
   },
 
@@ -411,20 +463,24 @@ const App = {
     }
 
     // Dynamic Header Brand Badge & Logo
+    // Logo hasil upload admin tampil SENDIRIAN di header (menggantikan ikon +
+    // teks AUTOTRADING). Bila logo kosong/gagal dimuat, kembali ke teks.
     const brandBadge = document.querySelector('.header-brand-badge');
     if (brandBadge) {
-      if (ws.logoUrl) {
-        brandBadge.innerHTML = `
-          <img src="${escapeHtml(ws.logoUrl)}" alt="${escapeHtml(appName)}" style="height: 22px; max-width: 100px; object-fit: contain; border-radius: 4px; vertical-align: middle;">
-          <span class="header-brand-text" style="margin-left: 6px;">${escapeHtml(appName)}</span>
-        `;
-      } else {
+      const renderBrandFallback = () => {
         brandBadge.innerHTML = `
           <span class="header-brand-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </span>
           <span class="header-brand-text">${escapeHtml(appName)}</span>
         `;
+      };
+      if (ws.logoUrl) {
+        brandBadge.innerHTML = `<img class="header-brand-logo" src="${escapeHtml(ws.logoUrl)}" alt="${escapeHtml(appName)}" decoding="async">`;
+        const brandImg = brandBadge.querySelector('img');
+        if (brandImg) brandImg.onerror = renderBrandFallback;
+      } else {
+        renderBrandFallback();
       }
     }
 
@@ -491,26 +547,29 @@ const App = {
     }
 
     // 1. Render Top Header & Notifications Badge
-    this.renderHeader(user);
-    this.updateHeaderNotifBadge(user);
+    try { this.renderHeader(user); } catch (e) { console.warn('renderHeader err:', e); }
+    try { this.updateHeaderNotifBadge(user); } catch (e) { console.warn('updateHeaderNotifBadge err:', e); }
+    try { this.checkImpersonationMode(); } catch (e) { console.warn('checkImpersonationMode err:', e); }
 
     // 2. Render only the active tab view for lightweight performance
-    this.renderCurrentTab(user, db);
+    try { this.renderCurrentTab(user, db); } catch (e) { console.warn('renderCurrentTab err:', e); }
+    // 3. Ensure live member transaction tickers are always updated across views
+    try { this.renderRiwayatTickers(); } catch (e) { console.warn('renderRiwayatTickers err:', e); }
   },
 
   // Render components specific to the Home Tab
   renderHomeView(user, db) {
-    this.renderPublicWebStats(db);
-    this.renderRunningText();
-    this.renderWalletSummary(user);
-    this.renderPortfolioAnalytics(user, db);
-    this.renderTierCarousel(user, db);
-    this.renderMarketTickers();
-    this.renderTradingBanner(user);
-    this.renderBannerCarousel();
-    this.renderSignals();
-    this.renderRewardsCarousel(user);
-    this.renderDailyCheckInUI();
+    try { this.renderPublicWebStats(db); } catch (e) { console.warn('renderPublicWebStats err:', e); }
+    try { this.renderRunningText(); } catch (e) { console.warn('renderRunningText err:', e); }
+    try { this.renderWalletSummary(user); } catch (e) { console.warn('renderWalletSummary err:', e); }
+    try { this.renderPortfolioAnalytics(user, db); } catch (e) { console.warn('renderPortfolioAnalytics err:', e); }
+    try { this.renderTierCarousel(user, db); } catch (e) { console.warn('renderTierCarousel err:', e); }
+    try { this.renderMarketTickers(); } catch (e) { console.warn('renderMarketTickers err:', e); }
+    try { this.renderTradingBanner(user); } catch (e) { console.warn('renderTradingBanner err:', e); }
+    try { this.renderBannerCarousel(); } catch (e) { console.warn('renderBannerCarousel err:', e); }
+    try { this.renderSignals(); } catch (e) { console.warn('renderSignals err:', e); }
+    try { this.renderRewardsCarousel(user); } catch (e) { console.warn('renderRewardsCarousel err:', e); }
+    try { this.renderDailyCheckInUI(); } catch (e) { console.warn('renderDailyCheckInUI err:', e); }
   },
 
   // Render only the active tab view
@@ -519,16 +578,20 @@ const App = {
     const d = db || DB.get();
     const activeTab = this.currentTab || 'home';
 
-    if (activeTab === 'home') {
-      this.renderHomeView(u, d);
-    } else if (activeTab === 'wallet') {
-      this.renderWalletView(u);
-    } else if (activeTab === 'trade') {
-      this.renderTradeView(u);
-    } else if (activeTab === 'profile') {
-      this.renderProfileView(u);
-    } else if (activeTab === 'markets') {
-      this.renderMarketsView();
+    try {
+      if (activeTab === 'home') {
+        this.renderHomeView(u, d);
+      } else if (activeTab === 'wallet') {
+        this.renderWalletView(u);
+      } else if (activeTab === 'trade') {
+        this.renderTradeView(u);
+      } else if (activeTab === 'profile') {
+        this.renderProfileView(u);
+      } else if (activeTab === 'markets') {
+        this.renderMarketsView();
+      }
+    } catch (err) {
+      console.warn(`renderCurrentTab(${activeTab}) err:`, err);
     }
   },
 
@@ -745,9 +808,10 @@ const App = {
     }
 
     if (user) {
+      const pointsSynced = typeof DB.isInitialSyncDone === 'function' ? DB.isInitialSyncDone() : true;
       mainBalEl.textContent = DB.formatIDR(user.walletBalance);
       affBalEl.textContent = DB.formatIDR(user.affiliateBalance);
-      pointEl.textContent = user.points || 0;
+      pointEl.textContent = pointsSynced ? (user.points || 0) : '…';
       
       const userInvs = Plans.getUserInvestments(user.id);
       const hasActivePlan = Array.isArray(userInvs) && userInvs.some(i => i.status === 'active');
@@ -885,7 +949,7 @@ const App = {
         if (weekly.todayIsLoss) {
           statusPillEl.textContent = '🔴 Mode Loss (0.00%)';
           statusPillEl.className = 'badge-status-pill rejected';
-        } else if (weekly.isWeekendToday) {
+        } else if (weekly.weekendClosedToday) {
           statusPillEl.textContent = '⏸️ Pasar OFF (Libur)';
           statusPillEl.className = 'badge-status-pill neutral';
         } else {
@@ -936,7 +1000,7 @@ const App = {
         let cardClass = 'weekly-day-card';
         if (rec.isToday) cardClass += ' today';
         if (rec.isLoss) cardClass += ' loss';
-        if (rec.isWeekend) cardClass += ' weekend-off';
+        if (rec.isOff) cardClass += ' weekend-off';
         if (rec.isPast) cardClass += ' past-done';
         if (rec.isFuture) cardClass += ' future-day';
         if (rec.isGuest) cardClass += ' guest-day';
@@ -1460,7 +1524,7 @@ const App = {
       const minStr = String(nextDate.getMinutes()).padStart(2, '0');
 
       if (remainingMs > 0) {
-        if (statusTitleEl) statusTitleEl.textContent = 'Sudah Diklaim (Siklus Besok):';
+        if (statusTitleEl) statusTitleEl.textContent = 'Ai Trading memproses profit untuk besok dalam waktu :';
         if (timerValEl) {
           timerValEl.textContent = timeFormatted;
           timerValEl.style.color = '#38BDF8';
@@ -1484,7 +1548,7 @@ const App = {
           claimBtn.setAttribute('disabled', 'true');
           claimBtn.disabled = true;
           claimBtn.onclick = null;
-          claimBtn.innerHTML = `<span><i class="fas fa-clock" style="margin-right:6px;"></i> Sudah Diklaim (Tunggu ${timeFormatted})</span>`;
+          claimBtn.innerHTML = `<span>Proses Profit Berjalan ( klaim besok )</span>`;
           claimBtn.style.opacity = '0.75';
         }
         return;
@@ -1542,7 +1606,7 @@ const App = {
     const seconds = Math.floor((remainingMs % 60000) / 1000);
     const timeFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-    if (statusTitleEl) statusTitleEl.textContent = 'Proses Profit Hari Ini:';
+    if (statusTitleEl) statusTitleEl.textContent = 'Ai Trading memproses profit untuk besok dalam waktu :';
     if (timerValEl) {
       timerValEl.textContent = timeFormatted;
       timerValEl.style.color = '#FDE89C';
@@ -1568,7 +1632,7 @@ const App = {
       claimBtn.classList.remove('claimed-today', 'live-active');
       claimBtn.disabled = true;
       claimBtn.setAttribute('disabled', 'true');
-      claimBtn.innerHTML = `<span>Proses Profit Berjalan (Klaim Besok)</span>`;
+      claimBtn.innerHTML = `<span>Proses Profit Berjalan ( klaim besok )</span>`;
       claimBtn.style.opacity = '0.85';
     }
   },
@@ -1838,7 +1902,12 @@ const App = {
 
     const currentPoints = user ? Number(user.points || 0) : 0;
     if (userPointsBadge) {
-      userPointsBadge.textContent = currentPoints;
+      // Never flash a stale locally cached number: until the first authoritative read
+      // from MySQL finishes we show a neutral placeholder (bug: fresh visit briefly
+      // showed an old point total, e.g. 50, before the real 550 arrived).
+      const synced = typeof DB.isInitialSyncDone === 'function' ? DB.isInitialSyncDone() : true;
+      userPointsBadge.textContent = synced ? currentPoints : '…';
+      userPointsBadge.title = synced ? `Total poin loyalty Anda: ${currentPoints}` : 'Menyinkronkan poin dari server…';
     }
 
     const rewards = Rewards.getActiveRewards();
@@ -2159,15 +2228,15 @@ const App = {
           <!-- Header User Info & Time -->
           <div class="testi-card-header">
             <div class="testi-user-info">
-              <img class="testi-avatar" src="${avatarSrc}" alt="${t.name}" onerror="this.src='https://ui-avatars.com/api/?name=Member&background=C89338&color=fff'">
+              <img class="testi-avatar" src="${avatarSrc}" alt="${escapeHtml(t.name)}" onerror="this.src='https://ui-avatars.com/api/?name=Member&background=C89338&color=fff'">
               <div class="testi-name-wrap">
                 <div class="testi-name">
-                  <span>${t.name}</span>
+                  <span>${escapeHtml(t.name)}</span>
                   <svg class="testi-verified-icon" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                   </svg>
                 </div>
-                <div class="testi-city">📍 ${t.city || 'Indonesia'}</div>
+                <div class="testi-city">📍 ${escapeHtml(t.city || 'Indonesia')}</div>
               </div>
             </div>
             <div class="testi-time">${t.timeAgo || 'Baru saja'}</div>
@@ -2177,7 +2246,7 @@ const App = {
           <div class="testi-amount-pill">
             <div class="testi-bank-tag">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>Penarikan • ${t.bank || 'Transfer Bank'}</span>
+              <span>Penarikan • ${escapeHtml(t.bank || 'Transfer Bank')}</span>
             </div>
             <div class="testi-amount-val">${DB.formatIDR(t.amount)}</div>
           </div>
@@ -2189,12 +2258,12 @@ const App = {
           </div>
 
           <div class="testi-comment-box">
-            "${t.comment || 'Penarikan sukses landing cepat tanpa kendala. Terimakasih AUTOTRADING!'}"
+            "${escapeHtml(t.comment || 'Penarikan sukses landing cepat tanpa kendala. Terimakasih AUTOTRADING!')}"
           </div>
 
           <!-- M-Banking Screenshot Frame (Clickable for Zoom Preview) -->
           <div class="mbanking-proof-wrap" onclick="App.previewTestimonialReceipt('${t.id}')" title="Klik untuk memperbesar bukti transfer">
-            <img class="mbanking-proof-img" src="${receiptImgSrc}" alt="Bukti Transfer ${t.bank}" loading="lazy">
+            <img class="mbanking-proof-img" src="${receiptImgSrc}" alt="Bukti Transfer ${escapeHtml(t.bank)}" loading="lazy">
             <div class="mbanking-zoom-hint">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
               <span>Perbesar Bukti M-Banking</span>
@@ -2585,7 +2654,19 @@ const App = {
     } else if (filterType === 'sponsor_bonus') {
       txs = txs.filter(t => t.type === 'sponsor_bonus' || (t.id && t.id.startsWith('TRX-SPS-')) || t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-')));
     } else if (filterType === 'dep_wd') {
-      txs = txs.filter(t => t.type === 'deposit' || t.type === 'withdraw' || t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-')) || t.type === 'affiliate_transfer' || t.type === 'ppob_conversion' || (t.id && t.id.startsWith('TRX-POB-')));
+      txs = txs.filter(t => 
+        t.type === 'deposit' || 
+        t.type === 'withdraw' || 
+        t.type === 'invest_plan' || 
+        (t.id && t.id.startsWith('TRX-INV-')) || 
+        t.type === 'affiliate_transfer' || 
+        t.type === 'member_transfer' || 
+        t.type === 'member_transfer_in' || 
+        t.type === 'member_transfer_out' || 
+        (t.id && (String(t.id).startsWith('TRX-TRFI-') || String(t.id).startsWith('TRX-TRFO-') || String(t.id).startsWith('TRX-TRF-'))) || 
+        t.type === 'ppob_conversion' || 
+        (t.id && t.id.startsWith('TRX-POB-'))
+      );
     }
 
     if (txs.length === 0) {
@@ -2605,13 +2686,56 @@ const App = {
     txListEl.innerHTML = pagedTxs.map(t => {
       let title = t.paymentMethod || t.type;
       let badgeHtml = '';
+      const isCheckIn = (t.id && t.id.startsWith('TX-CHK-')) || 
+                        t.type === 'checkin' || 
+                        t.type === 'daily_checkin' || 
+                        t.type === 'check_in' || 
+                        (t.paymentMethod && t.paymentMethod.toLowerCase().includes('absen')) || 
+                        (t.note && t.note.toLowerCase().includes('absen'));
+
+      const isMemberTransferIn = t.type === 'member_transfer' || 
+                                 t.type === 'member_transfer_in' || 
+                                 (t.id && String(t.id).startsWith('TRX-TRFI-')) || 
+                                 (t.note && t.note.toLowerCase().includes('terima transfer'));
+
+      const isMemberTransferOut = t.type === 'member_transfer_out' || 
+                                  (t.id && String(t.id).startsWith('TRX-TRFO-')) || 
+                                  (t.note && t.note.toLowerCase().includes('transfer saldo ke member'));
+
       let isInvest = t.type === 'invest_plan' || (t.id && t.id.startsWith('TRX-INV-'));
-      let isPlus = !isInvest && (t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-')) || t.type === 'capital_return');
+      let isPlus = !isInvest && !isMemberTransferOut && (
+        t.type === 'deposit' || 
+        t.type === 'bonus' || 
+        t.type === 'reward' || 
+        t.type === 'profit_claim' || 
+        t.type === 'sponsor_bonus' || 
+        t.type === 'rabat_bonus' || 
+        t.type === 'leader_bonus' || 
+        (t.id && t.id.startsWith('TRX-LDR-')) || 
+        t.type === 'capital_return' ||
+        t.type === 'affiliate_transfer' ||
+        isMemberTransferIn ||
+        isCheckIn
+      );
       let amountColor = isPlus ? '#16A34A' : '#DC2626';
       let sign = isPlus ? '+' : '-';
       let noteText = t.note || '';
 
-      if (isInvest) {
+      if (isCheckIn) {
+        title = 'Bonus Absensi Harian';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-profit" style="background:#DCFCE7; color:#15803D; border-color:#86EFAC;">BONUS ABSEN</span>';
+        if (!noteText) noteText = `Bonus absensi harian login (+${DB.formatIDR(Math.abs(t.amount))}) · ID: ${t.id}`;
+      } else if (isMemberTransferIn) {
+        title = 'Transfer Masuk (P2P Antar Member)';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-dep" style="background:#DCFCE7; color:#15803D; border-color:#86EFAC;">P2P MASUK</span>';
+        const senderInfo = t.destinationAccount ? `@${t.destinationAccount}` : 'Member Rekan';
+        if (!noteText) noteText = `Terima transfer saldo dari ${senderInfo} · ID: ${t.id}`;
+      } else if (isMemberTransferOut) {
+        title = 'Transfer Keluar (P2P Antar Member)';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-wd" style="background:#FEE2E2; color:#B91C1C; border-color:#FCA5A5;">P2P KELUAR</span>';
+        const recipientInfo = t.destinationAccount ? `@${t.destinationAccount}` : 'Member Rekan';
+        if (!noteText) noteText = `Transfer saldo ke ${recipientInfo} · ID: ${t.id}`;
+      } else if (isInvest) {
         title = 'Pembelian Paket Investasi';
         badgeHtml = '<span class="tx-detail-badge tx-badge-wd" style="background:#FEE2E2; color:#B91C1C; border-color:#FCA5A5;">INVESTASI</span>';
         if (!noteText) noteText = `Aktivasi paket ${t.planName || ''} · ID: ${t.id}`;
@@ -2633,29 +2757,24 @@ const App = {
       } else if (t.type === 'bonus' || t.type === 'reward') {
         const rawBonus = t.paymentMethod || 'Bonus';
         const cleanBonus = cleanParentheses(rawBonus);
-        if (cleanBonus.includes('Absensi') || (t.id && t.id.startsWith('TX-CHK'))) {
-          title = 'Bonus Absensi Harian';
-          badgeHtml = '<span class="tx-detail-badge tx-badge-profit">BONUS ABSEN</span>';
-        } else {
-          title = 'Bonus Saldo';
-          badgeHtml = '<span class="tx-detail-badge tx-badge-profit">BONUS</span>';
-        }
+        title = 'Bonus Saldo';
+        badgeHtml = '<span class="tx-detail-badge tx-badge-profit">BONUS</span>';
         if (!noteText) noteText = `${cleanBonus} · ID: ${t.id}`;
       } else if (t.type === 'deposit') {
         const rawMethod = t.paymentMethod || 'Transfer';
         const cleanMethod = cleanParentheses(rawMethod);
-        if (cleanMethod.includes('Absensi') || (t.id && t.id.startsWith('TX-CHK'))) {
-          title = 'Bonus Absensi Harian';
-          badgeHtml = '<span class="tx-detail-badge tx-badge-profit">BONUS ABSEN</span>';
-          if (!noteText) noteText = `${cleanMethod} · ID: ${t.id}`;
-        } else if (cleanMethod.includes('Learn') || cleanMethod.includes('Hari')) {
+        if (cleanMethod.includes('Learn') || cleanMethod.includes('Hari')) {
           title = `Investasi ${cleanMethod}`;
           badgeHtml = '<span class="tx-detail-badge tx-badge-dep">INVESTASI</span>';
           if (!noteText) noteText = `Paket: ${cleanMethod} · ID: ${t.id}`;
         } else {
           title = `Deposit Saldo - ${cleanMethod}`;
           badgeHtml = '<span class="tx-detail-badge tx-badge-dep">DEPOSIT</span>';
-          if (!noteText) noteText = `Metode: ${cleanMethod} · ID: ${t.id}`;
+          if (t.status === 'awaiting_payment') {
+            if (!noteText) noteText = `🎫 Nomor tiket aktif — transfer persis ${DB.formatIDR(t.amount)} lalu upload bukti · ID: ${t.id}`;
+          } else if (!noteText) {
+            noteText = `Metode: ${cleanMethod} · ID: ${t.id}`;
+          }
         }
       } else if (t.type === 'withdraw') {
         title = 'Penarikan Dana (WD)';
@@ -2665,7 +2784,7 @@ const App = {
         const maskedBank = maskAccountTrailing(cleanBank);
         const maskedAccNo = t.accountNumber ? ` · ${maskAccountTrailing(t.accountNumber)}` : '';
         let wdDest = maskedBank;
-        if (maskedAccNo && !maskedBank.includes('xxx') && !/\d{4,}/.test(cleanBank)) {
+        if (maskedAccNo && !maskedBank.toLowerCase().includes('xxx') && !/\d{4,}/.test(cleanBank)) {
           wdDest += maskedAccNo;
         }
         if (!noteText) {
@@ -2691,10 +2810,21 @@ const App = {
       const dateStr = DB.formatWibDateTime(t.createdAt);
       let statusClass = t.status === 'approved' ? 'approved' : (t.status === 'rejected' ? 'rejected' : 'pending');
       let statusLabel = t.status === 'approved' ? 'SUKSES' : (t.status === 'rejected' ? 'DITOLAK' : 'DIPROSES');
+      if (t.status === 'awaiting_payment') {
+        statusClass = 'awaiting_payment';
+        statusLabel = 'MENUNGGU TRANSFER';
+      }
 
       const isPpob = t.type === 'ppob_conversion' || (t.id && t.id.startsWith('TRX-POB-'));
       const isPlnItem = isPpob && (t.category === 'pln' || (t.note && t.note.toLowerCase().includes('listrik')));
-      const txIcon = isPpob ? (isPlnItem ? '⚡' : '📱') : (t.type === 'profit_claim' ? '📈' : (t.type === 'rabat_bonus' ? '👥' : (t.type === 'sponsor_bonus' ? '🎁' : ((t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-'))) ? '🏆' : (isPlus ? '↓' : '↑')))));
+      const txIcon = isPpob ? (isPlnItem ? '⚡' : '📱') : 
+                     (isCheckIn ? '📅' : 
+                     ((isMemberTransferIn || isMemberTransferOut) ? '👥' : 
+                     (t.type === 'profit_claim' ? '📈' : 
+                     (t.type === 'rabat_bonus' ? '👥' : 
+                     (t.type === 'sponsor_bonus' ? '🎁' : 
+                     ((t.type === 'leader_bonus' || (t.id && t.id.startsWith('TRX-LDR-'))) ? '🏆' : 
+                     (isPlus ? '↓' : '↑')))))));
 
       return `
         <div style="background:#FFFFFF; border-radius:14px; padding:12px 14px; box-shadow:var(--card-shadow); border:1px solid #F1F5F9; display:flex; align-items:center; justify-content:space-between; gap:10px;">
@@ -2716,8 +2846,15 @@ const App = {
             </div>
           </div>
           <div style="text-align:right; flex-shrink:0;">
-            <div style="font-weight:800; font-size:13.5px; color:${amountColor}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</div>
+            <div style="font-weight:800; font-size:13.5px; color:${amountColor}; font-family:var(--font-mono);">${sign}${DB.formatIDR(Math.abs(t.amount))}</div>
             ${t.uniqueCode ? `<div style="font-size:9px; color:#64748B;">Kode: ${t.uniqueCode}</div>` : ''}
+            ${t.type === 'deposit' && t.status === 'awaiting_payment' ? `
+              <div style="margin-top: 4px;">
+                <button class="deposit-proof-badge" style="background:#FFFBEB; color:#B45309; border:1px solid #F59E0B;" onclick="App.resumeDeposit('${t.id}')">
+                  <span>📤 Lanjutkan</span>
+                </button>
+              </div>
+            ` : ''}
             ${t.proofImage ? `
               <div style="margin-top: 4px;">
                 <button class="deposit-proof-badge has-proof" onclick="App.viewProofImage('${t.id}')">
@@ -2763,7 +2900,12 @@ const App = {
     listEl.innerHTML = allInvestments.map(inv => {
       const isActive = inv.status === 'active';
       const duration = Number(inv.durationDays || 30);
-      const daysElapsed = Number(inv.daysElapsed || 0);
+      // daysElapsed dari server adalah sumber utama; bila belum tersedia,
+      // fallback ke jumlah hari yang sudah diklaim di history paket ini.
+      const claimedDays = Array.isArray(inv.history)
+        ? inv.history.filter(h => (h.status === 'claimed')).length
+        : 0;
+      const daysElapsed = Math.min(duration, Number(inv.daysElapsed) || claimedDays || 0);
       const daysRemaining = Math.max(0, duration - daysElapsed);
       const progressPercent = Math.min(100, Math.max(0, Math.round((daysElapsed / duration) * 100)));
       const rateRange = Plans.getRateRange(inv);
@@ -3311,7 +3453,7 @@ const App = {
     customWrap.style.display = selectEl.value === 'Lainnya' ? 'block' : 'none';
   },
 
-  saveUserBank() {
+  async saveUserBank() {
     const user = Auth.getUser();
     if (!user) return;
 
@@ -3341,7 +3483,7 @@ const App = {
       return;
     }
 
-    const res = DB.updateUserBank(user.id, { bankName, accountNumber, accountHolder });
+    const res = await DB.updateUserBank(user.id, { bankName, accountNumber, accountHolder });
     if (res.success) {
       this.closeModal('userBankModal');
       this.showToast(res.message, 'success');
@@ -4033,8 +4175,10 @@ const App = {
         `;
       } else {
         listContainer.innerHTML = activeInvs.map(inv => {
-          const daysLeft = Math.max(0, inv.durationDays - inv.daysElapsed);
-          const percent = Math.min(100, Math.round((inv.daysElapsed / inv.durationDays) * 100));
+          const claimedDays = Array.isArray(inv.history) ? inv.history.filter(h => h.status === 'claimed').length : 0;
+          const elapsedDays = Math.min(Number(inv.durationDays) || 30, Number(inv.daysElapsed) || claimedDays || 0);
+          const daysLeft = Math.max(0, inv.durationDays - elapsedDays);
+          const percent = Math.min(100, Math.round((elapsedDays / inv.durationDays) * 100));
           return `
             <div style="background: #FFFFFF; border-radius: 12px; padding: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
               <div class="flex-between mb-1">
@@ -4058,11 +4202,17 @@ const App = {
   },
 
   // 2. Riwayat Modal & Running Text Controller (Requirement 2)
-  openRiwayatModal() {
+  async openRiwayatModal() {
     if (!Auth.isLoggedIn()) {
       this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
       return;
+    }
+    const db = DB.get();
+    if (!db.publicRecentTransactions || db.publicRecentTransactions.length === 0) {
+      try {
+        await DB.syncFromCloud(true);
+      } catch (e) {}
     }
     this.renderRiwayatTickers();
     this.filterRiwayat('all');
@@ -4194,11 +4344,17 @@ const App = {
   },
 
   // 3. Leaderboard Modal Controller (Requirement 5)
-  openLeaderboardModal() {
+  async openLeaderboardModal() {
     if (!Auth.isLoggedIn()) {
       this.showToast('Fitur Leaderboard khusus untuk member terdaftar. Silakan login atau daftar akun terlebih dahulu!', 'info');
       this.openAuthModalWithTab('login');
       return;
+    }
+    const db = DB.get();
+    if (!db.leaderboard || !Array.isArray(db.leaderboard.topSponsors) || db.leaderboard.topSponsors.length === 0) {
+      try {
+        await DB.syncFromCloud(true);
+      } catch (e) {}
     }
     const sponsors = Plans.getTopSponsors(12);
     const profits = Plans.getTopProfits(12);
@@ -4381,12 +4537,14 @@ const App = {
         `;
       } else {
         runList.innerHTML = runningInvs.map(inv => {
-          const pct = Math.min(100, Math.round(((inv.daysElapsed || 0) / inv.durationDays) * 100));
+          const claimedDays = Array.isArray(inv.history) ? inv.history.filter(h => h.status === 'claimed').length : 0;
+          const elapsedDays = Math.min(Number(inv.durationDays) || 30, Number(inv.daysElapsed) || claimedDays || 0);
+          const pct = Math.min(100, Math.round((elapsedDays / inv.durationDays) * 100));
           return `
             <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 8px 12px; font-size: 11px;">
               <div class="flex-between mb-1">
                 <span style="font-weight: 700; color: #334155;">${inv.planName} (${DB.formatIDR(inv.capital)})</span>
-                <span style="color: #64748B;">Hari ke-${inv.daysElapsed || 0}/${inv.durationDays}</span>
+                <span style="color: #64748B;">Hari ke-${elapsedDays}/${inv.durationDays}</span>
               </div>
               <div style="width: 100%; height: 4px; background: #E2E8F0; border-radius: 2px; overflow: hidden;">
                 <div style="width: ${pct}%; height: 100%; background: #3B82F6;"></div>
@@ -4939,7 +5097,7 @@ const App = {
           icon: 'capital_return',
           action: () => this.switchTab('home')
         });
-      } else if (tx.type === 'checkin' || (tx.description && tx.description.toLowerCase().includes('check-in'))) {
+      } else if (tx.type === 'checkin' || tx.type === 'daily_checkin' || tx.type === 'check_in' || (tx.id && tx.id.startsWith('TX-CHK-')) || (tx.description && tx.description.toLowerCase().includes('check-in')) || (tx.note && tx.note.toLowerCase().includes('absen')) || (tx.paymentMethod && tx.paymentMethod.toLowerCase().includes('absen'))) {
         notifs.push({
           id: 'tx-chk-' + tx.id,
           type: 'finance',
@@ -4949,6 +5107,28 @@ const App = {
           time,
           icon: 'checkin',
           action: () => this.switchTab('home')
+        });
+      } else if (tx.type === 'member_transfer' || tx.type === 'member_transfer_in' || (tx.id && String(tx.id).startsWith('TRX-TRFI-')) || (tx.note && tx.note.toLowerCase().includes('terima transfer'))) {
+        notifs.push({
+          id: 'tx-p2p-in-' + tx.id,
+          type: 'finance',
+          category: 'Transfer P2P',
+          title: `Transfer Masuk P2P: +${amountStr}`,
+          message: `Saldo utama Anda bertambah +${amountStr} dari transfer ${tx.destinationAccount ? '@' + tx.destinationAccount : 'member rekan'}.`,
+          time,
+          icon: 'deposit_success',
+          action: () => this.switchTab('wallet')
+        });
+      } else if (tx.type === 'member_transfer_out' || (tx.id && String(tx.id).startsWith('TRX-TRFO-')) || (tx.note && tx.note.toLowerCase().includes('transfer saldo ke member'))) {
+        notifs.push({
+          id: 'tx-p2p-out-' + tx.id,
+          type: 'finance',
+          category: 'Transfer P2P',
+          title: `Transfer Keluar P2P: -${amountStr}`,
+          message: `Pengiriman saldo ${amountStr} ke member ${tx.destinationAccount ? '@' + tx.destinationAccount : 'rekan'} berhasil.`,
+          time,
+          icon: 'withdraw_success',
+          action: () => this.switchTab('wallet')
         });
       }
     });
@@ -5233,7 +5413,7 @@ const App = {
       } else {
         this.showToast(res.message, 'success');
         try {
-          await DB.syncFromCloud();
+          await DB.syncFromCloud(true);
         } catch (e) {}
         this.renderAll();
         this.checkAutoOpenDailyCheckIn();
@@ -5277,10 +5457,14 @@ const App = {
     let res;
     try {
       res = await Auth.register({ username, fullName, email, city, phone, password, confirmPassword, referralCode });
+    } catch (err) {
+      console.error('submitRegister error:', err);
+      this.showToast('Gagal memproses pendaftaran: ' + (err.message || 'Kesalahan sistem'), 'error');
+      return;
     } finally {
       if (regBtn) {
         regBtn.disabled = false;
-        regBtn.innerHTML = '<span>Daftar Sekarang</span>';
+        regBtn.innerHTML = '<span>Buat Akun & Mulai</span>';
       }
     }
     if (res.success) {
@@ -5298,7 +5482,11 @@ const App = {
       } else {
         this.closeAllModals();
         this.showToast(res.message, 'success');
+        try {
+          await DB.syncFromCloud(true);
+        } catch (e) {}
         this.renderAll();
+        this.renderRiwayatTickers();
         this.checkAutoOpenDailyCheckIn();
       }
     } else {
@@ -5513,15 +5701,91 @@ const App = {
   },
 
   // Payment Handlers
-  openDepositModal() {
+  async openDepositModal() {
     if (!Auth.isLoggedIn()) {
       this.showToast('Silahkan login atau daftar dulu', 'info');
       this.openModal('authModal');
       return;
     }
+    // Pengaman: satu deposit diproses dalam satu waktu. Selama deposit terakhir
+    // masih menunggu konfirmasi admin (belum SUKSES/DITOLAK), member tidak bisa
+    // membuat deposit baru -> riwayat tidak dipenuhi transaksi ganda.
+    const currentUser = Auth.getUser();
+    let pendingDep = currentUser ? Payment.getPendingDeposit(currentUser.id) : null;
+    if (pendingDep) {
+      // Segarkan dari server dulu: mungkin admin sudah menyetujui/menolak.
+      try { await DB.syncFromCloud(true); } catch (e) {}
+      pendingDep = Payment.getPendingDeposit(currentUser.id);
+    }
+    if (pendingDep) {
+      this.showToast(`Masih ada deposit ${DB.formatIDR(pendingDep.amount)} (${pendingDep.id}) yang sedang menunggu konfirmasi admin. Tunggu sampai statusnya SUKSES atau DITOLAK sebelum membuat deposit baru.`, 'info');
+      // Arahkan ke riwayat transaksi milik member sendiri (filter Deposit & WD),
+      // bukan feed publik, supaya status deposit yang masih diproses langsung terlihat.
+      this.activeTxFilter = 'dep_wd';
+      this.switchTab('wallet');
+      this.filterWalletTransactions('dep_wd');
+      const txListEl = document.getElementById('walletTransactionList');
+      if (txListEl && txListEl.scrollIntoView) {
+        txListEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
     this.removeDepositProof();
     this.renderDepositModal();
     this.openModal('depositModal');
+    // Pulihkan nomor tiket yang masih berlaku (atau buat otomatis dari nominal terisi)
+    this.restoreDepositTicket();
+  },
+
+  // Buka kembali tiket deposit yang belum sempat diunggah buktinya dari riwayat
+  // transaksi member (status masih `awaiting_payment`).
+  resumeDeposit(trxId) {
+    if (!Auth.isLoggedIn()) {
+      this.showToast('Silahkan login atau daftar dulu', 'info');
+      this.openModal('authModal');
+      return;
+    }
+    const user = Auth.getUser();
+    const db = DB.get();
+    const trx = (db.transactions || []).find(t => t.id === trxId && t.userId === user.id && t.type === 'deposit');
+    if (!trx) {
+      this.showToast('Data tiket deposit tidak ditemukan.', 'error');
+      return;
+    }
+    if (trx.status !== 'awaiting_payment') {
+      this.showToast('Transaksi ini sudah dikirim dan sedang diproses. Tidak bisa dilanjutkan.', 'info');
+      return;
+    }
+    if (Payment.isDepositTicketExpired(trx)) {
+      this.showToast('Nomor tiket sudah kedaluwarsa (24 jam). Silakan buat nomor tiket baru.', 'error');
+      return;
+    }
+
+    const isQris = String(trx.paymentMethod || '').toUpperCase().includes('QRIS');
+    this.removeDepositProof();
+    this.renderDepositModal();
+    this.openModal('depositModal');
+
+    const methodEl = document.getElementById('depMethodSelect');
+    if (methodEl) methodEl.value = isQris ? 'qris' : 'bank';
+    const bankEl = document.getElementById('depBankSelect');
+    if (!isQris && bankEl && trx.destinationAccount) {
+      const hasOpt = Array.from(bankEl.options).some(o => o.value === trx.destinationAccount);
+      if (hasOpt) bankEl.value = trx.destinationAccount;
+    }
+    const base = Number(trx.amount) - Number(trx.uniqueCode || 0);
+    const amountEl = document.getElementById('depAmountInput');
+    if (amountEl && base > 0) amountEl.value = base;
+
+    this.activeDepositTicket = trx;
+    this._depTicketKey = `${isQris ? 'qris' : 'bank'}|${bankEl ? bankEl.value : ''}|${base}`;
+    this._depTicketError = null;
+    this._depTicketForce = false;
+    this.updateDepositBankInfo();
+    this.updateDepositMethodVisibility();
+    this.renderDepositTicket(trx);
+    this.updateDepositSubmitState();
+    this.showToast(`Tiket ${trx.id} dibuka kembali. Transfer persis ${DB.formatIDR(trx.amount)} lalu unggah bukti transfernya.`, 'info');
   },
 
   renderDepositModal() {
@@ -5542,7 +5806,11 @@ const App = {
         if (optBank) optBank.style.display = '';
         this.updateDepositBankInfo();
       } else {
+        // Semua rekening dimatikan admin -> saluran Transfer Bank disembunyikan
+        // dari dropdown dan kartu data rekening dikosongkan (jangan tampil lagi).
         bankSelect.innerHTML = '<option value="">Tidak ada bank aktif</option>';
+        if (optBank) optBank.style.display = 'none';
+        this.updateDepositBankInfo();
       }
     }
 
@@ -5610,24 +5878,40 @@ const App = {
 
   updateDepositBankInfo() {
     const db = DB.get();
-    const banks = (db.settings.paymentGateways && db.settings.paymentGateways.banks) || [];
+    // HANYA rekening berstatus aktif yang boleh tampil di area member —
+    // rekening yang dimatikan admin tidak boleh bocor ke formulir deposit.
+    const banks = ((db.settings.paymentGateways && db.settings.paymentGateways.banks) || [])
+      .filter(b => b.active !== false);
     const bankSelect = document.getElementById('depBankSelect');
     if (!bankSelect) return;
 
     const selectedId = bankSelect.value;
-    const bank = banks.find(b => b.id === selectedId) || banks.find(b => b.active !== false) || banks[0];
+    const bank = banks.find(b => b.id === selectedId) || banks[0];
 
     const nameEl = document.getElementById('depBankSelectedName');
     const accNoEl = document.getElementById('depBankAccountNo');
     const accNameEl = document.getElementById('depBankAccountName');
     const copyBtn = document.getElementById('btnCopyBankAcc');
+    const infoCard = document.getElementById('depBankInfoCard');
 
     if (bank) {
+      if (infoCard) infoCard.style.display = '';
       if (nameEl) nameEl.textContent = bank.name;
       if (accNoEl) accNoEl.textContent = bank.accountNo;
       if (accNameEl) accNameEl.textContent = bank.accountName;
       if (copyBtn) {
+        copyBtn.style.display = '';
         copyBtn.onclick = () => App.copyText(bank.accountNo, `Nomor Rekening ${bank.name}`);
+      }
+    } else {
+      // Tidak ada rekening aktif sama sekali -> kosongkan kartu info rekening
+      if (infoCard) infoCard.style.display = 'none';
+      if (nameEl) nameEl.textContent = '-';
+      if (accNoEl) accNoEl.textContent = '-';
+      if (accNameEl) accNameEl.textContent = '-';
+      if (copyBtn) {
+        copyBtn.style.display = 'none';
+        copyBtn.onclick = null;
       }
     }
   },
@@ -5641,28 +5925,274 @@ const App = {
     const usdtFields = document.getElementById('depUsdtFields');
     const nominalWrap = document.getElementById('depNominalWrap');
     const proofWrap = document.getElementById('depProofWrap');
-    const submitBtn = document.getElementById('btnSubmitDeposit');
+    const ticketWrap = document.getElementById('depTicketWrap');
 
     if (bankFields) bankFields.style.display = val === 'bank' ? 'block' : 'none';
     if (qrisFields) qrisFields.style.display = val === 'qris' ? 'block' : 'none';
     if (usdtFields) usdtFields.style.display = val === 'usdt' ? 'block' : 'none';
     if (nominalWrap) nominalWrap.style.display = val === 'usdt' ? 'none' : 'block';
 
+    if (!val || val === 'usdt') {
+      // Saluran tutup / USDT: nomor tiket tidak dipakai
+      if (ticketWrap) ticketWrap.style.display = 'none';
+      this._stopDepTicketCountdown();
+    }
     if (!val) {
       if (nominalWrap) nominalWrap.style.display = 'none';
       if (proofWrap) proofWrap.style.display = 'none';
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span>Saluran Deposit Sedang Tutup</span>';
-      }
     } else {
       if (proofWrap) proofWrap.style.display = 'block';
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>Konfirmasi & Ajukan Deposit</span>';
+    }
+    this.updateDepositSubmitState();
+  },
+
+  // ===== SIKLUS NOMOR TIKET DEPOSIT =====
+  // Tiket dibuat OTOMATIS saat nominal diisi (debounce), jadi nomor tiket &
+  // nominal transfer persis selalu muncul SEBELUM member mentransfer.
+  scheduleDepositTicket() {
+    if (this._depTicketDebounce) clearTimeout(this._depTicketDebounce);
+    this._depTicketDebounce = setTimeout(() => {
+      this._depTicketDebounce = null;
+      this.refreshDepositTicket();
+    }, 900);
+  },
+
+  // Pulihkan tiket aktif saat modal dibuka; bila belum ada, buat dari nominal terisi
+  restoreDepositTicket() {
+    const user = Auth.getUser();
+    const methodEl = document.getElementById('depMethodSelect');
+    const method = methodEl ? methodEl.value : 'bank';
+    if (!user || !method || method === 'usdt') {
+      this.activeDepositTicket = null;
+      this._depTicketKey = null;
+      this.renderDepositTicket(null);
+      this.updateDepositSubmitState();
+      return;
+    }
+
+    const amountEl = document.getElementById('depAmountInput');
+    const bankEl = document.getElementById('depBankSelect');
+    const existing = Payment.getActiveDepositTicket(user.id);
+    if (existing) {
+      const exBase = Number(existing.amount) - Number(existing.uniqueCode || 0);
+      const exIsQris = String(existing.paymentMethod || '').includes('QRIS');
+      const sameMethod = (method === 'qris') === exIsQris;
+      if (sameMethod) {
+        // Sinkronkan form ke tiket yang masih berlaku (tiket = kebenaran)
+        if (amountEl && exBase > 0) amountEl.value = exBase;
+        if (method === 'bank' && bankEl && existing.destinationAccount) {
+          const hasOpt = Array.from(bankEl.options).some(o => o.value === existing.destinationAccount);
+          if (hasOpt && bankEl.value !== existing.destinationAccount) {
+            bankEl.value = existing.destinationAccount;
+            this.updateDepositBankInfo();
+          }
+        }
+        this.activeDepositTicket = existing;
+        this._depTicketKey = `${method}|${bankEl ? bankEl.value : ''}|${exBase}`;
+        this.renderDepositTicket(existing);
+        this.updateDepositSubmitState();
+        return;
+      }
+      // Metode berbeda dari tiket aktif -> jatuh ke pembuatan tiket baru di bawah
+    }
+
+    this.activeDepositTicket = null;
+    this._depTicketKey = null;
+    this.renderDepositTicket(null);
+    this.updateDepositSubmitState();
+    this.scheduleDepositTicket();
+  },
+
+  async refreshDepositTicket(force = false) {
+    const methodEl = document.getElementById('depMethodSelect');
+    const method = methodEl ? methodEl.value : 'bank';
+    const user = Auth.getUser();
+
+    // Hanya jalan saat modal deposit terbuka (jangan bikin tiket saat tertutup)
+    const modal = document.getElementById('depositModal');
+    if (modal) {
+      const r = modal.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) {
+        this._depTicketRerun = false;
+        this._depTicketForce = false;
+        return;
+      }
+    }
+
+    if (!user || !method || method === 'usdt') {
+      this.activeDepositTicket = null;
+      this._depTicketKey = null;
+      this.renderDepositTicket(null);
+      this.updateDepositSubmitState();
+      return;
+    }
+
+    if (this._depTicketBusy) {
+      this._depTicketRerun = true;
+      this._depTicketForce = this._depTicketForce || force;
+      return;
+    }
+    this._depTicketBusy = true;
+    try {
+      const amountEl = document.getElementById('depAmountInput');
+      const bankEl = document.getElementById('depBankSelect');
+      const baseAmount = Math.floor(Number(amountEl ? amountEl.value : 0) || 0);
+      const bankId = bankEl ? bankEl.value : '';
+      const db = DB.get();
+      const minDep = (db.settings && db.settings.minDeposit) || 50000;
+      const key = `${method}|${bankId}|${baseAmount}`;
+
+      if (isNaN(baseAmount) || baseAmount <= 0 || baseAmount < minDep) {
+        // Nominal belum valid -> belum ada tiket (tombol submit menunggu input)
+        this.activeDepositTicket = null;
+        this._depTicketKey = null;
+        this._depTicketError = null;
+        this.renderDepositTicket(null);
+        this.updateDepositSubmitState();
+        return;
+      }
+
+      const existing = this.activeDepositTicket;
+      if (!force && !this._depTicketForce && existing && !Payment.isDepositTicketExpired(existing) && this._depTicketKey === key) {
+        return; // tiket aktif sudah cocok dengan input -> tidak perlu request baru
+      }
+
+      const res = await Payment.createDepositTicket({ userId: user.id, amount: baseAmount, method, bankId });
+      if (res.success && res.transaction) {
+        this.activeDepositTicket = res.transaction;
+        this._depTicketKey = key;
+        this._depTicketError = null;
+        this._depTicketExpireHandled = false;
+        this.renderDepositTicket(res.transaction);
+        if (res.offline) {
+          this.showToast('Server sedang tidak terjangkau — nomor tiket dibuat lokal dan akan diverifikasi ulang saat pengiriman bukti.', 'info');
+        }
+      } else {
+        this.activeDepositTicket = null;
+        this._depTicketKey = null;
+        this._depTicketError = res.message || 'Gagal membuat nomor tiket. Coba lagi.';
+        this.renderDepositTicket(null);
+        this.showToast(this._depTicketError, 'error');
+      }
+      this.updateDepositSubmitState();
+    } catch (e) {
+      console.warn('refreshDepositTicket error:', e);
+    } finally {
+      this._depTicketBusy = false;
+      this._depTicketForce = false;
+      if (this._depTicketRerun) {
+        this._depTicketRerun = false;
+        setTimeout(() => this.refreshDepositTicket(), 60);
       }
     }
   },
+
+  renderDepositTicket(trx) {
+    const wrap = document.getElementById('depTicketWrap');
+    if (!wrap) return;
+    if (!trx) {
+      wrap.style.display = 'none';
+      this._stopDepTicketCountdown();
+      return;
+    }
+    const noEl = document.getElementById('depTicketNo');
+    const amtEl = document.getElementById('depTicketAmount');
+    const codeEl = document.getElementById('depTicketCode');
+    const bdEl = document.getElementById('depTicketBreakdown');
+    const offEl = document.getElementById('depTicketOfflineNote');
+    const regenBtn = document.getElementById('btnRegenDepositTicket');
+    const base = Number(trx.amount) - Number(trx.uniqueCode || 0);
+
+    if (noEl) noEl.textContent = trx.id;
+    if (amtEl) amtEl.textContent = DB.formatIDR(trx.amount);
+    if (codeEl) codeEl.textContent = trx.uniqueCode || '-';
+    if (bdEl) bdEl.textContent = `${DB.formatIDR(base)} + Kode Unik ${trx.uniqueCode || '-'} = ${DB.formatIDR(trx.amount)}`;
+    if (offEl) offEl.style.display = trx.offlineTicket ? 'block' : 'none';
+    if (regenBtn) regenBtn.style.display = 'none';
+    wrap.style.display = 'block';
+    this._startDepTicketCountdown();
+  },
+
+  _startDepTicketCountdown() {
+    this._stopDepTicketCountdown();
+    const tick = () => {
+      const el = document.getElementById('depTicketCountdown');
+      const wrap = document.getElementById('depTicketWrap');
+      const modal = document.getElementById('depositModal');
+      if (!el || !wrap || wrap.style.display === 'none') { this._stopDepTicketCountdown(); return; }
+      if (modal) {
+        const r = modal.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return; // modal tertutup: tampilan & auto-regen dijeda
+      }
+      const t = this.activeDepositTicket;
+      if (!t) { this._stopDepTicketCountdown(); return; }
+      const expAt = new Date(t.createdAt || t.date || 0).getTime() + Payment.DEPOSIT_TICKET_TTL_MS;
+      const remain = expAt - Date.now();
+      if (remain <= 0) {
+        el.textContent = '⏳ KEDALUWARSA';
+        this.updateDepositSubmitState();
+        if (!this._depTicketExpireHandled) {
+          this._depTicketExpireHandled = true;
+          this.scheduleDepositTicket(); // buat ulang otomatis
+        }
+        return;
+      }
+      this._depTicketExpireHandled = false;
+      const h = Math.floor(remain / 3600000);
+      const m = Math.floor((remain % 3600000) / 60000);
+      const s = Math.floor((remain % 60000) / 1000);
+      el.textContent = `⏳ Berlaku ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} lagi`;
+    };
+    this._depTicketCountdownInterval = setInterval(tick, 1000);
+    tick();
+  },
+
+  _stopDepTicketCountdown() {
+    if (this._depTicketCountdownInterval) {
+      clearInterval(this._depTicketCountdownInterval);
+      this._depTicketCountdownInterval = null;
+    }
+  },
+
+  updateDepositSubmitState() {
+    const methodSelect = document.getElementById('depMethodSelect');
+    const submitBtn = document.getElementById('btnSubmitDeposit');
+    if (!submitBtn) return;
+    const val = methodSelect ? methodSelect.value : '';
+
+    if (!val) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Saluran Deposit Sedang Tutup</span>';
+      return;
+    }
+    if (val === 'usdt') {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>🚀 Konfirmasi & Kirim Bukti Transfer</span>';
+      return;
+    }
+
+    const t = this.activeDepositTicket;
+    if (t && !Payment.isDepositTicketExpired(t)) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>✅ Sudah Transfer? Kirim Bukti Transfer</span>';
+      return;
+    }
+    submitBtn.disabled = true;
+    if (t && Payment.isDepositTicketExpired(t)) {
+      submitBtn.innerHTML = '<span>⏳ Tiket kedaluwarsa — sedang dibuat ulang...</span>';
+      return;
+    }
+    if (this._depTicketError) {
+      submitBtn.innerHTML = `<span>⚠️ ${escapeHtml(this._depTicketError)}</span>`;
+      return;
+    }
+    const amountVal = Math.floor(Number((document.getElementById('depAmountInput') || {}).value) || 0);
+    const minDep = (DB.get().settings && DB.get().settings.minDeposit) || 50000;
+    submitBtn.innerHTML = (amountVal > 0 && amountVal < minDep)
+      ? `<span>Minimal deposit ${DB.formatIDR(minDep)}</span>`
+      : '<span>⏳ Membuat nomor tiket...</span>';
+  },
+
 
   openWithdrawModal() {
     const user = Auth.getUser();
@@ -5722,7 +6252,7 @@ const App = {
       const terms = (db.settings && db.settings.withdrawTerms) || [
         "Minimal Penarikan: Rp 50.000 per transaksi.",
         "Biaya Admin: 1.0% dari nominal penarikan dana.",
-        "Jam Operasional WD: Buka setiap hari pukul 09:00 - 21:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
+        "Jam Operasional WD: Buka setiap hari pukul 09:00 - 15:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
         "Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).",
         "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
       ];
@@ -5864,6 +6394,18 @@ const App = {
       return;
     }
 
+    // Bank/QRIS wajib sudah punya nomor tiket aktif: member harus transfer
+    // dulu sesuai nominal tiket, baru bukti boleh dikirim.
+    let ticket = null;
+    if (method === 'bank' || method === 'qris') {
+      ticket = this.activeDepositTicket;
+      if (!ticket || Payment.isDepositTicketExpired(ticket)) {
+        this.showToast('Nomor tiket belum siap atau sudah kedaluwarsa. Tunggu nomor tiket muncul, transfer sesuai nominalnya, lalu kirim bukti.', 'error');
+        this.scheduleDepositTicket();
+        return;
+      }
+    }
+
     const depSubmitBtn = document.getElementById('btnSubmitDeposit');
     if (depSubmitBtn) {
       depSubmitBtn.disabled = true;
@@ -5878,22 +6420,32 @@ const App = {
         amount,
         amountUsdt: usdtAmt,
         txid,
-        proofImage
+        proofImage,
+        ticketId: ticket ? ticket.id : null,
+        ticket
       });
     } finally {
-      if (depSubmitBtn) {
-        depSubmitBtn.disabled = false;
-        depSubmitBtn.innerHTML = '<span>🚀 Konfirmasi & Kirim Bukti Transfer</span>';
-      }
+      this.updateDepositSubmitState();
     }
 
     if (res.success) {
       this.removeDepositProof();
+      this.activeDepositTicket = null;
+      this._depTicketKey = null;
+      this._depTicketError = null;
+      this.renderDepositTicket(null);
+      this.updateDepositSubmitState();
       this.closeModal('depositModal');
       this.showToast(res.message, 'success');
       this.renderAll();
     } else {
       this.showToast(res.message, 'error');
+      if (ticket && /tiket/i.test(res.message || '')) {
+        // Tiket sudah tidak berlaku (dipakai / kedaluwarsa) -> buat ulang otomatis
+        this.activeDepositTicket = null;
+        this._depTicketKey = null;
+        this.scheduleDepositTicket();
+      }
     }
   },
 
@@ -6198,7 +6750,7 @@ const App = {
     this.updateTransferPreview();
   },
 
-  onTransferTargetInput() {
+  async onTransferTargetInput() {
     if (this.currentTransferType !== 'member') return;
     const user = Auth.getUser();
     const inputEl = document.getElementById('transferTargetUserInput');
@@ -6213,7 +6765,18 @@ const App = {
     }
 
     badgeEl.style.display = 'flex';
-    const found = typeof Affiliate !== 'undefined' && Affiliate.lookupMember ? Affiliate.lookupMember(val, user ? user.id : null) : null;
+    let found = typeof Affiliate !== 'undefined' && Affiliate.lookupMember ? Affiliate.lookupMember(val, user ? user.id : null) : null;
+    if (!found && typeof Affiliate !== 'undefined' && Affiliate.lookupMemberRemote) {
+      // Not in the local downline roster — resolve via the server lookup
+      // (members can transfer to any friend, not just their downline).
+      badgeText.textContent = '⏳ Memeriksa member tujuan...';
+      const remote = await Affiliate.lookupMemberRemote(val);
+      const stillCurrent = ((inputEl ? inputEl.value : '').trim() === val);
+      if (!stillCurrent) return; // stale response — a newer lookup owns the badge
+      if (remote) {
+        found = { id: remote.id, username: remote.username, fullName: remote.fullName, referralCode: remote.referralCode };
+      }
+    }
     if (!found) {
       badgeEl.className = 'transfer-recipient-badge error';
       badgeText.textContent = `❌ Member "${val}" tidak ditemukan. Pastikan username/kode sponsor benar.`;
@@ -6459,10 +7022,12 @@ const App = {
         return;
       }
       const found = typeof Affiliate !== 'undefined' && Affiliate.lookupMember ? Affiliate.lookupMember(targetUser, user.id) : null;
-      if (!found || found.isSelf) {
-        this.showToast(found && found.isSelf ? 'Tidak dapat mentransfer ke akun sendiri!' : 'Member tujuan tidak ditemukan!', 'error');
+      if (found && found.isSelf) {
+        this.showToast('Tidak dapat mentransfer ke akun sendiri!', 'error');
         return;
       }
+      // If the target is not in the local roster, let the server endpoint
+      // validate it — friends outside your downline are still transferable.
     }
 
     const btnConfirm = document.getElementById('btnConfirmTransfer');
@@ -7153,6 +7718,7 @@ const App = {
     if (depMethodSelect) {
       depMethodSelect.addEventListener('change', () => {
         this.updateDepositMethodVisibility();
+        this.scheduleDepositTicket(); // tiket ikut metode yang dipilih
       });
     }
 
@@ -7161,7 +7727,14 @@ const App = {
     if (depBankSelect) {
       depBankSelect.addEventListener('change', () => {
         this.updateDepositBankInfo();
+        this.scheduleDepositTicket(); // nominal unik menyesuaikan bank tujuan
       });
+    }
+
+    // Nominal deposit -> buat nomor tiket OTOMATIS (debounce) sebelum transfer
+    const depAmountInput = document.getElementById('depAmountInput');
+    if (depAmountInput) {
+      depAmountInput.addEventListener('input', () => this.scheduleDepositTicket());
     }
 
     // USDT conversion calculator
@@ -7265,26 +7838,76 @@ const App = {
   // Alias PPOB Modal
   openPpobModal(category = 'pulsa') {
     return this.openMainWalletPpobModal(category);
+  },
+
+  // Admin Impersonation Mode Check & Exit
+  checkImpersonationMode() {
+    const isImpersonating = typeof localStorage !== 'undefined' && localStorage.getItem('autotrading_is_impersonating') === 'true';
+    const targetUsername = typeof localStorage !== 'undefined' ? (localStorage.getItem('autotrading_impersonated_target') || '') : '';
+    const banner = document.getElementById('impersonationBanner');
+    if (isImpersonating && banner) {
+      banner.style.display = 'flex';
+      document.body.classList.add('has-impersonation-bar');
+      const targetEl = document.getElementById('impersonationTargetUsername');
+      if (targetEl) targetEl.textContent = `@${targetUsername || 'member'}`;
+    } else if (banner) {
+      banner.style.display = 'none';
+      document.body.classList.remove('has-impersonation-bar');
+    }
+  },
+
+  async exitImpersonation() {
+    const adminToken = typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_impersonator_token') : null;
+    const adminUserStr = typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_impersonator_user') : null;
+    let adminUser = null;
+    try {
+      if (adminUserStr) adminUser = JSON.parse(adminUserStr);
+    } catch(e) {}
+
+    try {
+      localStorage.removeItem('autotrading_is_impersonating');
+      localStorage.removeItem('autotrading_impersonated_target');
+      localStorage.removeItem('autotrading_impersonator_token');
+      localStorage.removeItem('autotrading_impersonator_user');
+    } catch(e) {}
+
+    if (adminToken) {
+      try {
+        localStorage.setItem('autotrading_session_token', adminToken);
+        sessionStorage.setItem('autotrading_session_token', adminToken);
+      } catch(e) {}
+    }
+    if (adminUser) {
+      DB.setSession(adminUser);
+    }
+    this.showToast('Kembali ke panel admin...', 'info');
+    setTimeout(() => {
+      window.location.href = 'admin.html';
+    }, 400);
   }
-};
+});
 
 // Global Exposure for HTML inline onclick handlers
-window.App = App;
-window.Auth = Auth;
-window.DB = DB;
-window.Plans = Plans;
-window.Affiliate = Affiliate;
-window.Payment = Payment;
-window.Rewards = Rewards;
-window.openMainWalletPpobModal = (cat) => App.openMainWalletPpobModal(cat);
-window.openPpobModal = (cat) => App.openMainWalletPpobModal(cat);
+if (typeof window !== 'undefined') {
+  window.App = App;
+  window.Auth = Auth;
+  window.DB = DB;
+  window.Plans = Plans;
+  window.Affiliate = Affiliate;
+  window.Payment = Payment;
+  window.Rewards = Rewards;
+  window.openMainWalletPpobModal = (cat) => App.openMainWalletPpobModal(cat);
+  window.openPpobModal = (cat) => App.openMainWalletPpobModal(cat);
+}
 
 // Launch App on DOM ready or immediately if already loaded
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      App.init();
+    });
+  } else {
     App.init();
-  });
-} else {
-  App.init();
+  }
 }
 

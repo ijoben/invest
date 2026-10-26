@@ -1,0 +1,963 @@
+{
+  "success": true,
+  "setting_keys": [
+    "general_settings",
+    "platform_announcements",
+    "platform_plans",
+    "platform_rewards",
+    "platform_signals"
+  ],
+  "general_settings": {
+    "appName": "AUTOTRADING",
+    "currency": "IDR",
+    "usdIdrRate": 16250,
+    "minDeposit": 50000,
+    "minWithdraw": 50000,
+    "withdrawFeePercent": 10,
+    "withdrawSchedule": {
+      "enabled": true,
+      "startHour": 9,
+      "endHour": 15,
+      "offMessage": "Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 15:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional."
+    },
+    "withdrawTerms": [
+      "Minimal Penarikan: Rp 50.000 per transaksi.",
+      "Biaya Admin: 10% dari nominal penarikan dana.",
+      "Jam Operasional WD: Buka setiap hari pukul 09:00 - 15:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
+      "Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).",
+      "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
+    ],
+    "apkDownload": {
+      "url": "https://autotrading.my.id/appautotrading.apk",
+      "version": "v2.4.0 (Official Release)",
+      "size": "18.5 MB",
+      "updatedAt": "2026-10-09",
+      "enabled": true
+    },
+    "email": {
+      "verificationRequired": false,
+      "adminNotificationOnRegister": true,
+      "adminNotificationEmail": "admin@autotrading.my.id",
+      "welcomeEmailEnabled": true,
+      "mailMethod": "smtp",
+      "smtp": {
+        "host": "mail.autotrading.my.id",
+        "port": 465,
+        "secure": "ssl",
+        "user": "admin@autotrading.my.id",
+        "fromName": "AUTOTRADING Official",
+        "fromEmail": "admin@autotrading.my.id",
+        "pass": "WSxYuJKO+idDc6?H"
+      }
+    },
+    "profitCycleDurationHours": 24,
+    "autoProfitIntervalSeconds": 86400,
+    "weekendProfit": {
+      "enabled": true,
+      "offMessage": "Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin."
+    },
+    "weekendProfitEnabled": true,
+    "todayProfitLossMode": {
+      "isLoss": false,
+      "lossRate": 0,
+      "message": "Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.",
+      "updatedAt": "2026-10-22T02:44:57.157Z"
+    },
+    "weeklyProfitHistory": [
+      {
+        "dayName": "Senin",
+        "date": "Senin",
+        "rate": 1,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Selasa",
+        "date": "Selasa",
+        "rate": 1.5,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Rabu",
+        "date": "Rabu",
+        "rate": 1.2,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Kamis",
+        "date": "Kamis",
+        "rate": 1.35,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Jumat",
+        "date": "Jumat",
+        "rate": 1.15,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Sabtu",
+        "date": "Sabtu",
+        "rate": null,
+        "isLoss": false,
+        "isWeekend": true
+      },
+      {
+        "dayName": "Minggu",
+        "date": "Minggu",
+        "rate": 1.1,
+        "isLoss": false,
+        "isWeekend": true
+      }
+    ],
+    "depositPointsReward": 50,
+    "dailyCheckIn": {
+      "enabled": true,
+      "rewardAmount": 1000,
+      "totalDays": 7
+    },
+    "cs": {
+      "whatsapp": "6281919189569",
+      "telegram": "https://t.me/autotrading_cs",
+      "waMessage": "Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform..."
+    },
+    "social": {
+      "telegram": "https://t.me/autotrading_channel",
+      "instagram": "https://instagram.com/autotradingofficial",
+      "tiktok": "https://tiktok.com/@autotradingofficial",
+      "youtube": "https://youtube.com/@autotrading",
+      "twitter": "",
+      "facebook": ""
+    },
+    "kelasTrading": {
+      "whatsapp": "https://wa.me/628123456789?text=Halo%20Mentor%20AUTOTRADING,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi",
+      "telegram": "https://t.me/autotrading_official_channel",
+      "desc": "Komunitas edukasi trading AI, webinar eksklusif & sinyal pasar harian"
+    },
+    "sponsorBonusPercent": 10,
+    "rabatLevels": [
+      {
+        "level": 1,
+        "percent": 3
+      },
+      {
+        "level": 2,
+        "percent": 2
+      },
+      {
+        "level": 3,
+        "percent": 1
+      }
+    ],
+    "levelTurnoverMilestones": [
+      {
+        "name": "Bronze Leader",
+        "minTurnover": 25000000,
+        "reward": 500000,
+        "badge": "🎖️"
+      },
+      {
+        "name": "Silver Director",
+        "minTurnover": 100000000,
+        "reward": 1000000,
+        "badge": "🎖️"
+      },
+      {
+        "name": "Gold Ambassador",
+        "minTurnover": 500000000,
+        "reward": 2500000,
+        "badge": "🎖️"
+      },
+      {
+        "name": "Crown Diamond",
+        "minTurnover": 2000000000,
+        "reward": 5000000,
+        "badge": "🎖️"
+      }
+    ],
+    "paymentGateways": {
+      "banks": [
+        {
+          "id": "bca",
+          "name": "SEABANK",
+          "accountNo": "901284135116",
+          "accountName": "EDY IRAWAN",
+          "active": true
+        },
+        {
+          "id": "mandiri",
+          "name": "BCA",
+          "accountNo": "8955257819",
+          "accountName": "EDY IRAWAN",
+          "active": false
+        },
+        {
+          "id": "bri",
+          "name": "Bank BRI",
+          "accountNo": "034101002938531",
+          "accountName": "PT AUTOTRADING INVESTASI",
+          "active": false
+        },
+        {
+          "id": "bank-1792426983340",
+          "name": "tes",
+          "accountNo": "214",
+          "accountName": "rwt",
+          "active": false
+        }
+      ],
+      "qris": {
+        "active": true,
+        "merchantName": "AUTOTRADING OFFICIAL QRIS",
+        "nmid": "ID1025434761348",
+        "imageUrl": "https://autotrading.my.id/uploads/img_20261020_051847_c716bb8b.jpg"
+      },
+      "usdt": {
+        "active": true,
+        "trc20Address": "TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1",
+        "bep20Address": "0x71C4982aF12B76295328B83716d1029C837A5982"
+      }
+    },
+    "announcementSpeed": 50,
+    "marketStatus": "open",
+    "marketOpen": true,
+    "marketOffMessage": "Pasar Keuangan Global & AI Trading sedang LIBUR (OFF). Semua instrumen, AI Bot, dan sinyal ditangguhkan.",
+    "webSettings": {
+      "appName": "AUTOTRADING",
+      "tagline": "Platform Investasi & AI Trading Mobile Terpercaya",
+      "domain": "https://autotrading.my.id",
+      "companyName": "PT AUTOTRADING INVESTASI",
+      "contactEmail": "cs@autotrading.my.id",
+      "whatsapp": "",
+      "copyright": "© 2026 AUTOTRADING. All rights reserved.",
+      "logoUrl": "https://autotrading.my.id/uploads/logo-autotrading-horizontal.svg",
+      "faviconUrl": "https://autotrading.my.id/uploads/logo-favicon.png",
+      "colorPrimary": "#C89338",
+      "colorBg": "#0B0F19",
+      "fontFamily": "Inter",
+      "displayMode": "light"
+    },
+    "seo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "robots": "index, follow",
+      "gaId": ""
+    },
+    "maintenance": {
+      "enabled": false,
+      "message": "Sistem sedang dalam pemeliharaan terjadwal. Kami akan kembali online dalam 3x24 jam. Mohon besabar..!! Terima Kasih sudah setia bersama kami."
+    },
+    "ppob": {
+      "enabled": true,
+      "pulsaEnabled": true,
+      "plnEnabled": true,
+      "showProcessStatus": true,
+      "adminFee": 0,
+      "notice": "Pengisian pulsa seluler dan token listrik PLN diproses manual oleh Admin maksimal 1x24 jam.",
+      "pricing": {
+        "10000": 12000,
+        "20000": 22000,
+        "50000": 52000,
+        "100000": 102000
+      }
+    }
+  },
+  "platform_plans": [
+    {
+      "id": "plan-learn",
+      "name": "Ai  Trading 01",
+      "theme": "theme-learn",
+      "minDeposit": 100000,
+      "maxDeposit": 2000000,
+      "minDailyProfit": 1.5,
+      "maxDailyProfit": 2.4,
+      "durationDays": 45,
+      "description": "Paket AI Standar Trading Algoritma AUTOTRADING"
+    },
+    {
+      "id": "plan-rookie",
+      "name": "Ai Trading Pro",
+      "theme": "theme-rookie",
+      "minDeposit": 2500000,
+      "maxDeposit": 50000000,
+      "minDailyProfit": 0.4,
+      "maxDailyProfit": 0.7,
+      "durationDays": 150,
+      "description": "Paket AI Pro Otomasi Profit dengan Proteksi Modal"
+    },
+    {
+      "theme": "theme-learn",
+      "activeCount": 0,
+      "name": "Ai Trading X",
+      "minDeposit": 55000000,
+      "maxDeposit": 500000000,
+      "minDailyProfit": 0.1,
+      "maxDailyProfit": 0.3,
+      "durationDays": 350,
+      "id": "plan-1792376327488-briey"
+    }
+  ],
+  "platform_rewards": [
+    {
+      "id": "rew-1792254049903",
+      "title": "Pulsa Rp. 5.000 ( semua operator )",
+      "category": "Pulsa & Paket Data",
+      "badge": "POPULER",
+      "pointsCost": 150,
+      "stock": 15,
+      "description": "Penukaran dengan sistem Redeem pulsa online senilai 5 ribu",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261019_053654_41192153.png",
+      "active": true,
+      "createdAt": "2026-10-17T16:20:49.903Z"
+    },
+    {
+      "id": "rew-1",
+      "title": "Saldo E-Wallet Rp  25.000 (DANA / OVO / GoPay)",
+      "category": "E-Wallet",
+      "badge": "POPULER",
+      "pointsCost": 550,
+      "stock": 10,
+      "description": "Penukaran saldo e-wallet instant langsung ke nomor akun DANA / OVO / GoPay kamu.",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261019_053726_2f932f64.jpg",
+      "active": true,
+      "createdAt": "2026-09-15T00:00:00.000Z"
+    },
+    {
+      "id": "rew-2",
+      "title": "Saldo E-Wallet Rp 50.000 (Semua Bank / E-Wallet)",
+      "category": "E-Wallet",
+      "badge": "TERLARIS",
+      "pointsCost": 5500,
+      "stock": 20,
+      "description": "Voucher transfer saldo tunai Rp 50.000 ke rekening bank atau e-wallet pilihan kamu.",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261019_053738_4b1f7b3e.jpg",
+      "active": true,
+      "createdAt": "2026-09-15T01:00:00.000Z"
+    },
+    {
+      "id": "rew-3",
+      "title": "Kaos Eksklusif AUTOTRADING Trader 2026 Edition",
+      "category": "Merchandise",
+      "badge": "OFFICIAL",
+      "pointsCost": 15000,
+      "stock": 20,
+      "description": "T-Shirt Cotton Combed 24s premium dengan bordir emas logo AUTOTRADING Trading AI.",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261019_053853_7e9b9db4.png",
+      "active": true,
+      "createdAt": "2026-09-15T02:00:00.000Z"
+    },
+    {
+      "id": "rew-4",
+      "title": "Smartwatch Fitness & Crypto Price Tracker",
+      "category": "Gadget",
+      "badge": "PREMIUM",
+      "pointsCost": 50000,
+      "stock": 15,
+      "description": "Smartwatch layar AMOLED dengan fitur notifikasi harga trading forex dan crypto realtime.",
+      "imageUrl": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80",
+      "active": true,
+      "createdAt": "2026-09-15T03:00:00.000Z"
+    },
+    {
+      "id": "rew-5",
+      "title": "Logam Mulia Emas Antam 0.2 Gram Bersertifikat",
+      "category": "Emas Fisik",
+      "badge": "INVESTASI",
+      "pointsCost": 95000,
+      "stock": 10,
+      "description": "Emas murni 99.99% bersertifikat resmi PT ANTAM Tbk dikirim aman ke alamat kamu.",
+      "imageUrl": "https://images.unsplash.com/photo-1610375461246-83df859d849d?w=600&auto=format&fit=crop&q=80",
+      "active": true,
+      "createdAt": "2026-09-15T04:00:00.000Z"
+    },
+    {
+      "id": "rew-6",
+      "title": "Smartphone Flagship 5G (Trading Edition)",
+      "category": "Gadget",
+      "badge": "SPECIAL VIP",
+      "pointsCost": 155000,
+      "stock": 3,
+      "description": "Smartphone 5G performa tinggi layar 120Hz untuk eksekusi order trading super mulus.",
+      "imageUrl": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&auto=format&fit=crop&q=80",
+      "active": true,
+      "createdAt": "2026-09-15T05:00:00.000Z"
+    }
+  ],
+  "platform_announcements": {
+    "announcements": [
+      {
+        "id": "ann-1792253539003",
+        "text": "SELAMAT DATANG DI PLATFORM AUTOTRADING",
+        "active": true,
+        "createdAt": "2026-10-17T16:12:19.003Z"
+      },
+      {
+        "id": "ann-1",
+        "text": "PLATFORM DIGITAL FOREX DENGAN SISTEM ALGORITMA, MEMBERIKAN KEUNTUNGAN YANG VARIATIF SETIAP HARI UNTUK ANDA, SERTA AMAN DAN NYAMAN",
+        "active": true,
+        "createdAt": "2026-09-15T00:00:00.000Z"
+      },
+      {
+        "id": "ann-2",
+        "text": "DEPOSIT VIA QRIS DAN TRANSFER BANK LEBIH MUDAH DAN INSTAN TANPA RIBET",
+        "active": true,
+        "createdAt": "2026-09-15T01:00:00.000Z"
+      },
+      {
+        "id": "ann-3",
+        "text": "SINYAL AKURAT DARI AUTOTRADING YANG SELALU DIPERBAHARUI, DENGAN AKURASI 80%",
+        "active": true,
+        "createdAt": "2026-09-15T02:00:00.000Z"
+      }
+    ],
+    "speed": 50
+  },
+  "banners": [
+    {
+      "id": "ban-1",
+      "title": "AI Trading Algoritma AUTOTRADING v4.2",
+      "active": 1,
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261020_052558_cf904386.jpg"
+    },
+    {
+      "id": "ban-1792458594708",
+      "title": "Akurasi Sinyal Setiap Hari",
+      "active": 1,
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261020_092756_dd438139.jpg"
+    },
+    {
+      "id": "ban-1792463376171",
+      "title": "Profit Harian Variatif",
+      "active": 1,
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261020_092936_55d896af.jpg"
+    },
+    {
+      "id": "ban-3",
+      "title": "Deposit Instant 24/7 QRIS",
+      "active": 1,
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261020_050402_61adc9c6.jpg"
+    }
+  ],
+  "state_settings": {
+    "appName": "AUTOTRADING",
+    "currency": "IDR",
+    "usdIdrRate": 16250,
+    "minDeposit": 50000,
+    "minWithdraw": 50000,
+    "withdrawFeePercent": 10,
+    "withdrawSchedule": {
+      "enabled": true,
+      "startHour": 9,
+      "endHour": 15,
+      "offMessage": "Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 15:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional."
+    },
+    "withdrawTerms": [
+      "Minimal Penarikan: Rp 50.000 per transaksi.",
+      "Biaya Admin: 10% dari nominal penarikan dana.",
+      "Jam Operasional WD: Buka setiap hari pukul 09:00 - 15:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.",
+      "Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).",
+      "Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."
+    ],
+    "apkDownload": {
+      "url": "https://autotrading.my.id/appautotrading.apk",
+      "version": "v2.4.0 (Official Release)",
+      "size": "18.5 MB",
+      "updatedAt": "2026-10-09",
+      "enabled": true
+    },
+    "email": {
+      "verificationRequired": false,
+      "adminNotificationOnRegister": true,
+      "adminNotificationEmail": "admin@autotrading.my.id",
+      "welcomeEmailEnabled": true,
+      "mailMethod": "smtp",
+      "smtp": {
+        "host": "mail.autotrading.my.id",
+        "port": 465,
+        "secure": "ssl",
+        "user": "admin@autotrading.my.id",
+        "fromName": "AUTOTRADING Official",
+        "fromEmail": "admin@autotrading.my.id",
+        "pass": "WSxYuJKO+idDc6?H"
+      }
+    },
+    "profitCycleDurationHours": 24,
+    "autoProfitIntervalSeconds": 86400,
+    "weekendProfit": {
+      "enabled": true,
+      "offMessage": "Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin."
+    },
+    "weekendProfitEnabled": true,
+    "todayProfitLossMode": {
+      "isLoss": false,
+      "lossRate": 0,
+      "message": "Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman.",
+      "updatedAt": "2026-10-22T02:44:57.157Z"
+    },
+    "weeklyProfitHistory": [
+      {
+        "dayName": "Senin",
+        "date": "Senin",
+        "rate": 1,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Selasa",
+        "date": "Selasa",
+        "rate": 1.5,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Rabu",
+        "date": "Rabu",
+        "rate": 1.2,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Kamis",
+        "date": "Kamis",
+        "rate": 1.35,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Jumat",
+        "date": "Jumat",
+        "rate": 1.15,
+        "isLoss": false,
+        "isWeekend": false
+      },
+      {
+        "dayName": "Sabtu",
+        "date": "Sabtu",
+        "rate": null,
+        "isLoss": false,
+        "isWeekend": true
+      },
+      {
+        "dayName": "Minggu",
+        "date": "Minggu",
+        "rate": 1.1,
+        "isLoss": false,
+        "isWeekend": true
+      }
+    ],
+    "depositPointsReward": 50,
+    "dailyCheckIn": {
+      "enabled": true,
+      "rewardAmount": 1000,
+      "totalDays": 7
+    },
+    "cs": {
+      "whatsapp": "6281919189569",
+      "telegram": "https://t.me/autotrading_cs",
+      "waMessage": "Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform..."
+    },
+    "social": {
+      "telegram": "https://t.me/autotrading_channel",
+      "instagram": "https://instagram.com/autotradingofficial",
+      "tiktok": "https://tiktok.com/@autotradingofficial",
+      "youtube": "https://youtube.com/@autotrading",
+      "twitter": "",
+      "facebook": ""
+    },
+    "kelasTrading": {
+      "whatsapp": "https://wa.me/628123456789?text=Halo%20Mentor%20AUTOTRADING,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi",
+      "telegram": "https://t.me/autotrading_official_channel",
+      "desc": "Komunitas edukasi trading AI, webinar eksklusif & sinyal pasar harian"
+    },
+    "sponsorBonusPercent": 10,
+    "rabatLevels": [
+      {
+        "level": 1,
+        "percent": 3
+      },
+      {
+        "level": 2,
+        "percent": 2
+      },
+      {
+        "level": 3,
+        "percent": 1
+      }
+    ],
+    "levelTurnoverMilestones": [
+      {
+        "name": "Bronze Leader",
+        "minTurnover": 25000000,
+        "reward": 500000,
+        "badge": "🎖️"
+      },
+      {
+        "name": "Silver Director",
+        "minTurnover": 100000000,
+        "reward": 1000000,
+        "badge": "🎖️"
+      },
+      {
+        "name": "Gold Ambassador",
+        "minTurnover": 500000000,
+        "reward": 2500000,
+        "badge": "🎖️"
+      },
+      {
+        "name": "Crown Diamond",
+        "minTurnover": 2000000000,
+        "reward": 5000000,
+        "badge": "🎖️"
+      }
+    ],
+    "paymentGateways": {
+      "banks": [
+        {
+          "id": "bca",
+          "name": "SEABANK",
+          "accountNo": "901284135116",
+          "accountName": "EDY IRAWAN",
+          "active": true
+        },
+        {
+          "id": "mandiri",
+          "name": "BCA",
+          "accountNo": "8955257819",
+          "accountName": "EDY IRAWAN",
+          "active": false
+        },
+        {
+          "id": "bri",
+          "name": "Bank BRI",
+          "accountNo": "034101002938531",
+          "accountName": "PT AUTOTRADING INVESTASI",
+          "active": false
+        },
+        {
+          "id": "bank-1792426983340",
+          "name": "tes",
+          "accountNo": "214",
+          "accountName": "rwt",
+          "active": false
+        }
+      ],
+      "qris": {
+        "active": true,
+        "merchantName": "AUTOTRADING OFFICIAL QRIS",
+        "nmid": "ID1025434761348",
+        "imageUrl": "https://autotrading.my.id/uploads/img_20261020_051847_c716bb8b.jpg"
+      },
+      "usdt": {
+        "active": true,
+        "trc20Address": "TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1",
+        "bep20Address": "0x71C4982aF12B76295328B83716d1029C837A5982"
+      }
+    },
+    "announcementSpeed": 50,
+    "marketStatus": "open",
+    "marketOpen": true,
+    "marketOffMessage": "Pasar Keuangan Global & AI Trading sedang LIBUR (OFF). Semua instrumen, AI Bot, dan sinyal ditangguhkan.",
+    "webSettings": {
+      "appName": "AUTOTRADING",
+      "tagline": "Platform Investasi & AI Trading Mobile Terpercaya",
+      "domain": "https://autotrading.my.id",
+      "companyName": "PT AUTOTRADING INVESTASI",
+      "contactEmail": "cs@autotrading.my.id",
+      "whatsapp": "",
+      "copyright": "© 2026 AUTOTRADING. All rights reserved.",
+      "logoUrl": "https://autotrading.my.id/uploads/logo-autotrading-horizontal.svg",
+      "faviconUrl": "https://autotrading.my.id/uploads/logo-favicon.png",
+      "colorPrimary": "#C89338",
+      "colorBg": "#0B0F19",
+      "fontFamily": "Inter",
+      "displayMode": "light"
+    },
+    "seo": {
+      "title": "",
+      "description": "",
+      "keywords": "",
+      "robots": "index, follow",
+      "gaId": ""
+    },
+    "maintenance": {
+      "enabled": false,
+      "message": "Sistem sedang dalam pemeliharaan terjadwal. Kami akan kembali online dalam 3x24 jam. Mohon besabar..!! Terima Kasih sudah setia bersama kami."
+    },
+    "ppob": {
+      "enabled": true,
+      "pulsaEnabled": true,
+      "plnEnabled": true,
+      "showProcessStatus": true,
+      "adminFee": 0,
+      "notice": "Pengisian pulsa seluler dan token listrik PLN diproses manual oleh Admin maksimal 1x24 jam.",
+      "pricing": {
+        "10000": 12000,
+        "20000": 22000,
+        "50000": 52000,
+        "100000": 102000
+      }
+    }
+  },
+  "state_plans": [
+    {
+      "id": "plan-learn",
+      "name": "Ai  Trading 01",
+      "theme": "theme-learn",
+      "minDeposit": 100000,
+      "maxDeposit": 2000000,
+      "minDailyProfit": 1.5,
+      "maxDailyProfit": 2.4,
+      "durationDays": 45,
+      "description": "Paket AI Standar Trading Algoritma AUTOTRADING"
+    },
+    {
+      "id": "plan-rookie",
+      "name": "Ai Trading Pro",
+      "theme": "theme-rookie",
+      "minDeposit": 2500000,
+      "maxDeposit": 50000000,
+      "minDailyProfit": 0.4,
+      "maxDailyProfit": 0.7,
+      "durationDays": 150,
+      "description": "Paket AI Pro Otomasi Profit dengan Proteksi Modal"
+    },
+    {
+      "theme": "theme-learn",
+      "activeCount": 0,
+      "name": "Ai Trading X",
+      "minDeposit": 55000000,
+      "maxDeposit": 500000000,
+      "minDailyProfit": 0.1,
+      "maxDailyProfit": 0.3,
+      "durationDays": 350,
+      "id": "plan-1792376327488-briey"
+    }
+  ],
+  "state_banners": [
+    {
+      "id": "ban-1792463376171",
+      "title": "Profit Harian Variatif",
+      "subtitle": "Dapatkan profit setiap hari dengan variatif , sistem ini membuat kenyamanan dalam memberikan bagi hasil untuk anda",
+      "badge": "PROMO UNGGULAN",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261020_092936_55d896af.jpg",
+      "actionUrl": "profile",
+      "active": true,
+      "sortOrder": 0,
+      "createdAt": "2026-10-20 09:29:36"
+    },
+    {
+      "id": "ban-1792458594708",
+      "title": "Akurasi Sinyal Setiap Hari",
+      "subtitle": "Memberikan kemudahan bagi member dalam belajar trading , serta siap kapan saja untuk entry dengan fasilitas yang ada",
+      "badge": "PROMO UNGGULAN",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261020_092756_dd438139.jpg",
+      "actionUrl": "trade",
+      "active": true,
+      "sortOrder": 0,
+      "createdAt": "2026-10-20 09:27:56"
+    },
+    {
+      "id": "ban-1",
+      "title": "AI Trading Algoritma AUTOTRADING v4.2",
+      "subtitle": "Otomasi profit harian dengan akurasi eksekusi 94.8% dan proteksi modal terintegrasi.",
+      "badge": "PROMO UNGGULAN",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261020_052558_cf904386.jpg",
+      "actionUrl": "plans",
+      "active": true,
+      "sortOrder": 0,
+      "createdAt": "2026-10-20 05:25:59"
+    },
+    {
+      "id": "ban-3",
+      "title": "Deposit Instant 24/7 QRIS",
+      "subtitle": "Proses deposit cepat otomatis melalui QRIS",
+      "badge": "GATEWAY TERCEPAT",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261020_050402_61adc9c6.jpg",
+      "actionUrl": "deposit",
+      "active": true,
+      "sortOrder": 2,
+      "createdAt": "2026-10-20 05:04:03"
+    }
+  ],
+  "state_rewards": [
+    {
+      "id": "rew-1792254049903",
+      "title": "Pulsa Rp. 5.000 ( semua operator )",
+      "category": "Pulsa & Paket Data",
+      "badge": "POPULER",
+      "pointsCost": 150,
+      "stock": 15,
+      "description": "Penukaran dengan sistem Redeem pulsa online senilai 5 ribu",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261019_053654_41192153.png",
+      "active": true,
+      "createdAt": "2026-10-17T16:20:49.903Z"
+    },
+    {
+      "id": "rew-1",
+      "title": "Saldo E-Wallet Rp  25.000 (DANA / OVO / GoPay)",
+      "category": "E-Wallet",
+      "badge": "POPULER",
+      "pointsCost": 550,
+      "stock": 10,
+      "description": "Penukaran saldo e-wallet instant langsung ke nomor akun DANA / OVO / GoPay kamu.",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261019_053726_2f932f64.jpg",
+      "active": true,
+      "createdAt": "2026-09-15T00:00:00.000Z"
+    },
+    {
+      "id": "rew-2",
+      "title": "Saldo E-Wallet Rp 50.000 (Semua Bank / E-Wallet)",
+      "category": "E-Wallet",
+      "badge": "TERLARIS",
+      "pointsCost": 5500,
+      "stock": 20,
+      "description": "Voucher transfer saldo tunai Rp 50.000 ke rekening bank atau e-wallet pilihan kamu.",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261019_053738_4b1f7b3e.jpg",
+      "active": true,
+      "createdAt": "2026-09-15T01:00:00.000Z"
+    },
+    {
+      "id": "rew-3",
+      "title": "Kaos Eksklusif AUTOTRADING Trader 2026 Edition",
+      "category": "Merchandise",
+      "badge": "OFFICIAL",
+      "pointsCost": 15000,
+      "stock": 20,
+      "description": "T-Shirt Cotton Combed 24s premium dengan bordir emas logo AUTOTRADING Trading AI.",
+      "imageUrl": "https://autotrading.my.id/uploads/img_20261019_053853_7e9b9db4.png",
+      "active": true,
+      "createdAt": "2026-09-15T02:00:00.000Z"
+    },
+    {
+      "id": "rew-4",
+      "title": "Smartwatch Fitness & Crypto Price Tracker",
+      "category": "Gadget",
+      "badge": "PREMIUM",
+      "pointsCost": 50000,
+      "stock": 15,
+      "description": "Smartwatch layar AMOLED dengan fitur notifikasi harga trading forex dan crypto realtime.",
+      "imageUrl": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80",
+      "active": true,
+      "createdAt": "2026-09-15T03:00:00.000Z"
+    },
+    {
+      "id": "rew-5",
+      "title": "Logam Mulia Emas Antam 0.2 Gram Bersertifikat",
+      "category": "Emas Fisik",
+      "badge": "INVESTASI",
+      "pointsCost": 95000,
+      "stock": 10,
+      "description": "Emas murni 99.99% bersertifikat resmi PT ANTAM Tbk dikirim aman ke alamat kamu.",
+      "imageUrl": "https://images.unsplash.com/photo-1610375461246-83df859d849d?w=600&auto=format&fit=crop&q=80",
+      "active": true,
+      "createdAt": "2026-09-15T04:00:00.000Z"
+    },
+    {
+      "id": "rew-6",
+      "title": "Smartphone Flagship 5G (Trading Edition)",
+      "category": "Gadget",
+      "badge": "SPECIAL VIP",
+      "pointsCost": 155000,
+      "stock": 3,
+      "description": "Smartphone 5G performa tinggi layar 120Hz untuk eksekusi order trading super mulus.",
+      "imageUrl": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&auto=format&fit=crop&q=80",
+      "active": true,
+      "createdAt": "2026-09-15T05:00:00.000Z"
+    }
+  ],
+  "state_announcements": [
+    {
+      "id": "ann-1792253539003",
+      "text": "SELAMAT DATANG DI PLATFORM AUTOTRADING",
+      "active": true,
+      "createdAt": "2026-10-17T16:12:19.003Z"
+    },
+    {
+      "id": "ann-1",
+      "text": "PLATFORM DIGITAL FOREX DENGAN SISTEM ALGORITMA, MEMBERIKAN KEUNTUNGAN YANG VARIATIF SETIAP HARI UNTUK ANDA, SERTA AMAN DAN NYAMAN",
+      "active": true,
+      "createdAt": "2026-09-15T00:00:00.000Z"
+    },
+    {
+      "id": "ann-2",
+      "text": "DEPOSIT VIA QRIS DAN TRANSFER BANK LEBIH MUDAH DAN INSTAN TANPA RIBET",
+      "active": true,
+      "createdAt": "2026-09-15T01:00:00.000Z"
+    },
+    {
+      "id": "ann-3",
+      "text": "SINYAL AKURAT DARI AUTOTRADING YANG SELALU DIPERBAHARUI, DENGAN AKURASI 80%",
+      "active": true,
+      "createdAt": "2026-09-15T02:00:00.000Z"
+    }
+  ],
+  "state_testimonials": [
+    {
+      "id": "testi-TRX-WDR-165481",
+      "userId": "usr-1791247049424",
+      "name": "pen***",
+      "city": "Indonesia",
+      "avatar": "https://ui-avatars.com/api/?name=pen%2A%2A%2A&background=C89338&color=fff",
+      "bank": "DANA (081274XXX)",
+      "amount": 500000,
+      "rating": 5,
+      "comment": "Penarikan dana dividen/bonus telah berhasil masuk ke rekening dengan lancar. AUTOTRADING terbukti amanah dan terpercaya!",
+      "receiptImage": "",
+      "timeAgo": "06 Oct 2026",
+      "active": true,
+      "status": "approved",
+      "createdAt": "2026-10-06 09:23:15"
+    },
+    {
+      "id": "testi-TRX-WDR-307351",
+      "userId": "usr-1791224078093",
+      "name": "bon***",
+      "city": "Indonesia",
+      "avatar": "https://ui-avatars.com/api/?name=bon%2A%2A%2A&background=C89338&color=fff",
+      "bank": "Transfer Bank BCA",
+      "amount": 1000000,
+      "rating": 5,
+      "comment": "Penarikan dana dividen/bonus telah berhasil masuk ke rekening dengan lancar. AUTOTRADING terbukti amanah dan terpercaya!",
+      "receiptImage": "",
+      "timeAgo": "06 Oct 2026",
+      "active": true,
+      "status": "approved",
+      "createdAt": "2026-10-06 09:20:27"
+    },
+    {
+      "id": "testi-TRX-WD-580134",
+      "userId": "usr-1790996838699",
+      "name": "dui***",
+      "city": "Indonesia",
+      "avatar": "https://ui-avatars.com/api/?name=dui%2A%2A%2A&background=C89338&color=fff",
+      "bank": "Transfer Bank BCA",
+      "amount": 50000,
+      "rating": 5,
+      "comment": "Penarikan dana dividen/bonus telah berhasil masuk ke rekening dengan lancar. AUTOTRADING terbukti amanah dan terpercaya!",
+      "receiptImage": "",
+      "timeAgo": "03 Oct 2026",
+      "active": true,
+      "status": "approved",
+      "createdAt": "2026-10-03 10:02:34"
+    }
+  ],
+  "state_signals_count": 4,
+  "admin_user": {
+    "id": "usr-admin",
+    "username": "admin",
+    "full_name": "System Administrator",
+    "role": "admin"
+  },
+  "counts": {
+    "banners": 4,
+    "plans": 3,
+    "rewards": 7,
+    "announcements": 2,
+    "testimonials": 3
+  }
+}

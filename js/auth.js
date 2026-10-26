@@ -105,7 +105,42 @@ export const Auth = {
               return { success: false, isBlocked: true, message: 'Akun Anda telah DIBLOKIR oleh Administrator. Silakan hubungi Layanan Pelanggan (CS) untuk bantuan.' };
             }
           }
+
+          // Immediately hydrate user investments and transactions so member area is active instantly
+          if (Array.isArray(json.investments)) {
+            db.investments = db.investments || [];
+            const otherInvs = db.investments.filter(i => i.userId !== local.id);
+            db.investments = [...otherInvs, ...json.investments];
+          }
+          if (Array.isArray(json.transactions)) {
+            db.transactions = db.transactions || [];
+            const otherTxs = db.transactions.filter(t => t.userId !== local.id);
+            db.transactions = [...json.transactions, ...otherTxs];
+          }
+          if (json.leaderboard) {
+            db.leaderboard = json.leaderboard;
+          }
+          if (Array.isArray(json.publicRecentDeposits)) {
+            db.publicRecentDeposits = json.publicRecentDeposits;
+          }
+          if (Array.isArray(json.publicRecentWithdrawals)) {
+            db.publicRecentWithdrawals = json.publicRecentWithdrawals;
+          }
+          if (Array.isArray(json.publicRecentTransactions)) {
+            db.publicRecentTransactions = json.publicRecentTransactions;
+          }
+
           DB._lastETag = null;
+          // Local-only persist: pushing this browser snapshot to the server here used to
+          // overwrite platform configuration (banners, running text, signals, rabat,
+          // OMSET targets) whenever the admin logged in from a browser holding an older
+          // or default state. The server stays authoritative; we only cache locally.
+          if (typeof DB.persistLocal === 'function') {
+            DB.persistLocal(db);
+          } else {
+            DB.save(db);
+          }
+
           // Keep the password in memory only (never persisted) so the browser
           // session can be silently re-established on the next visit.
           local.password = cleanPass;
@@ -197,10 +232,11 @@ export const Auth = {
   },
 
   // Register handler
-  async register({ username, fullName, email, phone, password, confirmPassword, referralCode }) {
+  async register({ username, fullName, email, city, phone, password, confirmPassword, referralCode }) {
     const cleanUsername = String(username || '').trim().toLowerCase();
     const cleanFullName = String(fullName || '').trim();
     const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanCity = String(city || '').trim();
     const cleanPhone = String(phone || '').trim();
     const cleanPassword = String(password || '');
     const cleanConfirm = confirmPassword !== undefined ? String(confirmPassword) : null;
@@ -296,8 +332,6 @@ export const Auth = {
 
     const db = DB.get();
     const isVerifyRequired = !!(db.settings && db.settings.email && db.settings.email.verificationRequired);
-
-    const cleanCity = (formData.city || '').trim();
 
     const newUser = await DB.addUser({
       username: cleanUsername,
@@ -468,12 +502,18 @@ export const Auth = {
     return DB.resetPasswordWithCode(identifier, code, newPassword);
   },
 
-  // Logout handler (clears local session + server session cookie)
-  logout() {
+  // Logout handler (clears local session + server session cookie).
+  // Returns a promise so callers that need the server cookie gone first (admin
+  // logout gate) can await it; fire-and-forget callers keep working.
+  async logout() {
     DB.clearSession();
     try {
       if (typeof fetch === 'function') {
-        fetch(DB.getApiUrl('logout'), { method: 'POST' }).catch(() => {});
+        await fetch(DB.getApiUrl('logout'), {
+          method: 'POST',
+          credentials: 'include',
+          keepalive: true
+        });
       }
     } catch (e) {}
     return { success: true, message: 'Anda telah berhasil logout.' };

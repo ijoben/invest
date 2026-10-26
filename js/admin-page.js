@@ -11,11 +11,30 @@ import { Affiliate } from './affiliate.js';
 import { Signals } from './signals.js';
 import { Rewards } from './rewards.js';
 
-export const AdminPage = {
+// Immediate global exposure of admin dependencies
+if (typeof window !== 'undefined') {
+  window.DB = DB;
+  window.Admin = Admin;
+  window.Auth = Auth;
+  window.Plans = Plans;
+  window.Affiliate = Affiliate;
+  window.Signals = Signals;
+  window.Rewards = Rewards;
+}
+
+export const AdminPage = {};
+if (typeof window !== 'undefined') {
+  window.AdminPage = AdminPage;
+}
+Object.assign(AdminPage, {
   currentTab: 'dashboard',
   userFilter: 'all',
   userSearchQuery: '',
   withdrawFilter: 'all',
+
+  // Target member yang sedang diproses di modal Reset Total Data
+  resetTargetId: null,
+  resetTargetUsername: '',
 
   // Pagination State for Admin Tables
   paginationState: {
@@ -121,6 +140,7 @@ export const AdminPage = {
     if (!this.checkAdminAuth()) return;
     const db = freshDb || DB.get();
     const stats = Admin.getStats();
+    this.applyBrandLogo((db.settings || {}).webSettings || {});
 
     // Badges & Counters
     const bDep = document.getElementById('badgePendingDep');
@@ -132,6 +152,11 @@ export const AdminPage = {
 
     const sUsers = document.getElementById('statTotalUsers');
     if (sUsers) sUsers.textContent = stats.totalUsers;
+    const sUsersCard = sUsers ? sUsers.closest('.admin-stat-card') : null;
+    if (sUsersCard) {
+      const changeEl = sUsersCard.querySelector('.admin-stat-change');
+      if (changeEl) changeEl.textContent = `✓ ${stats.activeUsers || 0} Aktif Trading · ${stats.buyerUsers || 0} Sudah Beli Paket`;
+    }
     const sDep = document.getElementById('statTotalDeposits');
     if (sDep) sDep.textContent = DB.formatIDR(stats.totalDeposits);
     const sWd = document.getElementById('statTotalWithdrawals');
@@ -146,16 +171,20 @@ export const AdminPage = {
     if (!isTyping && !hasOpenModal) {
       const curTab = this.currentTab || 'dashboard';
       if (curTab === 'dashboard') {
-        this.renderPendingTransactions(db);
+        // Stats & badges refreshed above; keep the pending queues current too
+        // (this used to call the non-existent renderPendingTransactions and
+        // threw on every sync while the dashboard was open).
+        this.renderDeposits(db);
+        this.renderWithdrawals(db);
+        this.renderRedemptions(db);
       } else if (curTab === 'users') {
         this.renderUsers(db);
       } else if (curTab === 'deposits') {
         this.renderDeposits(db);
       } else if (curTab === 'withdrawals') {
         this.renderWithdrawals(db);
-      } else if (curTab === 'investments') {
-        this.renderInvestments(db);
       } else if (curTab === 'backup') {
+        // (Stale 'investments' branch removed: no such admin tab exists.)
         this.refreshBackupStats(db);
       }
     }
@@ -280,6 +309,8 @@ export const AdminPage = {
       const link = document.querySelector("link[rel*='icon']");
       if (link) link.href = ws.faviconUrl;
     }
+    // Logo upload tampil di sidebar & topbar admin menggantikan ikon/teks
+    this.applyBrandLogo(ws);
 
     // 1. Dashboard Stats
     const sUsersEl = document.getElementById('statTotalUsers');
@@ -287,7 +318,7 @@ export const AdminPage = {
     const sUsersCard = sUsersEl ? sUsersEl.closest('.admin-stat-card') : null;
     if (sUsersCard) {
       const changeEl = sUsersCard.querySelector('.admin-stat-change');
-      if (changeEl) changeEl.textContent = `✓ ${stats.activeUsers || 0} Member Aktif (Trading AI)`;
+      if (changeEl) changeEl.textContent = `✓ ${stats.activeUsers || 0} Aktif Trading · ${stats.buyerUsers || 0} Sudah Beli Paket`;
     }
     document.getElementById('statTotalDeposits').textContent = DB.formatIDR(stats.totalDeposits);
     document.getElementById('statTotalWithdrawals').textContent = DB.formatIDR(stats.totalWithdrawals);
@@ -401,9 +432,9 @@ export const AdminPage = {
             </button>
           ` : `<span style="font-size: 10px; color: #94A3B8;">-</span>`}
         </td>
-        <td><span class="badge-status ${escapeHtml(t.status)}">${escapeHtml(t.status.toUpperCase())}</span></td>
+        <td><span class="badge-status ${t.status === 'awaiting_payment' ? 'awaiting_payment' : escapeHtml(t.status)}">${t.status === 'awaiting_payment' ? 'MENUNGGU TRANSFER' : escapeHtml(t.status.toUpperCase())}</span></td>
         <td>
-          ${t.status === 'pending' ? `
+          ${t.status === 'awaiting_payment' ? `<span style="font-size: 10px; color: #F59E0B; font-weight: 700;">🎫 Menunggu transfer member${(Date.now() - new Date(t.createdAt || 0).getTime()) > 86400000 ? ' · <span style="color: #EF4444;">Kedaluwarsa</span>' : ''}</span>` : t.status === 'pending' ? `
             <div class="btn-action-group">
               <button class="btn-admin-action approve" onclick="AdminPage.approveDeposit('${escapeHtml(t.id)}')">✓ Setujui</button>
               <button class="btn-admin-action reject" onclick="AdminPage.rejectDeposit('${escapeHtml(t.id)}')">✕ Tolak</button>
@@ -434,6 +465,88 @@ export const AdminPage = {
     const curEl = document.getElementById(map[filter]);
     if (curEl) curEl.classList.add('active');
     this.renderWithdrawals(DB.get());
+  },
+
+  // Resolve bank/e-wallet details for a withdrawal row.
+  // Data can live on the transaction itself, only inside payment_method /
+  // destination_account, or on the member profile. Admin must never approve a
+  // withdrawal with an unknown destination.
+  getWithdrawBankInfo(t, db) {
+    const user = ((db && db.users) || []).find(u => String(u.id) === String(t.userId)) || null;
+    const profile = (user && user.bankAccount) || {};
+    let bankName = String(t.bankName || '').trim();
+    let accountNumber = String(t.accountNumber || '').trim();
+    let accountHolder = String(t.accountHolder || '').trim();
+
+    const dest = String(t.destinationAccount || '').trim();
+    if (dest) {
+      const sep = dest.indexOf(' - ');
+      if (sep > 0) {
+        if (!accountHolder) accountHolder = dest.slice(0, sep).trim();
+        if (!accountNumber) accountNumber = dest.slice(sep + 3).trim();
+      } else if (!accountNumber) {
+        const mDest = dest.match(/^(.+?)\s*\(([^()]+)\)\s*$/);
+        if (mDest) {
+          if (!bankName) bankName = mDest[1].trim();
+          accountNumber = mDest[2].trim();
+        } else {
+          accountNumber = dest;
+        }
+      }
+    }
+
+    const pm = String(t.paymentMethod || '').trim();
+    if (!bankName || !accountNumber) {
+      const mPm = pm.match(/^(.+?)\s*\(([^()]*)\)\s*$/);
+      if (mPm) {
+        if (!bankName) bankName = mPm[1].trim();
+        if (!accountNumber) accountNumber = mPm[2].trim();
+      } else if (pm && !bankName && !/^(transfer bank|withdraw|withdrawal|penarikan)\b/i.test(pm)) {
+        bankName = pm;
+      }
+    }
+
+    if (!bankName) bankName = String(profile.bankName || '').trim();
+    if (!accountNumber) accountNumber = String(profile.accountNumber || '').trim();
+    if (!accountHolder) accountHolder = String(profile.accountHolder || '').trim();
+
+    // Generic labels are not a destination identity.
+    if (/^(bank|transfer|transfer bank|withdraw|withdrawal|penarikan|penarikan dana)$/i.test(bankName)) bankName = '';
+    if (!bankName && /usdt/i.test(pm)) bankName = 'USDT';
+
+    if (/[xX]{2,}|\*/.test(accountNumber)) {
+      const profileNumber = String(profile.accountNumber || '').trim();
+      if (profileNumber && !/[xX]{2,}|\*/.test(profileNumber)) accountNumber = profileNumber;
+    }
+
+    const cleanNumber = accountNumber.replace(/[^0-9a-zA-Z]/g, '');
+    return {
+      bankName,
+      accountNumber,
+      accountHolder,
+      masked: /[xX]{2,}|\*/.test(accountNumber),
+      // Number + holder are what a transfer needs; a missing bank label is
+      // surfaced as a warning instead of blocking the payout entirely.
+      complete: !!(accountHolder && cleanNumber.length >= 4),
+      userId: String(t.userId || (user && user.id) || '')
+    };
+  },
+
+  formatWithdrawDestination(t, db) {
+    const info = this.getWithdrawBankInfo(t, db);
+    if (!info.complete) {
+      const partial = [info.bankName, info.accountNumber, info.accountHolder].filter(Boolean).join(' · ');
+      return `<div style="color:#EF4444;font-weight:700;font-size:11px;">⚠️ Rekening belum lengkap</div>
+        <div style="font-size:10px;color:#94A3B8;margin-top:2px;">${partial ? escapeHtml(partial) : 'Bank / e-wallet, nomor, dan nama pemilik belum diisi.'}</div>
+        ${info.userId ? `<button type="button" class="btn-admin-action edit" style="margin-top:4px;font-size:10px;padding:3px 7px;" onclick="AdminPage.openEditUserModal('${escapeHtml(info.userId)}')">✏️ Lengkapi Rekening</button>` : ''}`;
+    }
+    const isUsdt = /usdt/i.test(t.paymentMethod || '') || /trc20|bep20/i.test(info.bankName);
+    const bankLabel = isUsdt ? 'USDT' : (info.bankName || 'Bank / E-Wallet');
+    const bankWarning = info.bankName ? '' : '<div style="font-size:10px;color:#F59E0B;margin-top:1px;">⚠️ Jenis bank/e-wallet belum tercatat</div>';
+    return `<div style="font-size:11.5px;"><strong>${escapeHtml(bankLabel)}</strong> · <span style="font-family:ui-monospace,Menlo,monospace;word-break:break-all;">${escapeHtml(info.accountNumber)}</span></div>
+      <div style="font-size:10px;color:#94A3B8;margin-top:1px;">a.n. ${escapeHtml(info.accountHolder)}</div>
+      ${bankWarning}
+      ${info.masked ? '<div style="font-size:10px;color:#F59E0B;margin-top:1px;">⚠️ Nomor terpotong (XXX) — jalankan Sinkronkan Rekening</div>' : ''}`;
   },
 
   // 3. Withdraw Table (Penarikan Dana & Konversi PPOB)
@@ -473,7 +586,9 @@ export const AdminPage = {
     if (tbody) tbody.innerHTML = pagedWds.map(t => {
       const isPpob = t.type === 'ppob_conversion';
       let walletSourceHtml = escapeHtml(t.walletSource || 'Wallet Balance');
-      let destHtml = escapeHtml(t.destinationAccount || t.paymentMethod || '-');
+      let destHtml = isPpob
+        ? escapeHtml(t.destinationAccount || t.paymentMethod || '-')
+        : this.formatWithdrawDestination(t, db);
       let amountHtml = `<strong style="color:#EF4444;">${DB.formatIDR(t.netAmount || t.amount)}</strong> (Total: ${DB.formatIDR(t.amount)})`;
       let statusBadgeHtml = `<span class="badge-status ${escapeHtml(t.status)}">${escapeHtml(t.status.toUpperCase())}</span>`;
       let actionHtml = '';
@@ -516,9 +631,11 @@ export const AdminPage = {
           </div>
         `;
       } else {
+        const wdInfo = this.getWithdrawBankInfo(t, db);
+        const approveDisabled = wdInfo.complete ? '' : ' disabled title="Lengkapi rekening member dulu" style="opacity:.45;cursor:not-allowed;"';
         actionHtml = t.status === 'pending' ? `
           <div class="btn-action-group">
-            <button class="btn-admin-action approve" onclick="AdminPage.approveWithdraw('${escapeHtml(t.id)}')">✓ Setujui</button>
+            <button class="btn-admin-action approve" onclick="AdminPage.approveWithdraw('${escapeHtml(t.id)}')"${approveDisabled}>✓ Setujui</button>
             <button class="btn-admin-action reject" onclick="AdminPage.rejectWithdraw('${escapeHtml(t.id)}')">✕ Tolak</button>
           </div>
         ` : '<span style="color:#64748B;">Selesai</span>';
@@ -543,6 +660,15 @@ export const AdminPage = {
   // 4. Plans Table
   renderPlans(db) {
     const tbody = document.getElementById('plansTableBody');
+    // Heal legacy plans saved without an id (old CRUD bug): generate ids so the
+    // Edit/Hapus buttons actually target a plan, then persist back once.
+    db.plans = db.plans || [];
+    const orphans = db.plans.filter(p => !p.id);
+    if (orphans.length > 0) {
+      orphans.forEach(p => { p.id = 'plan-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7); });
+      DB.adminSavePlans(db.plans).catch(() => {});
+      DB.save(db).catch(() => {});
+    }
     tbody.innerHTML = db.plans.map(p => {
       const activeInvestorsCount = (db.investments || []).filter(i => i.planId === p.id && i.status === 'active').length;
       return `
@@ -555,6 +681,7 @@ export const AdminPage = {
         <td><span class="badge-status ${activeInvestorsCount > 0 ? 'approved' : 'pending'}">${activeInvestorsCount} Investor Aktif</span></td>
         <td>
           <button class="btn-admin-action edit" onclick="AdminPage.openEditPlanModal('${p.id}')">Edit Paket</button>
+          <button class="btn-admin-action reject" onclick="AdminPage.deletePlan('${p.id}')" title="Hapus paket dari katalog">Hapus</button>
         </td>
       </tr>
     `;
@@ -955,15 +1082,15 @@ export const AdminPage = {
 
     this.previewUsdtSettings();
 
-    const sched = cfg.withdrawSchedule || { enabled: true, startHour: 9, endHour: 21, offMessage: '' };
+    const sched = cfg.withdrawSchedule || { enabled: true, startHour: 9, endHour: 15, offMessage: '' };
     const enabledEl = document.getElementById('wdCfgEnabled');
     if (enabledEl) enabledEl.value = String(sched.enabled !== false);
     const startEl = document.getElementById('wdCfgStartHour');
     if (startEl) startEl.value = sched.startHour !== undefined ? sched.startHour : 9;
     const endEl = document.getElementById('wdCfgEndHour');
-    if (endEl) endEl.value = sched.endHour !== undefined ? sched.endHour : 21;
+    if (endEl) endEl.value = sched.endHour !== undefined ? sched.endHour : 15;
     const msgEl = document.getElementById('wdCfgOffMessage');
-    if (msgEl) msgEl.value = sched.offMessage || 'Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.';
+    if (msgEl) msgEl.value = sched.offMessage || 'Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 15:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.';
 
     // Withdraw Terms
     const termsEl = document.getElementById('wdCfgTerms');
@@ -996,33 +1123,9 @@ export const AdminPage = {
     this.renderWdQuickToggle(db);
   },
 
-  // 6.1 PPOB (Pulsa & Token Listrik PLN) Settings
-  renderPpobSettings(db) {
-    const ppob = (db && db.settings && db.settings.ppob) || {
-      enabled: true,
-      pulsaEnabled: true,
-      plnEnabled: true,
-      adminFee: 0,
-      notice: 'Proses konversi PPOB ini dilakukan secara manual oleh admin. Saldo akan dipotong dan transaksi diproses dalam 5-15 menit.'
-    };
-
-    const masterEl = document.getElementById('ppobCfgMasterEnabled');
-    if (masterEl) masterEl.value = String(ppob.enabled !== false);
-
-    const pulsaEl = document.getElementById('ppobCfgPulsaEnabled');
-    if (pulsaEl) pulsaEl.value = String(ppob.pulsaEnabled !== false);
-
-    const plnEl = document.getElementById('ppobCfgPlnEnabled');
-    if (plnEl) plnEl.value = String(ppob.plnEnabled !== false);
-
-    const feeEl = document.getElementById('ppobCfgAdminFee');
-    if (feeEl) feeEl.value = Number(ppob.adminFee) || 0;
-
-    const noticeEl = document.getElementById('ppobCfgNotice');
-    if (noticeEl) noticeEl.value = ppob.notice || '';
-
-    this.previewPpobSettings();
-  },
+  // 6.1 PPOB render was duplicated here (later definition silently won, so this
+  // panel's master/pulsa/pln/fee fields never got populated). Merged into the
+  // single renderPpobSettings below which now fills BOTH admin panels.
 
   previewPpobSettings() {
     const masterEl = document.getElementById('ppobCfgMasterEnabled');
@@ -1325,23 +1428,48 @@ export const AdminPage = {
     if (!tbody) return;
 
     const allUsers = (db.users || []).filter(u => u.role !== 'admin');
+
+    // Satu sumber kebenaran untuk status blokir (server bisa mengisi isBlocked,
+    // status='blocked', atau keduanya). Tab & badge harus memakai aturan yang sama.
+    const isBlockedUser = (u) => !!(u && (u.isBlocked || u.status === 'blocked'));
+
+    // Peta investasi per member: "sudah beli" = punya record investasi apa pun,
+    // "aktif trading" = punya investasi berstatus active.
+    const allInvByUser = new Map();
+    const activeInvByUser = new Map();
+    (db.investments || []).forEach(inv => {
+      if (!inv || !inv.userId) return;
+      if (!allInvByUser.has(inv.userId)) allInvByUser.set(inv.userId, []);
+      allInvByUser.get(inv.userId).push(inv);
+      if (inv.status === 'active') {
+        if (!activeInvByUser.has(inv.userId)) activeInvByUser.set(inv.userId, []);
+        activeInvByUser.get(inv.userId).push(inv);
+      }
+    });
+    const hasBoughtPlan = (u) => allInvByUser.has(u.id);
+
     const totalCount = allUsers.length;
-    const activeCount = allUsers.filter(u => !u.isBlocked && u.status !== 'blocked').length;
-    const blockedCount = allUsers.filter(u => u.isBlocked || u.status === 'blocked').length;
+    const buyerCount = allUsers.filter(hasBoughtPlan).length;
+    const activeCount = allUsers.filter(u => !isBlockedUser(u)).length;
+    const blockedCount = allUsers.filter(isBlockedUser).length;
 
     const cAll = document.getElementById('userCountAll');
+    const cBuy = document.getElementById('userCountBuyers');
     const cAct = document.getElementById('userCountActive');
     const cBlk = document.getElementById('userCountBlocked');
     if (cAll) cAll.textContent = totalCount;
+    if (cBuy) cBuy.textContent = buyerCount;
     if (cAct) cAct.textContent = activeCount;
     if (cBlk) cBlk.textContent = blockedCount;
 
     // Filter by status
     let filtered = allUsers;
-    if (this.userFilter === 'active') {
-      filtered = filtered.filter(u => !u.isBlocked);
+    if (this.userFilter === 'buyers') {
+      filtered = filtered.filter(hasBoughtPlan);
+    } else if (this.userFilter === 'active') {
+      filtered = filtered.filter(u => !isBlockedUser(u));
     } else if (this.userFilter === 'blocked') {
-      filtered = filtered.filter(u => u.isBlocked);
+      filtered = filtered.filter(isBlockedUser);
     }
 
     // Filter by search query
@@ -1357,7 +1485,7 @@ export const AdminPage = {
     }
 
     if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#94A3B8;">Tidak ada data pengguna yang sesuai dengan filter / pencarian.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px; color:#94A3B8;">Tidak ada data pengguna yang sesuai dengan filter / pencarian.</td></tr>';
       this.renderPagination('usersPagination', 1, 0, 0, 'AdminPage.setUserPage');
       return;
     }
@@ -1373,13 +1501,27 @@ export const AdminPage = {
 
     tbody.innerHTML = pagedUsers.map(u => {
       const isAdmin = u.role === 'admin';
-      const isBlocked = !!u.isBlocked;
+      const isBlocked = isBlockedUser(u);
+
+      // Badge portofolio: bedakan member yang sudah membeli paket dari yang belum.
+      const userActiveInvs = activeInvByUser.get(u.id) || [];
+      const userAllInvs = allInvByUser.get(u.id) || [];
+      let portfolioBadge = '';
+      if (userActiveInvs.length > 0) {
+        const activeCapital = userActiveInvs.reduce((sum, i) => sum + (Number(i.capital) || 0), 0);
+        const planNames = [...new Set(userActiveInvs.map(i => i.planName || i.planId || 'Paket'))].join(', ');
+        portfolioBadge = `<span style="display:inline-block; background:rgba(34,197,94,0.12); color:#15803D; border:1px solid rgba(34,197,94,0.45); padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:800; line-height:1.35;" title="Investasi aktif: ${escapeHtml(planNames)} · Modal ${escapeHtml(DB.formatIDR(activeCapital))}">🔥 ${escapeHtml(planNames)}<br><span style="font-weight:600; color:#166534;">Modal ${escapeHtml(DB.formatIDR(activeCapital))}</span></span>`;
+      } else if (userAllInvs.length > 0) {
+        portfolioBadge = `<span style="display:inline-block; background:rgba(148,163,184,0.15); color:#475569; border:1px solid rgba(148,163,184,0.45); padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:800;" title="Pernah membeli paket, tidak ada investasi aktif saat ini">✅ Selesai (${userAllInvs.length} paket)</span>`;
+      } else {
+        portfolioBadge = `<span style="display:inline-block; background:rgba(148,163,184,0.08); color:#94A3B8; border:1px dashed rgba(148,163,184,0.45); padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:700;" title="Member belum pernah membeli paket investasi">— Belum Beli</span>`;
+      }
 
       let statusBadge = '';
       if (isAdmin) {
         statusBadge = '<span class="badge-status approved" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; font-weight:800; font-size:10.5px;">👑 ADMIN</span>';
       } else if (isBlocked) {
-        statusBadge = `<span class="badge-status blocked" style="background:#FEE2E2; color:#DC2626; border:1px solid #FCA5A5; font-weight:800; font-size:10.5px; cursor:help;" title="${u.blockedReason ? 'Alasan: ' + u.blockedReason : 'Akun Diblokir'}">🔴 DIBLOKIR</span>`;
+        statusBadge = `<span class="badge-status blocked" style="background:#FEE2E2; color:#DC2626; border:1px solid #FCA5A5; font-weight:800; font-size:10.5px; cursor:help;" title="${u.blockedReason ? escapeHtml('Alasan: ' + u.blockedReason) : 'Akun Diblokir'}">🔴 DIBLOKIR</span>`;
       } else if (u.isPendingVerification && !u.emailVerified) {
         statusBadge = `<span class="badge-status pending" style="background:#FEF3C7; color:#B45309; border:1px solid #FCD34D; font-weight:800; font-size:10.5px;" title="Menunggu verifikasi kode OTP email">⏳ VERIFIKASI OTP</span>`;
       } else {
@@ -1400,11 +1542,17 @@ export const AdminPage = {
         verifyActionBtn = `<button class="btn-admin-action approve" onclick="AdminPage.adminVerifyUserFromList('${u.id}', '${escapeHtml(u.username)}')" style="background:#10B981; color:#FFFFFF; border-color:#059669; font-weight:700;" title="Verifikasi email akun ini secara manual">✓ Verif</button>`;
       }
 
+      let resetActionBtn = '';
+      if (!isAdmin) {
+        resetActionBtn = `<button class="btn-admin-action" onclick="AdminPage.openResetMemberModal('${escapeHtml(u.id)}')" style="background: rgba(239, 68, 68, 0.18); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.5); font-weight: 700; padding: 4px 8px; white-space: nowrap;" title="Reset total data transaksi & saldo member yang curang / tidak valid (TIDAK BISA DIBATALKAN)">♻️ Reset</button>`;
+      }
+
       return `
         <tr style="${isBlocked ? 'background: rgba(254, 226, 226, 0.25);' : ''}">
           <td><strong>${escapeHtml(u.username)}</strong></td>
           <td>${escapeHtml(u.fullName || '-')}</td>
           <td>${statusBadge}</td>
+          <td>${portfolioBadge}</td>
           <td>${escapeHtml(u.email || u.phone || '-')}</td>
           <td><strong style="color:#22C55E;">${DB.formatIDR(u.walletBalance)}</strong></td>
           <td><strong style="color:#C89338;">${DB.formatIDR(u.affiliateBalance)}</strong></td>
@@ -1413,9 +1561,11 @@ export const AdminPage = {
           <td>
             <div class="btn-action-group" style="justify-content: flex-start; gap: 4px; flex-wrap: nowrap;">
               ${verifyActionBtn}
+              <button class="btn-admin-action" onclick="AdminPage.loginAsUser('${escapeHtml(u.id)}', '${escapeHtml(u.username)}')" style="background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%); color: #FFFFFF; border-color: #5B21B6; font-weight: 700; padding: 4px 8px;" title="Login sebagai member ini untuk cek dashboard & akun">🔑 Login</button>
               <button class="btn-admin-action edit" onclick="AdminPage.openEditUserModal('${escapeHtml(u.id)}')" title="Kelola Saldo & Point">Saldo</button>
               <button class="btn-admin-action view" onclick="AdminPage.openMemberDetailModal('${escapeHtml(u.id)}')" style="background: #2563EB; color: #FFFFFF; border-color: #1D4ED8; font-weight: 700;" title="Buka Detail Profil & Bantuan Password">👤 Detail</button>
               ${blockActionBtn}
+              ${resetActionBtn}
             </div>
           </td>
         </tr>
@@ -1429,7 +1579,7 @@ export const AdminPage = {
     if (this.paginationState && this.paginationState.users) {
       this.paginationState.users.page = 1;
     }
-    ['all', 'active', 'blocked'].forEach(f => {
+    ['all', 'buyers', 'active', 'blocked'].forEach(f => {
       const btn = document.getElementById('userFilter' + f.charAt(0).toUpperCase() + f.slice(1));
       if (btn) btn.classList.toggle('active', f === filter);
     });
@@ -1481,6 +1631,289 @@ export const AdminPage = {
     }
     const isCurrentlyBlocked = !!targetUser.isBlocked;
     await this.confirmToggleBlock(targetUser.id, targetUser.username, isCurrentlyBlocked);
+  },
+
+  // =========================================================================
+  // RESET TOTAL DATA MEMBER (akun curang / tidak valid)
+  // Reset dijalankan di server (api/index.php action=admin_reset_member):
+  // saldo & poin jadi 0, seluruh transaksi/paket/penukaran poin dihapus, dan
+  // tindakannya dicatat ke log audit admin. Profil, login, kode referral dan
+  // rekening bank tidak disentuh.
+  // =========================================================================
+  openResetMemberModal(userId) {
+    const db = DB.get();
+    const u = (db.users || []).find(x => x && x.id === userId);
+    if (!u) {
+      this.showToast('Data member tidak ditemukan dalam sistem.', 'error');
+      return;
+    }
+    if (u.role === 'admin') {
+      this.showToast('Akun administrator tidak dapat di-reset.', 'warning');
+      return;
+    }
+
+    this.resetTargetId = u.id;
+    this.resetTargetUsername = u.username || '';
+
+    const mine = (t) => !!t && ((t.userId === u.id) || (!!t.username && t.username === u.username));
+    const txs = (db.transactions || []).filter(mine);
+    const invs = (db.investments || []).filter(i => i && i.userId === u.id);
+    const reds = (db.redemptions || []).filter(mine);
+    const activeInvs = invs.filter(i => (i.status || '') === 'active');
+    const txAmount = txs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+    set('admResetTargetName', u.username || '');
+    set('admResetSummaryUser', u.username + (u.fullName ? ' · ' + u.fullName : ''));
+    set('admResetSummaryWallet', DB.formatIDR(u.walletBalance || 0));
+    set('admResetSummaryAff', DB.formatIDR(u.affiliateBalance || 0));
+    set('admResetSummaryPoints', String(u.points || 0));
+    set('admResetSummaryTx', txs.length + ' transaksi (' + DB.formatIDR(txAmount) + ')');
+    set('admResetSummaryInv', invs.length + ' paket (' + activeInvs.length + ' aktif)');
+    set('admResetSummaryRed', reds.length + ' penukaran poin');
+
+    const reasonEl = document.getElementById('admResetReason');
+    const confirmEl = document.getElementById('admResetConfirm');
+    if (reasonEl) reasonEl.value = '';
+    if (confirmEl) confirmEl.value = '';
+    this.validateResetForm();
+    this.openModal('adminResetMemberModal');
+    this.loadResetLogs();
+  },
+
+  openResetMemberModalFromDetail() {
+    const hidden = document.getElementById('admMemDetailUserId');
+    const userId = hidden ? hidden.value : '';
+    if (!userId) {
+      this.showToast('Data member tidak ditemukan dalam sistem.', 'error');
+      return;
+    }
+    this.openResetMemberModal(userId);
+  },
+
+  // Tombol reset hanya aktif bila alasan terisi dan username target ditulis persis
+  validateResetForm() {
+    const reasonEl = document.getElementById('admResetReason');
+    const confirmEl = document.getElementById('admResetConfirm');
+    const btn = document.getElementById('admResetSubmitBtn');
+    const hint = document.getElementById('admResetConfirmHint');
+    const reason = (((reasonEl && reasonEl.value) || '')).trim();
+    const typed = (((confirmEl && confirmEl.value) || '')).trim();
+    const target = this.resetTargetUsername || '';
+    const reasonOk = reason.length >= 5;
+    const nameOk = target !== '' && typed.toLowerCase() === target.toLowerCase();
+
+    if (btn) {
+      btn.disabled = !(reasonOk && nameOk);
+      btn.style.opacity = btn.disabled ? '0.55' : '1';
+    }
+    if (hint) {
+      if (typed === '') {
+        hint.innerHTML = 'Tulis persis username <strong style="color:#F8FAFC;">' + escapeHtml(target) + '</strong> untuk mengaktifkan tombol reset.';
+      } else if (!nameOk) {
+        hint.innerHTML = '<strong style="color:#F87171;">✗ Username belum cocok.</strong>';
+      } else {
+        hint.innerHTML = '<strong style="color:#4ADE80;">✓ Username cocok. Tombol reset aktif.</strong>';
+      }
+    }
+    return reasonOk && nameOk;
+  },
+
+  async submitResetMember() {
+    if (!this.resetTargetId) return;
+    if (!this.validateResetForm()) {
+      this.showToast('Lengkapi alasan dan ketik username target dengan benar.', 'warning');
+      return;
+    }
+    const reasonEl = document.getElementById('admResetReason');
+    const confirmEl = document.getElementById('admResetConfirm');
+    const btn = document.getElementById('admResetSubmitBtn');
+    const reason = reasonEl ? reasonEl.value.trim() : '';
+    const confirmName = confirmEl ? confirmEl.value.trim() : '';
+    const targetName = this.resetTargetUsername;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ Sedang mereset...';
+    }
+    try {
+      const res = await Admin.resetMember(this.resetTargetId, confirmName, reason);
+      if (res && res.success) {
+        this.showToast(res.message || `Data member "${targetName}" berhasil direset total.`, 'success');
+        this.closeResetMemberModal();
+        try { await DB.syncFromCloud(); } catch (e) {}
+        this.renderAll();
+      } else {
+        this.showToast((res && res.message) || 'Gagal mereset data member.', 'error');
+      }
+    } catch (e) {
+      this.showToast('Gagal mereset data member: ' + (e.message || 'koneksi error'), 'error');
+    } finally {
+      if (btn) {
+        btn.textContent = '♻️ HAPUS TOTAL SEKARANG';
+        this.validateResetForm();
+      }
+    }
+  },
+
+  // Daftar log audit reset terakhir (dari server) untuk ditampilkan di modal
+  async loadResetLogs() {
+    const box = document.getElementById('admResetLogList');
+    if (!box) return;
+    box.innerHTML = '<span style="color:#64748B;">Memuat riwayat...</span>';
+    try {
+      const res = await Admin.getResetLogs();
+      if (!res.success || !res.logs || res.logs.length === 0) {
+        box.innerHTML = '<span style="color:#64748B;">Belum ada catatan reset.</span>';
+        return;
+      }
+      box.innerHTML = res.logs.map(l => {
+        const d = l.details || {};
+        const bits = [];
+        if (d.walletBalanceBefore) bits.push('saldo ' + DB.formatIDR(d.walletBalanceBefore));
+        if (d.affiliateBalanceBefore) bits.push('afiliasi ' + DB.formatIDR(d.affiliateBalanceBefore));
+        if (d.transactionsDeleted) bits.push(d.transactionsDeleted + ' transaksi');
+        if (d.investmentsDeleted) bits.push(d.investmentsDeleted + ' paket');
+        if (d.redemptionsDeleted) bits.push(d.redemptionsDeleted + ' penukaran poin');
+        return '<div style="padding:7px 0; border-bottom:1px dashed rgba(148,163,184,0.2);">' +
+          '<div><strong style="color:#F87171;">' + escapeHtml(l.targetUsername || '-') + '</strong>' +
+          '<span style="color:#64748B;"> · oleh ' + escapeHtml(l.adminUsername || '-') +
+          ' · ' + escapeHtml(l.createdAt || '-') + '</span></div>' +
+          '<div style="color:#94A3B8;">' + escapeHtml(l.reason || '-') +
+          (bits.length ? ' <span style="color:#64748B;">(dihapus: ' + escapeHtml(bits.join(', ')) + ')</span>' : '') +
+          '</div></div>';
+      }).join('');
+    } catch (e) {
+      box.innerHTML = '<span style="color:#F87171;">Riwayat gagal dimuat.</span>';
+    }
+  },
+
+  closeResetMemberModal() {
+    this.closeModal('adminResetMemberModal');
+    this.resetTargetId = null;
+    this.resetTargetUsername = '';
+  },
+
+  // =========================================================================
+  // AUDIT PERHITUNGAN PROFIT
+  // Menampilkan temuan server: baris profit yang nominalnya tidak sama dengan
+  // modal x rate paket, pending yang tidak sama dengan riwayat, atau rate yang
+  // di luar rentang paket. Perbaikan TIDAK mengubah saldo / total profit /
+  // sisa hari paket — hanya menyamakan angka nominal & persen yang tampil.
+  // =========================================================================
+  openProfitAuditModal(userId = '') {
+    this.profitAuditUserId = userId || '';
+    let sub = 'Memeriksa seluruh member: nominal profit vs persen paket';
+    if (this.profitAuditUserId) {
+      const u = (DB.get().users || []).find(x => x && x.id === this.profitAuditUserId);
+      sub = 'Memeriksa member: @' + ((u && u.username) || this.profitAuditUserId);
+    }
+    const subEl = document.getElementById('admProfitAuditSub');
+    if (subEl) subEl.textContent = sub;
+    this.openModal('adminProfitAuditModal');
+    this.loadProfitAudit();
+  },
+
+  openProfitAuditFromDetail() {
+    const hidden = document.getElementById('admMemDetailUserId');
+    const userId = hidden ? hidden.value : '';
+    if (!userId) {
+      this.showToast('Data member tidak ditemukan dalam sistem.', 'error');
+      return;
+    }
+    this.openProfitAuditModal(userId);
+  },
+
+  closeProfitAuditModal() {
+    this.closeModal('adminProfitAuditModal');
+    this.profitAuditUserId = '';
+  },
+
+  async loadProfitAudit() {
+    const summaryBox = document.getElementById('admProfitAuditSummary');
+    const listBox = document.getElementById('admProfitAuditList');
+    const btn = document.getElementById('admProfitRepairBtn');
+    if (summaryBox) summaryBox.innerHTML = '<span style="color:#94A3B8;">⏳ Memeriksa perhitungan profit...</span>';
+    if (listBox) listBox.innerHTML = '';
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; }
+
+    try {
+      const res = await Admin.profitAudit(this.profitAuditUserId);
+      if (!res || !res.success) {
+        if (summaryBox) summaryBox.innerHTML = '<span style="color:#F87171;">❌ ' + escapeHtml((res && res.message) || 'Gagal memeriksa data profit.') + '</span>';
+        return;
+      }
+      const s = res.summary || {};
+      const users = Array.isArray(res.users) ? res.users : [];
+      const chip = (label, val, color) => '<span style="display:inline-block; padding:4px 9px; border-radius:999px; font-size:11px; font-weight:700; background:' + color + '1A; border:1px solid ' + color + '55; color:' + color + '; margin:0 6px 6px 0;">' + label + ': ' + val + '</span>';
+      const totalIssues = (s.rateMismatch || 0) + (s.pendingMismatch || 0) + (s.totalMismatch || 0) + (s.outOfRange || 0) + (s.noHistory || 0);
+
+      if (summaryBox) {
+        summaryBox.innerHTML =
+          (totalIssues === 0
+            ? '<div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.4); border-radius:10px; padding:10px 12px; color:#4ADE80; font-size:12px; font-weight:700;">✅ Tidak ada ketidakcocokan perhitungan profit. Nominal sudah sesuai persen paket.</div>'
+            : '<div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:10px 12px; color:#FCD34D; font-size:12px; font-weight:700;">⚠️ Ditemukan ' + totalIssues + ' temuan pada ' + users.length + ' member. Tinjau daftar di bawah.</div>') +
+          '<div style="margin-top:10px;">' +
+            chip('Paket diperiksa', s.investments || 0, '#38BDF8') +
+            chip('Nominal ≠ persen', s.rateMismatch || 0, '#F59E0B') +
+            chip('Pending ≠ riwayat', s.pendingMismatch || 0, '#A855F7') +
+            chip('Total ≠ riwayat', s.totalMismatch || 0, '#F87171') +
+            chip('Di luar rentang paket', s.outOfRange || 0, '#EF4444') +
+            chip('Tanpa riwayat', s.noHistory || 0, '#94A3B8') +
+          '</div>';
+      }
+
+      if (listBox) {
+        if (users.length === 0) {
+          listBox.innerHTML = '<div style="padding:14px; font-size:12px; color:#64748B;">Tidak ada member dengan data profit yang perlu diperbaiki.</div>';
+        } else {
+          listBox.innerHTML = users.map(u => {
+            const issues = (u.issues || []).map(i =>
+              '<div style="display:flex; gap:6px; padding:4px 0; font-size:11.5px; line-height:1.5; color:#CBD5E1;">' +
+              '<span style="color:#F59E0B;">•</span><span>' + escapeHtml(i.detail || i.type || '') +
+              (i.plan ? ' <span style="color:#64748B;">(' + escapeHtml(i.plan) + ')</span>' : '') + '</span></div>'
+            ).join('');
+            return '<div style="border:1px solid rgba(148,163,184,0.25); border-radius:10px; padding:9px 11px; margin-bottom:8px; background:rgba(15,23,42,0.7);">' +
+              '<div style="font-size:12px; font-weight:800; color:#38BDF8;">@' + escapeHtml(u.username || '-') +
+              ' <span style="color:#64748B; font-weight:600;">· ' + (u.issues || []).length + ' temuan</span></div>' +
+              issues + '</div>';
+          }).join('');
+        }
+      }
+
+      if (btn) {
+        btn.disabled = users.length === 0;
+        btn.style.opacity = users.length === 0 ? '0.55' : '1';
+      }
+    } catch (e) {
+      if (summaryBox) summaryBox.innerHTML = '<span style="color:#F87171;">❌ ' + escapeHtml(e.message || 'Gagal memeriksa data profit.') + '</span>';
+    }
+  },
+
+  async repairProfitData() {
+    const target = this.profitAuditUserId ? 'member ini' : 'SEMUA member';
+    if (!confirm(`Perbaiki data profit ${target} sekarang?\n\nYang diubah: persen & nominal pada riwayat profit serta nilai pending yang akan dibayar.\nYang TIDAK diubah: saldo, total profit, sisa hari paket, dan transaksi yang sudah ada.`)) return;
+    const btn = document.getElementById('admProfitRepairBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Memperbaiki...'; }
+    try {
+      const res = await Admin.repairProfitData(this.profitAuditUserId);
+      if (res && res.success) {
+        const s = res.summary || {};
+        this.showToast(`Perbaikan selesai: ${s.fixedRows || 0} paket diperbaiki, ${s.fixedPending || 0} nilai pending diselaraskan.`, 'success');
+        try { await DB.syncFromCloud(); } catch (e) {}
+        this.renderAll();
+        await this.loadProfitAudit();
+      } else {
+        this.showToast((res && res.message) || 'Gagal memperbaiki data profit.', 'error');
+      }
+    } catch (e) {
+      this.showToast('Gagal memperbaiki data profit: ' + (e.message || 'koneksi error'), 'error');
+    } finally {
+      if (btn) { btn.textContent = '🛠️ Perbaiki Data Profit'; }
+    }
   },
 
   // 8. Signals Table
@@ -1721,17 +2154,17 @@ export const AdminPage = {
         <tr>
           <td><strong style="font-family: var(--font-mono); color: #38BDF8;">${r.id}</strong></td>
           <td><span style="font-size:11px; color:#94A3B8;">${DB.formatWibDateTime(r.createdAt)} WIB</span></td>
-          <td><strong style="color: #FFFFFF;">${r.username}</strong></td>
+          <td><strong style="color: #FFFFFF;">${escapeHtml(r.username)}</strong></td>
           <td>
-            <div style="font-weight: 700; color: #FFFFFF; font-size: 13px;">${r.rewardTitle}</div>
-            ${r.note ? `<div style="font-size: 10.5px; color: #E5A83B; margin-top: 2px;">Catatan: ${r.note}</div>` : ''}
+            <div style="font-weight: 700; color: #FFFFFF; font-size: 13px;">${escapeHtml(r.rewardTitle)}</div>
+            ${r.note ? `<div style="font-size: 10.5px; color: #E5A83B; margin-top: 2px;">Catatan: ${escapeHtml(r.note)}</div>` : ''}
           </td>
           <td>
             <span style="font-family: var(--font-mono); font-weight: 800; color: #E5A83B;">${r.pointsSpent} Poin</span>
           </td>
           <td>
-            <div style="font-size: 12px; color: #FFFFFF; font-weight: 600;">${r.targetContact || '-'}</div>
-            ${r.deliveryAddress ? `<div style="font-size: 10.5px; color: #94A3B8; margin-top: 2px; line-height: 1.3;">${r.deliveryAddress}</div>` : ''}
+            <div style="font-size: 12px; color: #FFFFFF; font-weight: 600;">${escapeHtml(r.targetContact || '-')}</div>
+            ${r.deliveryAddress ? `<div style="font-size: 10.5px; color: #94A3B8; margin-top: 2px; line-height: 1.3;">${escapeHtml(r.deliveryAddress)}</div>` : ''}
           </td>
           <td>${statusBadge}</td>
           <td>${actionsHtml}</td>
@@ -2012,16 +2445,52 @@ export const AdminPage = {
     const pagedTxs = sortedTxs.slice(startIdx, startIdx + perPage);
 
     txBody.innerHTML = pagedTxs.map(t => {
-      let isPlus = t.type === 'deposit' || t.type === 'bonus' || t.type === 'reward' || t.type === 'profit_claim' || t.type === 'sponsor_bonus' || t.type === 'rabat_bonus' || t.type === 'capital_return';
+      const isCheckIn = (t.id && t.id.startsWith('TX-CHK-')) || 
+                        t.type === 'checkin' || 
+                        t.type === 'daily_checkin' || 
+                        t.type === 'check_in' || 
+                        (t.paymentMethod && t.paymentMethod.toLowerCase().includes('absen')) || 
+                        (t.note && t.note.toLowerCase().includes('absen'));
+
+      const isMemberTransferIn = t.type === 'member_transfer' || 
+                                 t.type === 'member_transfer_in' || 
+                                 (t.id && String(t.id).startsWith('TRX-TRFI-')) || 
+                                 (t.note && t.note.toLowerCase().includes('terima transfer'));
+
+      const isMemberTransferOut = t.type === 'member_transfer_out' || 
+                                  (t.id && String(t.id).startsWith('TRX-TRFO-')) || 
+                                  (t.note && t.note.toLowerCase().includes('transfer saldo ke member'));
+
+      let isPlus = !isMemberTransferOut && (
+                   t.type === 'deposit' || 
+                   t.type === 'bonus' || 
+                   t.type === 'reward' || 
+                   t.type === 'profit_claim' || 
+                   t.type === 'sponsor_bonus' || 
+                   t.type === 'rabat_bonus' || 
+                   t.type === 'leader_bonus' || 
+                   (t.id && t.id.startsWith('TRX-LDR-')) || 
+                   t.type === 'capital_return' || 
+                   t.type === 'affiliate_transfer' || 
+                   isMemberTransferIn || 
+                   isCheckIn
+      );
       let color = isPlus ? '#4ADE80' : '#F87171';
       let sign = isPlus ? '+' : '-';
+      let typeLabel = isCheckIn ? 'ABSENSI' : 
+                      (isMemberTransferIn ? 'P2P MASUK' : 
+                      (isMemberTransferOut ? 'P2P KELUAR' : (t.type || 'trx').toUpperCase()));
+      let badgeStyle = isCheckIn ? 'style="background:rgba(34,197,94,0.2); color:#4ADE80; border:1px solid rgba(34,197,94,0.45);"' : 
+                       (isMemberTransferIn ? 'style="background:rgba(34,197,94,0.2); color:#4ADE80; border:1px solid rgba(34,197,94,0.45);"' : 
+                       (isMemberTransferOut ? 'style="background:rgba(239,68,68,0.2); color:#F87171; border:1px solid rgba(239,68,68,0.45);"' : ''));
+
       return `
         <tr>
           <td><strong style="font-family:var(--font-mono); font-size:11px; color:#38BDF8;">${t.id}</strong></td>
-          <td><span class="badge-status ${t.status || 'approved'}">${(t.type || 'trx').toUpperCase()}</span></td>
-          <td><strong style="color:${color}; font-family:var(--font-mono);">${sign}${DB.formatIDR(t.amount)}</strong></td>
-          <td style="font-size:11px; max-width:220px; line-height:1.3; color:#E2E8F0;">${t.note || t.paymentMethod || '-'}</td>
-          <td><span class="badge-status ${t.status || 'approved'}">${t.status || 'approved'}</span></td>
+          <td><span class="badge-status ${t.status || 'approved'}" ${badgeStyle}>${typeLabel}</span></td>
+          <td><strong style="color:${color}; font-family:var(--font-mono);">${sign}${DB.formatIDR(Math.abs(t.amount))}</strong></td>
+          <td style="font-size:11px; max-width:220px; line-height:1.3; color:#E2E8F0;">${escapeHtml(t.note || t.paymentMethod || '-')}</td>
+          <td><span class="badge-status ${t.status === 'awaiting_payment' ? 'awaiting_payment' : (t.status || 'approved')}">${t.status === 'awaiting_payment' ? 'MENUNGGU TRANSFER' : escapeHtml(t.status || 'approved')}</span></td>
           <td style="font-size:10.5px; color:#94A3B8;">${DB.formatWibDateTime(t.createdAt)} WIB</td>
         </tr>
       `;
@@ -2033,6 +2502,15 @@ export const AdminPage = {
   // Actions
   switchTab(tabId) {
     if (!tabId || !this.tabTitles[tabId]) return;
+
+    // "Konfigurasi Email & OTP" kini menjadi sub-tab di dalam "Pengaturan Web".
+    // Hash/tab lama (#email_settings) tetap diarahkan ke lokasi barunya.
+    if (tabId === 'email_settings') {
+      this.switchTab('pengaturan');
+      this.switchSettingsTab('email');
+      return;
+    }
+
     this.currentTab = tabId;
 
     try {
@@ -2092,16 +2570,35 @@ export const AdminPage = {
     this.closeSidebar();
   },
 
-  logout() {
+  async logout() {
     if (!confirm('Apakah Anda yakin ingin keluar (logout) dari panel Admin AUTOTRADING?')) return;
-    Auth.logout();
-    this.showToast('Logout admin berhasil. Mengalihkan ke halaman utama...', 'success');
-    setTimeout(() => {
-      window.location.href = './';
-    }, 600);
+
+    // Purge admin-only leftovers so no stale admin state survives in this browser:
+    // last active tab, session storage, and any impersonation keys.
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('autotrading_admin_tab');
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('autotrading_admin_tab');
+        localStorage.removeItem('autotrading_is_impersonating');
+        localStorage.removeItem('autotrading_impersonated_target');
+        localStorage.removeItem('autotrading_impersonator_token');
+        localStorage.removeItem('autotrading_impersonator_user');
+      }
+    } catch (e) {}
+
+    // Await the server-side logout so the httpOnly session cookie is destroyed
+    // before anything can read it back (action=get would restore currentUser).
+    try { await Auth.logout(); } catch (e) { try { Auth.logout(); } catch (e2) {} }
+    try { this.closeAllModals(); } catch (e) {}
+
+    // Stay on /admin and show the admin login gate. Never bounce to the member
+    // area (previously `window.location.href = './'`).
+    this.currentTab = 'dashboard';
+    this.checkAdminAuth();
+    this.showToast('Logout admin berhasil. Silakan login kembali Administrator.', 'success');
   },
 
-  triggerDailyProfit() {
+  async triggerDailyProfit() {
     const marketStatus = Plans.isWeekendMarketClosed();
     let force = false;
     if (marketStatus.closed) {
@@ -2110,10 +2607,12 @@ export const AdminPage = {
       force = true;
     }
 
-    const res = Admin.triggerProfitYield(force);
-    if (res.updatedCount > 0) {
+    // WAJIB di-await: tanpa await, res adalah Promise sehingga updatedCount selalu
+    // undefined dan admin selalu melihat pesan "tidak ada paket" padahal yield jalan.
+    const res = await Admin.triggerProfitYield(force);
+    if (res && res.updatedCount > 0) {
       this.showToast(`Sukses mendistribusikan dividen profit ke ${res.updatedCount} paket investasi aktif (Total: ${DB.formatIDR(res.totalYielded)})!`, 'success');
-    } else if (res.isWeekendClosed) {
+    } else if (res && res.isWeekendClosed) {
       this.showToast(res.message || 'Pasar libur akhir pekan (Sabtu & Minggu).', 'info');
     } else {
       this.showToast('Tidak ada paket aktif yang siap menerima dividen baru saat ini (semua paket sudah menerima dividen hari ini atau telah selesai).', 'info');
@@ -2193,10 +2692,43 @@ export const AdminPage = {
   },
 
   async approveWithdraw(id) {
+    // A withdrawal can never be paid out without a known destination.
+    const db = DB.get();
+    const trx = (db.transactions || []).find(t => t.id === id);
+    if (trx && trx.type === 'withdraw') {
+      const info = this.getWithdrawBankInfo(trx, db);
+      if (!info.complete) {
+        this.showToast(`Rekening tujuan @${trx.username || 'member'} belum lengkap. Lengkapi dulu sebelum menyetujui penarikan.`, 'error');
+        if (info.userId) this.openEditUserModal(info.userId);
+        return;
+      }
+    }
     const res = await Admin.approveWithdrawal(id);
     if (res.success) {
       this.showToast(res.message, 'success');
       this.renderAll();
+    } else {
+      this.showToast((res && res.message) || 'Gagal menyetujui penarikan.', 'error');
+    }
+  },
+
+  // Reconcile bank details of every member (users table <-> WD transactions)
+  async syncBankDetails() {
+    this.showToast('Memeriksa data rekening seluruh member...', 'info');
+    const res = await Admin.syncBankDetails();
+    if (res && res.success) {
+      const missing = Array.isArray(res.stillMissing) ? res.stillMissing : [];
+      const pendingMissing = Number(res.pendingMissing) || 0;
+      let msg = res.message || 'Sinkronisasi rekening selesai.';
+      if (pendingMissing > 0) {
+        msg += ` ⚠️ ${pendingMissing} penarikan tertunda masih tanpa rekening lengkap.`;
+      } else if (missing.length) {
+        msg += ` ${missing.length} member belum mengisi rekening (tidak ada penarikan tertunda).`;
+      }
+      this.showToast(msg, pendingMissing > 0 ? 'error' : (missing.length ? 'info' : 'success'));
+      this.renderAll();
+    } else {
+      this.showToast((res && res.message) || 'Gagal sinkronisasi rekening.', 'error');
     }
   },
 
@@ -2349,6 +2881,27 @@ export const AdminPage = {
       badgeEl.textContent = isEnabled ? '🟢 PPOB AKTIF' : '🔴 PPOB NONAKTIF';
       badgeEl.className = `badge-status ${isEnabled ? 'approved' : 'rejected'}`;
     }
+
+    // --- Second admin panel (gateway subtab): master/pulsa/pln/fee + mirrored controls
+    const masterEl = document.getElementById('ppobCfgMasterEnabled');
+    if (masterEl) masterEl.value = String(ppob.enabled !== false);
+
+    const pulsaEl = document.getElementById('ppobCfgPulsaEnabled');
+    if (pulsaEl) pulsaEl.value = String(ppob.pulsaEnabled !== false);
+
+    const plnEl = document.getElementById('ppobCfgPlnEnabled');
+    if (plnEl) plnEl.value = String(ppob.plnEnabled !== false);
+
+    const feeEl = document.getElementById('ppobCfgAdminFee');
+    if (feeEl) feeEl.value = Number(ppob.adminFee) || 0;
+
+    const showStatusB = document.getElementById('ppobCfgShowStatusB');
+    if (showStatusB) showStatusB.value = ppob.showProcessStatus !== false ? 'true' : 'false';
+
+    const noticeB = document.getElementById('ppobCfgNoticeB');
+    if (noticeB) noticeB.value = ppob.notice || '';
+
+    this.previewPpobSettings();
   },
 
   async savePpobSettings() {
@@ -2356,15 +2909,31 @@ export const AdminPage = {
     db.settings = db.settings || {};
     const existingPpob = db.settings.ppob || {};
 
-    const p10 = Number(document.getElementById('ppobCfgPrice10')?.value) || Number(document.getElementById('ppobSysCfgPrice10')?.value) || existingPpob.pricing?.[10000] || 12000;
-    const p20 = Number(document.getElementById('ppobCfgPrice20')?.value) || Number(document.getElementById('ppobSysCfgPrice20')?.value) || existingPpob.pricing?.[20000] || 22000;
-    const p50 = Number(document.getElementById('ppobCfgPrice50')?.value) || Number(document.getElementById('ppobSysCfgPrice50')?.value) || existingPpob.pricing?.[50000] || 52000;
-    const p100 = Number(document.getElementById('ppobCfgPrice100')?.value) || Number(document.getElementById('ppobSysCfgPrice100')?.value) || existingPpob.pricing?.[100000] || 102000;
+    // The same setting appears in two admin panels (wallet & gateway subtabs).
+    // Read the control from the panel the admin is actually viewing so edits in
+    // the second panel are never ignored.
+    const readVisible = (idA, idB) => {
+      const a = document.getElementById(idA);
+      const b = idB ? document.getElementById(idB) : null;
+      const visible = (el) => !!el && el.offsetParent !== null;
+      if (b && visible(b) && !(a && visible(a))) return b.value;
+      if (a) return a.value;
+      return b ? b.value : '';
+    };
+
+    const p10 = Number(readVisible('ppobCfgPrice10', 'ppobSysCfgPrice10')) || existingPpob.pricing?.[10000] || 12000;
+    const p20 = Number(readVisible('ppobCfgPrice20', 'ppobSysCfgPrice20')) || existingPpob.pricing?.[20000] || 22000;
+    const p50 = Number(readVisible('ppobCfgPrice50', 'ppobSysCfgPrice50')) || existingPpob.pricing?.[50000] || 52000;
+    const p100 = Number(readVisible('ppobCfgPrice100', 'ppobSysCfgPrice100')) || existingPpob.pricing?.[100000] || 102000;
 
     const globalEl = document.getElementById('ppobCfgGlobalEnabled');
     const masterEl = document.getElementById('ppobCfgMasterEnabled');
+    const visGlobal = !!globalEl && globalEl.offsetParent !== null;
+    const visMaster = !!masterEl && masterEl.offsetParent !== null;
     let enabled = true;
-    if (globalEl) enabled = globalEl.value === 'true';
+    if (visGlobal) enabled = globalEl.value === 'true';
+    else if (visMaster) enabled = masterEl.value === 'true';
+    else if (globalEl) enabled = globalEl.value === 'true';
     else if (masterEl) enabled = masterEl.value === 'true';
     else if (existingPpob.enabled !== undefined) enabled = existingPpob.enabled;
 
@@ -2374,14 +2943,16 @@ export const AdminPage = {
     const plnEl = document.getElementById('ppobCfgPlnEnabled');
     const plnEnabled = plnEl ? plnEl.value === 'true' : (existingPpob.plnEnabled !== false);
 
-    const showStatusEl = document.getElementById('ppobCfgShowStatus');
-    const showProcessStatus = showStatusEl ? showStatusEl.value === 'true' : (existingPpob.showProcessStatus !== false);
+    const showStatusVal = readVisible('ppobCfgShowStatus', 'ppobCfgShowStatusB');
+    const showProcessStatus = (showStatusVal === 'true' || showStatusVal === 'false')
+      ? showStatusVal === 'true'
+      : (existingPpob.showProcessStatus !== false);
 
     const adminFeeEl = document.getElementById('ppobCfgAdminFee');
     const adminFee = adminFeeEl ? Math.max(0, parseInt(adminFeeEl.value || '0', 10) || 0) : (existingPpob.adminFee || 0);
 
-    const noticeEl = document.getElementById('ppobCfgNotice');
-    const notice = (noticeEl?.value || existingPpob.notice || 'Pengisian pulsa seluler dan token listrik PLN diproses manual oleh Admin maksimal 1x24 jam.').trim();
+    const noticeVal = (readVisible('ppobCfgNotice', 'ppobCfgNoticeB') || '').trim();
+    const notice = (noticeVal || existingPpob.notice || 'Pengisian pulsa seluler dan token listrik PLN diproses manual oleh Admin maksimal 1x24 jam.').trim();
 
     db.settings.ppob = {
       ...existingPpob,
@@ -2424,6 +2995,35 @@ export const AdminPage = {
 
     this.showToast('Pengaturan komisi sponsor & rabat level berhasil disimpan ke database!', 'success');
     this.renderAll();
+  },
+
+  // Sinkronisasi menyeluruh: absensi, sisa hari & profit paket, dan rabat
+  // seluruh member (lama maupun baru) dari ledger MySQL + setting admin.
+  async runDataSync() {
+    const btn = document.getElementById('btnAdminDataSync');
+    const box = document.getElementById('dataSyncResult');
+    const originalLabel = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳ Menyinkronkan...</span>'; }
+    try {
+      const res = await DB.adminSyncIntegrity();
+      if (res && res.success) {
+        const s = res.summary || {};
+        this.showToast(res.message || 'Sinkronisasi data member selesai.', 'success');
+        if (box) {
+          const details = Array.isArray(s.details) ? s.details : [];
+          box.innerHTML = `<li><strong style="color:#22C55E;">✔ ${Number(s.checkins) || 0} absensi, ${Number(s.investments) || 0} paket, ${Number(s.rabat) || 0} rabat diselaraskan.</strong></li>`
+            + details.slice(0, 20).map(d => `<li>• ${escapeHtml(String(d))}</li>`).join('');
+          box.style.display = 'block';
+        }
+        this.renderAll();
+      } else {
+        this.showToast((res && res.message) || 'Gagal sinkronisasi data member.', 'error');
+      }
+    } catch (e) {
+      this.showToast('Gagal sinkronisasi: ' + e.message, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+    }
   },
 
   async saveLeaderMilestonesSettings() {
@@ -2748,7 +3348,7 @@ export const AdminPage = {
 
   async savePlanModal() {
     const id = document.getElementById('planModalId').value;
-    const name = document.getElementById('planModalName').value;
+    const name = document.getElementById('planModalName').value.trim();
     const minDeposit = Number(document.getElementById('planModalMin').value);
     const maxDeposit = Number(document.getElementById('planModalMax').value);
     const minDailyProfit = parseFloat(document.getElementById('planModalMinRate').value);
@@ -2759,10 +3359,23 @@ export const AdminPage = {
       this.showToast('Nama paket wajib diisi!', 'error');
       return;
     }
+    if (!(minDeposit > 0) || !(maxDeposit > 0) || maxDeposit < minDeposit) {
+      this.showToast('Deposit minimal/maksimal tidak valid (maksimal harus ≥ minimal)!', 'error');
+      return;
+    }
+    if (!(minDailyProfit >= 0) || !(maxDailyProfit > 0) || maxDailyProfit < minDailyProfit) {
+      this.showToast('Range profit harian tidak valid (maksimal harus ≥ minimal)!', 'error');
+      return;
+    }
+    if (!(durationDays > 0)) {
+      this.showToast('Durasi kontrak (hari) wajib diisi!', 'error');
+      return;
+    }
 
     this.showToast('Menyimpan paket investasi ke database...', 'info');
     await Admin.savePlan({
-      id: id || undefined,
+      // Only send an id when EDITING — an empty id must never reach savePlan
+      ...(id ? { id } : {}),
       name,
       minDeposit,
       maxDeposit,
@@ -2771,8 +3384,49 @@ export const AdminPage = {
       durationDays
     });
 
+    // Re-read the authoritative plan list before claiming success: a save is
+    // only complete when MySQL actually returns the updated contract.
+    await DB.syncFromCloud(true).catch(() => {});
+    const savedPlans = DB.get().plans || [];
+    const saved = savedPlans.find(p => (id ? p.id === id : p.name === name));
+    if (!saved || Number(saved.durationDays) !== durationDays) {
+      this.showToast('Paket gagal tersimpan di database. Silakan simpan ulang.', 'error');
+      return;
+    }
+
     this.closeModal('adminPlanModal');
     this.showToast('Paket investasi berhasil disimpan ke database!', 'success');
+    this.renderAll();
+  },
+
+  async deletePlan(planId) {
+    const db = DB.get();
+    const plan = (db.plans || []).find(p => p.id === planId);
+    if (!plan) {
+      this.showToast('Paket tidak ditemukan!', 'error');
+      return;
+    }
+    const activeInvestors = (db.investments || []).filter(i => i.planId === planId && i.status === 'active').length;
+    if (activeInvestors > 0) {
+      this.showToast(`Tidak dapat menghapus paket "${plan.name}": masih ada ${activeInvestors} investor aktif dengan kontrak berjalan.`, 'error');
+      return;
+    }
+    if (!confirm(`Hapus paket investasi "${plan.name}"?\nPaket akan hilang dari katalog member.`)) {
+      return;
+    }
+    const res = await Admin.deletePlan(planId);
+    if (res && res.success === false) {
+      this.showToast(res.message || 'Gagal menghapus paket.', 'error');
+      return;
+    }
+    // Confirm against MySQL: deleting must be visible on the server, not only
+    // in this browser tab, before reporting success.
+    await DB.syncFromCloud(true).catch(() => {});
+    if ((DB.get().plans || []).some(p => p.id === planId)) {
+      this.showToast('Paket masih ada di database. Silakan coba hapus lagi.', 'error');
+      return;
+    }
+    this.showToast(res && res.message ? res.message : 'Paket investasi berhasil dihapus.', 'success');
     this.renderAll();
   },
 
@@ -2818,6 +3472,56 @@ export const AdminPage = {
     document.getElementById('adminUserBankHolder').value = bank.accountHolder || '';
 
     this.openModal('adminUserModal');
+  },
+
+  loginAsUserFromDetail() {
+    const userId = document.getElementById('admMemDetailUserId')?.value;
+    const username = document.getElementById('admMemDetailUsername')?.textContent || '';
+    if (!userId) return;
+    this.closeModal('adminMemberDetailModal');
+    this.loginAsUser(userId, username);
+  },
+
+  async loginAsUser(userId, username) {
+    if (!confirm(`Apakah Anda yakin ingin login sebagai member @${username}?\n\nAnda akan dialihkan ke tampilan akun member untuk memeriksa saldo, portofolio, dan transaksi. Anda dapat kembali ke panel admin kapan saja melalui tombol di bagian atas layar.`)) {
+      return;
+    }
+
+    this.showToast(`Memproses login sebagai @${username}...`, 'info');
+
+    // Backup current admin session so we can return easily
+    const adminToken = Auth.getSessionToken() || localStorage.getItem('autotrading_session_token') || '';
+    const adminUser = DB.getCurrentUser();
+
+    const res = await Admin.loginAsUser(userId);
+    if (res && res.success && res.sessionToken) {
+      // Save impersonator state
+      localStorage.setItem('autotrading_impersonator_token', adminToken);
+      if (adminUser) {
+        localStorage.setItem('autotrading_impersonator_user', JSON.stringify(adminUser));
+      }
+      localStorage.setItem('autotrading_is_impersonating', 'true');
+      localStorage.setItem('autotrading_impersonated_target', res.user?.username || username);
+
+      // Activate member session
+      localStorage.setItem('autotrading_session_token', res.sessionToken);
+      sessionStorage.setItem('autotrading_session_token', res.sessionToken);
+      localStorage.setItem('autotrading_session_user_id', res.user.id);
+      sessionStorage.setItem('autotrading_session_user_id', res.user.id);
+
+      const db = DB.get();
+      db.currentUser = res.user;
+      if (Array.isArray(res.investments)) db.investments = res.investments;
+      if (Array.isArray(res.transactions)) db.transactions = res.transactions;
+      DB.setSession(res.user);
+
+      this.showToast(`Login berhasil! Membuka dashboard member @${username}...`, 'success');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 500);
+    } else {
+      this.showToast((res && res.message) || 'Gagal login sebagai member', 'error');
+    }
   },
 
   openEditUserModalFromDetail() {
@@ -3089,9 +3793,9 @@ export const AdminPage = {
       if (authUser) sessionStorage.setItem('autotrading_admin_user', authUser);
       if (authRole) sessionStorage.setItem('autotrading_admin_role', authRole);
 
-      // Re-fetch backend
-      if (typeof DB !== 'undefined' && DB.fetchFromBackend) {
-        await DB.fetchFromBackend();
+      // Re-fetch authoritative state from the backend (forced, bypasses ETag cache)
+      if (typeof DB !== 'undefined' && typeof DB.syncFromCloud === 'function') {
+        await DB.syncFromCloud(true);
       }
       this.renderAll();
       this.showToast('✅ Cache browser & storage lokal berhasil dibersihkan!', 'success');
@@ -4258,6 +4962,11 @@ export const AdminPage = {
     if (tab === 'backup') {
       this.refreshBackupStats();
     }
+
+    if (tab === 'email') {
+      // Muat ulang nilai email terbaru (SMTP, OTP, notifikasi) saat sub-tab dibuka
+      this.renderEmailSettings(DB.get());
+    }
   },
 
   /** Load current settings values into Pengaturan form fields */
@@ -4346,21 +5055,30 @@ export const AdminPage = {
     const social = { ...(cfg.social || {}) };
     const maint = { ...(cfg.maintenance || {}) };
 
+    // Empty input means "clear this field", not "keep the previous value".
+    // Read the field itself whenever it is rendered; only fall back when the
+    // element is absent (e.g. saving from another settings tab).
+    const readField = (id, fallback) => {
+      const el = document.getElementById(id);
+      if (!el) return fallback;
+      return String(el.value == null ? '' : el.value).trim();
+    };
+
     // Tab 1: Identitas
-    const appName = document.getElementById('cfgSiteAppName')?.value.trim() || cfg.appName || 'AUTOTRADING';
+    const appName = readField('cfgSiteAppName', '') || cfg.appName || 'AUTOTRADING';
     ws.appName = appName;
-    ws.tagline = document.getElementById('cfgSiteTagline')?.value.trim() || ws.tagline || '';
-    ws.domain = document.getElementById('cfgSiteDomain')?.value.trim() || ws.domain || '';
-    ws.companyName = document.getElementById('cfgSiteCompanyName')?.value.trim() || ws.companyName || '';
-    ws.contactEmail = document.getElementById('cfgSiteContactEmail')?.value.trim() || ws.contactEmail || '';
-    ws.whatsapp = document.getElementById('cfgSiteWhatsapp')?.value.trim() || ws.whatsapp || '';
-    ws.copyright = document.getElementById('cfgSiteCopyright')?.value.trim() || ws.copyright || '';
+    ws.tagline = readField('cfgSiteTagline', ws.tagline || '');
+    ws.domain = readField('cfgSiteDomain', ws.domain || '');
+    ws.companyName = readField('cfgSiteCompanyName', ws.companyName || '');
+    ws.contactEmail = readField('cfgSiteContactEmail', ws.contactEmail || '');
+    ws.whatsapp = readField('cfgSiteWhatsapp', ws.whatsapp || '');
+    ws.copyright = readField('cfgSiteCopyright', ws.copyright || '');
 
     // Tab 2: Tampilan & Logo
-    const logoUrl = document.getElementById('cfgLogoUrl')?.value.trim();
-    if (logoUrl !== undefined) ws.logoUrl = logoUrl;
-    const faviconUrl = document.getElementById('cfgFaviconUrl')?.value.trim();
-    if (faviconUrl !== undefined) ws.faviconUrl = faviconUrl;
+    const logoEl = document.getElementById('cfgLogoUrl');
+    if (logoEl) ws.logoUrl = String(logoEl.value || '').trim();
+    const faviconEl = document.getElementById('cfgFaviconUrl');
+    if (faviconEl) ws.faviconUrl = String(faviconEl.value || '').trim();
 
     ws.colorPrimary = document.getElementById('cfgColorPrimaryHex')?.value.trim() || document.getElementById('cfgColorPrimary')?.value || ws.colorPrimary || '#C89338';
     ws.colorBg = document.getElementById('cfgColorBgHex')?.value.trim() || document.getElementById('cfgColorBg')?.value || ws.colorBg || '#0B0F19';
@@ -4368,23 +5086,23 @@ export const AdminPage = {
     ws.displayMode = document.getElementById('cfgDisplayMode')?.value || ws.displayMode || 'dark';
 
     // Tab 3: SEO
-    seo.title = document.getElementById('cfgSeoTitle')?.value.trim() || seo.title || '';
-    seo.description = document.getElementById('cfgSeoDescription')?.value.trim() || seo.description || '';
-    seo.keywords = document.getElementById('cfgSeoKeywords')?.value.trim() || seo.keywords || '';
-    seo.robots = document.getElementById('cfgSeoRobots')?.value || seo.robots || 'index, follow';
-    seo.gaId = document.getElementById('cfgGoogleAnalyticsId')?.value.trim() || seo.gaId || '';
+    seo.title = readField('cfgSeoTitle', seo.title || '');
+    seo.description = readField('cfgSeoDescription', seo.description || '');
+    seo.keywords = readField('cfgSeoKeywords', seo.keywords || '');
+    seo.robots = readField('cfgSeoRobots', '') || seo.robots || 'index, follow';
+    seo.gaId = readField('cfgGoogleAnalyticsId', seo.gaId || '');
 
     // Tab 4: Social
-    social.telegram = document.getElementById('cfgSocialTelegram')?.value.trim() || social.telegram || '';
-    social.instagram = document.getElementById('cfgSocialInstagram')?.value.trim() || social.instagram || '';
-    social.tiktok = document.getElementById('cfgSocialTiktok')?.value.trim() || social.tiktok || '';
-    social.youtube = document.getElementById('cfgSocialYoutube')?.value.trim() || social.youtube || '';
-    social.twitter = document.getElementById('cfgSocialTwitter')?.value.trim() || social.twitter || '';
-    social.facebook = document.getElementById('cfgSocialFacebook')?.value.trim() || social.facebook || '';
+    social.telegram = readField('cfgSocialTelegram', social.telegram || '');
+    social.instagram = readField('cfgSocialInstagram', social.instagram || '');
+    social.tiktok = readField('cfgSocialTiktok', social.tiktok || '');
+    social.youtube = readField('cfgSocialYoutube', social.youtube || '');
+    social.twitter = readField('cfgSocialTwitter', social.twitter || '');
+    social.facebook = readField('cfgSocialFacebook', social.facebook || '');
 
     // Tab 5: Maintenance
     maint.enabled = document.getElementById('cfgMaintenanceEnabled')?.value === 'true';
-    maint.message = document.getElementById('cfgMaintenanceMessage')?.value.trim() || maint.message || '';
+    maint.message = readField('cfgMaintenanceMessage', maint.message || '');
 
     return {
       appName,
@@ -4421,9 +5139,67 @@ export const AdminPage = {
       this.applyThemeColors(payload.webSettings?.colorPrimary, payload.webSettings?.colorBg);
       await DB.syncFromCloud();
       this.renderWebSettings();
+      this.applyBrandLogo((DB.get().settings || {}).webSettings || {});
     } else {
       this.showToast((res && res.message) || 'Gagal menyimpan pengaturan web ke database!', 'error');
     }
+  },
+
+  /**
+   * Terapkan logo hasil upload ke header admin (sidebar + topbar).
+   * Logo menggantikan ikon/teks "AUTOTRADING"; saat logo dikosongkan atau
+   * gagal dimuat, tampilan kembali ke ikon + teks bawaan.
+   */
+  applyBrandLogo(webSettings) {
+    const db = DB.get();
+    const cfg = db.settings || {};
+    const ws = webSettings || cfg.webSettings || {};
+    const appName = cfg.appName || 'AUTOTRADING';
+    const logoUrl = String(ws.logoUrl || '').trim();
+
+    const sidebarImg = document.getElementById('adminSidebarLogoImg');
+    const sidebarBadge = document.getElementById('adminSidebarLogoBadge');
+    const sidebarName = document.getElementById('adminSidebarBrandName');
+    const sidebarRole = document.getElementById('adminSidebarBrandRole');
+    const topImg = document.getElementById('adminTopbarLogoImg');
+    const topIcon = document.getElementById('adminTopbarLogoIcon');
+    const topTitle = document.getElementById('adminTopbarTitle');
+
+    const showSidebarFallback = () => {
+      if (sidebarImg) { sidebarImg.style.display = 'none'; sidebarImg.removeAttribute('src'); }
+      if (sidebarBadge) sidebarBadge.style.display = 'flex';
+      if (sidebarName) { sidebarName.style.display = ''; sidebarName.textContent = appName; }
+      if (sidebarRole) sidebarRole.style.display = '';
+    };
+    const showTopbarFallback = () => {
+      if (topImg) { topImg.style.display = 'none'; topImg.removeAttribute('src'); }
+      if (topIcon) topIcon.style.display = 'flex';
+      if (topTitle) { topTitle.style.display = 'inline-block'; topTitle.textContent = appName; }
+    };
+
+    if (!logoUrl) {
+      showSidebarFallback();
+      showTopbarFallback();
+      return;
+    }
+
+    if (sidebarImg) {
+      sidebarImg.onerror = showSidebarFallback;
+      sidebarImg.src = logoUrl;
+      sidebarImg.style.display = 'block';
+    }
+    if (sidebarBadge) sidebarBadge.style.display = 'none';
+    if (sidebarName) sidebarName.style.display = 'none';
+    // Subtitle tidak muat bersebelahan dengan logo lebar di sidebar 295px
+    if (sidebarRole) sidebarRole.style.display = 'none';
+
+    if (topImg) {
+      topImg.onerror = showTopbarFallback;
+      topImg.src = logoUrl;
+      topImg.style.display = 'block';
+    }
+    if (topIcon) topIcon.style.display = 'none';
+    if (topTitle) topTitle.style.display = 'none';
   },
 
   /** Dynamic theme color applier */
@@ -4496,11 +5272,53 @@ export const AdminPage = {
         if (urlInput) urlInput.value = uploadRes.url;
         if (img) { img.src = uploadRes.url; img.style.display = ''; }
         if (ph)  { ph.style.display = 'none'; }
+
+        // Simpan otomatis ke pengaturan agar logo/favicon langsung aktif tanpa
+        // harus klik "Simpan Tampilan & Logo" lagi.
+        const isFavicon = urlInputId === 'cfgFaviconUrl';
+        const settingKey = isFavicon ? 'faviconUrl' : 'logoUrl';
         if (statusEl) {
-          statusEl.style.color = '#10B981';
-          statusEl.textContent = '✅ Berhasil disimpan di /uploads/ server!';
+          statusEl.style.color = '#F59E0B';
+          statusEl.textContent = '⏳ Menerapkan ke header admin & website...';
         }
-        this.showToast('✅ Gambar berhasil diunggah ke folder /uploads!', 'success');
+        let savedOk = false;
+        try {
+          const saveRes = await Admin.saveWebSettings({ webSettings: { [settingKey]: uploadRes.url } });
+          savedOk = !!(saveRes && saveRes.success);
+        } catch (saveErr) {
+          console.warn('Auto-save logo/favicon failed:', saveErr);
+        }
+
+        if (savedOk) {
+          await DB.syncFromCloud().catch(() => {});
+          if (isFavicon) {
+            let link = document.querySelector("link[rel*='icon']");
+            if (!link) {
+              link = document.createElement('link');
+              link.rel = 'shortcut icon';
+              document.head.appendChild(link);
+            }
+            link.href = uploadRes.url;
+            if (statusEl) {
+              statusEl.style.color = '#10B981';
+              statusEl.textContent = '✅ Favicon tersimpan & langsung aktif!';
+            }
+            this.showToast('✅ Favicon berhasil disimpan & langsung aktif!', 'success');
+          } else {
+            this.applyBrandLogo({ logoUrl: uploadRes.url });
+            if (statusEl) {
+              statusEl.style.color = '#10B981';
+              statusEl.textContent = '✅ Logo tersimpan & aktif di header admin + website!';
+            }
+            this.showToast('✅ Logo aktif di header admin & website, menggantikan teks!', 'success');
+          }
+        } else {
+          if (statusEl) {
+            statusEl.style.color = '#F59E0B';
+            statusEl.textContent = '⚠️ File terunggah. Klik "Simpan Tampilan & Logo" untuk menerapkan.';
+          }
+          this.showToast('File terunggah, klik Simpan untuk menerapkan.', 'info');
+        }
         return;
       } else {
         console.warn('Upload image API response error:', uploadRes);
@@ -4656,7 +5474,7 @@ export const AdminPage = {
   },
 
   /** Reset all web settings to default */
-  resetWebSettings() {
+  async resetWebSettings() {
     if (!confirm('Reset semua pengaturan web ke nilai default? Tindakan ini tidak dapat dibatalkan.')) return;
     const db = DB.get();
     db.settings.webSettings = {};
@@ -4665,6 +5483,9 @@ export const AdminPage = {
     db.settings.maintenance = {};
     DB.save(db);
     this.renderWebSettings();
+    // Web settings are server-authoritative: also push the reset through the dedicated
+    // settings endpoint, otherwise the next refresh would restore the previous values.
+    await this.saveAllWebSettings();
     this.showToast('🔄 Semua pengaturan web direset ke default!', 'success');
   },
 
@@ -5004,8 +5825,9 @@ export const AdminPage = {
           targetState.users.unshift(currentAdmin);
         }
 
-        // Save state to MySQL
-        await DB.save(targetState);
+        // Save state to MySQL. A restore is the one flow allowed to replace platform
+        // configuration (settings, banners, running text, signals, rewards) as a whole.
+        await DB.save(targetState, { allowConfigWrite: true });
         this.showToast('Data sistem berhasil dipulihkan 100%!', 'success');
         this.renderAll();
         this.refreshBackupStats(targetState);
@@ -5018,10 +5840,18 @@ export const AdminPage = {
     reader.readAsText(file);
   },
 
-};
-
-window.AdminPage = AdminPage;
-
-document.addEventListener('DOMContentLoaded', () => {
-  AdminPage.init();
 });
+
+if (typeof window !== 'undefined') {
+  window.AdminPage = AdminPage;
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      AdminPage.init();
+    });
+  } else {
+    AdminPage.init();
+  }
+}

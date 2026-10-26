@@ -7,6 +7,8 @@
     "deploy": "node scripts/cpanel-sync.mjs"
   },
   "dependencies": {
-    "basic-ftp": "^6.2.1"
+    "basic-ftp": "^6.2.1",
+    "bcryptjs": "^3.0.3",
+    "jsdom": "^24.0.0"
   }
 }

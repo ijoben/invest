@@ -114,6 +114,21 @@ export const Plans = {
     return { min, max };
   },
 
+  // Nominal profit dari modal & rate (basis point). Rumus ini identik dengan
+  // profitAmountFromRate() di api/index.php, sehingga server & klien tidak pernah
+  // menghasilkan nominal berbeda untuk rate yang sama.
+  computeProfitAmount(capital, rate) {
+    const bp = Math.round((Number(rate) || 0) * 100);
+    return Math.floor((Number(capital) || 0) * bp / 10000);
+  },
+
+  // Rate (%) yang benar-benar dibayar menurut nominalnya.
+  impliedRateFromAmount(amount, capital) {
+    const cap = Number(capital) || 0;
+    if (cap <= 0) return 0;
+    return parseFloat(((Number(amount) || 0) / cap * 100).toFixed(2));
+  },
+
   // True when this day already has a pending yield, so we never append a second
   // identical history row for the same contract day.
   _hasPendingHistoryForDay(inv, dayNo) {
@@ -131,7 +146,7 @@ export const Plans = {
     const cycleDurationMs = (db.settings.profitCycleDurationHours || 24) * 3600 * 1000;
     const todayWib = DB.getWibDateStr();
 
-    const user = db.users.find(u => u.id === userId);
+    const user = (db.users || []).find(u => u.id === userId);
     if (!user) return [];
 
     // Check if user has already claimed profit today
@@ -157,17 +172,51 @@ export const Plans = {
         }
       });
 
-      // 2. Strict T-1 rule: pendingProfitClaim ONLY includes yields from past days (date < todayWib) that have not been claimed
-      const pastPendingAmount = inv.history
-        .filter(h => {
-          const hIso = DB.parseDateToIso(h.date);
-          return hIso && hIso < todayWib && h.status === 'pending_claim';
-        })
-        .reduce((sum, h) => sum + (Number(h.amount) || 0), 0);
+      // 1b. Normalisasi rate <-> nominal supaya "persen profit" yang tampil selalu
+      //     sama dengan uang yang benar-benar masuk:
+      //     - baris yang uangnya sudah/akan dibayar (claimed / pending_claim)
+      //       -> rate dihitung ulang dari amount / modal
+      //     - baris hari ini yang masih in_progress -> rate kanonik & amount modal x rate
+      inv.history.forEach(h => {
+        const hIso = DB.parseDateToIso(h.date);
+        if (!hIso) return;
+        const st = h.status || '';
+        if (st === 'claimed' || st === 'pending_claim') {
+          const amt = Number(h.amount) || 0;
+          if (amt > 0) {
+            const wantRate = this.impliedRateFromAmount(amt, inv.capital);
+            if (Number(h.rate) !== wantRate) {
+              h.rate = wantRate;
+              modified = true;
+            }
+          }
+        } else if (st === 'in_progress' || st === '') {
+          const isLossRow = db.settings && db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
+          const wantRate = isLossRow ? 0 : this.getDeterministicDailyRate(inv, hIso);
+          const wantAmount = isLossRow ? 0 : this.computeProfitAmount(inv.capital, wantRate);
+          if (Number(h.rate) !== wantRate || Number(h.amount) !== wantAmount) {
+            h.rate = wantRate;
+            h.amount = wantAmount;
+            modified = true;
+          }
+        }
+      });
 
-      if (inv.pendingProfitClaim !== pastPendingAmount) {
-        inv.pendingProfitClaim = pastPendingAmount;
-        modified = true;
+      // 2. Strict T-1 rule: pendingProfitClaim ONLY includes yields from past days (date < todayWib) that have not been claimed.
+      //    Hanya dihitung ulang bila history lokal memang ada. History kosong
+      //    (mis. baru sync dari server) tidak boleh menihilkan pendingProfitClaim.
+      if (inv.history.length > 0) {
+        const pastPendingAmount = inv.history
+          .filter(h => {
+            const hIso = DB.parseDateToIso(h.date);
+            return hIso && hIso < todayWib && h.status === 'pending_claim';
+          })
+          .reduce((sum, h) => sum + (Number(h.amount) || 0), 0);
+
+        if (Number(inv.pendingProfitClaim || 0) !== pastPendingAmount) {
+          inv.pendingProfitClaim = pastPendingAmount;
+          modified = true;
+        }
       }
 
       // 3. Check if investment duration has expired
@@ -197,15 +246,14 @@ export const Plans = {
       // 5. Ensure today's yield is present in history with status 'in_progress'
       const hasTodayYield = inv.history.some(h => DB.parseDateToIso(h.date) === todayWib);
       if (!hasTodayYield) {
-        const range = this.getRateRange(inv);
         const isTodayLoss = db.settings && db.settings.todayProfitLossMode && db.settings.todayProfitLossMode.isLoss;
-        const rate = isTodayLoss ? 0.0 : this.generateRandomDailyRate(range.min, range.max);
-        const profitAmount = Math.floor((inv.capital * rate) / 100);
-        const dayNo = (inv.daysElapsed || 0) + 1;
+        const rate = isTodayLoss ? 0.0 : this.getDeterministicDailyRate(inv, todayWib);
+        const profitAmount = isTodayLoss ? 0 : this.computeProfitAmount(inv.capital, rate);
+        const dayNo = Math.min(Number(inv.durationDays) || 30, (inv.daysElapsed || 0) + 1);
 
         inv.history.push({
           day: dayNo,
-          date: new Date().toLocaleDateString('id-ID'),
+          date: todayWib, // ISO Y-m-d: konsisten dengan server & history hasil rekonsiliasi
           rate: rate,
           amount: profitAmount,
           status: 'in_progress' // PROFIT HARI INI SEDANG BERJALAN, BARU DIKLAIM BESOK
@@ -238,16 +286,27 @@ export const Plans = {
     return (db.investments || []).filter(inv => inv.userId === userId);
   },
 
+  // Weekend profit toggle from settings (shared fallback chain used by every
+  // frontend surface so DB, admin and member UI always agree)
+  isWeekendProfitEnabled() {
+    const db = DB.get();
+    const s = db.settings || {};
+    if (s.weekendProfit && typeof s.weekendProfit.enabled === 'boolean') return s.weekendProfit.enabled;
+    if (typeof s.weekendProfitEnabled === 'boolean') return s.weekendProfitEnabled;
+    return true;
+  },
+
   // Calculate today profit % for a specific user
   getUserTodayProfitRate(userId) {
     if (!userId) return 0;
     const db = DB.get();
 
-    // Check if weekend (market OFF on Saturday & Sunday)
+    // Weekend: 0% only when the admin weekend toggle is LIBUR
+    // (7-Hari Penuh Aktif keeps paying weekend rates)
     const now = new Date();
     const dayOfWeek = now.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
-      return 0.0;
+      if (!this.isWeekendProfitEnabled()) return 0.0;
     }
 
     // Requirement 4: Check if Today Profit Loss Mode (0%) is active
@@ -261,18 +320,20 @@ export const Plans = {
     let totalCapital = 0;
     let totalWeightedRate = 0;
     const todayStr = now.toLocaleDateString('id-ID');
+    const todayWib = (typeof DB !== 'undefined' && DB.getWibDateStr) ? DB.getWibDateStr(now) : null;
 
     userInvs.forEach(inv => {
       totalCapital += inv.capital;
       // Check if profit yielded today in history
-      const todayHistory = inv.history && inv.history.find(h => h.date === todayStr);
+      const todayHistory = inv.history && inv.history.find(h => {
+        const dIso = (typeof DB !== 'undefined' && DB.parseDateToIso) ? DB.parseDateToIso(h.date) : h.date;
+        return (todayWib && dIso === todayWib) || h.date === todayStr || h.date === todayWib;
+      });
       let rate = 0;
-      if (todayHistory) {
+      if (todayHistory && typeof todayHistory.rate === 'number') {
         rate = todayHistory.rate;
       } else {
-        // Average active range or base daily rate for this plan
-        const range = this.getRateRange(inv);
-        rate = (range.min + range.max) / 2;
+        rate = this.getDeterministicDailyRate(inv, todayWib);
       }
       totalWeightedRate += (rate * inv.capital);
     });
@@ -288,6 +349,9 @@ export const Plans = {
     const now = new Date();
     const currentDay = now.getDay(); // 0: Minggu, 1: Senin, ..., 6: Sabtu
     const isWeekendToday = (currentDay === 0 || currentDay === 6);
+    // Sync with the admin weekend toggle: OFF = libur akhir pekan, ON = 7 Hari Penuh
+    const weekendEnabled = this.isWeekendProfitEnabled();
+    const weekendClosedToday = isWeekendToday && !weekendEnabled;
 
     // Monday-based offset (Senin = 0, Selasa = 1, ..., Sabtu = 5, Minggu = 6)
     const currentMondayIdx = currentDay === 0 ? 6 : currentDay - 1;
@@ -299,10 +363,6 @@ export const Plans = {
 
     const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-    // Base fallback rates from settings for Monday-Friday
-    const defaultRates = [1.00, 1.50, 1.20, 1.35, 1.15];
-    const settingsHistory = Array.isArray(db.settings.weeklyProfitHistory) ? db.settings.weeklyProfitHistory : [];
 
     const isGuest = !userId;
     let todayRateForUser = 0;
@@ -324,6 +384,7 @@ export const Plans = {
         const fullDateStr = dayDate.toLocaleDateString('id-ID');
         const isToday = idx === currentMondayIdx;
         const isWeekend = (idx === 5 || idx === 6);
+        const isOff = isWeekend && !weekendEnabled;
 
         return {
           dayName: dName,
@@ -331,14 +392,14 @@ export const Plans = {
           fullDate: fullDateStr,
           rate: null,
           isWeekend,
-          isOff: isWeekend,
+          isOff,
           isLoss: false,
           isToday,
           isGuest: false,
           hasActivePackage: false,
           displayRate: '-',
-          statusLabel: isWeekend ? 'Pasar OFF' : 'Belum Ada Paket',
-          pillText: isWeekend ? 'Pasar OFF' : 'Kosong'
+          statusLabel: isOff ? 'Pasar OFF' : 'Belum Ada Paket',
+          pillText: isOff ? 'Pasar OFF' : 'Kosong'
         };
       });
 
@@ -350,6 +411,7 @@ export const Plans = {
         todayRate: 0,
         todayIsLoss: false,
         isWeekendToday,
+        weekendClosedToday,
         isGuest: false,
         hasActivePackage: false
       };
@@ -359,6 +421,15 @@ export const Plans = {
       const s = DB.getWibDateStr(inv.startDate || inv.createdAt);
       return !min || s < min ? s : min;
     }, null);
+
+    // Plan average rate ((min+max)/2) — used for future days and for weekend
+    // slots without a settings rate when 7-Hari Penuh is active
+    const planAvgRate = activeInvs.length
+      ? parseFloat((activeInvs.reduce((acc, inv) => {
+          const range = this.getRateRange(inv);
+          return acc + (range.min + range.max) / 2;
+        }, 0) / activeInvs.length).toFixed(2))
+      : 0;
 
     const records = dayNames.map((dName, idx) => {
       const dayDate = new Date(mondayDate);
@@ -370,8 +441,9 @@ export const Plans = {
       const isPast = idx < currentMondayIdx;
       const isWeekend = (idx === 5 || idx === 6); // Sabtu or Minggu
 
-      // Sabtu and Minggu: Always OFF / empty (Requirement 5)
-      if (isWeekend) {
+      // Weekend: only OFF when the admin weekend toggle is LIBUR
+      // (7-Hari Penuh Aktif treats Sat/Sun like normal trading days)
+      if (isWeekend && !weekendEnabled) {
         return {
           dayName: dName,
           date: dateStr,
@@ -435,7 +507,7 @@ export const Plans = {
         if (todayLossMode) {
           rate = 0.0;
           isLoss = true;
-        } else if (isWeekendToday) {
+        } else if (isWeekendToday && !weekendEnabled) {
           rate = 0.0;
         } else {
           rate = todayRateForUser;
@@ -444,7 +516,10 @@ export const Plans = {
         // Look up member's yield history for this date if available
         let foundHistoryRate = null;
         activeInvs.forEach(inv => {
-          const h = inv.history && inv.history.find(item => item.date === fullDateStr);
+          const h = inv.history && inv.history.find(item => {
+            const dIso = (typeof DB !== 'undefined' && DB.parseDateToIso) ? DB.parseDateToIso(item.date) : item.date;
+            return dIso === targetDateStr || item.date === fullDateStr || item.date === targetDateStr;
+          });
           if (h && typeof h.rate === 'number') foundHistoryRate = h.rate;
         });
 
@@ -455,31 +530,31 @@ export const Plans = {
             return isPrf && DB.getWibDateStr(t.createdAt) === targetDateStr;
           });
           if (claimTx) {
-            const totalCap = activeInvs.reduce((s, i) => s + (i.capital || 0), 0);
-            if (totalCap > 0) {
-              foundHistoryRate = parseFloat(((claimTx.amount / totalCap) * 100).toFixed(2));
+            // Modal yang benar-benar berjalan pada tanggal itu, bukan modal hari ini
+            // (dulu pakai activeInvs sehingga member yang menambah paket belakangan
+            // melihat persen yang salah untuk hari-hari sebelumnya).
+            const capOnDate = (db.investments || [])
+              .filter(i => i.userId === userId && DB.getWibDateStr(i.startDate || i.createdAt) <= targetDateStr)
+              .reduce((s, i) => s + (Number(i.capital) || 0), 0);
+            if (capOnDate > 0) {
+              foundHistoryRate = parseFloat(((Number(claimTx.amount) || 0) / capOnDate * 100).toFixed(2));
             }
           }
         }
 
-        if (foundHistoryRate !== null) {
-          rate = foundHistoryRate;
-        } else {
-          rate = (settingsHistory[idx] && typeof settingsHistory[idx].rate === 'number')
-            ? settingsHistory[idx].rate
-            : defaultRates[idx];
-        }
+        // Rate global (weeklyProfitHistory / defaultRates) TIDAK boleh dipakai untuk
+        // hari yang sudah lewat: itu bukan rate paket member, sehingga nominal yang
+        // sudah masuk tampak "tidak cocok" dengan persen di kartu. Bila data nyata
+        // belum ada, tampilkan "-" alih-alih angka karangan.
+        rate = (foundHistoryRate !== null) ? foundHistoryRate : null;
       } else {
-        // Future weekdays: Plan expected rate for 1-week calculation
-        const avgUserRate = activeInvs.reduce((acc, inv) => {
-          const range = this.getRateRange(inv);
-          return acc + (range.min + range.max) / 2;
-        }, 0) / activeInvs.length;
-        rate = parseFloat(avgUserRate.toFixed(2));
+        // Future weekdays & 7-Hari-Aktif weekends: Plan expected rate for 1-week calculation
+        rate = planAvgRate;
       }
 
-      const isFuture = !isPast && !isToday && !isWeekend;
-      if (typeof rate === 'number') {
+      const isFuture = !isPast && !isToday && (isWeekend ? weekendEnabled : true);
+      const hasRate = typeof rate === 'number' && isFinite(rate);
+      if (hasRate) {
         rate = parseFloat(Number(rate || 0).toFixed(2));
       }
       isLoss = rate === 0 && (todayLossMode || (isToday && todayLossMode));
@@ -500,6 +575,13 @@ export const Plans = {
         pillText = 'Loss 0%';
         pillClass = 'pill-loss';
         displayRate = '0.00%';
+      } else if (isPast && !hasRate) {
+        // Tidak ada riwayat/klaim nyata untuk tanggal ini. Jangan tampilkan rate
+        // global yang bukan milik paket member.
+        statusLabel = '— Belum Ada Data';
+        pillText = 'Kosong';
+        pillClass = 'pill-next';
+        displayRate = '-';
       } else if (isPast) {
         statusLabel = `✓ +${Number(rate || 0).toFixed(2)}% (Selesai)`;
         pillText = 'Selesai';
@@ -517,8 +599,8 @@ export const Plans = {
         date: dateStr,
         fullDate: fullDateStr,
         rate,
-        isWeekend: false,
-        isOff: false,
+        isWeekend,
+        isOff: isWeekend && !weekendEnabled,
         isLoss,
         isToday,
         isPast,
@@ -538,7 +620,8 @@ export const Plans = {
 
     if (!isGuest && hasActivePackage) {
       records.forEach(r => {
-        if (!r.isWeekend && typeof r.rate === 'number') {
+        // Count every trading day that is not OFF (7-Hari-Aktif weekends included)
+        if (!r.isOff && typeof r.rate === 'number') {
           totalRate += r.rate;
           countActiveDays++;
         }
@@ -555,6 +638,8 @@ export const Plans = {
       todayRate: todayRateForUser,
       todayIsLoss: !!todayLossMode,
       isWeekendToday,
+      weekendEnabled,
+      weekendClosedToday,
       isGuest,
       hasActivePackage,
       lossMessage: todayLossMode ? (db.settings.todayProfitLossMode?.message || 'Hari ini dividen profit 0%') : ''
@@ -564,7 +649,7 @@ export const Plans = {
   // Buy / Activate Plan (Authoritative Server Endpoint - BUG-003)
   async invest({ userId, planId, amount }) {
     const db = DB.get();
-    const user = db.users.find(u => u.id === userId);
+    const user = (db.users || []).find(u => u.id === userId);
     const plan = this.getPlanById(planId);
 
     if (!user) return { success: false, message: 'User tidak ditemukan!' };
@@ -616,8 +701,46 @@ export const Plans = {
             };
           }
 
-          // Refresh state from server
-          await DB.loadFromMySQL().catch(() => {});
+          // Authoritative state update directly from server response
+          if (typeof json.walletBalance === 'number') {
+            user.walletBalance = json.walletBalance;
+          } else {
+            user.walletBalance -= parsedAmount;
+          }
+          if (typeof json.points === 'number') {
+            user.points = json.points;
+          } else {
+            user.points = (user.points || 0) + 60;
+          }
+          if (db.currentUser && (db.currentUser.id === user.id || db.currentUser.username === user.username)) {
+            db.currentUser.walletBalance = user.walletBalance;
+            db.currentUser.points = user.points;
+          }
+
+          db.investments = db.investments || [];
+          if (json.investment) {
+            const existsInv = db.investments.some(i => i.id === json.investment.id);
+            if (!existsInv) {
+              db.investments.unshift(json.investment);
+            }
+          }
+
+          db.transactions = db.transactions || [];
+          if (json.transaction) {
+            const existsTrx = db.transactions.some(t => t.id === json.transaction.id);
+            if (!existsTrx) {
+              db.transactions.unshift(json.transaction);
+            }
+          }
+
+          if (typeof localStorage !== 'undefined') {
+            try {
+              localStorage.setItem('autotrading_db', JSON.stringify(DB.stripSensitiveFields(db)));
+            } catch (e) {}
+          }
+
+          // Trigger asynchronous sync in background without blocking return
+          DB.syncFromCloud(true).catch(() => {});
 
           return {
             success: true,
@@ -685,10 +808,30 @@ export const Plans = {
     };
   },
 
+  // Calculate deterministic daily profit % between minRate and maxRate based on investment ID and date
+  getDeterministicDailyRate(inv, dateStr) {
+    const range = this.getRateRange(inv);
+    if (range.min >= range.max) return range.min;
+    const invId = inv.id || inv.planId || 'inv-default';
+    const dayKey = dateStr || DB.getWibDateStr();
+    const str = `${invId}_${dayKey}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    const normalized = (Math.abs(hash) % 10000) / 10000;
+    const rawRate = range.min + (normalized * (range.max - range.min));
+    // Bulatkan ke 2 desimal (basis point) — harus sama dengan round($rate, 2)
+    // di deterministicProfitRate() pada api/index.php.
+    return Math.round(rawRate * 100) / 100;
+  },
+
   // Calculate random daily profit % between minRate and maxRate
   generateRandomDailyRate(minRate, maxRate) {
     const min = parseFloat(minRate);
     const max = parseFloat(maxRate);
+    if (min >= max) return min;
     const random = Math.random() * (max - min) + min;
     return parseFloat(random.toFixed(2)); // e.g. 2.45%
   },
@@ -738,19 +881,31 @@ export const Plans = {
         }
 
         if (inv.daysElapsed < inv.durationDays && (!inv.pendingProfitClaim || inv.pendingProfitClaim <= 0)) {
-          const range = this.getRateRange(inv);
-          const rate = isTodayLossMode ? 0.0 : this.generateRandomDailyRate(range.min, range.max);
-          const profitAmount = Math.floor((inv.capital * rate) / 100);
+          // Rate DETERMINISTIK (bukan random): nominal yang dibagikan harus sama
+          // dengan persen yang sudah terlihat member untuk hari itu. Sebelumnya
+          // yield admin memakai rate random, sehingga uang yang masuk berbeda dari
+          // persen di dashboard (mis. Jumat 1,15% tapi dibayar 2,3%).
+          const rate = isTodayLossMode ? 0.0 : this.getDeterministicDailyRate(inv, todayWib);
+          const profitAmount = isTodayLossMode ? 0 : this.computeProfitAmount(inv.capital, rate);
 
           inv.pendingProfitClaim = profitAmount;
           inv.lastProfitYieldDate = new Date().toISOString();
 
-          const dayNo = (inv.daysElapsed || 0) + 1;
-          if (!this._hasPendingHistoryForDay(inv, dayNo)) {
-            inv.history = inv.history || [];
+          const dayNo = Math.min(Number(inv.durationDays) || 30, (inv.daysElapsed || 0) + 1);
+          inv.history = Array.isArray(inv.history) ? inv.history : [];
+          const todayRow = inv.history.find(h => DB.parseDateToIso(h.date) === todayWib);
+          if (todayRow) {
+            // Baris hari ini sudah dibuat klien saat dashboard dibuka. Pakai SATU
+            // angka saja: jangan biarkan riwayat dan pending berbeda.
+            todayRow.date = todayWib;
+            todayRow.rate = rate;
+            todayRow.amount = profitAmount;
+            todayRow.status = 'pending_claim';
+            todayRow.day = Number(todayRow.day) || dayNo;
+          } else {
             inv.history.push({
               day: dayNo,
-              date: new Date().toLocaleDateString('id-ID'),
+              date: todayWib, // ISO Y-m-d, konsisten dengan syncUserInvestments()
               rate: rate,
               amount: profitAmount,
               status: 'pending_claim'
@@ -853,11 +1008,14 @@ export const Plans = {
         }
       });
 
+      // Persen yang ditampilkan harus persen TERTIMBANG modal, bukan rata-rata
+      // sederhana antar paket: member dengan 2 paket berbeda modal akan melihat
+      // persen yang tidak cocok dengan nominal kalau dirata-ratakan biasa.
       let computedRate = 0;
-      if (pendingRates.length > 0) {
-        computedRate = parseFloat((pendingRates.reduce((a, b) => a + b, 0) / pendingRates.length).toFixed(2));
-      } else if (pendingCapital > 0 && totalPending > 0) {
+      if (pendingCapital > 0 && totalPending > 0) {
         computedRate = parseFloat(((totalPending / pendingCapital) * 100).toFixed(2));
+      } else if (pendingRates.length > 0) {
+        computedRate = parseFloat((pendingRates.reduce((a, b) => a + b, 0) / pendingRates.length).toFixed(2));
       }
       const computedRateStr = 'Profit ' + String(computedRate || 0).replace('.', ',') + '%';
       const computedPlanName = pendingPlanNames.length > 0 ? Array.from(new Set(pendingPlanNames)).join(', ') : 'Paket AI Trading';
@@ -907,7 +1065,7 @@ export const Plans = {
           const url = DB.getApiUrl('claim_profit');
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 4500);
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
 
           const res = await fetch(url, {
             method: 'POST',
@@ -933,8 +1091,23 @@ export const Plans = {
               serverClaimSucceeded = true;
               // Authoritative synchronization with MySQL database response
               user.walletBalance = json.walletBalance;
-              (db.investments || []).forEach(inv => {
-                if (inv.userId === userId && inv.status === 'active') {
+              // Server mengembalikan paket yang benar-benar diklaim, lengkap dengan
+              // daysElapsed & totalProfitEarned final. Jangan menaikkan hari sendiri:
+              // dulu SEMUA paket aktif ikut +1 hari walau tidak ikut diklaim.
+              if (Array.isArray(json.investments) && json.investments.length > 0) {
+                json.investments.forEach(srvInv => {
+                  const idx = (db.investments || []).findIndex(local => local.id === srvInv.id);
+                  if (idx >= 0) {
+                    db.investments[idx] = { ...db.investments[idx], ...srvInv };
+                  } else if (srvInv.userId === userId) {
+                    db.investments = db.investments || [];
+                    db.investments.push(srvInv);
+                  }
+                });
+              } else {
+                (db.investments || []).forEach(inv => {
+                  if (inv.userId !== userId || inv.status !== 'active') return;
+                  if (!Number(inv.pendingProfitClaim)) return;
                   if (Array.isArray(inv.history)) {
                     inv.history.forEach(h => {
                       const hIso = DB.parseDateToIso(h.date);
@@ -944,22 +1117,29 @@ export const Plans = {
                     });
                   }
                   inv.pendingProfitClaim = 0;
-                  inv.daysElapsed = (inv.daysElapsed || 0) + 1;
+                  inv.daysElapsed = Math.min(Number(inv.durationDays) || 30, (inv.daysElapsed || 0) + 1);
                   if (inv.daysElapsed >= inv.durationDays) {
                     inv.status = 'completed';
                     inv.completedAt = inv.completedAt || new Date().toISOString();
                     inv.refundReady = true;
                     if (inv.capitalReturned === undefined) inv.capitalReturned = false;
                   }
-                }
-              });
+                });
+              }
               if (json.transaction) {
                 db.transactions = db.transactions || [];
                 if (!db.transactions.some(t => t.id === json.transaction.id)) {
                   db.transactions.unshift(json.transaction);
                 }
               }
-              await DB.save(db);
+              if (db.currentUser && (db.currentUser.id === user.id || db.currentUser.username === user.username)) {
+                db.currentUser.walletBalance = user.walletBalance;
+              }
+              if (typeof localStorage !== 'undefined') {
+                try {
+                  localStorage.setItem('autotrading_db', JSON.stringify(DB.stripSensitiveFields(db)));
+                } catch (e) {}
+              }
               if (!json.profitPercent) json.profitPercent = computedRateStr;
               if (!json.profitRate) json.profitRate = computedRate;
               if (!json.profitDate) json.profitDate = computedDateStr;
@@ -974,7 +1154,14 @@ export const Plans = {
               if (typeof json.walletBalance === 'number') {
                 user.walletBalance = json.walletBalance;
               }
-              await DB.save(db);
+              if (db.currentUser && (db.currentUser.id === user.id || db.currentUser.username === user.username)) {
+                db.currentUser.walletBalance = user.walletBalance;
+              }
+              if (typeof localStorage !== 'undefined') {
+                try {
+                  localStorage.setItem('autotrading_db', JSON.stringify(DB.stripSensitiveFields(db)));
+                } catch (e) {}
+              }
               return json;
             } else {
               return json;
@@ -1101,7 +1288,7 @@ export const Plans = {
   // Process manual refund of completed investment capital to user's wallet balance
   async processContractRefund(investmentId, userId) {
     const db = DB.get();
-    const user = db.users.find(u => u.id === userId);
+    const user = (db.users || []).find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan!' };
 
     db.investments = db.investments || [];
@@ -1202,89 +1389,118 @@ export const Plans = {
 
   getTopSponsors(limit = 10) {
     const db = DB.get();
-    // Every account with sponsor activity takes part (including Admin VIP) -
-    // filtering out role=admin hid the top sponsor from the leaderboard.
-    const realUsers = (db.users || []).filter(u => u.username);
-    
-    const sponsorStats = realUsers.map(u => {
-      const downlines = Affiliate.getDownlines(u.referralCode || '');
-      const directCount = downlines.level1 ? downlines.level1.length : 0;
-      const totalTeam = downlines.totalMembers || 0;
-      const turnover = downlines.totalTeamTurnover || 0;
-      const commission = this.getSponsorBonusTotal(u);
-      let badge = 'Member Aktif';
-      if (turnover >= 500000000) badge = 'Crown Diamond';
-      else if (turnover >= 100000000) badge = 'Gold Master';
-      else if (turnover >= 25000000) badge = 'Silver Pro';
-      else if (directCount >= 5) badge = 'Super Sponsor';
-      else if (directCount >= 1) badge = 'Rising Star';
+    if (db && db.leaderboard && Array.isArray(db.leaderboard.topSponsors) && db.leaderboard.topSponsors.length > 0) {
+      return db.leaderboard.topSponsors.slice(0, limit);
+    }
+    // Fallback: local calculation if db.leaderboard not yet loaded and enough users exist
+    const realUsers = (db.users || []).filter(u => u && u.username && u.role !== 'admin');
+    if (realUsers.length >= 3) {
+      const sponsorStats = realUsers.map(u => {
+        const downlines = Affiliate.getDownlines(u.referralCode || '');
+        const directCount = downlines.level1 ? downlines.level1.length : 0;
+        const totalTeam = downlines.totalMembers || 0;
+        const turnover = downlines.totalTeamTurnover || 0;
+        const commission = this.getSponsorBonusTotal(u);
+        let badge = 'Member Aktif';
+        if (turnover >= 500000000) badge = 'Crown Diamond';
+        else if (turnover >= 100000000) badge = 'Gold Master';
+        else if (turnover >= 25000000) badge = 'Silver Pro';
+        else if (directCount >= 5) badge = 'Super Sponsor';
+        else if (directCount >= 1) badge = 'Rising Star';
 
-      return {
-        id: u.id,
-        username: u.username,
-        maskedUsername: this.maskUsername(u.username),
-        fullName: u.fullName || u.username,
-        directCount,
-        sponsorCount: directCount,
-        totalTeam,
-        turnover,
-        commission,
-        badge
-      };
-    });
+        return {
+          id: u.id,
+          username: u.username,
+          maskedUsername: this.maskUsername(u.username),
+          fullName: u.fullName || u.username,
+          directCount,
+          sponsorCount: directCount,
+          totalTeam,
+          turnover,
+          commission,
+          badge
+        };
+      });
 
-    // Rank by bonus sponsor actually paid, then by team size
-    sponsorStats.sort((a, b) =>
-      (b.commission - a.commission) ||
-      (b.turnover - a.turnover) ||
-      (b.directCount - a.directCount)
-    );
-    return sponsorStats.slice(0, limit);
+      // Filter to members who have actual affiliate activity
+      const activeSponsors = sponsorStats.filter(s => s.commission > 0 || s.directCount > 0 || s.turnover > 0 || s.totalTeam > 0);
+      const toRank = activeSponsors.length > 0 ? activeSponsors : sponsorStats;
+
+      toRank.sort((a, b) =>
+        (b.commission - a.commission) ||
+        (b.turnover - a.turnover) ||
+        (b.directCount - a.directCount)
+      );
+      if (toRank.length > 0) {
+        return toRank.slice(0, limit);
+      }
+    }
+
+    // Default real database leaderboard fallback
+    if (DB.defaultDB && DB.defaultDB.leaderboard && Array.isArray(DB.defaultDB.leaderboard.topSponsors)) {
+      return DB.defaultDB.leaderboard.topSponsors.slice(0, limit);
+    }
+    return [];
   },
 
   // Leaderboard: Top Profit (Realtime Database Members Only)
   getTopProfits(limit = 10) {
     const db = DB.get();
+    if (db && db.leaderboard && Array.isArray(db.leaderboard.topProfits) && db.leaderboard.topProfits.length > 0) {
+      return db.leaderboard.topProfits.slice(0, limit);
+    }
+    // Fallback: local calculation if db.leaderboard not yet loaded and enough users exist
     const realUsers = (db.users || []).filter(u => u && u.username && u.role !== 'admin' && u.status !== 'blocked');
     const investments = db.investments || [];
     const transactions = db.transactions || [];
 
-    const userProfits = realUsers.map(u => {
-      const userInvs = investments.filter(i => i.userId === u.id);
-      const userPrfTxs = transactions.filter(t => 
-        t.userId === u.id && 
-        (t.type === 'profit_claim' || (t.id && String(t.id).startsWith('TRX-PRF-'))) &&
-        (t.status === 'approved' || !t.status)
+    if (realUsers.length >= 3) {
+      const userProfits = realUsers.map(u => {
+        const userInvs = investments.filter(i => i.userId === u.id);
+        const userPrfTxs = transactions.filter(t => 
+          t.userId === u.id && 
+          (t.type === 'profit_claim' || (t.id && String(t.id).startsWith('TRX-PRF-'))) &&
+          (t.status === 'approved' || !t.status)
+        );
+        const txProfit = userPrfTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const invProfit = userInvs.reduce((sum, i) => sum + (Number(i.totalProfitEarned) || 0), 0);
+        const totalProfit = Math.max(txProfit, invProfit);
+        const totalCap = userInvs.reduce((sum, i) => sum + (Number(i.capital) || 0), 0);
+        const activePlans = userInvs.filter(i => i.status === 'active');
+        const activePlan = activePlans.length > 0 
+          ? String(activePlans[0].planName || 'VIP Pro').trim() 
+          : (userInvs.length > 0 ? 'Kontrak Selesai' : 'Belum Ada Paket');
+
+        return {
+          id: u.id,
+          username: u.username,
+          maskedUsername: this.maskUsername(u.username),
+          fullName: u.fullName || u.username,
+          totalProfit,
+          totalCapital: totalCap,
+          activePlansCount: activePlans.length,
+          activePlan,
+          winRate: totalProfit > 0 ? 98.8 : 98.4
+        };
+      });
+
+      const activeProfits = userProfits.filter(p => p.totalProfit > 0 || p.totalCapital > 0);
+      const toRank = activeProfits.length > 0 ? activeProfits : userProfits;
+
+      toRank.sort((a, b) => 
+        (b.totalProfit - a.totalProfit) || 
+        (b.totalCapital - a.totalCapital) || 
+        (b.activePlansCount - a.activePlansCount)
       );
-      const txProfit = userPrfTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-      const invProfit = userInvs.reduce((sum, i) => sum + (Number(i.totalProfitEarned) || 0), 0);
-      const totalProfit = Math.max(txProfit, invProfit);
-      const totalCap = userInvs.reduce((sum, i) => sum + (Number(i.capital) || 0), 0);
-      const activePlans = userInvs.filter(i => i.status === 'active');
-      const activePlan = activePlans.length > 0 
-        ? String(activePlans[0].planName || 'VIP Pro').trim() 
-        : (userInvs.length > 0 ? 'Kontrak Selesai' : 'Belum Ada Paket');
+      if (toRank.length > 0) {
+        return toRank.slice(0, limit);
+      }
+    }
 
-      return {
-        id: u.id,
-        username: u.username,
-        maskedUsername: this.maskUsername(u.username),
-        fullName: u.fullName || u.username,
-        totalProfit,
-        totalCapital: totalCap,
-        activePlansCount: activePlans.length,
-        activePlan,
-        winRate: totalProfit > 0 ? 98.8 : 98.4
-      };
-    });
-
-    // Sort strictly: 1. Highest Total Profit, 2. Highest Capital, 3. Active Plans Count
-    userProfits.sort((a, b) => 
-      (b.totalProfit - a.totalProfit) || 
-      (b.totalCapital - a.totalCapital) || 
-      (b.activePlansCount - a.activePlansCount)
-    );
-
-    return userProfits.slice(0, limit);
+    // Default real database leaderboard fallback
+    if (DB.defaultDB && DB.defaultDB.leaderboard && Array.isArray(DB.defaultDB.leaderboard.topProfits)) {
+      return DB.defaultDB.leaderboard.topProfits.slice(0, limit);
+    }
+    return [];
   }
 };

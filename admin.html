@@ -17,9 +17,9 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23C89338'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
   
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/admin.css">
-  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/style.css?v=20261018_full_audit">
+  <link rel="stylesheet" href="css/admin.css?v=20261018_full_audit">
+  <link rel="stylesheet" href="css/responsive.css?v=20261018_full_audit">
   <!-- Early Theme & Branding Initializer -->
   <script>
     (function() {
@@ -107,12 +107,13 @@
     <!-- Sidebar Header -->
     <div class="admin-sidebar-header">
       <div class="admin-sidebar-brand">
-        <div class="sidebar-logo-badge">
+        <div class="sidebar-logo-badge" id="adminSidebarLogoBadge">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
+        <img id="adminSidebarLogoImg" class="admin-sidebar-logo-img" alt="Logo" decoding="async">
         <div>
-          <div class="sidebar-brand-name">AUTOTRADING</div>
-          <div class="sidebar-brand-role">Master Admin Control</div>
+          <div class="sidebar-brand-name" id="adminSidebarBrandName">AUTOTRADING</div>
+          <div class="sidebar-brand-role" id="adminSidebarBrandRole">Master Admin Control</div>
         </div>
       </div>
       <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Tutup Menu Admin">
@@ -130,6 +131,10 @@
         <button class="admin-nav-btn active" data-tab="dashboard">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
           <span>Dashboard Overview</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="users">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>Kelola Pengguna</span>
         </button>
       </nav>
 
@@ -192,15 +197,7 @@
         </button>
       </nav>
 
-      <div class="sidebar-group-title">PENGGUNA & DATA</div>
-      <nav class="sidebar-menu">
-        <button class="admin-nav-btn" data-tab="users">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-          <span>Kelola Pengguna</span>
-        </button>
-      </nav>
-
-      <div class="sidebar-group-title">SISTEM & PENGATURAN</div>
+      <div class="sidebar-group-title">SISTEM &amp; PENGATURAN</div>
       <nav class="sidebar-menu">
         <button class="admin-nav-btn" data-tab="kontak_kelas">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
@@ -211,11 +208,6 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span>Pengaturan Web</span>
           <span class="admin-nav-badge" style="background: #6366F1;">Baru</span>
-        </button>
-        <button class="admin-nav-btn" data-tab="email_settings">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-          <span>Konfigurasi Email & OTP</span>
-          <span class="admin-nav-badge" id="badgeEmailStatus" style="background: #10B981;">cPanel</span>
         </button>
         <button class="admin-nav-btn" data-tab="admin_account">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/><path d="M7 18.5c.8-2 2.8-3.5 5-3.5s4.2 1.5 5 3.5"/></svg>
@@ -250,11 +242,12 @@
 
         <!-- Logo & Tulisan Admin -->
         <div class="admin-topbar-brand">
-          <div class="admin-brand-icon">
+          <div class="admin-brand-icon" id="adminTopbarLogoIcon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C89338" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
+          <img id="adminTopbarLogoImg" class="admin-topbar-logo-img" alt="Logo" decoding="async">
           <div class="admin-topbar-title-wrap">
-            <h1 class="admin-topbar-title" style="margin: 0; display: inline-block;">AUTOTRADING</h1>
+            <h1 class="admin-topbar-title" id="adminTopbarTitle" style="margin: 0; display: inline-block;">AUTOTRADING</h1>
             <span class="admin-title-badge">ADMIN</span>
           </div>
         </div>
@@ -346,6 +339,89 @@
           <span>▶ Pemicu Distribusi Profit Hari Ini Sekarang</span>
         </button>
       </div>
+
+      <!-- Changelog: hasil perbaikan terbaru sistem -->
+      <div class="admin-card" style="border-left: 4px solid #22C55E;">
+        <div class="admin-card-header" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <h3 class="admin-card-title">🧾 Log Perbaikan Terbaru Sistem (Changelog)</h3>
+          <button class="admin-btn-action-primary" id="btnAdminDataSync" onclick="AdminPage.runDataSync()" title="Rekonsiliasi absensi, sisa hari/profit paket, dan rabat seluruh member dari ledger MySQL">
+            <span>🔄 Sinkronkan Data Member</span>
+          </button>
+        </div>
+        <ul id="dataSyncResult" style="display:none; list-style:none; padding:10px 12px; margin:0 0 10px 0; background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.25); border-radius:8px; font-size:11px; color:#CBD5E1; line-height:1.6;"></ul>
+        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+          <li style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #38BDF8;">2026-10-25 · Profit harian kini selalu cocok dengan persen paket</strong><br>
+            <b>1) Satu rumus profit:</b> rate harian dihitung dengan rumus yang sama di server (<code>deterministicProfitRate</code>) dan di browser, dipakai saat paket diaktifkan, saat yield harian admin, dan saat klaim — jadi nominal yang masuk = modal × persen yang tertulis. <b>2) Tidak ada lagi dua angka untuk hari yang sama:</b> yield admin dulu memakai rate acak sementara kartu member memakai rate paket (mis. Jumat tampil 1,15% tetapi dibayar 2,3%); sekarang keduanya satu sumber dan klaim menulis ulang riwayat sesuai nominal yang benar-benar dibayar. <b>3) Kartu mingguan</b> tidak lagi memakai rate global <code>weeklyProfitHistory</code> untuk hari yang sudah lewat — persen dihitung dari riwayat/klaim nyata member (hari tanpa data tampil “-”, bukan angka karangan). <b>4) Tombol <b>🔍 Audit Profit</b></b> di panel Member (dan di Detail Member) memeriksa seluruh member: nominal ≠ persen, pending ≠ riwayat, rate di luar rentang paket, dan paket tanpa riwayat — lengkap dengan tombol perbaikan yang tidak mengubah saldo.<br>
+            <b>Template email deposit</b> juga diperbaiki: saat member mengirim bukti transfer, email yang keluar kini “Menunggu Verifikasi Admin / saldo belum bertambah”; email “Saldo Berhasil Masuk” hanya dikirim setelah admin menyetujui deposit.
+          </li>
+          <li style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #EF4444;">2026-10-24 · Fitur baru: Reset total data member (akun curang / tidak valid)</strong><br>
+            Tombol <b>♻️ Reset</b> di kolom Aksi tabel Member dan tombol <b>♻️ Reset Data Member</b> di modal Detail membuka modal konfirmasi berisi ringkasan data member (saldo dompet, saldo afiliasi, poin, jumlah transaksi, paket & penukaran poin), wajib mengisi <b>alasan</b>, serta mengetik persis <b>username target</b> — pemeriksaan yang sama juga dilakukan di server. Reset mengosongkan saldo dompet, saldo afiliasi, poin & streak absensi, lalu menghapus permanen seluruh transaksi, paket investasi dan penukaran poin di tabel MySQL <b>dan</b> JSON state sekaligus sehingga data lama tidak muncul lagi saat sinkronisasi (guard <code>reset_at</code> menolak snapshot browser lama yang mengirim ulang data tsb). Profil, login, kode referral dan rekening bank tetap dipertahankan. Setiap reset tercatat di log audit admin (siapa, kapan, alasan, apa yang dihapus) dan tampil di bagian “Riwayat reset terakhir”.
+          </li>
+          <li style="background: rgba(34, 197, 94, 0.06); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #22C55E;">2026-10-22 · Sinkronisasi menyeluruh: klaim profit, absensi, rabat &amp; sisa hari paket</strong><br>
+            <b>1) Sisa hari paket:</b> <code>days_elapsed</code> kini hanya naik untuk paket yang benar-benar diklaim (dulu semua paket aktif ikut +1 hari) dan tidak bisa mundur karena snapshot browser lama (<code>GREATEST</code>). Data historis direkonsiliasi dari ledger: <b>@gudangforex</b> 2 klaim → <b>Tersisa 43 Hari (Hari ke-2 dari 45)</b>, profit IDR 103.600 — terverifikasi di halaman Trade. <b>2) Rabat:</b> persentase dibaca dari setting admin (dulu hard-code 5/3/1,5), 8 transaksi lama 5% dikoreksi ke 3% beserta saldo upline; contoh <b>@forex1</b> kini +IDR 174 (3%) bukan 291 (5%). <b>3) Absensi:</b> streak &amp; history dibangun ulang dari ledger transaksi (1 hari = 1 klaim), hilangnya entri history akibat save browser lama tidak lagi merusak hitungan H-1..H-7. <b>4) Tombol baru «🔄 Sinkronkan Data Member»</b> di kartu ini untuk rekonsiliasi idempoten seluruh member (lama &amp; baru), hasilnya dicatat di <code>system_logs</code>.
+          </li>
+          <li style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #38BDF8;">2026-10-22 · Hasil verifikasi live</strong><br>
+            Absensi 11 member diselaraskan (forex1/gudangforex/grow H-3 ✓), 6 paket diperbaiki (pending profit palsu dibersihkan agar tidak dobel bayar), 8 rabat dikoreksi ke 3%. E2E klaim profit dengan akun uji: klaim IDR 5.000 → hari 0→1, pending 0, total profit 5.000, rabat upline <b>3% = IDR 150</b> (bukan 5% = 250); akun uji &amp; rabatnya dihapus kembali setelah uji (saldo @forex1 kembali 65.174). Rekonsiliasi kedua menghasilkan 0 perubahan (idempoten).<br>
+            <b style="color:#F59E0B;">Temuan lama (belum dipotong otomatis):</b> 3 klaim sebelum perbaikan terindikasi dobel karena pending lama ikut terbayar — @forex1 IDR 1.630, @grow IDR 32.400, @gudangforex IDR 31.400 (total IDR 65.430). Data klaim &amp; sisa hari kini sudah benar; penyesuaian saldo historis menunggu keputusan admin.
+          </li>
+          <li style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #38BDF8;">2026-10-20 · Upload logo langsung aktif di header admin &amp; website</strong><br>
+            Logo yang diunggah lewat <b>Pengaturan → Tampilan &amp; Logo</b> sekarang otomatis tersimpan dan langsung menggantikan logo teks “AUTOTRADING” di <b>sidebar admin</b>, <b>topbar admin</b>, dan <b>header frontend</b>. Bila logo dihapus/dikosongkan, tampilan otomatis kembali ke ikon + teks bawaan. Favicon juga langsung diterapkan tanpa perlu klik simpan ulang.
+          </li>
+          <li style="background: rgba(168, 85, 247, 0.06); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #A855F7;">2026-10-20 · Bedakan member “Sudah Beli Paket” vs semua member</strong><br>
+            Panel <b>Manajemen Pengguna</b> kini memiliki tab <b>💼 Sudah Beli</b> dan kolom <b>Portofolio</b>: member yang sudah membeli paket tampil dengan badge <b>🔥 nama paket + modal</b>, member yang paketnya sudah selesai ditandai <b>✅ Selesai</b>, dan yang belum pernah membeli ditandai <b>— Belum Beli</b>. Kartu <b>Total Pengguna</b> di dashboard juga menampilkan jumlah member aktif trading &amp; jumlah yang sudah beli paket.
+          </li>
+          <li style="background: rgba(34, 197, 94, 0.06); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #22C55E;">2026-10-20 · Hitungan status member diseragamkan</strong><br>
+            Tab <b>Semua / Sudah Beli / Aktif / Diblokir</b> kini memakai sumber status yang sama dengan server (<code>isBlocked</code> atau <code>status = blocked</code>). Sebelumnya filter bisa menampilkan member yang diblokir sebagai “Aktif” bila hanya salah satu field terisi. Verifikasi ulang dilakukan <b>tanpa menghapus / reset database</b>.
+          </li>
+          <li style="background: rgba(34, 197, 94, 0.06); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #22C55E;">2026-10-19 · Transfer wallet P2P (server-authoritative)</strong><br>
+            Endpoint baru <code>transfer_to_member</code> + <code>lookup_member</code>: debit/kredit saldo berjalan di MySQL (dua baris ledger debit+kredit per transfer), teman di luar downline kini bisa dicari &amp; ditransfer (roster member memang terbatas demi privasi). Uji live 14/14: 500rb → kirim 250rb → sisa 250rb persis.
+          </li>
+          <li style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #38BDF8;">2026-10-19 · CRUD Paket Investasi diperbaiki</strong><br>
+            Paket baru tidak lagi kehilangan <code>id</code> (bug spread menimpa id hasil generate → edit/render rusak), tombol <b>Hapus</b> tersedia dengan guard investor aktif, dan plan lama tanpa id otomatis di-heal. Uji live 7/7 (tambah → edit → hapus → restore).
+          </li>
+          <li style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #F59E0B;">2026-10-19 · Toggle Sabtu/Minggu sinkron 3 lapis</strong><br>
+            Server <code>claim_profit</code> kini membaca saklar <code>weekendProfit</code> dari DB (dulu hard-code libur mengabaikan setting admin), tampilan mingguan frontend mengikuti saklar (Pasar OFF ↔ hari bursa), dobel-klaim tetap terjaga. Uji live 16/16 + harness dual-mode LIBUR/7-Hari.
+          </li>
+          <li style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #EF4444;">2026-10-19 · Klaim profit server (bug SQL lama)</strong><br>
+            INSERT <code>profit_claim</code>/<code>rabat_bonus</code> memakai placeholder <code>:amount</code> dua kali → setiap klaim lewat server mengembalikan HTTP 500 (SQLSTATE HY093). Diperbaiki &amp; diverifikasi live: klaim sukses, saldo naik, klaim-kedua ditolak.
+          </li>
+          <li style="background: rgba(34, 197, 94, 0.06); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #22C55E;">2026-10-18 · Sesi Logout (utama)</strong><br>
+            Logout kini menempel: flag logout eksplisit di client (race sync in-flight &amp; logout POST gagal tidak bisa menghidupkan sesi lagi), gate login tampil tanpa lari ke halaman member.
+          </li>
+          <li style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #EF4444;">2026-10-18 · Kebocoran identitas sesi di API publik</strong><br>
+            <code>action=get</code> publik tidak lagi menyebarkan <code>currentUser</code>/<code>isAdmin</code> milik browser lain (auto-login tamu tertutup); <code>action=save</code> menolak kunci sesi dari klien.
+          </li>
+          <li style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #F59E0B;">2026-10-18 · Anti double-refund</strong><br>
+            Penolakan WD/PPOB kini idempoten (guard status di server + cek <code>isRefunded</code> di client) — retry/klik ganda tidak menggandakan refund saldo.
+          </li>
+          <li style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #38BDF8;">2026-10-18 · Panel PPOB ganda</strong><br>
+            Fungsi render PPOB dobel digabung (panel Gateway kini terisi), ID HTML duplikat dihilangkan, dan form simpan membaca panel yang sedang dilihat admin.
+          </li>
+          <li style="background: rgba(168, 85, 247, 0.06); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #A855F7;">2026-10-18 · Perbaikan lain</strong><br>
+            Verifikasi email admin kembali server-authoritative (duplikat fungsi dihapus), tombol Bersihkan Cache Admin melakukan re-fetch backend sungguhan, seed JS publik dibersihkan dari PII member (hanya akun bootstrap admin), serta 3 panggilan fungsi rusak diperbaiki (sync dashboard admin, cabang tab usang, reload setelah rekonsiliasi saldo).
+          </li>
+          <li style="background: rgba(148, 163, 184, 0.06); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #CBD5E1;">
+            <strong style="color: #94A3B8;">2026-10-18 · Verifikasi</strong><br>
+            Suite test diselaraskan dengan flow autentikasi session-gated: E2E live 7/7 lulus, deep-audit 0 error, semua harness lokal hijau.
+          </li>
+        </ul>
+      </div>
     </section>
 
     <!-- ====================================================================
@@ -401,7 +477,10 @@
               <p style="font-size: 11px; color: #94A3B8; margin-top: 3px;">Persetujuan manual penarikan rekening/e-wallet serta transaksi pembelian pulsa &amp; token listrik PLN.</p>
             </div>
             <!-- Filter Tabs Penarikan vs PPOB -->
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;" class="admin-filter-pills">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;" class="admin-filter-pills">
+              <button type="button" class="btn-admin-action" id="btnWdSyncBank" onclick="AdminPage.syncBankDetails()" style="font-size: 11px; padding: 6px 12px; border-radius: 20px;" title="Lengkapi &amp; selaraskan data rekening WD seluruh member dengan database">
+                🔄 Sinkronkan Rekening
+              </button>
               <button type="button" class="btn-admin-action active" id="btnWdFilterAll" onclick="AdminPage.setWithdrawFilter('all')" style="font-size: 11px; padding: 6px 12px; border-radius: 20px;">
                 Semua (WD &amp; PPOB)
               </button>
@@ -1066,10 +1145,10 @@
           <div class="setting-row">
             <div class="setting-info">
               <div class="setting-title">Jam Tutup Layanan (WIB)</div>
-              <div class="setting-desc">Jam selesai operasional penarikan (misal: 21 untuk pukul 21:00 WIB)</div>
+              <div class="setting-desc">Jam selesai operasional penarikan (misal: 15 untuk pukul 15:00 WIB)</div>
             </div>
             <div class="setting-input-wrap">
-              <input type="number" class="admin-input" id="wdCfgEndHour" min="0" max="23" value="21">
+              <input type="number" class="admin-input" id="wdCfgEndHour" min="0" max="23" value="15">
             </div>
           </div>
 
@@ -1079,7 +1158,7 @@
               <div class="setting-desc">Teks informasi yang ditampilkan ke member jika penarikan di luar jam operasional</div>
             </div>
             <div class="setting-input-wrap" style="width: 320px;">
-              <input type="text" class="admin-input" id="wdCfgOffMessage" value="Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.">
+              <input type="text" class="admin-input" id="wdCfgOffMessage" value="Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 15:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional.">
             </div>
           </div>
 
@@ -1302,7 +1381,7 @@
               <div class="setting-desc">Tampilkan status proses (Dalam Proses, Selesai, Gangguan) pada menu PPOB member</div>
             </div>
             <div class="setting-input-wrap">
-              <select class="admin-input" id="ppobCfgShowStatus">
+              <select class="admin-input" id="ppobCfgShowStatusB">
                 <option value="true">🟢 AKTIF (Tampilkan Status ke Member)</option>
                 <option value="false">🔴 NONAKTIF (Sembunyikan)</option>
               </select>
@@ -1325,7 +1404,7 @@
               <div class="setting-desc">Pesan informasi yang ditampilkan kepada member saat mengajukan PPOB</div>
             </div>
             <div class="setting-input-wrap" style="width: 380px;">
-              <textarea class="admin-input" id="ppobCfgNotice" rows="3" style="width: 100%; font-size: 11px; line-height: 1.4; padding: 8px; resize: vertical;" placeholder="Proses konversi PPOB ini dilakukan secara manual oleh admin..."></textarea>
+              <textarea class="admin-input" id="ppobCfgNoticeB" rows="3" style="width: 100%; font-size: 11px; line-height: 1.4; padding: 8px; resize: vertical;" placeholder="Proses konversi PPOB ini dilakukan secara manual oleh admin..."></textarea>
             </div>
           </div>
 
@@ -1352,11 +1431,13 @@
             <!-- Filter Status User -->
             <div class="admin-detail-tabs user-filter-tabs" style="margin: 0; padding: 4px; background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 10px;">
               <button class="admin-detail-tab-btn active" id="userFilterAll" onclick="AdminPage.setUserFilter('all')" style="padding: 5px 12px; font-size: 11px;">Semua (<span id="userCountAll">0</span>)</button>
-              <button class="admin-detail-tab-btn" id="userFilterActive" onclick="AdminPage.setUserFilter('active')" style="padding: 5px 12px; font-size: 11px;">🟢 Aktif (<span id="userCountActive">0</span>)</button>
-              <button class="admin-detail-tab-btn" id="userFilterBlocked" onclick="AdminPage.setUserFilter('blocked')" style="padding: 5px 12px; font-size: 11px;">🔴 Diblokir (<span id="userCountBlocked">0</span>)</button>
+              <button class="admin-detail-tab-btn" id="userFilterBuyers" onclick="AdminPage.setUserFilter('buyers')" style="padding: 5px 12px; font-size: 11px;" title="Hanya member yang sudah membeli paket investasi">💼 Sudah Beli (<span id="userCountBuyers">0</span>)</button>
+              <button class="admin-detail-tab-btn" id="userFilterActive" onclick="AdminPage.setUserFilter('active')" style="padding: 5px 12px; font-size: 11px;" title="Member yang tidak diblokir">🟢 Aktif (<span id="userCountActive">0</span>)</button>
+              <button class="admin-detail-tab-btn" id="userFilterBlocked" onclick="AdminPage.setUserFilter('blocked')" style="padding: 5px 12px; font-size: 11px;" title="Member yang diblokir admin">🔴 Diblokir (<span id="userCountBlocked">0</span>)</button>
             </div>
             <!-- Search bar -->
             <input type="text" id="userSearchInput" class="admin-input" placeholder="🔍 Cari username / nama / email..." oninput="AdminPage.onUserSearchInput()" style="width: 220px; padding: 6px 10px; font-size: 12px;">
+            <button type="button" class="admin-btn-action-primary" onclick="AdminPage.openProfitAuditModal()" style="padding: 6px 12px; font-size: 11.5px; background: linear-gradient(135deg, #0EA5E9 0%, #0369A1 100%); border-color: #075985; white-space: nowrap;" title="Periksa apakah nominal profit setiap member sudah sama dengan persen paketnya">🔍 Audit Profit</button>
           </div>
         </div>
         <div class="admin-table-container">
@@ -1366,6 +1447,7 @@
                 <th>Username</th>
                 <th>Nama Lengkap</th>
                 <th>Status Akun</th>
+                <th>Portofolio</th>
                 <th>Email / Kontak</th>
                 <th>Wallet Balance</th>
                 <th>Wallet Tambah Teman</th>
@@ -1627,192 +1709,7 @@
       </div>
     </section>
 
-    <!-- ====================================================================
-         14. PANEL KONFIGURASI EMAIL, NOTIFIKASI & VERIFIKASI OTP
-         ==================================================================== -->
-    <section id="pane-email_settings" class="admin-view-panel">
-      <!-- Card 1: Saklar Kontrol Verifikasi & Notifikasi -->
-      <div class="admin-card">
-        <div class="admin-card-header">
-          <div>
-            <h3 class="admin-card-title">📧 Kontrol Verifikasi Email Pendaftaran & Notifikasi</h3>
-            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Atur kewajiban verifikasi kode OTP 6-digit saat member baru mendaftar dan alert email ke administrator.</p>
-          </div>
-          <span class="badge-status approved" id="emailStatusBadgeHeader" style="background: rgba(34, 197, 94, 0.15); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 12px; padding: 4px 10px;">🟢 Siap Digunakan</span>
-        </div>
 
-        <!-- Setting: Wajib Verifikasi Email (OTP) -->
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-title" style="display: flex; align-items: center; gap: 8px;">
-              <span>Wajib Verifikasi Email Pendaftaran (OTP 6-Digit)</span>
-              <span id="emailVerifyBadge" class="badge-status" style="font-size: 10px;">-</span>
-            </div>
-            <div class="setting-desc">Jika AKTIF, member baru wajib memasukkan 6 digit kode OTP yang dikirimkan ke email untuk mengaktifkan akun. Jika NONAKTIF, member langsung aktif tanpa kode.</div>
-          </div>
-          <div class="setting-input-wrap" style="width: 280px;">
-            <select class="admin-input" id="emailCfgVerificationRequired" onchange="AdminPage.previewEmailBadge()">
-              <option value="false">⚪ NONAKTIF (Langsung Aktif Tanpa OTP)</option>
-              <option value="true">🟢 AKTIF (Wajib Verifikasi Kode OTP 6-Digit)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Setting: Notifikasi Email ke Admin -->
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-title">Notifikasi Email ke Admin saat Member Baru Daftar</div>
-            <div class="setting-desc">Kirim email ringkasan data member (Username, Nama, WA, Sponsor) secara otomatis ke email Administrator saat ada pendaftaran baru.</div>
-          </div>
-          <div class="setting-input-wrap" style="width: 280px;">
-            <select class="admin-input" id="emailCfgAdminNotification">
-              <option value="true">🟢 AKTIF (Kirim Email ke Admin)</option>
-              <option value="false">🔴 NONAKTIF (Tanpa Notifikasi)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Setting: Alamat Email Admin -->
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-title">Alamat Email Penerima Notifikasi Admin</div>
-            <div class="setting-desc">Alamat email yang akan menerima laporan pendaftaran member baru.</div>
-          </div>
-          <div class="setting-input-wrap" style="width: 280px;">
-            <input type="email" class="admin-input" id="emailCfgAdminEmail" placeholder="admin@domain.com">
-          </div>
-        </div>
-
-        <!-- Setting: Welcome Email -->
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-title">Email Sambutan (Welcome Email) ke Member</div>
-            <div class="setting-desc">Kirim email ucapan selamat datang resmi AUTOTRADING ke inbox member setelah akun aktif.</div>
-          </div>
-          <div class="setting-input-wrap" style="width: 280px;">
-            <select class="admin-input" id="emailCfgWelcomeEmail">
-              <option value="true">🟢 AKTIF (Kirim Welcome Email)</option>
-              <option value="false">🔴 NONAKTIF (Jangan Kirim)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 2: Pengaturan Server Pengirim Email (cPanel Mailer / SMTP) -->
-      <div class="admin-card" style="margin-top: 24px;">
-        <div class="admin-card-header">
-          <div>
-            <h3 class="admin-card-title">⚙️ Konfigurasi Server Pengirim Email (SMTP / cPanel Mailer)</h3>
-            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Pilih metode pengiriman email bawaan hosting cPanel (PHP mail) atau server SMTP eksternal kustom.</p>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-title">Metode Pengiriman Email</div>
-            <div class="setting-desc">Gunakan PHP mail() untuk hosting cPanel (otomatis & tanpa setup port) atau SMTP Server jika menggunakan Google Workspace / Titan Mail / Mailgun.</div>
-          </div>
-          <div class="setting-input-wrap" style="width: 320px;">
-            <select class="admin-input" id="emailCfgMethod" onchange="AdminPage.toggleSmtpFields()">
-              <option value="smtp" selected>🌐 Custom SMTP Server (Resmi - Host, Port & Autentikasi Sandi)</option>
-              <option value="cpanel">🚀 PHP mail() Standar cPanel (Fallback)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-title">Nama Pengirim Resmi (Sender Name)</div>
-            <div class="setting-desc">Nama institusi/aplikasi yang tertera di kotak masuk email penerima.</div>
-          </div>
-          <div class="setting-input-wrap" style="width: 320px;">
-            <input type="text" class="admin-input" id="emailCfgFromName" placeholder="AUTOTRADING Official">
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-title">Alamat Email Pengirim (From Email)</div>
-            <div class="setting-desc">Alamat email pengirim (sebaiknya gunakan domain yang sama dengan hosting, misal: noreply@domainanda.com).</div>
-          </div>
-          <div class="setting-input-wrap" style="width: 320px;">
-            <input type="email" class="admin-input" id="emailCfgFromEmail" placeholder="noreply@autotrading.my.id">
-          </div>
-        </div>
-
-        <!-- SMTP Detail Fields (Hidden if cpanel mode) -->
-        <div id="smtpFieldsWrap" style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 16px; margin: 16px 0;">
-          <div style="font-size: 12px; font-weight: 700; color: #E5A83B; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-            <span>🌐 Parameter Server SMTP:</span>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-            <div>
-              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Host Server SMTP:</label>
-              <input type="text" class="admin-input" id="emailCfgSmtpHost" placeholder="mail.domainanda.com / smtp.gmail.com">
-            </div>
-            <div>
-              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Port SMTP:</label>
-              <input type="number" class="admin-input" id="emailCfgSmtpPort" placeholder="465">
-            </div>
-            <div>
-              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Enkripsi:</label>
-              <select class="admin-input" id="emailCfgSmtpSecure">
-                <option value="ssl">SSL (Port 465)</option>
-                <option value="tls">TLS (Port 587)</option>
-                <option value="none">Tanpa Enkripsi (25)</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div>
-              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Username / Akun Email SMTP:</label>
-              <input type="text" class="admin-input" id="emailCfgSmtpUser" placeholder="noreply@domainanda.com">
-            </div>
-            <div>
-              <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Password / App Password:</label>
-              <input type="password" class="admin-input" id="emailCfgSmtpPass" placeholder="••••••••">
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top: 18px;">
-          <button class="admin-btn-action-primary" onclick="AdminPage.saveEmailSettings()">
-            <span>💾 Simpan Semua Pengaturan Email</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Card 3: Uji Coba Pengiriman Email (Live Test Mail) -->
-      <div class="admin-card" style="margin-top: 24px; border-left: 4px solid #3B82F6;">
-        <div class="admin-card-header">
-          <div>
-            <h3 class="admin-card-title">🧪 Uji Coba Pengiriman Email (Live Test Dispatch)</h3>
-            <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Kirim pesan uji coba langsung ke email pribadi Anda untuk memastikan server cPanel dan email dapat menerima pesan dengan baik.</p>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="setting-info">
-            <div class="setting-title">Alamat Email Tujuan Pengujian</div>
-            <div class="setting-desc">Masukkan alamat email aktif Anda untuk menerima email uji coba resmi AUTOTRADING.</div>
-          </div>
-          <div class="setting-input-wrap" style="width: 320px; display: flex; gap: 8px;">
-            <input type="email" class="admin-input" id="emailTestTargetInput" placeholder="emailanda@gmail.com" style="flex: 1;">
-            <button class="admin-btn-action-primary" id="btnSendTestEmail" style="white-space: nowrap; padding: 8px 14px; font-size: 12px;" onclick="AdminPage.sendTestEmail()">
-              <span>✉️ Kirim Tes</span>
-            </button>
-          </div>
-        </div>
-
-        <div id="emailTestResultBox" style="display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; font-size: 12px; line-height: 1.5;"></div>
-
-        <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 8px; padding: 10px 14px; margin-top: 14px; font-size: 11.5px; color: #FDE047; line-height: 1.5;">
-          <strong>💡 Tips Pengujian:</strong> Jika menggunakan metode default cPanel (PHP mail), email biasanya disaring oleh Gmail / Yahoo ke <strong>Folder SPAM, JUNK, atau tab PROMOSI</strong> karena sistem DNS domain shared hosting belum memiliki DKIM/SPF. Silakan periksa folder Spam Anda dan tandai <em>"Bukan Spam"</em>. Untuk pengiriman 100% langsung ke Inbox utama, gunakan metode <strong>Custom SMTP Server</strong>.
-        </div>
-      </div>
-    </section>
 
     <!-- ====================================================================
          PANEL KONTAK CS & KELAS TRADING (Manual Input WhatsApp & Telegram)
@@ -1987,6 +1884,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
           <span>Tampilan &amp; Logo</span>
         </button>
+        <button type="button" class="admin-settings-tab" data-settings-tab="email" role="tab" aria-selected="false" onclick="AdminPage.switchSettingsTab('email')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          <span>Email &amp; OTP</span>
+        </button>
         <button type="button" class="admin-settings-tab" data-settings-tab="seo" role="tab" aria-selected="false" onclick="AdminPage.switchSettingsTab('seo')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <span>SEO &amp; Meta</span>
@@ -2007,6 +1908,201 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
           <span>Reset &amp; Bersihkan Cache</span>
         </button>
+      </div>
+
+      <!-- ===== TAB: EMAIL & OTP (Konfigurasi Email, Notifikasi & Verifikasi OTP) ===== -->
+      <div id="settings-tab-email" class="admin-settings-tab-pane">
+        <div class="admin-card" style="margin-bottom:20px; border-left: 4px solid #10B981;">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">📧 Konfigurasi Email, Notifikasi &amp; Verifikasi OTP</h3>
+              <p style="font-size:11.5px;color:#94A3B8;margin-top:4px;">Semua pengaturan pengiriman email (SMTP / cPanel), notifikasi ke administrator, dan kewajiban verifikasi OTP member baru.</p>
+            </div>
+            <span class="badge-status approved" id="badgeEmailStatus" style="background:#10B981;color:#0B0F19;font-size:11px;padding:4px 12px;">cPanel</span>
+          </div>
+        </div>
+
+      <!-- Card 1: Saklar Kontrol Verifikasi & Notifikasi -->
+      <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">📧 Kontrol Verifikasi Email Pendaftaran & Notifikasi</h3>
+              <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Atur kewajiban verifikasi kode OTP 6-digit saat member baru mendaftar dan alert email ke administrator.</p>
+            </div>
+            <span class="badge-status approved" id="emailStatusBadgeHeader" style="background: rgba(34, 197, 94, 0.15); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 12px; padding: 4px 10px;">🟢 Siap Digunakan</span>
+          </div>
+
+          <!-- Setting: Wajib Verifikasi Email (OTP) -->
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title" style="display: flex; align-items: center; gap: 8px;">
+                <span>Wajib Verifikasi Email Pendaftaran (OTP 6-Digit)</span>
+                <span id="emailVerifyBadge" class="badge-status" style="font-size: 10px;">-</span>
+              </div>
+              <div class="setting-desc">Jika AKTIF, member baru wajib memasukkan 6 digit kode OTP yang dikirimkan ke email untuk mengaktifkan akun. Jika NONAKTIF, member langsung aktif tanpa kode.</div>
+            </div>
+            <div class="setting-input-wrap" style="width: 280px;">
+              <select class="admin-input" id="emailCfgVerificationRequired" onchange="AdminPage.previewEmailBadge()">
+                <option value="false">⚪ NONAKTIF (Langsung Aktif Tanpa OTP)</option>
+                <option value="true">🟢 AKTIF (Wajib Verifikasi Kode OTP 6-Digit)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Setting: Notifikasi Email ke Admin -->
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Notifikasi Email ke Admin saat Member Baru Daftar</div>
+              <div class="setting-desc">Kirim email ringkasan data member (Username, Nama, WA, Sponsor) secara otomatis ke email Administrator saat ada pendaftaran baru.</div>
+            </div>
+            <div class="setting-input-wrap" style="width: 280px;">
+              <select class="admin-input" id="emailCfgAdminNotification">
+                <option value="true">🟢 AKTIF (Kirim Email ke Admin)</option>
+                <option value="false">🔴 NONAKTIF (Tanpa Notifikasi)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Setting: Alamat Email Admin -->
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Alamat Email Penerima Notifikasi Admin</div>
+              <div class="setting-desc">Alamat email yang akan menerima laporan pendaftaran member baru.</div>
+            </div>
+            <div class="setting-input-wrap" style="width: 280px;">
+              <input type="email" class="admin-input" id="emailCfgAdminEmail" placeholder="admin@domain.com">
+            </div>
+          </div>
+
+          <!-- Setting: Welcome Email -->
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Email Sambutan (Welcome Email) ke Member</div>
+              <div class="setting-desc">Kirim email ucapan selamat datang resmi AUTOTRADING ke inbox member setelah akun aktif.</div>
+            </div>
+            <div class="setting-input-wrap" style="width: 280px;">
+              <select class="admin-input" id="emailCfgWelcomeEmail">
+                <option value="true">🟢 AKTIF (Kirim Welcome Email)</option>
+                <option value="false">🔴 NONAKTIF (Jangan Kirim)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Pengaturan Server Pengirim Email (cPanel Mailer / SMTP) -->
+        <div class="admin-card" style="margin-top: 24px;">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">⚙️ Konfigurasi Server Pengirim Email (SMTP / cPanel Mailer)</h3>
+              <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Pilih metode pengiriman email bawaan hosting cPanel (PHP mail) atau server SMTP eksternal kustom.</p>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Metode Pengiriman Email</div>
+              <div class="setting-desc">Gunakan PHP mail() untuk hosting cPanel (otomatis & tanpa setup port) atau SMTP Server jika menggunakan Google Workspace / Titan Mail / Mailgun.</div>
+            </div>
+            <div class="setting-input-wrap" style="width: 320px;">
+              <select class="admin-input" id="emailCfgMethod" onchange="AdminPage.toggleSmtpFields()">
+                <option value="smtp" selected>🌐 Custom SMTP Server (Resmi - Host, Port & Autentikasi Sandi)</option>
+                <option value="cpanel">🚀 PHP mail() Standar cPanel (Fallback)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Nama Pengirim Resmi (Sender Name)</div>
+              <div class="setting-desc">Nama institusi/aplikasi yang tertera di kotak masuk email penerima.</div>
+            </div>
+            <div class="setting-input-wrap" style="width: 320px;">
+              <input type="text" class="admin-input" id="emailCfgFromName" placeholder="AUTOTRADING Official">
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Alamat Email Pengirim (From Email)</div>
+              <div class="setting-desc">Alamat email pengirim (sebaiknya gunakan domain yang sama dengan hosting, misal: noreply@domainanda.com).</div>
+            </div>
+            <div class="setting-input-wrap" style="width: 320px;">
+              <input type="email" class="admin-input" id="emailCfgFromEmail" placeholder="noreply@autotrading.my.id">
+            </div>
+          </div>
+
+          <!-- SMTP Detail Fields (Hidden if cpanel mode) -->
+          <div id="smtpFieldsWrap" style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <div style="font-size: 12px; font-weight: 700; color: #E5A83B; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>🌐 Parameter Server SMTP:</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+              <div>
+                <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Host Server SMTP:</label>
+                <input type="text" class="admin-input" id="emailCfgSmtpHost" placeholder="mail.domainanda.com / smtp.gmail.com">
+              </div>
+              <div>
+                <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Port SMTP:</label>
+                <input type="number" class="admin-input" id="emailCfgSmtpPort" placeholder="465">
+              </div>
+              <div>
+                <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Enkripsi:</label>
+                <select class="admin-input" id="emailCfgSmtpSecure">
+                  <option value="ssl">SSL (Port 465)</option>
+                  <option value="tls">TLS (Port 587)</option>
+                  <option value="none">Tanpa Enkripsi (25)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Username / Akun Email SMTP:</label>
+                <input type="text" class="admin-input" id="emailCfgSmtpUser" placeholder="noreply@domainanda.com">
+              </div>
+              <div>
+                <label style="font-size: 11px; color: #94A3B8; display: block; margin-bottom: 4px;">Password / App Password:</label>
+                <input type="password" class="admin-input" id="emailCfgSmtpPass" placeholder="••••••••">
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <button class="admin-btn-action-primary" onclick="AdminPage.saveEmailSettings()">
+              <span>💾 Simpan Semua Pengaturan Email</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 3: Uji Coba Pengiriman Email (Live Test Mail) -->
+        <div class="admin-card" style="margin-top: 24px; border-left: 4px solid #3B82F6;">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">🧪 Uji Coba Pengiriman Email (Live Test Dispatch)</h3>
+              <p style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">Kirim pesan uji coba langsung ke email pribadi Anda untuk memastikan server cPanel dan email dapat menerima pesan dengan baik.</p>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Alamat Email Tujuan Pengujian</div>
+              <div class="setting-desc">Masukkan alamat email aktif Anda untuk menerima email uji coba resmi AUTOTRADING.</div>
+            </div>
+            <div class="setting-input-wrap" style="width: 320px; display: flex; gap: 8px;">
+              <input type="email" class="admin-input" id="emailTestTargetInput" placeholder="emailanda@gmail.com" style="flex: 1;">
+              <button class="admin-btn-action-primary" id="btnSendTestEmail" style="white-space: nowrap; padding: 8px 14px; font-size: 12px;" onclick="AdminPage.sendTestEmail()">
+                <span>✉️ Kirim Tes</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="emailTestResultBox" style="display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; font-size: 12px; line-height: 1.5;"></div>
+
+          <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 8px; padding: 10px 14px; margin-top: 14px; font-size: 11.5px; color: #FDE047; line-height: 1.5;">
+            <strong>💡 Tips Pengujian:</strong> Jika menggunakan metode default cPanel (PHP mail), email biasanya disaring oleh Gmail / Yahoo ke <strong>Folder SPAM, JUNK, atau tab PROMOSI</strong> karena sistem DNS domain shared hosting belum memiliki DKIM/SPF. Silakan periksa folder Spam Anda dan tandai <em>"Bukan Spam"</em>. Untuk pengiriman 100% langsung ke Inbox utama, gunakan metode <strong>Custom SMTP Server</strong>.
+          </div>
+        </div>
       </div>
 
       <!-- ===== TAB 1: IDENTITAS WEB ===== -->
@@ -3011,6 +3107,95 @@
   </div>
 
   <!-- ======================================================================
+       MODAL: RESET TOTAL DATA MEMBER (akun curang / tidak valid)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="adminResetMemberModal">
+    <div class="modal-sheet" style="max-width: 580px; background: #0B1220; border: 1px solid rgba(239, 68, 68, 0.35);">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" style="color: #F8FAFC;">♻️ Reset Total Data Member</h3>
+          <p class="modal-subtitle" style="color: #F87171;">Untuk akun curang / tidak valid — TIDAK BISA DIBATALKAN</p>
+        </div>
+        <button class="modal-close-btn" onclick="AdminPage.closeResetMemberModal()">&times;</button>
+      </div>
+
+      <!-- Peringatan -->
+      <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 11.5px; color: #FECACA; line-height: 1.55;">
+        Tindakan ini menghapus <strong>PERMANEN</strong>: seluruh saldo dompet &amp; saldo afiliasi (direset ke Rp 0), seluruh poin &amp; riwayat absensi, semua riwayat transaksi (deposit, penarikan, bonus), semua paket investasi, serta semua penukaran poin.
+        Profil, login, kode referral, dan rekening bank <strong>tidak diubah</strong>.
+      </div>
+
+      <!-- Ringkasan data member -->
+      <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+        <div style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Data member saat ini</div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 14px; font-size: 12px;">
+          <div><span style="color: #64748B; font-size: 11px;">Member</span><div id="admResetSummaryUser" style="font-weight: 800; color: #38BDF8; margin-top: 2px;">-</div></div>
+          <div><span style="color: #64748B; font-size: 11px;">Saldo Dompet</span><div id="admResetSummaryWallet" style="font-weight: 800; color: #22C55E; margin-top: 2px;">-</div></div>
+          <div><span style="color: #64748B; font-size: 11px;">Saldo Afiliasi</span><div id="admResetSummaryAff" style="font-weight: 800; color: #C89338; margin-top: 2px;">-</div></div>
+          <div><span style="color: #64748B; font-size: 11px;">Poin Loyalitas</span><div id="admResetSummaryPoints" style="font-weight: 800; color: #A855F7; margin-top: 2px;">-</div></div>
+          <div><span style="color: #64748B; font-size: 11px;">Riwayat Transaksi</span><div id="admResetSummaryTx" style="font-weight: 700; color: #F8FAFC; margin-top: 2px;">-</div></div>
+          <div><span style="color: #64748B; font-size: 11px;">Paket Investasi</span><div id="admResetSummaryInv" style="font-weight: 700; color: #F8FAFC; margin-top: 2px;">-</div></div>
+          <div><span style="color: #64748B; font-size: 11px;">Penukaran Poin</span><div id="admResetSummaryRed" style="font-weight: 700; color: #F8FAFC; margin-top: 2px;">-</div></div>
+        </div>
+      </div>
+
+      <!-- Alasan -->
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 11.5px; font-weight: 700; color: #CBD5E1; margin-bottom: 6px;">Alasan reset <span style="color: #F87171;">(wajib, min. 5 karakter)</span></label>
+        <textarea id="admResetReason" rows="2" placeholder="mis: Manipulasi bukti transfer / akun ganda / saldo tidak valid" style="width: 100%; box-sizing: border-box; background: #0F172A; border: 1px solid #334155; color: #F8FAFC; border-radius: 8px; padding: 10px 12px; font-size: 13px; font-family: inherit; resize: vertical;" oninput="AdminPage.validateResetForm()"></textarea>
+      </div>
+
+      <!-- Konfirmasi username -->
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 11.5px; font-weight: 700; color: #CBD5E1; margin-bottom: 6px;">Ketik username target: <strong id="admResetTargetName" style="color: #F87171;">-</strong></label>
+        <input type="text" id="admResetConfirm" autocomplete="off" placeholder="Tulis username target persis seperti di atas" style="width: 100%; box-sizing: border-box; background: #0F172A; border: 1px solid #334155; color: #F8FAFC; border-radius: 8px; padding: 10px 12px; font-size: 13px;" oninput="AdminPage.validateResetForm()">
+        <div id="admResetConfirmHint" style="font-size: 11px; color: #94A3B8; margin-top: 6px;">Konfirmasi juga diperiksa di server, bukan hanya di form ini.</div>
+      </div>
+
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button type="button" class="btn-admin-action" onclick="AdminPage.closeResetMemberModal()" style="padding: 9px 14px; font-weight: 700;">Batal</button>
+        <button type="button" id="admResetSubmitBtn" class="btn-admin-action delete" disabled onclick="AdminPage.submitResetMember()" style="background: #DC2626; color: #FFFFFF; border: 1px solid #B91C1C; font-weight: 800; padding: 9px 16px; opacity: 0.55; cursor: not-allowed;">♻️ HAPUS TOTAL SEKARANG</button>
+      </div>
+
+      <!-- Riwayat log -->
+      <div style="margin-top: 16px; border-top: 1px dashed rgba(148, 163, 184, 0.3); padding-top: 12px;">
+        <div style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Riwayat reset terakhir (log admin)</div>
+        <div id="admResetLogList" style="font-size: 11.5px; color: #CBD5E1; max-height: 150px; overflow-y: auto;">Memuat...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: AUDIT PERHITUNGAN PROFIT (nominal vs persen paket)
+       ====================================================================== -->
+  <div class="modal-backdrop" id="adminProfitAuditModal">
+    <div class="modal-sheet" style="max-width: 700px; background: #0B1220; border: 1px solid rgba(56, 189, 248, 0.35);">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" style="color: #F8FAFC;">🔍 Audit Perhitungan Profit</h3>
+          <p class="modal-subtitle" id="admProfitAuditSub" style="color: #94A3B8;">Nominal profit vs persen paket</p>
+        </div>
+        <button class="modal-close-btn" onclick="AdminPage.closeProfitAuditModal()">&times;</button>
+      </div>
+
+      <div id="admProfitAuditSummary" style="font-size: 12px; color: #CBD5E1;">Memuat...</div>
+
+      <div id="admProfitAuditList" style="margin-top: 12px; max-height: 320px; overflow-y: auto; padding-right: 4px;"></div>
+
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap;">
+        <button type="button" class="btn-admin-action" onclick="AdminPage.loadProfitAudit()" style="padding: 9px 14px; font-weight: 700;">🔄 Periksa Ulang</button>
+        <button type="button" id="admProfitRepairBtn" class="btn-admin-action delete" disabled onclick="AdminPage.repairProfitData()" style="background: #0284C7; color: #FFFFFF; border: 1px solid #075985; font-weight: 800; padding: 9px 16px; opacity: 0.55;">🛠️ Perbaiki Data Profit</button>
+      </div>
+
+      <div style="margin-top: 12px; font-size: 11px; color: #64748B; line-height: 1.55;">
+        Perbaikan hanya menyamakan <b style="color:#94A3B8;">persen &amp; nominal pada riwayat profit</b> serta nilai pending yang akan dibayar. Saldo, total profit, sisa hari paket, dan transaksi yang sudah tercatat <b style="color:#94A3B8;">tidak diubah</b>.
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
        MODAL: DETAIL MEMBER & BANTUAN ADMIN (Requirement 6)
        ====================================================================== -->
   <div class="modal-backdrop" id="adminMemberDetailModal">
@@ -3039,11 +3224,20 @@
         <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; background: rgba(30, 41, 59, 0.8); padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); align-items: center; justify-content: space-between;">
           <div style="font-size: 11.5px; font-weight: 700; color: #E2E8F0;">Aksi Cepat Admin:</div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="admin-btn-action-primary" style="background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%); border-color: #5B21B6; padding: 7px 12px; font-size: 11.5px;" onclick="AdminPage.loginAsUserFromDetail()">
+              <span>🔑 Login Sebagai Member Ini</span>
+            </button>
             <button type="button" class="admin-btn-action-primary" style="padding: 7px 12px; font-size: 11.5px;" onclick="AdminPage.openEditUserModalFromDetail()">
               <span>✏️ Edit Lengkap Data &amp; Saldo</span>
             </button>
             <button type="button" id="admMemBtnDirectVerify" class="admin-btn-action-primary" style="background: #10B981; padding: 7px 12px; font-size: 11.5px; display: none;" onclick="AdminPage.verifyUserFromDetail()">
               <span>✓ Verifikasi Email Member</span>
+            </button>
+            <button type="button" class="admin-btn-action-primary" style="background: linear-gradient(135deg, #0EA5E9 0%, #0369A1 100%); border-color: #075985; padding: 7px 12px; font-size: 11.5px;" onclick="AdminPage.openProfitAuditFromDetail()" title="Periksa perhitungan profit member ini: nominal vs persen paket">
+              <span>🔍 Audit Profit</span>
+            </button>
+            <button type="button" class="admin-btn-action-primary" style="background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%); border-color: #991B1B; padding: 7px 12px; font-size: 11.5px;" onclick="AdminPage.openResetMemberModalFromDetail()" title="Reset total data transaksi & saldo member ini (tidak bisa dibatalkan)">
+              <span>♻️ Reset Data Member</span>
             </button>
           </div>
         </div>
@@ -3753,7 +3947,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Admin Page Script -->
-  <script type="module" src="js/admin-page.js?v=20261009_pwd_v3"></script>
+  <script type="module" src="js/admin-page.js?v=20261018_full_audit"></script>
 
 </body>
 </html>

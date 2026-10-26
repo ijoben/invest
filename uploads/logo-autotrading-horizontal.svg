@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 724 144" width="724" height="144" role="img" aria-label="AUTOTRADING">
+  <title>AUTOTRADING - AI Trading</title>
+  <defs>
+    <linearGradient id="gH" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C89338"/>
+      <stop offset="1" stop-color="#E8C275"/>
+    </linearGradient>
+    <linearGradient id="gS" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#C89338"/>
+      <stop offset="0.55" stop-color="#DFA94A"/>
+      <stop offset="1" stop-color="#F2D896"/>
+    </linearGradient>
+    <linearGradient id="gT" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C89338"/>
+      <stop offset="1" stop-color="#E8C275"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ikon heksagon: chip AI ditembus candlestick (identik dengan logo persegi) -->
+  <g transform="scale(0.28125)">
+    <polygon points="494,256 375,462 137,462 18,256 137,50 375,50"
+             fill="url(#gH)" stroke="url(#gH)" stroke-width="16" stroke-linejoin="round"/>
+    <polygon points="470,256 363,441 149,441 42,256 149,71 363,71"
+             fill="#14110C" stroke="#14110C" stroke-width="16" stroke-linejoin="round"/>
+    <g stroke="url(#gH)" stroke-width="14" stroke-linecap="round">
+      <line x1="176" y1="206" x2="150" y2="206"/>
+      <line x1="176" y1="246" x2="150" y2="246"/>
+      <line x1="176" y1="286" x2="150" y2="286"/>
+      <line x1="336" y1="206" x2="362" y2="206"/>
+      <line x1="336" y1="246" x2="362" y2="246"/>
+      <line x1="336" y1="286" x2="362" y2="286"/>
+      <line x1="216" y1="166" x2="216" y2="140"/>
+      <line x1="256" y1="166" x2="256" y2="140"/>
+      <line x1="296" y1="166" x2="296" y2="140"/>
+      <line x1="216" y1="326" x2="216" y2="352"/>
+      <line x1="256" y1="326" x2="256" y2="352"/>
+      <line x1="296" y1="326" x2="296" y2="352"/>
+    </g>
+    <rect x="176" y="166" width="160" height="160" rx="30"
+          fill="rgba(200,147,56,0.10)" stroke="url(#gH)" stroke-width="16"/>
+    <g stroke="#C89338" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.45">
+      <path d="M200 196 h22 v20"/>
+      <path d="M312 296 h-22 v-20"/>
+    </g>
+    <g stroke-linecap="round">
+      <line x1="210" y1="300" x2="210" y2="250" stroke="#C89338" stroke-width="8"/>
+      <rect x="197" y="262" width="26" height="28" rx="6" fill="#C89338"/>
+      <line x1="256" y1="276" x2="256" y2="222" stroke="#DFA94A" stroke-width="8"/>
+      <rect x="243" y="234" width="26" height="32" rx="6" fill="#DFA94A"/>
+      <line x1="302" y1="248" x2="302" y2="190" stroke="url(#gS)" stroke-width="8"/>
+      <rect x="289" y="200" width="26" height="36" rx="6" fill="url(#gS)"/>
+    </g>
+  </g>
+
+  <!-- Wordmark emas -->
+  <text x="162" y="99" font-family="Arial Black, Arial Black, Arial, Helvetica, sans-serif"
+        font-size="64" font-weight="900" letter-spacing="3" fill="url(#gT)">AUTOTRADING</text>
+</svg>

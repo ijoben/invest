@@ -46,7 +46,7 @@ export const Affiliate = {
   applySponsorBonus(db, buyerUser, amount) {
     if (!buyerUser || !buyerUser.referredBy || !amount || amount <= 0) return 0;
 
-    const upline = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === buyerUser.referredBy.toUpperCase());
+    const upline = (db.users || []).find(u => u.referralCode && u.referralCode.toUpperCase() === buyerUser.referredBy.toUpperCase());
     // Security: Prevent self-bonus exploit
     if (!upline || upline.id === buyerUser.id) return 0;
 
@@ -106,7 +106,7 @@ export const Affiliate = {
     db.transactions = db.transactions || [];
 
     while (currentRefCode && currentLevel <= rabatLevels.length) {
-      const upline = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === currentRefCode.toUpperCase());
+      const upline = (db.users || []).find(u => u.referralCode && u.referralCode.toUpperCase() === currentRefCode.toUpperCase());
       if (!upline || seenUplines.has(upline.id)) break;
       seenUplines.add(upline.id);
 
@@ -324,7 +324,7 @@ export const Affiliate = {
       return result;
     }
 
-    const uplineUser = db.users.find(u => u.referralCode && u.referralCode.toUpperCase() === userReferralCode.toUpperCase());
+    const uplineUser = (db.users || []).find(u => u.referralCode && u.referralCode.toUpperCase() === userReferralCode.toUpperCase());
     const uplineId = uplineUser ? uplineUser.id : null;
 
     // Helper to enrich user with active plans and personal turnover
@@ -349,18 +349,18 @@ export const Affiliate = {
     };
 
     // Level 1 (Direct)
-    const rawL1 = db.users.filter(u => u.referredBy && u.referredBy.toUpperCase() === userReferralCode.toUpperCase());
+    const rawL1 = (db.users || []).filter(u => u.referredBy && u.referredBy.toUpperCase() === userReferralCode.toUpperCase());
     result.level1 = rawL1.map(u => enrichMember(u, 1, uplineUser ? uplineUser.username : null));
 
     // Level 2
     rawL1.forEach(l1 => {
-      const rawL2 = db.users.filter(u => u.referredBy && u.referredBy.toUpperCase() === (l1.referralCode || '').toUpperCase());
+      const rawL2 = (db.users || []).filter(u => u.referredBy && u.referredBy.toUpperCase() === (l1.referralCode || '').toUpperCase());
       result.level2.push(...rawL2.map(u => enrichMember(u, 2, l1.username)));
     });
 
     // Level 3
     result.level2.forEach(l2 => {
-      const rawL3 = db.users.filter(u => u.referredBy && u.referredBy.toUpperCase() === (l2.referralCode || '').toUpperCase());
+      const rawL3 = (db.users || []).filter(u => u.referredBy && u.referredBy.toUpperCase() === (l2.referralCode || '').toUpperCase());
       result.level3.push(...rawL3.map(u => enrichMember(u, 3, l2.username)));
     });
 
@@ -404,7 +404,7 @@ export const Affiliate = {
   // Transfer Affiliate Balance ("Wallet Tambah Teman") to Main Wallet Balance
   async transferToMainBalance(userId, amount) {
     const db = DB.get();
-    const user = db.users.find(u => u.id === userId);
+    const user = (db.users || []).find(u => u.id === userId);
     if (!user) return { success: false, message: 'User tidak ditemukan' };
 
     const parsedAmount = Math.floor(Number(amount));
@@ -462,10 +462,30 @@ export const Affiliate = {
     };
   },
 
-  // Member-to-Member (P2P) Wallet Transfer
+  // Remote target lookup — action=get only serves members their own downline
+  // roster (privacy), so a transfer to an arbitrary friend must be resolved
+  // by the server's minimal lookup_member endpoint (no balances/PII exposed).
+  async lookupMemberRemote(targetIdentifier) {
+    const cleanTarget = (targetIdentifier || '').trim();
+    if (!cleanTarget) return null;
+    try {
+      const res = await fetch(DB.getApiUrl('lookup_member') + '&target=' + encodeURIComponent(cleanTarget), {
+        headers: DB.getAuthHeaders(),
+        credentials: 'include'
+      });
+      if (!res.ok) return null;
+      const json = await res.json().catch(() => null);
+      if (!json || !json.success || !json.found || !json.user) return null;
+      return json.user;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // Member-to-Member (P2P) Wallet Transfer — server-authoritative debit/credit
   async transferToMember(senderUserId, targetIdentifier, amount) {
     const db = DB.get();
-    const sender = db.users.find(u => u.id === senderUserId);
+    const sender = (db.users || []).find(u => u.id === senderUserId);
     if (!sender) return { success: false, message: 'Akun pengirim tidak ditemukan!' };
 
     const parsedAmount = Math.floor(Number(amount));
@@ -473,29 +493,57 @@ export const Affiliate = {
       return { success: false, message: 'Minimal transfer antar member adalah Rp 10.000!' };
     }
 
-    if ((sender.walletBalance || 0) < parsedAmount) {
-      return { success: false, message: `Saldo Wallet Utama tidak mencukupi! Saldo Anda: ${DB.formatIDR(sender.walletBalance || 0)}` };
-    }
-
     const cleanTarget = (targetIdentifier || '').trim().toLowerCase();
     if (!cleanTarget) {
       return { success: false, message: 'Masukkan username atau kode referral member tujuan!' };
     }
 
-    const recipient = db.users.find(u => 
+    const localRecipient = (db.users || []).find(u => 
       (u.username && u.username.toLowerCase() === cleanTarget) ||
       (u.referralCode && u.referralCode.toLowerCase() === cleanTarget)
     );
+    if (localRecipient && localRecipient.id === sender.id) {
+      return { success: false, message: 'Anda tidak dapat mentransfer saldo ke akun Anda sendiri!' };
+    }
+
+    if ((sender.walletBalance || 0) < parsedAmount) {
+      return { success: false, message: `Saldo Wallet Utama tidak mencukupi! Saldo Anda: ${DB.formatIDR(sender.walletBalance || 0)}` };
+    }
+
+    // Preferred path: server endpoint (authoritative MySQL balances). Handles
+    // recipients outside the local roster and validates everything again.
+    try {
+      const res = await fetch(DB.getApiUrl('transfer_to_member'), {
+        method: 'POST',
+        headers: DB.getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ target: (targetIdentifier || '').trim(), amount: parsedAmount })
+      });
+      if (res.ok) {
+        const json = await res.json().catch(() => null);
+        if (json && typeof json.success === 'boolean') {
+          if (json.success) {
+            // Refresh local state so balances & history match the server
+            try { await DB.syncFromCloud(); } catch (e) {}
+          }
+          return {
+            success: json.success,
+            message: json.message || (json.success ? 'Transfer berhasil!' : 'Transfer gagal.'),
+            recipient: json.recipient || undefined
+          };
+        }
+      }
+    } catch (e) {
+      // Endpoint unavailable (older server build) -> legacy local fallback below
+    }
+
+    const recipient = localRecipient;
 
     if (!recipient) {
       return { success: false, message: `Member tujuan "${targetIdentifier}" tidak ditemukan!` };
     }
 
-    if (recipient.id === sender.id) {
-      return { success: false, message: 'Anda tidak dapat mentransfer saldo ke akun Anda sendiri!' };
-    }
-
-    // Deduct sender & credit recipient
+    // Legacy fallback: deduct sender & credit recipient in the synced state
     sender.walletBalance = (sender.walletBalance || 0) - parsedAmount;
     recipient.walletBalance = (recipient.walletBalance || 0) + parsedAmount;
 
@@ -513,6 +561,8 @@ export const Affiliate = {
       type: 'member_transfer_out',
       amount: parsedAmount,
       destinationAccount: recipient.username,
+      paymentMethod: 'P2P Antar Member',
+      walletSource: 'Saldo Utama',
       note: `Transfer saldo ke member ${recipient.username} (${recipient.fullName || recipient.username})`,
       status: 'approved',
       createdAt: nowIso
@@ -526,7 +576,9 @@ export const Affiliate = {
       type: 'member_transfer',
       amount: parsedAmount,
       destinationAccount: sender.username,
-      note: `Terima transfer saldo dari member ${sender.username}`,
+      paymentMethod: 'P2P Antar Member',
+      walletSource: 'Saldo Utama',
+      note: `Terima transfer saldo dari member ${sender.username} (${sender.fullName || sender.username})`,
       status: 'approved',
       createdAt: nowIso
     });
