@@ -617,6 +617,47 @@
                 <span class="quick-label">PPOB Pulsa/PLN</span>
               </div>
 
+              <!-- 10. Aset Perak & Emas Fisik (Disamping PPOB) -->
+              <div class="quick-item" id="menuItemAsetPerak" onclick="navigateToModule('aset')">
+                <div class="quick-icon-wrap" style="background: #DCFCE7;">
+                  <svg viewBox="0 0 32 32" fill="none">
+                    <rect x="5" y="10" width="22" height="13" rx="3" fill="#10B981"/>
+                    <rect x="7" y="12" width="18" height="9" rx="1.5" stroke="#FFFFFF" stroke-width="1.2"/>
+                    <path d="M11 16.5H21M13.5 14V19" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round"/>
+                    <circle cx="21" cy="9" r="4.5" fill="#F59E0B"/>
+                    <path d="M21 7V11M19 9H23" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <span class="quick-label">Aset Perak</span>
+              </div>
+
+              <!-- 11. Toko Online / Merchandise (Disamping PPOB) -->
+              <div class="quick-item" id="menuItemTokoOnline" onclick="navigateToModule('toko')">
+                <div class="quick-icon-wrap" style="background: #FEF3C7;">
+                  <svg viewBox="0 0 32 32" fill="none">
+                    <path d="M6 11L8 6H24L26 11V24C26 25.1 25.1 26 24 26H8C6.9 26 6 25.1 6 24V11Z" fill="#F59E0B"/>
+                    <path d="M6 11H26" stroke="#D97706" stroke-width="1.8"/>
+                    <path d="M12 15C12 17.2 13.8 19 16 19C18.2 19 20 17.2 20 15" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <span class="quick-label">Toko Online</span>
+              </div>
+
+              <!-- 12. Pinjaman Modal Cepat Leader (Disamping PPOB) -->
+              <div class="quick-item" id="menuItemPinjamanLeader" onclick="navigateToModule('pinjaman')">
+                <div class="quick-icon-wrap" style="background: #DBEAFE;">
+                  <svg viewBox="0 0 32 32" fill="none">
+                    <rect x="5" y="7" width="22" height="16" rx="3" fill="#2563EB"/>
+                    <rect x="5" y="11" width="22" height="4" fill="#1D4ED8"/>
+                    <circle cx="10" cy="18" r="1.5" fill="#93C5FD"/>
+                    <rect x="14" y="17" width="8" height="2" rx="1" fill="#FFFFFF"/>
+                    <circle cx="23" cy="22" r="5" fill="#F59E0B"/>
+                    <path d="M23 19V25M21 21H25" stroke="#FFFFFF" stroke-width="1.3" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <span class="quick-label">Pinjaman Leader</span>
+              </div>
+
             </div>
           </div>
         </section>
@@ -3587,6 +3628,50 @@
 
   <!-- Javascript Modules Entry Point -->
   <script type="module" src="js/app.js?v=20261018_full_audit"></script>
+
+
+  <!-- Module Session Bridge & Member Gate -->
+  <script>
+    function navigateToModule(path) {
+      try {
+        let uid = sessionStorage.getItem('autotrading_session_user_id') || 
+                  localStorage.getItem('autotrading_session_user_id');
+        if (typeof Auth !== 'undefined' && Auth.getUser) {
+          const u = Auth.getUser();
+          if (u && u.id) uid = String(u.id);
+        }
+        if (uid) {
+          localStorage.setItem('autotrading_session_user_id', String(uid));
+          sessionStorage.setItem('autotrading_session_user_id', String(uid));
+        }
+        let tok = sessionStorage.getItem('autotrading_session_token') || 
+                  localStorage.getItem('autotrading_session_token');
+        if (typeof Auth !== 'undefined' && Auth.getSessionToken) {
+          const t = Auth.getSessionToken();
+          if (t) tok = t;
+        }
+        if (tok) {
+          localStorage.setItem('autotrading_session_token', tok);
+          sessionStorage.setItem('autotrading_session_token', tok);
+        }
+
+        // Enforce member access gate for protected modules: aset, toko, pinjaman
+        const memberOnlyModules = ['aset', 'toko', 'pinjaman'];
+        if (memberOnlyModules.includes(path) && !uid) {
+          if (typeof App !== 'undefined' && App.showToast) {
+            App.showToast('Khusus Member: Silakan login terlebih dahulu untuk mengakses menu ini!', 'info');
+          }
+          if (typeof App !== 'undefined' && App.openAuthModalWithTab) {
+            App.openAuthModalWithTab('login');
+          } else if (typeof App !== 'undefined' && App.openAuthModal) {
+            App.openAuthModal('login');
+          }
+          return;
+        }
+      } catch(e) {}
+      window.location.href = path;
+    }
+  </script>
 
 </body>
 </html>

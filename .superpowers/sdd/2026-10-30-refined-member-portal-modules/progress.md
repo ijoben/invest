@@ -46,4 +46,10 @@ Task 6: completed
 - Implemented loadAssetAdmin, saveAssetPrices, loadShopProductsAdmin, openAddShopProductModal, openEditShopProductModal, saveShopProduct, and deleteShopProduct in js/admin-page.js.
 - scratch/test_admin_portal.cjs verified 100% PASS.
 
-Task 7: in_progress
+Task 7: completed
+- Rebranded "Toko Offline" to "Toko Online" in index.html quick menu.
+- Enforced strict member access gate in navigateToModule: unauthenticated visitors are prompted to login via App.openAuthModalWithTab('login') rather than native alerts.
+- Confirmed quick menu uses clean URLs (/aset, /toko, /pinjaman) with no .html extension.
+- scratch/test_index_nav.cjs verified 100% PASS.
+
+Task 8: in_progress
