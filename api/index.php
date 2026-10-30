@@ -10524,44 +10524,104 @@ if ($action === 'admin_profit_normalize') {
 
 // === MODULE EXTENSIONS: ASET, TOKO, PINJAMAN ===
 
-// 1. Action: Get Asset Data (Perak/Emas)
+// 1. Action: Get Asset Data (Perak & Emas)
 if ($action === 'get_asset_data') {
     ensureTablesExist($pdo);
     $uid = currentSessionUserId();
     
-    $buyPrice = 40000;
-    $sellPrice = 35000;
-    $cashbackBal = 105.0000;
-    $cashbackYield = 4.1360;
+    // Default prices & parameters
+    $silverBuyPrice = 18500;
+    $silverSellPrice = 17200;
+    $silverCashbackBal = 15.0000;
+    $silverCashbackYield = 0.5000;
+    
+    $goldBuyPrice = 1350000;
+    $goldSellPrice = 1300000;
+    $goldCashbackBal = 10.0000;
+    $goldCashbackYield = 0.4500;
+
+    $mintingFeeSilver = 25000;
+    $mintingFeeGold = 50000;
+
+    $priceHistorySilver = [
+        ['date' => '24 Okt', 'price' => 17000],
+        ['date' => '25 Okt', 'price' => 17100],
+        ['date' => '26 Okt', 'price' => 17050],
+        ['date' => '27 Okt', 'price' => 17150],
+        ['date' => '28 Okt', 'price' => 17100],
+        ['date' => '29 Okt', 'price' => 17200],
+        ['date' => '30 Okt', 'price' => 17200]
+    ];
+    $priceHistoryGold = [
+        ['date' => '24 Okt', 'price' => 1280000],
+        ['date' => '25 Okt', 'price' => 1285000],
+        ['date' => '26 Okt', 'price' => 1290000],
+        ['date' => '27 Okt', 'price' => 1295000],
+        ['date' => '28 Okt', 'price' => 1290000],
+        ['date' => '29 Okt', 'price' => 1300000],
+        ['date' => '30 Okt', 'price' => 1300000]
+    ];
     $updateTime = date('Y-m-d H:i:s');
     
     try {
-        $st = $pdo->prepare("SELECT setting_key, setting_value FROM `settings` WHERE setting_key IN ('silver_buy_price', 'silver_sell_price', 'silver_cashback_balance', 'silver_cashback_yield', 'silver_last_update')");
+        $st = $pdo->prepare("SELECT setting_key, setting_value FROM `settings` WHERE setting_key IN (
+            'silver_buy_price', 'silver_sell_price', 'silver_cashback_balance', 'silver_cashback_yield', 'silver_last_update',
+            'gold_buy_price', 'gold_sell_price', 'gold_cashback_balance', 'gold_cashback_yield', 'gold_last_update',
+            'minting_fee_silver', 'minting_fee_gold', 'price_history_silver', 'price_history_gold'
+        )");
         $st->execute();
         $rows = $st->fetchAll();
         foreach ($rows as $r) {
-            if ($r['setting_key'] === 'silver_buy_price') $buyPrice = (int)$r['setting_value'];
-            if ($r['setting_key'] === 'silver_sell_price') $sellPrice = (int)$r['setting_value'];
-            if ($r['setting_key'] === 'silver_cashback_balance') $cashbackBal = (float)$r['setting_value'];
-            if ($r['setting_key'] === 'silver_cashback_yield') $cashbackYield = (float)$r['setting_value'];
-            if ($r['setting_key'] === 'silver_last_update') $updateTime = $r['setting_value'];
+            $k = $r['setting_key'];
+            $v = $r['setting_value'];
+            if ($k === 'silver_buy_price') $silverBuyPrice = (int)$v;
+            if ($k === 'silver_sell_price') $silverSellPrice = (int)$v;
+            if ($k === 'silver_cashback_balance') $silverCashbackBal = (float)$v;
+            if ($k === 'silver_cashback_yield') $silverCashbackYield = (float)$v;
+            if ($k === 'gold_buy_price') $goldBuyPrice = (int)$v;
+            if ($k === 'gold_sell_price') $goldSellPrice = (int)$v;
+            if ($k === 'gold_cashback_balance') $goldCashbackBal = (float)$v;
+            if ($k === 'gold_cashback_yield') $goldCashbackYield = (float)$v;
+            if ($k === 'minting_fee_silver') $mintingFeeSilver = (int)$v;
+            if ($k === 'minting_fee_gold') $mintingFeeGold = (int)$v;
+            if ($k === 'silver_last_update' || $k === 'gold_last_update') $updateTime = $v;
+            if ($k === 'price_history_silver' && !empty($v)) {
+                $dec = json_decode($v, true);
+                if (is_array($dec) && !empty($dec)) $priceHistorySilver = $dec;
+            }
+            if ($k === 'price_history_gold' && !empty($v)) {
+                $dec = json_decode($v, true);
+                if (is_array($dec) && !empty($dec)) $priceHistoryGold = $dec;
+            }
         }
     } catch (Exception $e) {}
 
     $silverBalance = 0.0000;
+    $silverSavingsBalance = 0.0000;
+    $silverContractBalance = 0.0000;
+    $goldBalance = 0.0000;
+    $goldSavingsBalance = 0.0000;
+    $goldContractBalance = 0.0000;
     $walletBalance = 0;
+    $points = 0;
     $txs = [];
 
     if ($uid !== '') {
         try {
-            $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, silver_balance FROM `users` WHERE id = :uid LIMIT 1");
+            $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, points, silver_balance, silver_savings_balance, silver_contract_balance, gold_balance, gold_savings_balance, gold_contract_balance FROM `users` WHERE id = :uid LIMIT 1");
             $uStmt->execute([':uid' => $uid]);
             $user = $uStmt->fetch();
             if ($user) {
                 $silverBalance = (float)($user['silver_balance'] ?? 0);
+                $silverSavingsBalance = (float)($user['silver_savings_balance'] ?? 0);
+                $silverContractBalance = (float)($user['silver_contract_balance'] ?? 0);
+                $goldBalance = (float)($user['gold_balance'] ?? 0);
+                $goldSavingsBalance = (float)($user['gold_savings_balance'] ?? 0);
+                $goldContractBalance = (float)($user['gold_contract_balance'] ?? 0);
                 $walletBalance = (int)($user['wallet_balance'] ?? 0);
+                $points = (int)($user['points'] ?? 0);
             }
-            $txStmt = $pdo->prepare("SELECT * FROM `asset_transactions` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 25");
+            $txStmt = $pdo->prepare("SELECT * FROM `asset_transactions` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 50");
             $txStmt->execute([':uid' => $uid]);
             $txs = $txStmt->fetchAll();
         } catch (Exception $e) {}
@@ -10572,14 +10632,34 @@ if ($action === 'get_asset_data') {
         'data' => [
             'session_token' => ($uid !== '') ? createSessionToken($uid, currentSessionRole()) : null,
             'is_logged_in' => ($uid !== ''),
-            'silver_buy_price' => $buyPrice,
-            'silver_sell_price' => $sellPrice,
-            'silver_balance' => $silverBalance,
+            // Perak
+            'silver_buy_price' => $silverBuyPrice,
+            'silver_sell_price' => $silverSellPrice,
+            'silver_balance' => $silverBalance, // Liquid siap jual
+            'silver_savings_balance' => $silverSavingsBalance, // Tabungan
+            'silver_contract_balance' => $silverContractBalance, // Kontrak aktif
+            'silver_total_balance' => round($silverBalance + $silverSavingsBalance + $silverContractBalance, 4),
+            'cashback_balance' => $silverCashbackBal,
+            'cashback_yield' => $silverCashbackYield,
+            'estimated_rupiah' => (int)round($silverBalance * $silverSellPrice),
+            'price_history_silver' => $priceHistorySilver,
+            'minting_fee_silver' => $mintingFeeSilver,
+            // Emas
+            'gold_buy_price' => $goldBuyPrice,
+            'gold_sell_price' => $goldSellPrice,
+            'gold_balance' => $goldBalance, // Liquid siap jual
+            'gold_savings_balance' => $goldSavingsBalance, // Tabungan
+            'gold_contract_balance' => $goldContractBalance, // Kontrak aktif
+            'gold_total_balance' => round($goldBalance + $goldSavingsBalance + $goldContractBalance, 4),
+            'gold_cashback_balance' => $goldCashbackBal,
+            'gold_cashback_yield' => $goldCashbackYield,
+            'gold_estimated_rupiah' => (int)round($goldBalance * $goldSellPrice),
+            'price_history_gold' => $priceHistoryGold,
+            'minting_fee_gold' => $mintingFeeGold,
+            // Umum
             'wallet_balance' => $walletBalance,
-            'cashback_balance' => $cashbackBal,
-            'cashback_yield' => $cashbackYield,
+            'points' => $points,
             'last_update' => $updateTime,
-            'estimated_rupiah' => (int)round($silverBalance * $sellPrice),
             'transactions' => $txs
         ]
     ]);
@@ -10600,7 +10680,7 @@ if ($action === 'buy_silver_asset') {
         jsonResponse(['success' => false, 'message' => 'Jumlah gram harus lebih besar dari 0.'], 400);
     }
 
-    $buyPrice = 40000;
+    $buyPrice = 18500;
     try {
         $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'silver_buy_price' LIMIT 1");
         $st->execute();
@@ -10624,9 +10704,13 @@ if ($action === 'buy_silver_asset') {
         $curWallet = (int)($user['wallet_balance'] ?? 0);
         if ($curWallet < $totalCost) {
             $pdo->rollBack();
+            $shortfall = $totalCost - $curWallet;
             jsonResponse([
                 'success' => false,
-                'message' => 'Saldo dompet tidak mencukupi. Diperlukan Rp ' . number_format($totalCost, 0, ',', '.') . ', saldo Anda: Rp ' . number_format($curWallet, 0, ',', '.')
+                'message' => 'Saldo dompet tidak mencukupi. Kurang Rp ' . number_format($shortfall, 0, ',', '.') . '. Silakan lakukan deposit.',
+                'shortfall' => $shortfall,
+                'required' => $totalCost,
+                'wallet_balance' => $curWallet
             ], 400);
         }
 
@@ -10674,6 +10758,99 @@ if ($action === 'buy_silver_asset') {
     }
 }
 
+// 2b. Action: Buy Gold Asset (Beli Emas via Saldo Utama)
+if ($action === 'buy_gold_asset') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $grams = (float)($in['grams'] ?? 0);
+    if ($grams <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Jumlah gram emas harus lebih besar dari 0.'], 400);
+    }
+
+    $buyPrice = 1350000;
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'gold_buy_price' LIMIT 1");
+        $st->execute();
+        $r = $st->fetch();
+        if ($r && (int)$r['setting_value'] > 0) $buyPrice = (int)$r['setting_value'];
+    } catch (Exception $e) {}
+
+    $totalCost = (int)round($grams * $buyPrice);
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, gold_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+        if (!$user) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+
+        $curWallet = (int)($user['wallet_balance'] ?? 0);
+        if ($curWallet < $totalCost) {
+            $pdo->rollBack();
+            $shortfall = $totalCost - $curWallet;
+            jsonResponse([
+                'success' => false,
+                'message' => 'Saldo dompet tidak mencukupi. Kurang Rp ' . number_format($shortfall, 0, ',', '.') . '. Silakan lakukan deposit.',
+                'shortfall' => $shortfall,
+                'required' => $totalCost,
+                'wallet_balance' => $curWallet
+            ], 400);
+        }
+
+        $newWallet = $curWallet - $totalCost;
+        $curGold = (float)($user['gold_balance'] ?? 0);
+        $newGold = $curGold + $grams;
+
+        $upUser = $pdo->prepare("UPDATE `users` SET wallet_balance = :wb, gold_balance = :gb WHERE id = :uid");
+        $upUser->execute([':wb' => $newWallet, ':gb' => $newGold, ':uid' => $uid]);
+
+        $txId = 'ATX-BUY-G-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $insAssetTx = $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'buy', 'gold', :grams, :ppg, :total, 'completed', NOW())");
+        $insAssetTx->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':grams' => $grams,
+            ':ppg' => $buyPrice,
+            ':total' => $totalCost
+        ]);
+
+        $insMainTx = $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'asset_buy', :amount, 'completed', 'Saldo Utama', 'wallet', 'Aset Emas', :txid, NOW())");
+        $insMainTx->execute([
+            ':id' => 'TRX-' . $txId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amount' => $totalCost,
+            ':txid' => $txId
+        ]);
+
+        $pdo->commit();
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Berhasil membeli ' . $grams . ' gram emas seharga Rp ' . number_format($totalCost, 0, ',', '.'),
+            'data' => [
+                'wallet_balance' => $newWallet,
+                'gold_balance' => $newGold,
+                'tx_id' => $txId
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal memproses pembelian emas: ' . $e->getMessage()], 500);
+    }
+}
+
 // 3. Action: Sell Silver Asset (Jual Perak Cair ke Saldo Utama / WD)
 if ($action === 'sell_silver_asset') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -10689,7 +10866,7 @@ if ($action === 'sell_silver_asset') {
         jsonResponse(['success' => false, 'message' => 'Jumlah gram harus lebih besar dari 0.'], 400);
     }
 
-    $sellPrice = 35000;
+    $sellPrice = 17200;
     try {
         $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'silver_sell_price' LIMIT 1");
         $st->execute();
@@ -10715,7 +10892,7 @@ if ($action === 'sell_silver_asset') {
             $pdo->rollBack();
             jsonResponse([
                 'success' => false,
-                'message' => 'Aset perak tidak mencukupi untuk dijual. Anda memiliki ' . $curSilver . ' gram.'
+                'message' => 'Saldo perak likuid tidak mencukupi untuk dijual. Anda memiliki ' . $curSilver . ' gram siap jual. Saldo tabungan/kontrak tidak dapat dijual langsung.'
             ], 400);
         }
 
@@ -10764,7 +10941,97 @@ if ($action === 'sell_silver_asset') {
     }
 }
 
-// 4. Action: Admin Save Asset Prices
+// 3b. Action: Sell Gold Asset (Jual Emas Cair ke Saldo Utama / WD)
+if ($action === 'sell_gold_asset') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $grams = (float)($in['grams'] ?? 0);
+    if ($grams <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Jumlah gram emas harus lebih besar dari 0.'], 400);
+    }
+
+    $sellPrice = 1300000;
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'gold_sell_price' LIMIT 1");
+        $st->execute();
+        $r = $st->fetch();
+        if ($r && (int)$r['setting_value'] > 0) $sellPrice = (int)$r['setting_value'];
+    } catch (Exception $e) {}
+
+    $totalProceeds = (int)round($grams * $sellPrice);
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, gold_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+        if (!$user) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+
+        $curGold = (float)($user['gold_balance'] ?? 0);
+        if ($curGold < $grams) {
+            $pdo->rollBack();
+            jsonResponse([
+                'success' => false,
+                'message' => 'Saldo emas likuid tidak mencukupi untuk dijual. Anda memiliki ' . $curGold . ' gram siap jual. Saldo tabungan/kontrak tidak dapat dijual langsung.'
+            ], 400);
+        }
+
+        $curWallet = (int)($user['wallet_balance'] ?? 0);
+        $newWallet = $curWallet + $totalProceeds;
+        $newGold = $curGold - $grams;
+
+        $upUser = $pdo->prepare("UPDATE `users` SET wallet_balance = :wb, gold_balance = :gb WHERE id = :uid");
+        $upUser->execute([':wb' => $newWallet, ':gb' => $newGold, ':uid' => $uid]);
+
+        $txId = 'ATX-SELL-G-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $insAssetTx = $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'sell', 'gold', :grams, :ppg, :total, 'completed', NOW())");
+        $insAssetTx->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':grams' => $grams,
+            ':ppg' => $sellPrice,
+            ':total' => $totalProceeds
+        ]);
+
+        $insMainTx = $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'asset_sell', :amount, 'completed', 'Pencairan Aset Emas', 'Aset Emas', 'Saldo Utama', :txid, NOW())");
+        $insMainTx->execute([
+            ':id' => 'TRX-' . $txId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amount' => $totalProceeds,
+            ':txid' => $txId
+        ]);
+
+        $pdo->commit();
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Berhasil menjual ' . $grams . ' gram emas. Dana Rp ' . number_format($totalProceeds, 0, ',', '.') . ' telah masuk ke saldo utama Anda.',
+            'data' => [
+                'wallet_balance' => $newWallet,
+                'gold_balance' => $newGold,
+                'proceeds' => $totalProceeds,
+                'tx_id' => $txId
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal memproses penjualan emas: ' . $e->getMessage()], 500);
+    }
+}
+
+// 4. Action: Admin Save Asset Prices (Dual Perak & Emas, Cashback, Biaya Cetak, & Grafik)
 if ($action === 'admin_save_asset_prices') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
@@ -10772,22 +11039,129 @@ if ($action === 'admin_save_asset_prices') {
     requireAdmin();
     ensureTablesExist($pdo);
     $in = json_decode(file_get_contents('php://input'), true) ?: [];
-    $buyPrice = (int)($in['silver_buy_price'] ?? $in['buy_price'] ?? 40000);
-    $sellPrice = (int)($in['silver_sell_price'] ?? $in['sell_price'] ?? 35000);
-    $cashbackBal = (float)($in['silver_cashback_balance'] ?? 105);
-    $cashbackYield = (float)($in['silver_cashback_yield'] ?? 4.136);
+
+    $silverBuyPrice = (int)($in['silver_buy_price'] ?? $in['buy_price'] ?? 18500);
+    $silverSellPrice = (int)($in['silver_sell_price'] ?? $in['sell_price'] ?? 17200);
+    $silverCashbackBal = (float)($in['silver_cashback_balance'] ?? 15);
+    $silverCashbackYield = (float)($in['silver_cashback_yield'] ?? 0.50);
+
+    $goldBuyPrice = (int)($in['gold_buy_price'] ?? 1350000);
+    $goldSellPrice = (int)($in['gold_sell_price'] ?? 1300000);
+    $goldCashbackBal = (float)($in['gold_cashback_balance'] ?? 10);
+    $goldCashbackYield = (float)($in['gold_cashback_yield'] ?? 0.45);
+
+    $mintingFeeSilver = (int)($in['minting_fee_silver'] ?? 25000);
+    $mintingFeeGold = (int)($in['minting_fee_gold'] ?? 50000);
+
+    $historySilver = $in['price_history_silver'] ?? null;
+    $historyGold = $in['price_history_gold'] ?? null;
 
     try {
         $up = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) VALUES (:k, :v, :d) ON DUPLICATE KEY UPDATE setting_value = :v, updated_at = NOW()");
-        $up->execute([':k' => 'silver_buy_price', ':v' => (string)$buyPrice, ':d' => 'Harga Beli Perak per Gram']);
-        $up->execute([':k' => 'silver_sell_price', ':v' => (string)$sellPrice, ':d' => 'Harga Jual Perak per Gram']);
-        $up->execute([':k' => 'silver_cashback_balance', ':v' => (string)$cashbackBal, ':d' => 'Saldo Cashback Perak']);
-        $up->execute([':k' => 'silver_cashback_yield', ':v' => (string)$cashbackYield, ':d' => 'Hasil Cashback Perak']);
+        
+        $up->execute([':k' => 'silver_buy_price', ':v' => (string)$silverBuyPrice, ':d' => 'Harga Beli Perak per Gram']);
+        $up->execute([':k' => 'silver_sell_price', ':v' => (string)$silverSellPrice, ':d' => 'Harga Jual Perak per Gram']);
+        $up->execute([':k' => 'silver_cashback_balance', ':v' => (string)$silverCashbackBal, ':d' => 'Saldo Cashback Perak']);
+        $up->execute([':k' => 'silver_cashback_yield', ':v' => (string)$silverCashbackYield, ':d' => 'Hasil Cashback Perak']);
         $up->execute([':k' => 'silver_last_update', ':v' => date('Y-m-d H:i:s'), ':d' => 'Waktu Update Harga Perak']);
 
-        jsonResponse(['success' => true, 'message' => 'Harga aset perak berhasil diperbarui.']);
+        $up->execute([':k' => 'gold_buy_price', ':v' => (string)$goldBuyPrice, ':d' => 'Harga Beli Emas per Gram']);
+        $up->execute([':k' => 'gold_sell_price', ':v' => (string)$goldSellPrice, ':d' => 'Harga Jual Emas per Gram']);
+        $up->execute([':k' => 'gold_cashback_balance', ':v' => (string)$goldCashbackBal, ':d' => 'Saldo Cashback Emas']);
+        $up->execute([':k' => 'gold_cashback_yield', ':v' => (string)$goldCashbackYield, ':d' => 'Hasil Cashback Emas']);
+        $up->execute([':k' => 'gold_last_update', ':v' => date('Y-m-d H:i:s'), ':d' => 'Waktu Update Harga Emas']);
+
+        $up->execute([':k' => 'minting_fee_silver', ':v' => (string)$mintingFeeSilver, ':d' => 'Biaya Cetak Fisik Perak']);
+        $up->execute([':k' => 'minting_fee_gold', ':v' => (string)$mintingFeeGold, ':d' => 'Biaya Cetak Fisik Emas']);
+
+        if ($historySilver !== null) {
+            $up->execute([':k' => 'price_history_silver', ':v' => is_string($historySilver) ? $historySilver : json_encode($historySilver), ':d' => 'Riwayat Grafik Perak']);
+        }
+        if ($historyGold !== null) {
+            $up->execute([':k' => 'price_history_gold', ':v' => is_string($historyGold) ? $historyGold : json_encode($historyGold), ':d' => 'Riwayat Grafik Emas']);
+        }
+
+        jsonResponse(['success' => true, 'message' => 'Pengaturan harga aset perak, emas, dan biaya cetak berhasil diperbarui.']);
     } catch (Exception $e) {
         jsonResponse(['success' => false, 'message' => 'Gagal menyimpan harga aset: ' . $e->getMessage()], 500);
+    }
+}
+
+// 4b. Action: Admin Save Shop Product (CRUD Toko Online: Foto, Nama, Harga, Stok, Deskripsi)
+if ($action === 'admin_save_shop_product') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $id = trim((string)($in['id'] ?? ''));
+    $name = trim((string)($in['name'] ?? ''));
+    $category = trim((string)($in['category'] ?? 'online'));
+    $description = trim((string)($in['description'] ?? ''));
+    $priceAmount = (int)($in['price_amount'] ?? 0);
+    $priceType = trim((string)($in['price_type'] ?? 'saldo'));
+    $imageUrl = trim((string)($in['image_url'] ?? ''));
+    $stock = (int)($in['stock'] ?? 100);
+    $pointsReward = (int)($in['points_reward'] ?? 10);
+    $status = trim((string)($in['status'] ?? 'active'));
+
+    if ($name === '' || $priceAmount <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Nama produk dan harga wajib diisi dengan benar.'], 400);
+    }
+
+    if ($id === '') {
+        $id = 'prod-' . strtolower(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+    }
+
+    try {
+        $st = $pdo->prepare("INSERT INTO `shop_products` (id, name, category, description, price_amount, price_type, image_url, stock, points_reward, status, created_at)
+            VALUES (:id, :name, :cat, :desc, :price, :ptype, :img, :stock, :prew, :status, NOW())
+            ON DUPLICATE KEY UPDATE name = :name, category = :cat, description = :desc, price_amount = :price, price_type = :ptype, image_url = :img, stock = :stock, points_reward = :prew, status = :status");
+        $st->execute([
+            ':id' => $id,
+            ':name' => $name,
+            ':cat' => $category,
+            ':desc' => $description,
+            ':price' => $priceAmount,
+            ':ptype' => $priceType,
+            ':img' => $imageUrl,
+            ':stock' => $stock,
+            ':prew' => $pointsReward,
+            ':status' => $status
+        ]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Produk toko online berhasil disimpan.',
+            'data' => ['id' => $id]
+        ]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal menyimpan produk: ' . $e->getMessage()], 500);
+    }
+}
+
+// 4c. Action: Admin Delete Shop Product
+if ($action === 'admin_delete_shop_product') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $id = trim((string)($in['id'] ?? ''));
+    if ($id === '') {
+        jsonResponse(['success' => false, 'message' => 'ID Produk wajib disertakan.'], 400);
+    }
+
+    try {
+        $st = $pdo->prepare("DELETE FROM `shop_products` WHERE id = :id");
+        $st->execute([':id' => $id]);
+        jsonResponse(['success' => true, 'message' => 'Produk berhasil dihapus dari katalog Toko Online.']);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal menghapus produk: ' . $e->getMessage()], 500);
     }
 }
 
@@ -10883,23 +11257,27 @@ if ($action === 'order_shop_product') {
 
         $price = (int)$product['price_amount'];
         $priceType = $product['price_type'] ?? 'saldo';
+        $pointsReward = isset($product['points_reward']) ? (int)$product['points_reward'] : 10;
+        if ($pointsReward <= 0) $pointsReward = 10;
 
         if ($priceType === 'points') {
             if ((int)$user['points'] < $price) {
                 $pdo->rollBack();
                 jsonResponse(['success' => false, 'message' => 'Poin Anda tidak mencukupi untuk redeem produk ini.'], 400);
             }
-            $newPoints = (int)$user['points'] - $price;
+            $newPoints = (int)$user['points'] - $price + $pointsReward;
             $upUser = $pdo->prepare("UPDATE `users` SET points = :pt WHERE id = :uid");
             $upUser->execute([':pt' => $newPoints, ':uid' => $uid]);
+            $newWallet = (int)$user['wallet_balance'];
         } else {
             if ((int)$user['wallet_balance'] < $price) {
                 $pdo->rollBack();
                 jsonResponse(['success' => false, 'message' => 'Saldo dompet tidak mencukupi untuk membeli produk ini. Silakan deposit terlebih dahulu.'], 400);
             }
             $newWallet = (int)$user['wallet_balance'] - $price;
-            $upUser = $pdo->prepare("UPDATE `users` SET wallet_balance = :wb WHERE id = :uid");
-            $upUser->execute([':wb' => $newWallet, ':uid' => $uid]);
+            $newPoints = (int)($user['points'] ?? 0) + $pointsReward;
+            $upUser = $pdo->prepare("UPDATE `users` SET wallet_balance = :wb, points = points + :prew WHERE id = :uid");
+            $upUser->execute([':wb' => $newWallet, ':prew' => $pointsReward, ':uid' => $uid]);
         }
 
         $pdo->prepare("UPDATE `shop_products` SET stock = stock - 1 WHERE id = :pid")->execute([':pid' => $productId]);
@@ -10929,15 +11307,27 @@ if ($action === 'order_shop_product') {
             ':txid' => $orderId
         ]);
 
+        $insPtsTx = $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'points_reward', :amount, 'completed', 'Reward Pembelian Toko (+10 Poin)', 'shop', 'Point Loyalty', :txid, NOW())");
+        $insPtsTx->execute([
+            ':id' => 'TRX-PTS-' . $orderId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amount' => $pointsReward,
+            ':txid' => $orderId
+        ]);
+
         $pdo->commit();
 
         jsonResponse([
             'success' => true,
-            'message' => 'Pesanan berhasil dibuat! Admin akan memproses pengemasan dan mengirim ke alamat Anda.',
+            'message' => 'Pesanan berhasil dibuat! Anda mendapatkan +' . $pointsReward . ' Poin Reward belanja.',
             'data' => [
                 'order_id' => $orderId,
                 'product_name' => $product['name'],
-                'amount' => $price
+                'amount' => $price,
+                'points_reward' => $pointsReward,
+                'wallet_balance' => $newWallet,
+                'points' => $newPoints
             ]
         ]);
     } catch (Exception $e) {
