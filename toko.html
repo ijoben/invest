@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Toko Online Resmi &amp; Produk Fisik - AUTOTRADING</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    :root {
+      --primary-gold: #D97706;
+      --primary-gold-dark: #B45309;
+      --primary-green: #10B981;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --card-bg: #FFFFFF;
+    }
+    body {
+      background-color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+    .top-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #FFFFFF;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: #0F172A;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 8px;
+    }
+    .back-btn:hover {
+      background: #F1F5F9;
+    }
+    .page-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    
+    /* BALANCE BAR */
+    .user-balance-bar {
+      background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+      border-radius: 18px;
+      padding: 16px 20px;
+      color: #FFFFFF;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+    }
+    .bal-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .bal-label {
+      font-size: 11px;
+      color: #94A3B8;
+      font-weight: 600;
+    }
+    .bal-val {
+      font-size: 16px;
+      font-weight: 800;
+      color: #FBBF24;
+    }
+
+    /* TABS */
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      background: #E2E8F0;
+      padding: 4px;
+      border-radius: 14px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #64748B;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    .tab-btn.active {
+      color: #0F172A;
+      background: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* PRODUCT CARD */
+    .product-card {
+      background: #FFFFFF;
+      border-radius: 20px;
+      border: 1px solid #E2E8F0;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.2s ease;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.07);
+    }
+    .product-hero {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .product-img-box {
+      width: 82px;
+      height: 82px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      flex-shrink: 0;
+      border: 1px solid #FCD34D;
+      overflow: hidden;
+      position: relative;
+    }
+    .product-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .product-info {
+      flex: 1;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .product-badge {
+      display: inline-block;
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #E0E7FF;
+      color: #3730A3;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .points-reward-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #DCFCE7;
+      color: #15803D;
+      border: 1px solid #BBF7D0;
+    }
+    .product-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .product-price {
+      font-size: 16px;
+      font-weight: 800;
+      color: #D97706;
+    }
+    .product-desc {
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.5;
+      background: #F8FAFC;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #F1F5F9;
+    }
+    .stock-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .stock-in { background: #ECFDF5; color: #059669; }
+    .stock-out { background: #FEF2F2; color: #DC2626; }
+
+    .btn-buy-product {
+      width: 100%;
+      background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 12px;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-buy-product:hover {
+      background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+    }
+    .btn-buy-product.disabled {
+      background: #CBD5E1;
+      color: #64748B;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* ORDER HISTORY CARD */
+    .order-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      border: 1px solid #E2E8F0;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed #E2E8F0;
+      padding-bottom: 8px;
+    }
+    .order-id {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .order-status {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+    .status-pending { background: #FEF3C7; color: #92400E; }
+    .status-shipped { background: #DBEAFE; color: #1E40AF; }
+    .status-completed { background: #DCFCE7; color: #166534; }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #FFFFFF;
+      border-radius: 22px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 22px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      border: 1px solid #E2E8F0;
+      position: relative;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #94A3B8;
+      line-height: 1;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .input-field {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px 12px;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 12px;
+      font-size: 13.5px;
+      color: #0F172A;
+      outline: none;
+      font-family: inherit;
+    }
+    .input-field:focus {
+      border-color: #D97706;
+    }
+    textarea.input-field {
+      resize: vertical;
+      min-height: 65px;
+    }
+
+    /* === MODERN ATTRACTIVE APP POPUP DIALOG === */
+    .app-popup-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999999;
+      padding: 20px;
+      animation: appPopupFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes appPopupFade { from { opacity: 0; } to { opacity: 1; } }
+    .app-popup-card {
+      background: #ffffff;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 360px;
+      padding: 26px 22px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      animation: appPopupZoom 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes appPopupZoom { from { transform: scale(0.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .app-popup-icon-wrap {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      background: #F0FDF4;
+      color: #16A34A;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+    }
+    .app-popup-icon-wrap.error { background: #FEF2F2; color: #DC2626; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15); }
+    .app-popup-icon-wrap.warning { background: #FFFBEB; color: #D97706; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15); }
+    .app-popup-icon-wrap.info { background: #EFF6FF; color: #2563EB; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15); }
+    .app-popup-title { font-size: 18px; font-weight: 800; color: #0F172A; margin-bottom: 8px; line-height: 1.3; }
+    .app-popup-message { font-size: 13px; line-height: 1.6; color: #64748B; margin-bottom: 22px; white-space: pre-line; word-break: break-word; }
+    .app-popup-actions { display: flex; gap: 10px; }
+    .app-popup-btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .app-popup-btn-confirm { background: linear-gradient(135deg, #10B981, #059669); color: #ffffff; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); }
+    .app-popup-btn-cancel { background: #F1F5F9; color: #64748B; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav class="top-navbar">
+    <button type="button" class="back-btn" onclick="window.location.href='./'">
+      <span>‹</span> Beranda
+    </button>
+    <div class="page-title">Toko Online Resmi</div>
+    <div style="font-size: 12px; font-weight: 700; color: #D97706;" id="userGreeting">Member</div>
+  </nav>
+
+  <div class="container">
+
+    <!-- USER BALANCE BAR -->
+    <div class="user-balance-bar">
+      <div class="bal-item">
+        <span class="bal-label">Saldo Utama Anda</span>
+        <span class="bal-val" id="displayUserWallet">Rp 0</span>
+      </div>
+      <div class="bal-item" style="text-align: right;">
+        <span class="bal-label">Poin Reward Anda</span>
+        <span class="bal-val" id="displayUserPoints" style="color: #6EE7B7;">0 Poin</span>
+      </div>
+    </div>
+
+    <!-- TABS: KATALOG VS RIWAYAT PESANAN -->
+    <div class="tab-bar">
+      <button type="button" class="tab-btn active" id="tabBtnCatalog" onclick="switchTab('catalog')">
+        🛍️ Produk Toko Online
+      </button>
+      <button type="button" class="tab-btn" id="tabBtnOrders" onclick="switchTab('orders')">
+        📦 Pesanan &amp; Resi Saya
+      </button>
+    </div>
+
+    <!-- TAB 1: PRODUCT CATALOG -->
+    <div id="tabCatalogSection">
+      <div id="productCatalogList">
+        <div style="text-align: center; padding: 30px; color: #94A3B8;">Memuat katalog Toko Online...</div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ORDER HISTORY -->
+    <div id="tabOrdersSection" style="display: none;">
+      <div id="orderHistoryList">
+        <div style="text-align: center; padding: 30px; color: #94A3B8;">Memuat riwayat pesanan...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CHECKOUT MODAL: BELI & KIRIM ALAMAT -->
+  <div class="modal-overlay" id="checkoutModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Checkout Toko Online</div>
+        <button class="modal-close" onclick="closeCheckoutModal()">&times;</button>
+      </div>
+
+      <!-- Item Preview -->
+      <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong style="font-size: 14px; color: #92400E; display: block;" id="modalProductName">Nama Produk</strong>
+          <span style="font-size: 12px; color: #B45309; font-weight: 700;" id="modalProductPrice">Harga: Rp 0</span>
+          <div style="margin-top: 4px;">
+            <span class="points-reward-badge" id="modalProductPointsReward">🎁 Dapatkan +10 Poin Reward</span>
+          </div>
+        </div>
+        <span style="font-size: 32px;" id="modalProductIcon">📦</span>
+      </div>
+
+      <!-- Shipping Address Form -->
+      <div class="form-group">
+        <label class="form-label">Nama Lengkap Penerima:</label>
+        <input type="text" class="input-field" id="orderRecipientName" placeholder="Contoh: Budi Santoso">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor WhatsApp / HP Aktif:</label>
+        <input type="tel" class="input-field" id="orderRecipientPhone" placeholder="Contoh: 081234567890">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Alamat Lengkap Pengiriman:</label>
+        <textarea class="input-field" id="orderShippingAddress" placeholder="Jalan, No Rumah, RT/RW, Kelurahan, Kecamatan, Kota/Kabupaten, Kode Pos"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Catatan Pengiriman (Opsional):</label>
+        <input type="text" class="input-field" id="orderNotes" placeholder="Contoh: Titipkan ke satpam jika tidak ada orang">
+      </div>
+
+      <div style="font-size: 11px; color: #64748B; margin-bottom: 16px; background: #F1F5F9; padding: 10px 12px; border-radius: 10px; line-height: 1.5;">
+        💡 <strong>Bonus Poin Belanja:</strong> Saldo utama akan dipotong secara instan dan Anda mendapatkan <strong>+10 Poin Reward</strong> otomatis. Paket dikemas rapi dan dikirim via ekspedisi terpercaya.
+      </div>
+
+      <button type="button" class="btn-buy-product" id="btnConfirmOrder" onclick="submitOrder()">
+        <span>🚚</span> Konfirmasi Beli &amp; Kirim Pesanan
+      </button>
+    </div>
+  </div>
+
+  <!-- MODERN ATTRACTIVE APP POPUP DIALOG -->
+  <div id="appCustomPopupOverlay" class="app-popup-overlay" style="display: none;">
+    <div class="app-popup-card">
+      <div class="app-popup-icon-wrap" id="appPopupIconWrap">
+        <span id="appPopupIcon">✨</span>
+      </div>
+      <div class="app-popup-title" id="appPopupTitle">Pemberitahuan</div>
+      <div class="app-popup-message" id="appPopupMessage">Pesan informasi</div>
+      <div class="app-popup-actions" id="appPopupActions">
+        <button type="button" class="app-popup-btn app-popup-btn-cancel" id="appPopupBtnCancel" style="display: none;">Batal</button>
+        <button type="button" class="app-popup-btn app-popup-btn-confirm" id="appPopupBtnConfirm">OK, Mengerti</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'api/index.php';
+    let shopData = {
+      products: [],
+      orders: [],
+      user_wallet: 0,
+      user_points: 0
+    };
+    let selectedProduct = null;
+
+    function showAppPopup({ title, message, type = 'info', confirmText = 'OK, Mengerti', cancelText = null, onConfirm = null, onCancel = null }) {
+      const overlay = document.getElementById('appCustomPopupOverlay');
+      const iconWrap = document.getElementById('appPopupIconWrap');
+      const iconSpan = document.getElementById('appPopupIcon');
+      const titleEl = document.getElementById('appPopupTitle');
+      const msgEl = document.getElementById('appPopupMessage');
+      const btnConfirm = document.getElementById('appPopupBtnConfirm');
+      const btnCancel = document.getElementById('appPopupBtnCancel');
+
+      iconWrap.className = 'app-popup-icon-wrap';
+      if (type === 'success') {
+        iconWrap.classList.add('success');
+        iconSpan.innerHTML = '✓';
+      } else if (type === 'error') {
+        iconWrap.classList.add('error');
+        iconSpan.innerHTML = '✕';
+      } else if (type === 'warning') {
+        iconWrap.classList.add('warning');
+        iconSpan.innerHTML = '⚠️';
+      } else {
+        iconWrap.classList.add('info');
+        iconSpan.innerHTML = 'ℹ️';
+      }
+
+      titleEl.innerText = title || 'Informasi';
+      msgEl.innerText = message || '';
+      btnConfirm.innerText = confirmText;
+
+      if (cancelText) {
+        btnCancel.style.display = 'block';
+        btnCancel.innerText = cancelText;
+      } else {
+        btnCancel.style.display = 'none';
+      }
+
+      btnConfirm.onclick = () => {
+        overlay.style.display = 'none';
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+
+      btnCancel.onclick = () => {
+        overlay.style.display = 'none';
+        if (typeof onCancel === 'function') onCancel();
+      };
+
+      overlay.style.display = 'flex';
+    }
+
+    function getSessionToken() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('sessionToken') || urlParams.get('token');
+        if (urlToken) return urlToken;
+        if (typeof localStorage !== 'undefined') {
+          const t = localStorage.getItem('autotrading_session_token') || localStorage.getItem('session_token') || localStorage.getItem('fgt_session_token');
+          if (t) return t;
+        }
+        if (typeof sessionStorage !== 'undefined') {
+          const t = sessionStorage.getItem('autotrading_session_token') || sessionStorage.getItem('session_token') || sessionStorage.getItem('fgt_session_token');
+          if (t) return t;
+        }
+      } catch (e) {}
+      return '';
+    }
+
+    function getCurrentUserLocal() {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const u = localStorage.getItem('autotrading_user') || localStorage.getItem('current_user') || localStorage.getItem('fgt_user');
+          if (u) return JSON.parse(u);
+        }
+        if (typeof sessionStorage !== 'undefined') {
+          const u = sessionStorage.getItem('autotrading_user') || sessionStorage.getItem('current_user') || sessionStorage.getItem('fgt_user');
+          if (u) return JSON.parse(u);
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function getActiveUserId() {
+      const u = getCurrentUserLocal();
+      if (u && u.id) return String(u.id);
+      const uid = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_user_id') : null) ||
+                  (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_user_id') : null) ||
+                  (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('fgt_session_user_id') : null);
+      return uid ? String(uid) : '';
+    }
+
+    function isMemberLoggedIn() {
+      return Boolean(getSessionToken() || getCurrentUserLocal() || getActiveUserId());
+    }
+
+    function checkMemberAccess() {
+      if (!isMemberLoggedIn()) {
+        showAppPopup({
+          title: 'Akses Khusus Member',
+          message: 'Menu Toko Online hanya dapat diakses oleh member terdaftar.\n\nSilakan login terlebih dahulu untuk berbelanja dan mendapatkan Poin Reward.',
+          type: 'info',
+          confirmText: 'Login Sekarang',
+          cancelText: 'Kembali',
+          onConfirm: () => { window.location.href = './#login'; },
+          onCancel: () => { window.location.href = './'; }
+        });
+        return false;
+      }
+      return true;
+    }
+
+    function getApiUrl(action) {
+      const token = getSessionToken();
+      const uid = getActiveUserId();
+      let url = `${API_URL}?action=${encodeURIComponent(action)}`;
+      if (token) url += `&sessionToken=${encodeURIComponent(token)}`;
+      if (uid) url += `&userId=${encodeURIComponent(uid)}`;
+      return url;
+    }
+
+    function getAuthFetchOptions(method = 'GET', body = null) {
+      const token = getSessionToken();
+      const uid = getActiveUserId();
+      const headers = { 'Accept': 'application/json' };
+      if (body) headers['Content-Type'] = 'application/json';
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+        headers['X-Session-Token'] = token;
+      }
+      if (uid) headers['X-User-Id'] = uid;
+      const opts = { method, headers, credentials: 'include' };
+      if (body) {
+        const bodyObj = (typeof body === 'string') ? JSON.parse(body) : { ...body };
+        if (token && !bodyObj.sessionToken) bodyObj.sessionToken = token;
+        if (uid && !bodyObj.userId) bodyObj.userId = uid;
+        opts.body = JSON.stringify(bodyObj);
+      }
+      return opts;
+    }
+
+    function handleApiSessionToken(json) {
+      if (!json) return;
+      const t = json.sessionToken || (json.data && json.data.session_token);
+      if (t) {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', t);
+          if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', t);
+        } catch (e) {}
+      }
+    }
+
+    function formatRupiah(num) {
+      return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+    }
+
+    async function loadShopData() {
+      try {
+        const res = await fetch(getApiUrl('get_shop_data'), getAuthFetchOptions('GET'));
+        const json = await res.json();
+        if (json.success && json.data) {
+          handleApiSessionToken(json);
+          shopData = json.data;
+          renderShopUI();
+        }
+      } catch (e) {
+        console.error('Error fetching shop data:', e);
+      }
+    }
+
+    function renderShopUI() {
+      const u = getCurrentUserLocal();
+      if (u && (u.username || u.fullName)) {
+        document.getElementById('userGreeting').innerText = u.username || u.fullName;
+      }
+      document.getElementById('displayUserWallet').innerText = formatRupiah(shopData.user_wallet);
+      document.getElementById('displayUserPoints').innerText = Number(shopData.user_points || 0).toLocaleString('id-ID') + ' Poin';
+
+      // Render Products
+      const catWrap = document.getElementById('productCatalogList');
+      const products = shopData.products || [];
+
+      if (products.length === 0) {
+        catWrap.innerHTML = '<div style="text-align:center; padding:30px; color:#94A3B8;">Tidak ada produk Toko Online tersedia saat ini.</div>';
+      } else {
+        const iconMap = {
+          'prod-perak-5g': '🪙',
+          'prod-kaos-trader': '👕',
+          'prod-starter-kit': '📚'
+        };
+
+        catWrap.innerHTML = products.map(p => {
+          const fallbackIcon = iconMap[p.id] || '🛍️';
+          const stock = Number(p.stock || 0);
+          const isOutOfStock = (stock <= 0);
+          const pointsReward = Number(p.points_reward || 10);
+
+          let imgHtml = `<span style="font-size: 38px;">${fallbackIcon}</span>`;
+          if (p.image_url && p.image_url.trim() !== '') {
+            imgHtml = `<img src="${p.image_url}" alt="${p.name}" onerror="this.outerHTML='<span style=\\'font-size:38px;\\'>${fallbackIcon}</span>'">`;
+          }
+
+          return `
+            <div class="product-card">
+              <div class="product-hero">
+                <div class="product-img-box">${imgHtml}</div>
+                <div class="product-info">
+                  <div class="badge-row">
+                    <span class="product-badge">TOKO ONLINE</span>
+                    <span class="points-reward-badge">🎁 +${pointsReward} Poin</span>
+                  </div>
+                  <div class="product-title">${p.name}</div>
+                  <div class="product-price">${formatRupiah(p.price_amount)}</div>
+                </div>
+              </div>
+              <div class="product-desc">${p.description || 'Produk resmi fisik siap kirim.'}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #64748B;">
+                <span>Stok: <strong class="stock-badge ${isOutOfStock ? 'stock-out' : 'stock-in'}">${isOutOfStock ? 'Stok Habis' : stock + ' unit'}</strong></span>
+                <span style="color: #16A34A; font-weight: 700;">✓ Pengiriman Nasional</span>
+              </div>
+              <button type="button" class="btn-buy-product ${isOutOfStock ? 'disabled' : ''}" ${isOutOfStock ? 'disabled' : ''} onclick="openCheckoutModal('${p.id}')">
+                <span>🛒</span> ${isOutOfStock ? 'Stok Habis' : 'Beli Sekarang (+' + pointsReward + ' Poin)'}
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render Orders
+      const orderWrap = document.getElementById('orderHistoryList');
+      const orders = shopData.orders || [];
+
+      if (orders.length === 0) {
+        orderWrap.innerHTML = '<div style="text-align:center; padding:30px; color:#94A3B8; font-size:12.5px;">Belum ada pesanan produk Toko Online.<br>Pilih produk di tab katalog untuk memesan.</div>';
+      } else {
+        orderWrap.innerHTML = orders.map(o => {
+          const statusClass = 'status-' + (o.status || 'pending');
+          const statusLabel = (o.status === 'pending') ? 'Dikemas (Pending)' : ((o.status === 'shipped') ? 'Dikirim' : 'Selesai');
+          return `
+            <div class="order-card">
+              <div class="order-header">
+                <span class="order-id">${o.id}</span>
+                <span class="order-status ${statusClass}">${statusLabel}</span>
+              </div>
+              <div>
+                <strong style="font-size: 13.5px; color: #0F172A;">${o.product_name}</strong>
+                <div style="font-size: 11.5px; color: #D97706; font-weight: 700; margin-top: 2px;">${formatRupiah(o.amount)}</div>
+              </div>
+              <div style="font-size: 11px; color: #475569; background: #F8FAFC; padding: 8px 10px; border-radius: 8px;">
+                <strong>Penerima:</strong> ${o.recipient_name} (${o.recipient_phone})<br>
+                <strong>Alamat:</strong> ${o.shipping_address}<br>
+                ${o.tracking_number ? `<strong style="color: #1E40AF;">No. Resi: ${o.tracking_number}</strong>` : '<span style="color: #94A3B8;">Resi sedang disiapkan oleh admin...</span>'}
+              </div>
+              <div style="font-size: 10px; color: #94A3B8; text-align: right;">
+                Waktu Pesan: ${o.created_at || 'Baru saja'}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function switchTab(tab) {
+      if (tab === 'catalog') {
+        document.getElementById('tabBtnCatalog').classList.add('active');
+        document.getElementById('tabBtnOrders').classList.remove('active');
+        document.getElementById('tabCatalogSection').style.display = 'block';
+        document.getElementById('tabOrdersSection').style.display = 'none';
+      } else {
+        document.getElementById('tabBtnOrders').classList.add('active');
+        document.getElementById('tabBtnCatalog').classList.remove('active');
+        document.getElementById('tabOrdersSection').style.display = 'block';
+        document.getElementById('tabCatalogSection').style.display = 'none';
+      }
+    }
+
+    function openCheckoutModal(productId) {
+      if (!checkMemberAccess()) return;
+      const p = (shopData.products || []).find(item => item.id === productId);
+      if (!p) return;
+      if (Number(p.stock || 0) <= 0) {
+        showAppPopup({ title: 'Stok Habis', message: 'Mohon maaf, stok produk ini sedang habis.', type: 'warning' });
+        return;
+      }
+      selectedProduct = p;
+
+      document.getElementById('modalProductName').innerText = p.name;
+      document.getElementById('modalProductPrice').innerText = 'Harga: ' + formatRupiah(p.price_amount);
+      const pointsReward = Number(p.points_reward || 10);
+      document.getElementById('modalProductPointsReward').innerText = `🎁 Dapatkan +${pointsReward} Poin Reward`;
+
+      const iconMap = {
+        'prod-perak-5g': '🪙',
+        'prod-kaos-trader': '👕',
+        'prod-starter-kit': '📚'
+      };
+      document.getElementById('modalProductIcon').innerText = iconMap[p.id] || '🛍️';
+      
+      const u = getCurrentUserLocal();
+      if (u) {
+        if (u.fullName || u.name) document.getElementById('orderRecipientName').value = u.fullName || u.name;
+        if (u.phone) document.getElementById('orderRecipientPhone').value = u.phone;
+        if (u.address) document.getElementById('orderShippingAddress').value = u.address;
+      }
+
+      document.getElementById('checkoutModal').style.display = 'flex';
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkoutModal').style.display = 'none';
+    }
+
+    async function submitOrder() {
+      if (!checkMemberAccess()) return;
+      if (!selectedProduct) return;
+      const recipientName = document.getElementById('orderRecipientName').value.trim();
+      const recipientPhone = document.getElementById('orderRecipientPhone').value.trim();
+      const shippingAddress = document.getElementById('orderShippingAddress').value.trim();
+      const notes = document.getElementById('orderNotes').value.trim();
+
+      if (!recipientName || !recipientPhone || !shippingAddress) {
+        showAppPopup({ title: 'Form Belum Lengkap', message: 'Mohon lengkapi Nama Penerima, Nomor WhatsApp, dan Alamat Lengkap Pengiriman.', type: 'warning' });
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmOrder');
+      btn.disabled = true;
+      btn.innerText = 'Mengirim Pesanan...';
+
+      try {
+        const res = await fetch(getApiUrl('order_shop_product'), getAuthFetchOptions('POST', {
+          product_id: selectedProduct.id,
+          recipient_name: recipientName,
+          recipient_phone: recipientPhone,
+          shipping_address: shippingAddress,
+          notes: notes
+        }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.auth || res.status === 401) {
+          showAppPopup({ title: 'Login Diperlukan', message: json.message || 'Sesi login telah berakhir.', type: 'info', confirmText: 'Login Sekarang', onConfirm: () => { window.location.href = './#login'; } });
+          return;
+        }
+        if (json.success) {
+          showAppPopup({
+            title: 'Pesanan Berhasil Dibuat!',
+            message: `${json.message}\n\nAnda mendapatkan +${json.data && json.data.points_reward ? json.data.points_reward : 10} Poin Reward belanja!`,
+            type: 'success',
+            onConfirm: () => {
+              closeCheckoutModal();
+              switchTab('orders');
+              loadShopData();
+            }
+          });
+        } else {
+          showAppPopup({ title: 'Pemesanan Gagal', message: json.message || 'Gagal memproses pesanan.', type: 'error' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🚚</span> Konfirmasi Beli &amp; Kirim Pesanan';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkMemberAccess();
+      loadShopData();
+    });
+  </script>
+
+</body>
+</html>

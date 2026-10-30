@@ -26,4 +26,12 @@ Task 3: completed
 - Strict member access gate enforcing authentication on boot.
 - scratch/test_aset_page.cjs verified 100% PASS.
 
-Task 4: in_progress
+Task 4: completed
+- toko.html rebranded completely to Toko Online.
+- Product cards support dynamic image_url rendering with high-quality fallback icons.
+- Added stock badge and out-of-stock validation disabling checkout when stock <= 0.
+- Added "+10 Poin Reward" tags and awarded points confirmation dialog.
+- Strict member access gate enforcing authentication on boot.
+- scratch/test_toko_page.cjs verified 100% PASS.
+
+Task 5: in_progress
