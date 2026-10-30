@@ -563,6 +563,152 @@ function ensureTablesExist($pdo) {
             INDEX `idx_audit_action` (`action`, `created_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+        // 9. Kolom aset logam mulia (Perak & Emas: likuid, tabungan, kontrak) pada tabel users
+        try {
+            $colsUsers = [
+                'silver_balance' => "DECIMAL(10,4) DEFAULT 0.0000 AFTER `wallet_balance`",
+                'silver_savings_balance' => "DECIMAL(10,4) DEFAULT 0.0000 AFTER `silver_balance`",
+                'silver_contract_balance' => "DECIMAL(10,4) DEFAULT 0.0000 AFTER `silver_savings_balance`",
+                'gold_balance' => "DECIMAL(10,4) DEFAULT 0.0000 AFTER `silver_contract_balance`",
+                'gold_savings_balance' => "DECIMAL(10,4) DEFAULT 0.0000 AFTER `gold_balance`",
+                'gold_contract_balance' => "DECIMAL(10,4) DEFAULT 0.0000 AFTER `gold_savings_balance`"
+            ];
+            foreach ($colsUsers as $colName => $colDef) {
+                $colExist = $pdo->query("SHOW COLUMNS FROM `users` LIKE '{$colName}'")->fetch();
+                if (!$colExist) {
+                    $pdo->exec("ALTER TABLE `users` ADD COLUMN `{$colName}` {$colDef}");
+                }
+            }
+        } catch(Exception $eColsUsers) {}
+
+        // 10. Tabel asset_transactions (Jual/Beli Perak & Emas)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `asset_transactions` (
+            `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+            `user_id` VARCHAR(64) NOT NULL,
+            `username` VARCHAR(64) NOT NULL,
+            `type` VARCHAR(32) NOT NULL,
+            `asset_type` VARCHAR(32) DEFAULT 'silver',
+            `grams` DECIMAL(10,4) NOT NULL,
+            `price_per_gram` BIGINT(20) NOT NULL,
+            `total_amount` BIGINT(20) NOT NULL,
+            `status` VARCHAR(32) DEFAULT 'completed',
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_asset_user` (`user_id`),
+            INDEX `idx_asset_type` (`type`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        // 11. Tabel shop_products (Toko Online / Produk Fisik)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `shop_products` (
+            `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+            `name` VARCHAR(128) NOT NULL,
+            `category` VARCHAR(64) DEFAULT 'online',
+            `description` TEXT DEFAULT NULL,
+            `price_amount` BIGINT(20) NOT NULL,
+            `price_type` VARCHAR(32) DEFAULT 'saldo',
+            `image_url` TEXT DEFAULT NULL,
+            `stock` INT(11) DEFAULT 100,
+            `points_reward` INT(11) DEFAULT 10,
+            `status` VARCHAR(32) DEFAULT 'active',
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        try {
+            $colPointsReward = $pdo->query("SHOW COLUMNS FROM `shop_products` LIKE 'points_reward'")->fetch();
+            if (!$colPointsReward) {
+                $pdo->exec("ALTER TABLE `shop_products` ADD COLUMN `points_reward` INT(11) DEFAULT 10 AFTER `stock`");
+            }
+        } catch(Exception $ePointsRew) {}
+
+        try {
+            $prodCount = (int)$pdo->query("SELECT COUNT(*) FROM `shop_products`")->fetchColumn();
+            if ($prodCount === 0) {
+                $pdo->exec("INSERT INTO `shop_products` (`id`, `name`, `category`, `description`, `price_amount`, `price_type`, `image_url`, `stock`, `points_reward`, `status`) VALUES
+                    ('prod-perak-5g', 'Logam Perak Murni 5 Gram (Fisik Bersertifikat)', 'online', 'Keping perak murni fisik kadar 99.9% cetakan bersertifikat resmi, siap dikirim ke alamat rumah Anda.', 200000, 'saldo', 'assets/images/silver_bar.png', 50, 10, 'active'),
+                    ('prod-kaos-trader', 'T-Shirt & Polo Eksklusif Komunitas Trader', 'online', 'Kaos polo katun premium dengan bordir emas logo resmi komunitas investor. Nyaman dipakai harian.', 125000, 'saldo', 'assets/images/merch_shirt.png', 100, 10, 'active'),
+                    ('prod-starter-kit', 'Starter Kit & Buku Panduan Fisik Investasi', 'online', 'Buku panduan cetak lengkap + binder strategi profit finansial dan sertifikat keanggotaan fisik.', 85000, 'saldo', 'assets/images/starter_kit.png', 150, 10, 'active')
+                ");
+            }
+        } catch(Exception $eProd) {}
+
+        // 12. Tabel shop_orders (Pesanan Toko & Alamat Pengiriman)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `shop_orders` (
+            `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+            `user_id` VARCHAR(64) NOT NULL,
+            `username` VARCHAR(64) NOT NULL,
+            `product_id` VARCHAR(64) NOT NULL,
+            `product_name` VARCHAR(128) NOT NULL,
+            `amount` BIGINT(20) NOT NULL,
+            `recipient_name` VARCHAR(128) NOT NULL,
+            `recipient_phone` VARCHAR(32) NOT NULL,
+            `shipping_address` TEXT NOT NULL,
+            `notes` TEXT DEFAULT NULL,
+            `tracking_number` VARCHAR(64) DEFAULT NULL,
+            `status` VARCHAR(32) DEFAULT 'pending',
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_shop_order_user` (`user_id`),
+            INDEX `idx_shop_order_status` (`status`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        // 13. Tabel leader_loans (Pinjaman Modal Cepat Leader)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `leader_loans` (
+            `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+            `user_id` VARCHAR(64) NOT NULL,
+            `username` VARCHAR(64) NOT NULL,
+            `loan_amount` BIGINT(20) NOT NULL,
+            `active_sponsors_count` INT(11) NOT NULL,
+            `purpose` TEXT NOT NULL,
+            `ktp_nik` VARCHAR(32) DEFAULT NULL,
+            `ktp_name` VARCHAR(128) DEFAULT NULL,
+            `ktp_image` LONGTEXT DEFAULT NULL,
+            `bank_name` VARCHAR(64) DEFAULT NULL,
+            `account_number` VARCHAR(64) DEFAULT NULL,
+            `account_holder` VARCHAR(128) DEFAULT NULL,
+            `status` VARCHAR(32) DEFAULT 'pending',
+            `rejection_reason` TEXT DEFAULT NULL,
+            `interest_rate_percent` DECIMAL(5,2) DEFAULT 2.00,
+            `monthly_due_amount` BIGINT(20) DEFAULT 0,
+            `total_due_amount` BIGINT(20) DEFAULT 0,
+            `repaid_amount` BIGINT(20) DEFAULT 0,
+            `due_date` DATETIME DEFAULT NULL,
+            `unpaid_months_count` INT(11) DEFAULT 0,
+            `repayment_status` VARCHAR(32) DEFAULT 'pending',
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_loan_user` (`user_id`),
+            INDEX `idx_loan_status` (`status`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        try {
+            $colInterest = $pdo->query("SHOW COLUMNS FROM `leader_loans` LIKE 'interest_rate_percent'")->fetch();
+            if (!$colInterest) {
+                $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `interest_rate_percent` DECIMAL(5,2) DEFAULT 2.00 AFTER `rejection_reason`");
+                $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `monthly_due_amount` BIGINT(20) DEFAULT 0 AFTER `interest_rate_percent`");
+                $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `total_due_amount` BIGINT(20) DEFAULT 0 AFTER `monthly_due_amount`");
+                $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `repaid_amount` BIGINT(20) DEFAULT 0 AFTER `total_due_amount`");
+                $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `due_date` DATETIME DEFAULT NULL AFTER `repaid_amount`");
+                $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `unpaid_months_count` INT(11) DEFAULT 0 AFTER `due_date`");
+                $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `repayment_status` VARCHAR(32) DEFAULT 'pending' AFTER `unpaid_months_count`");
+            }
+        } catch(Exception $eCols) {}
+
+        try {
+            $pdo->exec("INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES
+                ('loan_monthly_interest_rate', '2.0', 'Suku bunga bulanan pinjaman modal leader (%)'),
+                ('loan_block_threshold_months', '2', 'Batas bulan keterlambatan sebelum akun diblokir'),
+                ('silver_buy_price', '18500', 'Harga beli perak per gram (Rp)'),
+                ('silver_sell_price', '17200', 'Harga jual perak per gram (Rp)'),
+                ('silver_cashback_balance', '15.0', 'Saldo cashback perak (Gram)'),
+                ('silver_cashback_yield', '0.50', 'Hasil cashback perak harian (Gram)'),
+                ('gold_buy_price', '1350000', 'Harga beli emas per gram (Rp)'),
+                ('gold_sell_price', '1300000', 'Harga jual emas per gram (Rp)'),
+                ('gold_cashback_balance', '10.0', 'Saldo cashback emas (Gram)'),
+                ('gold_cashback_yield', '0.45', 'Hasil cashback emas harian (Gram)'),
+                ('minting_fee_silver', '25000', 'Biaya cetak perak fisik per gram (Rp)'),
+                ('minting_fee_gold', '50000', 'Biaya cetak emas fisik per gram (Rp)'),
+                ('price_history_silver', '[{\"date\":\"24 Okt\",\"price\":17000},{\"date\":\"25 Okt\",\"price\":17100},{\"date\":\"26 Okt\",\"price\":17050},{\"date\":\"27 Okt\",\"price\":17150},{\"date\":\"28 Okt\",\"price\":17100},{\"date\":\"29 Okt\",\"price\":17200},{\"date\":\"30 Okt\",\"price\":17200}]', 'Riwayat harga perak 7 hari'),
+                ('price_history_gold', '[{\"date\":\"24 Okt\",\"price\":1280000},{\"date\":\"25 Okt\",\"price\":1285000},{\"date\":\"26 Okt\",\"price\":1290000},{\"date\":\"27 Okt\",\"price\":1295000},{\"date\":\"28 Okt\",\"price\":1290000},{\"date\":\"29 Okt\",\"price\":1300000},{\"date\":\"30 Okt\",\"price\":1300000}]', 'Riwayat harga emas 7 hari')
+            ");
+        } catch(Exception $eSet) {}
+
         return true;
     } catch (Exception $e) {
         error_log('Error ensuring tables exist: ' . $e->getMessage());
@@ -1445,6 +1591,20 @@ function deterministicProfitRate($invId, $minRate, $maxRate, $ymd) {
     return round($min + ($normalized * ($max - $min)), 2);
 }
 
+/**
+ * Paket yang aktif SEBELUM tanggal ini sudah menerima pembayaran lama yang
+ * tidak bisa direkonstruksi dengan pasti (klaim kumulatif membayar ulang hari
+ * sebelumnya). Untuk paket lama, klaim dibatasi SATU hari per siklus agar
+ * normalisasi tidak memicu pembayaran susulan besar. Paket baru tetap boleh
+ * mengejar beberapa hari yang terlewat.
+ */
+const PROFIT_CATCHUP_START_DATE = '2026-10-29';
+
+function profitCatchUpAllowed($startDate) {
+    $iso = normalizeHistoryDate($startDate);
+    return $iso !== null && $iso >= PROFIT_CATCHUP_START_DATE;
+}
+
 /** Nominal profit dari modal & rate (basis point, tanpa pembulatan ganda). */
 function profitAmountFromRate($capital, $rate) {
     $bp = (int)round(((float)$rate) * 100);
@@ -1470,6 +1630,62 @@ function normalizeHistoryDate($raw) {
     }
     $ts = strtotime($raw);
     return $ts ? date('Y-m-d', $ts) : null;
+}
+
+/**
+ * Daftar tanggal yield harian yang menjadi hak satu paket sampai $endYmd.
+ *
+ * Weekend hanya dilewati bila admin menetapkan "LIBUR" (weekendProfit OFF),
+ * sama seperti gerbang klaim & kalender mingguan di dashboard member.
+ * $maxDays membatasi jumlah hari kontrak (durationDays).
+ */
+function buildYieldDateList($startDate, $endYmd, $weekendEnabled, $maxDays = 0) {
+    $startIso = normalizeHistoryDate($startDate);
+    $endIso = normalizeHistoryDate($endYmd);
+    $out = [];
+    if (!$startIso || !$endIso) return $out;
+    $ts = strtotime($startIso . ' 00:00:00');
+    $endTs = strtotime($endIso . ' 00:00:00');
+    if ($ts === false || $endTs === false || $ts > $endTs) return $out;
+    while ($ts <= $endTs) {
+        $dow = (int)date('N', $ts);
+        if ($weekendEnabled || $dow < 6) {
+            $out[] = date('Y-m-d', $ts);
+            if ($maxDays > 0 && count($out) >= $maxDays) break;
+        }
+        $ts = strtotime('+1 day', $ts);
+    }
+    return $out;
+}
+
+/**
+ * Baris yield kanonik untuk hari ke-1..$uptoDays sebuah paket.
+ *
+ * Nominal SETIAP baris = modal x deterministicProfitRate(hari itu), jadi tidak
+ * mungkin melebihi rentang min/max paket. $zeroDates dipakai untuk hari yang
+ * memang sudah diselesaikan 0% (mode Loss) agar tidak dibayar ulang.
+ */
+function buildCanonicalYieldRows($invId, $capital, $minRate, $maxRate, $startDate, $endYmd, $weekendEnabled, $uptoDays, $zeroDates = []) {
+    $dates = buildYieldDateList($startDate, $endYmd, $weekendEnabled, (int)$uptoDays);
+    $rows = [];
+    $dayNo = 0;
+    foreach ($dates as $d) {
+        $dayNo++;
+        if (isset($zeroDates[$d])) {
+            $rate = 0.0;
+            $amount = 0;
+        } else {
+            $rate = deterministicProfitRate($invId, $minRate, $maxRate, $d);
+            $amount = profitAmountFromRate($capital, $rate);
+        }
+        $rows[] = [
+            'day' => $dayNo,
+            'date' => $d,
+            'rate' => $rate,
+            'amount' => $amount
+        ];
+    }
+    return $rows;
 }
 
 /**
@@ -1529,124 +1745,101 @@ function reconcilePlatformIntegrity($pdo) {
     }
 
     // 2. INVESTASI -----------------------------------------------------------
+    // Riwayat & total profit dibangun ulang dari KALENDER KONTRAK, bukan dari
+    // nominal transaksi klaim. Transaksi bisa berupa akumulasi beberapa hari
+    // atau snapshot lama yang membayar ulang hari sebelumnya; memakai nominal
+    // transaksi akan mengembalikan bug profit di luar rentang paket.
     $invRows = $pdo->query("SELECT * FROM `investments`")->fetchAll();
-    $profitByUser = [];
-    try {
-        $profitRows = $pdo->query("SELECT `user_id`, `amount`, `created_at` FROM `transactions` WHERE (`type` = 'profit_claim' OR `id` LIKE 'TRX-PRF-%') AND `status` = 'approved' ORDER BY `created_at` ASC")->fetchAll();
-        foreach ($profitRows as $r) $profitByUser[$r['user_id']][] = $r;
-    } catch (Exception $ePrf) {}
-    $invCountByUser = [];
-    foreach ($invRows as $inv) $invCountByUser[$inv['user_id']] = ($invCountByUser[$inv['user_id']] ?? 0) + 1;
     $stateInvMap = [];
     foreach (($stateData['investments'] ?? []) as $si) {
         if (!empty($si['id'])) $stateInvMap[$si['id']] = $si;
     }
+    $recWeekend = false;
+    if (isset($cfg['weekendProfit']['enabled'])) {
+        $recWeekend = (bool)$cfg['weekendProfit']['enabled'];
+    } elseif (isset($cfg['weekendProfitEnabled'])) {
+        $recWeekend = (bool)$cfg['weekendProfitEnabled'];
+    }
+    $recYesterday = date('Y-m-d', strtotime('-1 day'));
+    $recNow = date('Y-m-d H:i:s');
     $updInv = $pdo->prepare("UPDATE `investments` SET `days_elapsed` = :d, `total_profit_earned` = :t, `status` = :s, `pending_profit_claim` = :p WHERE `id` = :id");
     $invUpdates = [];
     foreach ($invRows as $inv) {
-        $uid = $inv['user_id'];
-        $claimedDays = 0;
-        $claimedAmount = 0;
-        $claimTxList = [];
-        if (($invCountByUser[$uid] ?? 0) <= 1) {
-            $startTs = strtotime($inv['start_date'] ?: ($inv['created_at'] ?: '1970-01-01'));
-            foreach (($profitByUser[$uid] ?? []) as $t) {
-                if (strtotime($t['created_at']) >= $startTs) {
-                    $claimTxList[] = $t;
-                    $claimedDays++;
-                    $claimedAmount += (int)$t['amount'];
-                }
-            }
-        } else {
-            $si = $stateInvMap[$inv['id']] ?? null;
-            if ($si && !empty($si['history']) && is_array($si['history'])) {
-                foreach ($si['history'] as $h) {
-                    if (($h['status'] ?? '') === 'claimed') {
-                        $claimedDays++;
-                        $claimedAmount += (int)($h['amount'] ?? 0);
+        $capitalR = (int)($inv['capital'] ?? 0);
+        $durationR = max(1, (int)($inv['duration_days'] ?: 30));
+        $minR = (float)($inv['min_rate'] ?? 0);
+        $maxR = (float)($inv['max_rate'] ?? $minR);
+        if ($maxR < $minR) $maxR = $minR;
+        if ($capitalR <= 0 || $maxR <= 0) continue;
+
+        $siR = $stateInvMap[$inv['id']] ?? null;
+        $claimedDatesR = [];
+        $claimedAtMapR = [];
+        $zeroDatesR = [];
+        if ($siR && !empty($siR['history']) && is_array($siR['history'])) {
+            foreach ($siR['history'] as $hR) {
+                if (!is_array($hR)) continue;
+                $isoR = normalizeHistoryDate($hR['date'] ?? ($hR['claimedAt'] ?? ''));
+                if (!$isoR) continue;
+                if (!empty($hR['claimedAt'])) $claimedAtMapR[$isoR] = $hR['claimedAt'];
+                if (($hR['status'] ?? '') === 'claimed') {
+                    $claimedDatesR[$isoR] = true;
+                    if ((int)($hR['amount'] ?? 0) === 0 && (float)($hR['rate'] ?? 0) == 0.0) {
+                        $zeroDatesR[$isoR] = true;
                     }
                 }
             }
         }
-        $si = $stateInvMap[$inv['id']] ?? null;
 
-        // Bangun ulang history: 1 baris = 1 klaim (ledger transaksi), lalu
-        // pertahankan hanya yield berjalan yang BELUM diklaim. Ini menghapus
-        // baris 'pending_claim' palsu yang dulu membuat profit dibayar dua kali.
-        $newHistory = null;
-        $newPending = null;
-        if ($si && !empty($claimTxList)) {
-            $durationH = (int)($inv['duration_days'] ?: 30);
-            $newHistory = [];
-            $n = 0;
-            foreach ($claimTxList as $t) {
-                $n++;
-                $newHistory[] = [
-                    'day' => min($n, $durationH),
-                    'date' => date('Y-m-d', strtotime($t['created_at'])),
-                    // `rate` WAJIB ikut disimpan. Dulu baris hasil rekonsiliasi tidak
-                    // punya rate, sehingga kartu mingguan tidak menemukan rate nyata
-                    // dan menampilkan rate global (mis. Jumat 1,15% padahal dibayar
-                    // 1,73%) — sumber keluhan "profit tidak cocok dengan persen".
-                    'rate' => impliedProfitRate((int)$t['amount'], (int)($inv['capital'] ?? 0)),
-                    'amount' => (int)$t['amount'],
-                    'status' => 'claimed',
-                    'claimedAt' => $t['created_at']
-                ];
-            }
-            $lastClaimTs = strtotime($claimTxList[count($claimTxList) - 1]['created_at']);
-            $keepRow = null;
-            $keepTs = 0;
-            if (!empty($si['history']) && is_array($si['history'])) {
-                foreach ($si['history'] as $h) {
-                    $st = (string)($h['status'] ?? '');
-                    if ($st !== 'pending_claim' && $st !== 'in_progress') continue;
-                    $iso = normalizeHistoryDate($h['date'] ?? ($h['claimedAt'] ?? ''));
-                    if (!$iso) continue;
-                    $ts = strtotime($iso);
-                    if ($ts <= $lastClaimTs) continue;
-                    if ($keepRow === null || $ts > $keepTs) {
-                        $keepRow = [
-                            'day' => min(count($newHistory) + 1, $durationH),
-                            'date' => $iso,
-                            'rate' => (isset($h['rate']) && is_numeric($h['rate']))
-                                ? (float)$h['rate']
-                                : impliedProfitRate((int)($h['amount'] ?? 0), (int)($inv['capital'] ?? 0)),
-                            'amount' => (int)($h['amount'] ?? 0),
-                            'status' => $st,
-                            'claimedAt' => $h['claimedAt'] ?? null
-                        ];
-                        $keepTs = $ts;
-                    }
-                }
-            }
-            if ($keepRow) $newHistory[] = $keepRow;
-            $newPending = 0;
-            foreach ($newHistory as $h) {
-                if (($h['status'] ?? '') === 'pending_claim') $newPending += (int)($h['amount'] ?? 0);
-            }
-        }
+        $paidDaysR = max(0, min($durationR, (int)($inv['days_elapsed'] ?? 0)));
+        $paidDaysR = max($paidDaysR, min($durationR, count($claimedDatesR)));
+        if ($paidDaysR <= 0) continue;
 
-        if ($claimedDays <= 0 && $newHistory === null) continue;
-        $duration = (int)($inv['duration_days'] ?: 30);
-        $newDays = min($duration, max((int)$inv['days_elapsed'], $claimedDays));
-        $newEarned = max((int)$inv['total_profit_earned'], $claimedAmount);
-        $newStatus = ($newDays >= $duration) ? 'completed' : $inv['status'];
-        $pending = ($newStatus === 'completed') ? 0 : (($newPending !== null) ? $newPending : (int)$inv['pending_profit_claim']);
-        $historyChanged = false;
-        if ($newHistory !== null && $si) {
-            $historyChanged = json_encode($si['history'] ?? []) !== json_encode($newHistory);
+        $rowsR = buildCanonicalYieldRows(
+            (string)$inv['id'],
+            $capitalR,
+            $minR,
+            $maxR,
+            (string)($inv['start_date'] ?: ($inv['created_at'] ?? '')),
+            $recYesterday,
+            $recWeekend,
+            $paidDaysR,
+            $zeroDatesR
+        );
+        $newDaysR = count($rowsR);
+        if ($newDaysR <= 0) continue;
+
+        $newHistoryR = [];
+        $newEarnedR = 0;
+        foreach ($rowsR as $rR) {
+            $newEarnedR += (int)$rR['amount'];
+            $newHistoryR[] = [
+                'day' => (int)$rR['day'],
+                'date' => (string)$rR['date'],
+                'rate' => (float)$rR['rate'],
+                'amount' => (int)$rR['amount'],
+                'status' => 'claimed',
+                'claimedAt' => $claimedAtMapR[$rR['date']] ?? ((string)$rR['date'] . ' 00:00:00')
+            ];
         }
-        if (!$historyChanged && $newDays === (int)$inv['days_elapsed'] && $newEarned === (int)$inv['total_profit_earned'] && $newStatus === $inv['status'] && $pending === (int)$inv['pending_profit_claim']) {
-            $invUpdates[$inv['id']] = ['days' => $newDays, 'earned' => $newEarned, 'status' => $newStatus, 'pending' => $pending, 'history' => $newHistory];
+        $newStatusR = ($newDaysR >= $durationR) ? 'completed' : (string)($inv['status'] ?? 'active');
+        $pendingR = 0;
+
+        $historyChangedR = json_encode($siR['history'] ?? []) !== json_encode($newHistoryR);
+        if (!$historyChangedR
+            && $newDaysR === (int)$inv['days_elapsed']
+            && $newEarnedR === (int)$inv['total_profit_earned']
+            && $newStatusR === $inv['status']
+            && $pendingR === (int)$inv['pending_profit_claim']) {
+            $invUpdates[$inv['id']] = ['days' => $newDaysR, 'earned' => $newEarnedR, 'status' => $newStatusR, 'pending' => $pendingR, 'history' => $newHistoryR];
             continue;
         }
         try {
-            $updInv->execute([':d' => $newDays, ':t' => $newEarned, ':s' => $newStatus, ':p' => $pending, ':id' => $inv['id']]);
+            $updInv->execute([':d' => $newDaysR, ':t' => $newEarnedR, ':s' => $newStatusR, ':p' => $pendingR, ':id' => $inv['id']]);
             $summary['investments']++;
-            $summary['details'][] = 'Paket ' . $inv['id'] . ': ' . $newDays . '/' . $duration . ' hari, profit IDR ' . number_format($newEarned, 0, ',', '.') . ', pending IDR ' . number_format($pending, 0, ',', '.');
+            $summary['details'][] = 'Paket ' . $inv['id'] . ': ' . $newDaysR . '/' . $durationR . ' hari, profit IDR ' . number_format($newEarnedR, 0, ',', '.') . ' (kanonik paket)';
         } catch (Exception $eUpdInv) {}
-        $invUpdates[$inv['id']] = ['days' => $newDays, 'earned' => $newEarned, 'status' => $newStatus, 'pending' => $pending, 'history' => $newHistory];
+        $invUpdates[$inv['id']] = ['days' => $newDaysR, 'earned' => $newEarnedR, 'status' => $newStatusR, 'pending' => $pendingR, 'history' => $newHistoryR];
     }
 
     // 3. RABAT ---------------------------------------------------------------
@@ -3871,15 +4064,20 @@ if ($action === 'claim_profit') {
 
     $totalClaimable = 0;
     $totalCapital = 0;
+    $totalPaidDays = 0;
+    $rateWeightedSum = 0.0;
+    $rateWeightSum = 0.0;
     $planNames = [];
     $claimedYieldDates = [];
     $nowDt = date('Y-m-d H:i:s');
+    // Yield T-1: hari yang sudah selesai saja (hari ini masih in progress).
+    $yesterdayWib = date('Y-m-d', strtotime($todayWib . ' -1 day'));
     $completedPlans = [];
     $claimResults = [];
 
     $updInvStmt = $pdo->prepare("
-        UPDATE `investments` 
-        SET `total_profit_earned` = `total_profit_earned` + :profit,
+        UPDATE `investments`
+        SET `total_profit_earned` = :total,
             `pending_profit_claim` = 0,
             `days_elapsed` = :newDays,
             `last_profit_yield_date` = :nowDt,
@@ -3887,7 +4085,8 @@ if ($action === 'claim_profit') {
         WHERE `id` = :id
     ");
 
-    // Load system state to synchronize history records and ensure no pending yields are missed
+    // Load system state: dipakai hanya untuk mengambil tanggal yang MEMANG sudah
+    // diselesaikan 0% (mode Loss) dan untuk menulis ulang riwayat kanonik.
     $stateDataSnapshot = [];
     try {
         $stSnap = $pdo->query("SELECT `data_json` FROM `autotrading_system_state` WHERE `state_key` = 'main_state' LIMIT 1");
@@ -3897,48 +4096,106 @@ if ($action === 'claim_profit') {
         }
     } catch(Exception $eSnap) {}
 
+    // Index riwayat state per paket sekali saja (hindari scan berulang O(n^2)).
+    $stateHistoryByInv = [];
+    if (isset($stateDataSnapshot['investments']) && is_array($stateDataSnapshot['investments'])) {
+        foreach ($stateDataSnapshot['investments'] as $sInvIdx) {
+            if (!is_array($sInvIdx) || empty($sInvIdx['id'])) continue;
+            $stateHistoryByInv[(string)$sInvIdx['id']] = (isset($sInvIdx['history']) && is_array($sInvIdx['history']))
+                ? $sInvIdx['history']
+                : [];
+        }
+    }
+
     foreach ($activeInvs as $inv) {
-        $pending = (int)($inv['pending_profit_claim'] ?? 0);
+        $capital = (int)($inv['capital'] ?? 0);
+        $duration = max(1, (int)($inv['duration_days'] ?? 30));
+        if ($capital <= 0) continue;
+
+        $minRate = (float)($inv['min_rate'] ?? 0);
+        $maxRate = (float)($inv['max_rate'] ?? $minRate);
+        if ($maxRate < $minRate) $maxRate = $minRate;
+        // Paket tanpa rentang rate yang sah tidak boleh menghasilkan "klaim 0"
+        // yang menaikkan hari tanpa membayar profit.
+        if ($maxRate <= 0) continue;
+
+        // Hari yang sudah lunas menurut kontrak (days_elapsed otoritatif di MySQL).
+        $paidDays = max(0, min($duration, (int)($inv['days_elapsed'] ?? 0)));
+
+        // Hari yang sudah diselesaikan 0% (mode Loss) + claimedAt asli.
+        $zeroDates = [];
+        $claimedAtMap = [];
+        foreach (($stateHistoryByInv[(string)$inv['id']] ?? []) as $hRow) {
+            if (!is_array($hRow)) continue;
+            $hIso = normalizeHistoryDate($hRow['date'] ?? '');
+            if (!$hIso) continue;
+            if (!empty($hRow['claimedAt'])) $claimedAtMap[$hIso] = $hRow['claimedAt'];
+            if (($hRow['status'] ?? '') === 'claimed' && (int)($hRow['amount'] ?? 0) === 0 && (float)($hRow['rate'] ?? 0) == 0.0) {
+                $zeroDates[$hIso] = true;
+            }
+        }
+
+        // Seluruh hari yield kanonik sampai kemarin (dibatasi durasi kontrak).
+        $canonicalRows = buildCanonicalYieldRows(
+            (string)$inv['id'],
+            $capital,
+            $minRate,
+            $maxRate,
+            (string)($inv['start_date'] ?: ($inv['created_at'] ?? '')),
+            $yesterdayWib,
+            $weekendEnabled,
+            $duration,
+            $zeroDates
+        );
+        if (empty($canonicalRows)) continue;
+
+        // Yang belum dibayar = hari setelah days_elapsed. Nominal TIDAK PERNAH
+        // diambil dari pending kiriman browser (sumber profit dobel & di luar paket).
+        $unpaidRows = array_slice($canonicalRows, $paidDays);
+        if (empty($unpaidRows)) continue;
+
+        // Paket lama: maksimal satu hari per klaim. Ini mencegah pembayaran
+        // susulan besar dari data historis yang sudah terlanjur dibayar ulang.
+        if (!profitCatchUpAllowed((string)($inv['start_date'] ?: ($inv['created_at'] ?? '')))) {
+            $unpaidRows = array_slice($unpaidRows, 0, 1);
+        }
+
         $profit = 0;
-
-        // If MySQL table pending is 0, check if history in state data has pending_claim records
-        $pendingFromHistory = 0;
-        if (!empty($stateDataSnapshot['investments']) && is_array($stateDataSnapshot['investments'])) {
-            foreach ($stateDataSnapshot['investments'] as $sInv) {
-                if (($sInv['id'] ?? '') === $inv['id'] && !empty($sInv['history']) && is_array($sInv['history'])) {
-                    foreach ($sInv['history'] as $hRow) {
-                        if (($hRow['status'] ?? '') === 'pending_claim') {
-                            $pendingFromHistory += (int)($hRow['amount'] ?? 0);
-                        }
-                    }
-                }
-            }
+        $lastPaidDate = null;
+        foreach ($unpaidRows as $uRow) {
+            $profit += (int)$uRow['amount'];
+            $rateWeightedSum += ((float)$uRow['rate']) * $capital;
+            $rateWeightSum += $capital;
+            $lastPaidDate = $uRow['date'];
         }
 
-        $effectivePending = max($pending, $pendingFromHistory);
-        if ($effectivePending > 0) {
-            $profit = $effectivePending;
-            $totalCapital += (int)($inv['capital'] ?? 0);
-            if (!empty($inv['plan_name'])) {
-                $planNames[] = $inv['plan_name'];
-            }
-            if (!empty($inv['last_profit_yield_date'])) {
-                $claimedYieldDates[] = $inv['last_profit_yield_date'];
-            }
-        } else {
-            // Profit trading hari ini sedang berjalan (in progress). Klaim profit harian baru dapat dilakukan besok pada tanggal berikutnya.
-            continue;
-        }
-
-        $newDays = (int)$inv['days_elapsed'] + 1;
-        $duration = (int)($inv['duration_days'] ?? 30);
+        $newDays = min($duration, $paidDays + count($unpaidRows));
         $newStatus = ($newDays >= $duration) ? 'completed' : 'active';
         if ($newStatus === 'completed') {
             $completedPlans[] = $inv;
         }
 
+        // Riwayat di state harus identik dengan riwayat kanonik (claimed sampai
+        // hari ke-newDays); inilah yang membuat kartu member selalu = plan.
+        $canonicalHistory = [];
+        $canonicalTotal = 0;
+        foreach ($canonicalRows as $cRow) {
+            if ((int)$cRow['day'] > $newDays) break;
+            $claimIso = $cRow['date'];
+            $claimedAt = $claimedAtMap[$claimIso] ?? null;
+            $canonicalTotal += (int)$cRow['amount'];
+            $canonicalHistory[] = [
+                'day' => (int)$cRow['day'],
+                'date' => $claimIso,
+                'rate' => (float)$cRow['rate'],
+                'amount' => (int)$cRow['amount'],
+                'status' => 'claimed',
+                'claimedAt' => $claimedAt ?: ($claimIso . ' 00:00:00')
+            ];
+        }
+
         $updInvStmt->execute([
-            ':profit' => $profit,
+            ':total' => $canonicalTotal,
             ':newDays' => $newDays,
             ':nowDt' => $nowDt,
             ':status' => $newStatus,
@@ -3948,15 +4205,32 @@ if ($action === 'claim_profit') {
         $claimResults[$inv['id']] = [
             'profit' => $profit,
             'days' => $newDays,
+            'daysPaid' => count($unpaidRows),
+            'total' => $canonicalTotal,
+            'history' => $canonicalHistory,
             'status' => $newStatus,
             'duration' => $duration
         ];
 
         $totalClaimable += $profit;
+        $totalCapital += $capital;
+        $totalPaidDays += count($unpaidRows);
+        if (!empty($inv['plan_name'])) {
+            $planNames[] = $inv['plan_name'];
+        }
+        if ($lastPaidDate) {
+            $claimedYieldDates[] = $lastPaidDate;
+        }
     }
 
-    $profitRate = ($totalCapital > 0) ? round(($totalClaimable / $totalCapital) * 100, 2) : 0;
+    // Persen yang ditampilkan = RATA-RATA HARIAN tertimbang modal (bukan
+    // total/modal). Klaim beberapa hari sekaligus tidak lagi tampil di luar
+    // rentang paket hanya karena harinya menumpuk.
+    $profitRate = ($rateWeightSum > 0) ? round($rateWeightedSum / $rateWeightSum, 2) : 0;
     $profitRateStr = 'Profit ' . str_replace('.', ',', (string)$profitRate) . '%';
+    if ($totalPaidDays > 1) {
+        $profitRateStr .= ' (rata-rata ' . $totalPaidDays . ' hari)';
+    }
     if (!empty($planNames)) {
         $uniquePlans = array_values(array_unique($planNames));
         if (count($uniquePlans) === 1) {
@@ -4119,94 +4393,45 @@ if ($action === 'claim_profit') {
             }
             if (isset($stateData['investments']) && is_array($stateData['investments'])) {
                 foreach ($stateData['investments'] as &$invRef) {
-                    // HANYA paket yang benar-benar diklaim yang boleh naik hari/profitnya.
-                    // Dulu semua paket aktif ikut naik +1 hari pada setiap klaim.
-                    if (($invRef['userId'] ?? '') !== $userId || !isset($claimResults[$invRef['id'] ?? ''])) continue;
-                    $cr = $claimResults[$invRef['id']];
-                    $yieldDateRaw = $invRef['lastProfitYieldDate'] ?? null;
+                    if (($invRef['userId'] ?? '') !== $userId) continue;
+                    $invKey = (string)($invRef['id'] ?? '');
 
-                    // Selaraskan baris riwayat yang dibayar dengan nominal yang BENAR-BENAR
-                    // dikreditkan. Dulu baris pending bisa berisi nominal berbeda dari
-                    // pending_profit_claim (mis. hasil yield admin random vs yield klien),
-                    // sehingga persen yang tampil tidak cocok dengan uang yang masuk.
-                    $invCapital = (int)($invRef['capital'] ?? 0);
-                    $pendingRowsIdx = [];
-                    if (isset($invRef['history']) && is_array($invRef['history'])) {
-                        foreach ($invRef['history'] as $hi => $hrow) {
-                            if (is_array($hrow) && ($hrow['status'] ?? '') === 'pending_claim') $pendingRowsIdx[] = $hi;
+                    if (!isset($claimResults[$invKey])) {
+                        // Paket ini tidak dibayar pada siklus ini: buang baris pending
+                        // dari snapshot browser supaya tidak bisa dibayar ulang nanti.
+                        if (isset($invRef['history']) && is_array($invRef['history'])) {
+                            $invRef['history'] = array_values(array_filter($invRef['history'], function($h) {
+                                return is_array($h) && ($h['status'] ?? '') !== 'pending_claim';
+                            }));
                         }
-                    }
-                    $paidProfit = (int)$cr['profit'];
-                    if (!empty($pendingRowsIdx)) {
-                        if ($paidProfit <= 0) {
-                            // Mode Loss / flat 0%: tidak ada uang masuk, riwayat ikut 0%.
-                            foreach ($pendingRowsIdx as $hi) {
-                                $invRef['history'][$hi]['amount'] = 0;
-                                $invRef['history'][$hi]['rate'] = 0;
-                            }
-                        } else {
-                            $rowsSum = 0;
-                            foreach ($pendingRowsIdx as $hi) $rowsSum += (int)($invRef['history'][$hi]['amount'] ?? 0);
-                            $diff = $paidProfit - $rowsSum;
-                            if ($diff !== 0) {
-                                $lastIdx = $pendingRowsIdx[count($pendingRowsIdx) - 1];
-                                $invRef['history'][$lastIdx]['amount'] = max(0, (int)($invRef['history'][$lastIdx]['amount'] ?? 0) + $diff);
-                            }
-                            foreach ($pendingRowsIdx as $hi) {
-                                $rowAmt = (int)($invRef['history'][$hi]['amount'] ?? 0);
-                                $invRef['history'][$hi]['rate'] = impliedProfitRate($rowAmt, $invCapital);
-                            }
-                        }
-                    } elseif ($paidProfit > 0) {
-                        // State belum punya baris pending untuk paket ini: catat baris yang
-                        // dibayar agar kartu mingguan memakai rate nyata, bukan rate global.
-                        $paidDateIso = normalizeHistoryDate($yieldDateRaw);
-                        $invRef['history'] = (isset($invRef['history']) && is_array($invRef['history'])) ? $invRef['history'] : [];
-                        $invRef['history'][] = [
-                            'day' => (int)$cr['days'],
-                            'date' => $paidDateIso ?: date('Y-m-d'),
-                            'rate' => impliedProfitRate($paidProfit, $invCapital),
-                            'amount' => $paidProfit,
-                            'status' => 'claimed',
-                            'claimedAt' => $nowDt
-                        ];
+                        $invRef['pendingProfitClaim'] = 0;
+                        continue;
                     }
 
+                    // Riwayat kanonik: 1 baris per hari kontrak, nominal = modal x rate
+                    // hari itu sesuai rentang paket. Tidak ada lagi baris pending palsu.
+                    $cr = $claimResults[$invKey];
+                    $invRef['history'] = $cr['history'];
                     $invRef['pendingProfitClaim'] = 0;
                     $invRef['lastProfitYieldDate'] = $nowDt;
-                    $invRef['daysElapsed'] = max((int)($invRef['daysElapsed'] ?? 0), (int)$cr['days']);
-                    $invRef['totalProfitEarned'] = (int)($invRef['totalProfitEarned'] ?? 0) + (int)$cr['profit'];
+                    $invRef['daysElapsed'] = (int)$cr['days'];
+                    $invRef['totalProfitEarned'] = (int)$cr['total'];
                     $invRef['status'] = $cr['status'];
                     if ($cr['status'] === 'completed') {
                         $invRef['completedAt'] = $nowDt;
                         $invRef['refundReady'] = true;
                     }
-                    if (isset($invRef['history']) && is_array($invRef['history'])) {
-                        $normHistory = [];
-                        foreach ($invRef['history'] as $h) {
-                            if (!is_array($h)) continue;
-                            $iso = normalizeHistoryDate($h['date'] ?? ($h['claimedAt'] ?? ''));
-                            if (!empty($iso)) $h['date'] = $iso;
-                            if (($h['status'] ?? '') === 'pending_claim') {
-                                $h['status'] = 'claimed';
-                                $h['claimedAt'] = $nowDt;
-                            }
-                            $normHistory[] = $h;
-                        }
-                        usort($normHistory, function($a, $b) {
-                            return strtotime($a['date'] ?? '1970-01-01') <=> strtotime($b['date'] ?? '1970-01-01');
-                        });
-                        $seq = 0;
-                        foreach ($normHistory as &$h) {
-                            $seq++;
-                            $h['day'] = min($seq, (int)$cr['duration']);
-                        }
-                        unset($h);
-                        $invRef['history'] = $normHistory;
-                    }
                 }
                 unset($invRef);
             }
+
+            // pending_profit_claim lama (hasil snapshot browser) tidak pernah lagi
+            // dipakai sebagai dasar pembayaran; nolkan agar tidak tampil sebagai
+            // "profit siap klaim" yang berbeda dari riwayat kanonik.
+            try {
+                $clrPendingStmt = $pdo->prepare("UPDATE `investments` SET `pending_profit_claim` = 0 WHERE `user_id` = :uid");
+                $clrPendingStmt->execute([':uid' => $userId]);
+            } catch (Exception $eClrPending) {}
             if (!isset($stateData['transactions']) || !is_array($stateData['transactions'])) {
                 $stateData['transactions'] = [];
             }
@@ -4259,12 +4484,13 @@ if ($action === 'claim_profit') {
         'walletBalance' => $newBalance,
         'profitRate' => $profitRate,
         'profitPercent' => $profitRateStr,
+        'profitDays' => $totalPaidDays,
         'profitDate' => $profitDateFormatted,
         'investments' => $updatedInvestments,
         'planName' => implode(', ', array_unique($planNames)) ?: 'Paket AI Trading',
         'transaction' => $trxObj,
         'sessionToken' => createSessionToken($userId, currentSessionRole() ?: 'user'),
-        'message' => 'Berhasil klaim profit harian sebesar IDR ' . number_format($totalClaimable, 0, ',', '.') . ' ke Saldo Utama!'
+        'message' => 'Berhasil klaim profit harian sebesar IDR ' . number_format($totalClaimable, 0, ',', '.') . ($totalPaidDays > 1 ? ' (' . $totalPaidDays . ' hari sekaligus)' : '') . ' ke Saldo Utama!'
     ]);
     exit();
 }
@@ -4527,7 +4753,7 @@ if ($action === 'invest_plan') {
                     'history' => [
                         [
                             'day' => 1,
-                            'date' => date('d/m/Y'),
+                            'date' => date('Y-m-d'),
                             'rate' => $day1Rate,
                             'amount' => $day1Profit,
                             'status' => 'in_progress'
@@ -9928,6 +10154,1511 @@ if ($action === 'admin_profit_audit' || $action === 'admin_profit_repair') {
         'summary' => $summary,
         'users' => array_values($report)
     ]);
+}
+
+// --- action=admin_profit_normalize (admin only) -----------------------------
+// Menormalkan SELURUH riwayat profit yang sudah dibayar ke rumus kanonik:
+// nominal per hari = modal x rate paket hari itu. Total profit, sisa hari, dan
+// status paket ikut dihitung ulang. SALDO DOMPET & TRANSAKSI TIDAK DIUBAH.
+// Idempoten: aman dijalankan berulang; jalankan dengan {"dryRun":true} untuk
+// melihat rencana perubahan tanpa menulis apa pun.
+if ($action === 'admin_profit_normalize') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    if (!$pdo) {
+        jsonResponse(['success' => false, 'message' => 'Database MySQL tidak terhubung.'], 503);
+    }
+    ensureTablesExist($pdo);
+
+    $inNorm = json_decode((string)file_get_contents('php://input'), true) ?: [];
+    $onlyUserIdN = trim((string)($inNorm['userId'] ?? ''));
+    $dryRunN = !empty($inNorm['dryRun']);
+
+    $cfgN = getGeneralSettings($pdo);
+    $weekendEnabledN = false;
+    if (isset($cfgN['weekendProfit']['enabled'])) {
+        $weekendEnabledN = (bool)$cfgN['weekendProfit']['enabled'];
+    } elseif (isset($cfgN['weekendProfitEnabled'])) {
+        $weekendEnabledN = (bool)$cfgN['weekendProfitEnabled'];
+    }
+
+    $plansN = [];
+    try {
+        $pStmtN = $pdo->prepare("SELECT `setting_value` FROM `settings` WHERE `setting_key` = 'platform_plans' LIMIT 1");
+        $pStmtN->execute();
+        $pRowN = $pStmtN->fetch();
+        if ($pRowN && !empty($pRowN['setting_value'])) {
+            $dbPlansN = json_decode($pRowN['setting_value'], true);
+            if (is_array($dbPlansN) && count($dbPlansN) > 0) $plansN = $dbPlansN;
+        }
+    } catch (Exception $ePlansN) {}
+
+    $planByIdN = [];
+    $planByNameN = [];
+    $normPlanName = function($s) {
+        return strtolower(trim((string)preg_replace('/\s+/u', ' ', (string)$s)));
+    };
+    foreach ($plansN as $pN) {
+        if (!is_array($pN)) continue;
+        if (!empty($pN['id'])) $planByIdN[(string)$pN['id']] = $pN;
+        if (!empty($pN['name'])) $planByNameN[$normPlanName($pN['name'])] = $pN;
+    }
+
+    $userNamesN = [];
+    try {
+        foreach ($pdo->query("SELECT `id`, `username`, `role` FROM `users`")->fetchAll() as $uN) {
+            $userNamesN[(string)$uN['id']] = [
+                'username' => (string)$uN['username'],
+                'role' => (string)$uN['role']
+            ];
+        }
+    } catch (Exception $eUsersN) {}
+
+    $stateN = loadMainState($pdo);
+    if (!is_array($stateN)) $stateN = [];
+    // Fallback: state yang sama juga menyimpan daftar paket bila tabel setting
+    // platform_plans belum terisi.
+    if (empty($plansN) && !empty($stateN['plans']) && is_array($stateN['plans'])) {
+        $plansN = $stateN['plans'];
+        $planByIdN = [];
+        $planByNameN = [];
+        foreach ($plansN as $pN) {
+            if (!is_array($pN)) continue;
+            if (!empty($pN['id'])) $planByIdN[(string)$pN['id']] = $pN;
+            if (!empty($pN['name'])) $planByNameN[$normPlanName($pN['name'])] = $pN;
+        }
+    }
+    $stateInvByIdN = [];
+    if (isset($stateN['investments']) && is_array($stateN['investments'])) {
+        foreach ($stateN['investments'] as $sInvN) {
+            if (is_array($sInvN) && !empty($sInvN['id'])) $stateInvByIdN[(string)$sInvN['id']] = $sInvN;
+        }
+    }
+
+    $invRowsN = [];
+    try {
+        $invRowsN = $pdo->query("SELECT * FROM `investments` ORDER BY `user_id`")->fetchAll();
+    } catch (Exception $eInvN) {
+        jsonResponse(['success' => false, 'message' => 'Gagal membaca tabel investasi: ' . $eInvN->getMessage()], 500);
+    }
+
+    $yesterdayN = date('Y-m-d', strtotime('-1 day'));
+    $nowN = date('Y-m-d H:i:s');
+    $normalizedById = [];
+    $canonicalByUser = [];
+    $detailsN = [];
+    $summaryN = [
+        'investmentsChecked' => 0,
+        'investmentsChanged' => 0,
+        'membersAffected' => 0,
+        'totalOld' => 0,
+        'totalNew' => 0
+    ];
+    $affectedUsers = [];
+
+    foreach ($invRowsN as $invN) {
+        $uidN = (string)($invN['user_id'] ?? '');
+        $invIdN = (string)($invN['id'] ?? '');
+        if ($invIdN === '' || $uidN === '') continue;
+        if ($onlyUserIdN !== '' && $uidN !== $onlyUserIdN) continue;
+        if (($userNamesN[$uidN]['role'] ?? '') === 'admin') continue;
+
+        $capitalN = (int)($invN['capital'] ?? 0);
+        if ($capitalN <= 0) continue;
+        $durationN = max(1, (int)($invN['duration_days'] ?? 30));
+
+        // Rate kontrak mengikuti paket yang berlaku (id dulu, lalu nama yang
+        // dinormalisasi spasinya). Bila paket tak ditemukan, pakai rate kontrak.
+        $planN = $planByIdN[(string)($invN['plan_id'] ?? '')] ?? null;
+        if (!$planN && !empty($invN['plan_name'])) {
+            $planN = $planByNameN[$normPlanName($invN['plan_name'])] ?? null;
+        }
+        $minN = $planN ? (float)($planN['minDailyProfit'] ?? $planN['minRate'] ?? 0) : (float)($invN['min_rate'] ?? 0);
+        $maxN = $planN ? (float)($planN['maxDailyProfit'] ?? $planN['maxRate'] ?? $minN) : (float)($invN['max_rate'] ?? $minN);
+        if ($maxN < $minN) $maxN = $minN;
+        $minStoredN = (float)($invN['min_rate'] ?? 0);
+        $maxStoredN = (float)($invN['max_rate'] ?? 0);
+
+        // Jangan pernah menormalkan paket tanpa rentang rate yang jelas: itu
+        // akan membuat seluruh profit menjadi 0%.
+        if ($minN <= 0 && $maxN <= 0) {
+            $detailsN[] = [
+                'userId' => $uidN,
+                'username' => $userNamesN[$uidN]['username'] ?? '-',
+                'investmentId' => $invIdN,
+                'skipped' => 'rentang rate paket tidak ditemukan (min/max 0)'
+            ];
+            continue;
+        }
+
+        $historyN = [];
+        if (isset($stateInvByIdN[$invIdN]['history']) && is_array($stateInvByIdN[$invIdN]['history'])) {
+            $historyN = $stateInvByIdN[$invIdN]['history'];
+        }
+
+        $claimedDatesN = [];
+        $claimedAtByDateN = [];
+        $zeroDatesN = [];
+        foreach ($historyN as $hN) {
+            if (!is_array($hN)) continue;
+            $hIsoN = normalizeHistoryDate($hN['date'] ?? ($hN['claimedAt'] ?? ''));
+            if (!$hIsoN) continue;
+            if (!empty($hN['claimedAt'])) $claimedAtByDateN[$hIsoN] = $hN['claimedAt'];
+            $stN = (string)($hN['status'] ?? '');
+            if ($stN === 'claimed') {
+                $claimedDatesN[$hIsoN] = true;
+                if ((int)($hN['amount'] ?? 0) === 0 && (float)($hN['rate'] ?? 0) == 0.0) {
+                    $zeroDatesN[$hIsoN] = true;
+                }
+            }
+        }
+
+        $paidDaysN = max(0, min($durationN, (int)($invN['days_elapsed'] ?? 0)));
+        $paidDaysN = max($paidDaysN, min($durationN, count($claimedDatesN)));
+
+        $summaryN['investmentsChecked']++;
+        $summaryN['totalOld'] += (int)($invN['total_profit_earned'] ?? 0);
+
+        if ($paidDaysN <= 0) {
+            // Belum ada hari yang lunas: cukup selaraskan rate kontrak, jangan
+            // sentuh riwayat in-progress hari ini.
+            $normalizedById[$invIdN] = [
+                'history' => null,
+                'days' => (int)($invN['days_elapsed'] ?? 0),
+                'total' => (int)($invN['total_profit_earned'] ?? 0),
+                'status' => (string)($invN['status'] ?? 'active'),
+                'minRate' => $minN,
+                'maxRate' => $maxN
+            ];
+            $summaryN['totalNew'] += (int)($invN['total_profit_earned'] ?? 0);
+            if (abs($minStoredN - $minN) > 0.001 || abs($maxStoredN - $maxN) > 0.001) {
+                $summaryN['investmentsChanged']++;
+                $detailsN[] = [
+                    'userId' => $uidN,
+                    'username' => $userNamesN[$uidN]['username'] ?? '-',
+                    'investmentId' => $invIdN,
+                    'plan' => (string)($invN['plan_name'] ?? ''),
+                    'change' => 'rate paket ' . $minStoredN . '-' . $maxStoredN . '% -> ' . $minN . '-' . $maxN . '%'
+                ];
+            }
+            $canonicalByUser[$uidN] = ($canonicalByUser[$uidN] ?? 0) + (int)($invN['total_profit_earned'] ?? 0);
+            if (!$dryRunN) {
+                try {
+                    $updRateN = $pdo->prepare("UPDATE `investments` SET `min_rate` = :minr, `max_rate` = :maxr, `pending_profit_claim` = 0 WHERE `id` = :id");
+                    $updRateN->execute([':minr' => $minN, ':maxr' => $maxN, ':id' => $invIdN]);
+                } catch (Exception $eRateN) {}
+            }
+            continue;
+        }
+
+        $rowsN = buildCanonicalYieldRows(
+            $invIdN,
+            $capitalN,
+            $minN,
+            $maxN,
+            (string)($invN['start_date'] ?: ($invN['created_at'] ?? '')),
+            $yesterdayN,
+            $weekendEnabledN,
+            $paidDaysN,
+            $zeroDatesN
+        );
+        $newDaysN = count($rowsN);
+        $newTotalN = 0;
+        $newHistoryN = [];
+        foreach ($rowsN as $rN) {
+            $newTotalN += (int)$rN['amount'];
+            $newHistoryN[] = [
+                'day' => (int)$rN['day'],
+                'date' => (string)$rN['date'],
+                'rate' => (float)$rN['rate'],
+                'amount' => (int)$rN['amount'],
+                'status' => 'claimed',
+                'claimedAt' => $claimedAtByDateN[$rN['date']] ?? ((string)$rN['date'] . ' 00:00:00')
+            ];
+        }
+        $newStatusN = ($newDaysN >= $durationN) ? 'completed' : (string)($invN['status'] ?? 'active');
+        if ($newStatusN !== 'completed' && ($newDaysN >= $durationN)) $newStatusN = 'completed';
+
+        // Riwayat state juga harus dibandingkan: total bisa sudah benar tetapi
+        // barisnya masih duplikat/berisi pending lama, dan itu wajib ditulis ulang.
+        $historyChangedN = (json_encode($historyN) !== json_encode($newHistoryN));
+        $changedN = ((int)($invN['total_profit_earned'] ?? 0) !== $newTotalN)
+            || ((int)($invN['days_elapsed'] ?? 0) !== $newDaysN)
+            || (abs($minStoredN - $minN) > 0.001)
+            || (abs($maxStoredN - $maxN) > 0.001)
+            || ((string)($invN['status'] ?? 'active') !== $newStatusN)
+            || $historyChangedN;
+
+        $summaryN['totalNew'] += $newTotalN;
+        $canonicalByUser[$uidN] = ($canonicalByUser[$uidN] ?? 0) + $newTotalN;
+        if ($changedN) {
+            $summaryN['investmentsChanged']++;
+            $affectedUsers[$uidN] = true;
+            $detailsN[] = [
+                'userId' => $uidN,
+                'username' => $userNamesN[$uidN]['username'] ?? '-',
+                'investmentId' => $invIdN,
+                'plan' => (string)($invN['plan_name'] ?? ''),
+                'range' => $minN . '-' . $maxN . '%',
+                'daysOld' => (int)($invN['days_elapsed'] ?? 0),
+                'daysNew' => $newDaysN,
+                'rowsOld' => count($historyN),
+                'rowsNew' => count($newHistoryN),
+                'historyFixed' => $historyChangedN,
+                'totalOld' => (int)($invN['total_profit_earned'] ?? 0),
+                'totalNew' => $newTotalN
+            ];
+        }
+
+        $normalizedById[$invIdN] = [
+            'history' => $newHistoryN,
+            'days' => $newDaysN,
+            'total' => $newTotalN,
+            'status' => $newStatusN,
+            'minRate' => $minN,
+            'maxRate' => $maxN
+        ];
+
+        if (!$dryRunN) {
+            try {
+                $updN = $pdo->prepare("UPDATE `investments`
+                    SET `min_rate` = :minr, `max_rate` = :maxr, `total_profit_earned` = :total,
+                        `pending_profit_claim` = 0, `days_elapsed` = :days, `status` = :status,
+                        `last_profit_yield_date` = :ly
+                    WHERE `id` = :id");
+                $updN->execute([
+                    ':minr' => $minN,
+                    ':maxr' => $maxN,
+                    ':total' => $newTotalN,
+                    ':days' => $newDaysN,
+                    ':status' => $newStatusN,
+                    ':ly' => $nowN,
+                    ':id' => $invIdN
+                ]);
+            } catch (Exception $eUpdN) {
+                $detailsN[] = ['investmentId' => $invIdN, 'error' => $eUpdN->getMessage()];
+            }
+        }
+    }
+
+    // Selaraskan state JSON sekali di akhir (bukan per paket) supaya hemat tulis.
+    if (!$dryRunN && !empty($normalizedById) && isset($stateN['investments']) && is_array($stateN['investments'])) {
+        foreach ($stateN['investments'] as &$sInvN) {
+            if (!is_array($sInvN) || empty($sInvN['id'])) continue;
+            $nN = $normalizedById[(string)$sInvN['id']] ?? null;
+            if (!$nN) continue;
+            if ($nN['history'] !== null) $sInvN['history'] = $nN['history'];
+            $sInvN['daysElapsed'] = $nN['days'];
+            $sInvN['totalProfitEarned'] = $nN['total'];
+            $sInvN['pendingProfitClaim'] = 0;
+            $sInvN['status'] = $nN['status'];
+            $sInvN['minRate'] = $nN['minRate'];
+            $sInvN['maxRate'] = $nN['maxRate'];
+            $sInvN['minDailyProfit'] = $nN['minRate'];
+            $sInvN['maxDailyProfit'] = $nN['maxRate'];
+            if ($nN['status'] === 'completed') {
+                $sInvN['completedAt'] = $sInvN['completedAt'] ?? $nowN;
+                $sInvN['refundReady'] = true;
+            }
+        }
+        unset($sInvN);
+        try {
+            saveMainState($pdo, $stateN);
+        } catch (Exception $eSaveN) {
+            $detailsN[] = ['stateSaveError' => $eSaveN->getMessage()];
+        }
+    }
+
+    // Bandingkan uang profit yang SUDAH masuk ke dompet (transaksi approved)
+    // dengan hak paket. Kelebihan hanya DILAPORKAN, tidak dipotong otomatis:
+    // saldo bisa saja sudah ditarik, jadi keputusan koreksi ada di admin.
+    $paidClaimsByUser = [];
+    try {
+        // Dedupe per id transaksi: tabel lama bisa menyimpan baris kembar dengan
+        // id sama, dan baris kembar itu tidak boleh dihitung sebagai pembayaran ganda.
+        $pcStmt = $pdo->query("SELECT `id`, `user_id`, `amount` FROM `transactions` WHERE (`type` = 'profit_claim' OR `id` LIKE 'TRX-PRF-%') AND `status` = 'approved' ORDER BY `created_at` ASC");
+        $seenPcIds = [];
+        foreach (($pcStmt ? $pcStmt->fetchAll() : []) as $pcRow) {
+            $pcId = (string)($pcRow['id'] ?? '');
+            if ($pcId !== '') {
+                if (isset($seenPcIds[$pcId])) continue;
+                $seenPcIds[$pcId] = true;
+            }
+            $pcUid = (string)$pcRow['user_id'];
+            $paidClaimsByUser[$pcUid] = ($paidClaimsByUser[$pcUid] ?? 0) + (int)round((float)$pcRow['amount']);
+        }
+    } catch (Exception $ePc) {}
+
+    $overpaidTotal = 0;
+    $overpaidMembers = 0;
+    foreach ($canonicalByUser as $uidC => $canonicalC) {
+        $paidC = (int)($paidClaimsByUser[(string)$uidC] ?? 0);
+        $diffC = $paidC - (int)$canonicalC;
+        if ($diffC <= 0) continue;
+        $overpaidTotal += $diffC;
+        $overpaidMembers++;
+        $detailsN[] = [
+            'userId' => (string)$uidC,
+            'username' => $userNamesN[(string)$uidC]['username'] ?? '-',
+            'overpaid' => $diffC,
+            'claimsPaid' => $paidC,
+            'canonicalProfit' => (int)$canonicalC,
+            'info' => 'Kelebihan bayar historis (tidak dipotong otomatis)'
+        ];
+    }
+    $summaryN['overpaidTotal'] = $overpaidTotal;
+    $summaryN['overpaidMembers'] = $overpaidMembers;
+
+    $summaryN['membersAffected'] = count($affectedUsers);
+    jsonResponse([
+        'success' => true,
+        'dryRun' => $dryRunN,
+        'note' => 'Saldo dompet & transaksi tidak diubah. Hanya riwayat/total profit paket yang diselaraskan dengan rentang paket.',
+        'summary' => $summaryN,
+        'details' => $detailsN
+    ]);
+}
+
+
+// === MODULE EXTENSIONS: ASET, TOKO, PINJAMAN ===
+
+// 1. Action: Get Asset Data (Perak/Emas)
+if ($action === 'get_asset_data') {
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+    
+    $buyPrice = 40000;
+    $sellPrice = 35000;
+    $cashbackBal = 105.0000;
+    $cashbackYield = 4.1360;
+    $updateTime = date('Y-m-d H:i:s');
+    
+    try {
+        $st = $pdo->prepare("SELECT setting_key, setting_value FROM `settings` WHERE setting_key IN ('silver_buy_price', 'silver_sell_price', 'silver_cashback_balance', 'silver_cashback_yield', 'silver_last_update')");
+        $st->execute();
+        $rows = $st->fetchAll();
+        foreach ($rows as $r) {
+            if ($r['setting_key'] === 'silver_buy_price') $buyPrice = (int)$r['setting_value'];
+            if ($r['setting_key'] === 'silver_sell_price') $sellPrice = (int)$r['setting_value'];
+            if ($r['setting_key'] === 'silver_cashback_balance') $cashbackBal = (float)$r['setting_value'];
+            if ($r['setting_key'] === 'silver_cashback_yield') $cashbackYield = (float)$r['setting_value'];
+            if ($r['setting_key'] === 'silver_last_update') $updateTime = $r['setting_value'];
+        }
+    } catch (Exception $e) {}
+
+    $silverBalance = 0.0000;
+    $walletBalance = 0;
+    $txs = [];
+
+    if ($uid !== '') {
+        try {
+            $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, silver_balance FROM `users` WHERE id = :uid LIMIT 1");
+            $uStmt->execute([':uid' => $uid]);
+            $user = $uStmt->fetch();
+            if ($user) {
+                $silverBalance = (float)($user['silver_balance'] ?? 0);
+                $walletBalance = (int)($user['wallet_balance'] ?? 0);
+            }
+            $txStmt = $pdo->prepare("SELECT * FROM `asset_transactions` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 25");
+            $txStmt->execute([':uid' => $uid]);
+            $txs = $txStmt->fetchAll();
+        } catch (Exception $e) {}
+    }
+
+    jsonResponse([
+        'success' => true,
+        'data' => [
+            'session_token' => ($uid !== '') ? createSessionToken($uid, currentSessionRole()) : null,
+            'is_logged_in' => ($uid !== ''),
+            'silver_buy_price' => $buyPrice,
+            'silver_sell_price' => $sellPrice,
+            'silver_balance' => $silverBalance,
+            'wallet_balance' => $walletBalance,
+            'cashback_balance' => $cashbackBal,
+            'cashback_yield' => $cashbackYield,
+            'last_update' => $updateTime,
+            'estimated_rupiah' => (int)round($silverBalance * $sellPrice),
+            'transactions' => $txs
+        ]
+    ]);
+}
+
+// 2. Action: Buy Silver Asset (Beli Perak via Saldo Utama)
+if ($action === 'buy_silver_asset') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $grams = (float)($in['grams'] ?? 0);
+    if ($grams <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Jumlah gram harus lebih besar dari 0.'], 400);
+    }
+
+    $buyPrice = 40000;
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'silver_buy_price' LIMIT 1");
+        $st->execute();
+        $r = $st->fetch();
+        if ($r && (int)$r['setting_value'] > 0) $buyPrice = (int)$r['setting_value'];
+    } catch (Exception $e) {}
+
+    $totalCost = (int)round($grams * $buyPrice);
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+        if (!$user) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+
+        $curWallet = (int)($user['wallet_balance'] ?? 0);
+        if ($curWallet < $totalCost) {
+            $pdo->rollBack();
+            jsonResponse([
+                'success' => false,
+                'message' => 'Saldo dompet tidak mencukupi. Diperlukan Rp ' . number_format($totalCost, 0, ',', '.') . ', saldo Anda: Rp ' . number_format($curWallet, 0, ',', '.')
+            ], 400);
+        }
+
+        $newWallet = $curWallet - $totalCost;
+        $curSilver = (float)($user['silver_balance'] ?? 0);
+        $newSilver = $curSilver + $grams;
+
+        $upUser = $pdo->prepare("UPDATE `users` SET wallet_balance = :wb, silver_balance = :sb WHERE id = :uid");
+        $upUser->execute([':wb' => $newWallet, ':sb' => $newSilver, ':uid' => $uid]);
+
+        $txId = 'ATX-BUY-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $insAssetTx = $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'buy', 'silver', :grams, :ppg, :total, 'completed', NOW())");
+        $insAssetTx->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':grams' => $grams,
+            ':ppg' => $buyPrice,
+            ':total' => $totalCost
+        ]);
+
+        $insMainTx = $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'asset_buy', :amount, 'completed', 'Saldo Utama', 'wallet', 'Aset Perak', :txid, NOW())");
+        $insMainTx->execute([
+            ':id' => 'TRX-' . $txId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amount' => $totalCost,
+            ':txid' => $txId
+        ]);
+
+        $pdo->commit();
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Berhasil membeli ' . $grams . ' gram perak seharga Rp ' . number_format($totalCost, 0, ',', '.'),
+            'data' => [
+                'wallet_balance' => $newWallet,
+                'silver_balance' => $newSilver,
+                'tx_id' => $txId
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal memproses pembelian aset: ' . $e->getMessage()], 500);
+    }
+}
+
+// 3. Action: Sell Silver Asset (Jual Perak Cair ke Saldo Utama / WD)
+if ($action === 'sell_silver_asset') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $grams = (float)($in['grams'] ?? 0);
+    if ($grams <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Jumlah gram harus lebih besar dari 0.'], 400);
+    }
+
+    $sellPrice = 35000;
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'silver_sell_price' LIMIT 1");
+        $st->execute();
+        $r = $st->fetch();
+        if ($r && (int)$r['setting_value'] > 0) $sellPrice = (int)$r['setting_value'];
+    } catch (Exception $e) {}
+
+    $totalProceeds = (int)round($grams * $sellPrice);
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+        if (!$user) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+
+        $curSilver = (float)($user['silver_balance'] ?? 0);
+        if ($curSilver < $grams) {
+            $pdo->rollBack();
+            jsonResponse([
+                'success' => false,
+                'message' => 'Aset perak tidak mencukupi untuk dijual. Anda memiliki ' . $curSilver . ' gram.'
+            ], 400);
+        }
+
+        $curWallet = (int)($user['wallet_balance'] ?? 0);
+        $newWallet = $curWallet + $totalProceeds;
+        $newSilver = $curSilver - $grams;
+
+        $upUser = $pdo->prepare("UPDATE `users` SET wallet_balance = :wb, silver_balance = :sb WHERE id = :uid");
+        $upUser->execute([':wb' => $newWallet, ':sb' => $newSilver, ':uid' => $uid]);
+
+        $txId = 'ATX-SELL-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $insAssetTx = $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'sell', 'silver', :grams, :ppg, :total, 'completed', NOW())");
+        $insAssetTx->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':grams' => $grams,
+            ':ppg' => $sellPrice,
+            ':total' => $totalProceeds
+        ]);
+
+        $insMainTx = $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'asset_sell', :amount, 'completed', 'Pencairan Aset Perak', 'Aset Perak', 'Saldo Utama', :txid, NOW())");
+        $insMainTx->execute([
+            ':id' => 'TRX-' . $txId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amount' => $totalProceeds,
+            ':txid' => $txId
+        ]);
+
+        $pdo->commit();
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Berhasil menjual ' . $grams . ' gram perak. Dana Rp ' . number_format($totalProceeds, 0, ',', '.') . ' telah masuk ke saldo utama Anda.',
+            'data' => [
+                'wallet_balance' => $newWallet,
+                'silver_balance' => $newSilver,
+                'proceeds' => $totalProceeds,
+                'tx_id' => $txId
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal memproses penjualan aset: ' . $e->getMessage()], 500);
+    }
+}
+
+// 4. Action: Admin Save Asset Prices
+if ($action === 'admin_save_asset_prices') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $buyPrice = (int)($in['silver_buy_price'] ?? $in['buy_price'] ?? 40000);
+    $sellPrice = (int)($in['silver_sell_price'] ?? $in['sell_price'] ?? 35000);
+    $cashbackBal = (float)($in['silver_cashback_balance'] ?? 105);
+    $cashbackYield = (float)($in['silver_cashback_yield'] ?? 4.136);
+
+    try {
+        $up = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) VALUES (:k, :v, :d) ON DUPLICATE KEY UPDATE setting_value = :v, updated_at = NOW()");
+        $up->execute([':k' => 'silver_buy_price', ':v' => (string)$buyPrice, ':d' => 'Harga Beli Perak per Gram']);
+        $up->execute([':k' => 'silver_sell_price', ':v' => (string)$sellPrice, ':d' => 'Harga Jual Perak per Gram']);
+        $up->execute([':k' => 'silver_cashback_balance', ':v' => (string)$cashbackBal, ':d' => 'Saldo Cashback Perak']);
+        $up->execute([':k' => 'silver_cashback_yield', ':v' => (string)$cashbackYield, ':d' => 'Hasil Cashback Perak']);
+        $up->execute([':k' => 'silver_last_update', ':v' => date('Y-m-d H:i:s'), ':d' => 'Waktu Update Harga Perak']);
+
+        jsonResponse(['success' => true, 'message' => 'Harga aset perak berhasil diperbarui.']);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal menyimpan harga aset: ' . $e->getMessage()], 500);
+    }
+}
+
+// 5. Action: Get Shop Data
+if ($action === 'get_shop_data') {
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+    $isAdmin = (currentSessionRole() === 'admin');
+
+    try {
+        $pStmt = $pdo->query("SELECT * FROM `shop_products` WHERE status = 'active' ORDER BY price_amount ASC");
+        $products = $pStmt->fetchAll();
+
+        $orders = [];
+        if ($isAdmin) {
+            $oStmt = $pdo->query("SELECT * FROM `shop_orders` ORDER BY created_at DESC LIMIT 100");
+            $orders = $oStmt->fetchAll();
+        } elseif ($uid !== '') {
+            $oStmt = $pdo->prepare("SELECT * FROM `shop_orders` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 50");
+            $oStmt->execute([':uid' => $uid]);
+            $orders = $oStmt->fetchAll();
+        }
+
+        $userWallet = 0;
+        $userPoints = 0;
+        if ($uid !== '') {
+            $uStmt = $pdo->prepare("SELECT wallet_balance, points FROM `users` WHERE id = :uid LIMIT 1");
+            $uStmt->execute([':uid' => $uid]);
+            $u = $uStmt->fetch();
+            if ($u) {
+                $userWallet = (int)($u['wallet_balance'] ?? 0);
+                $userPoints = (int)($u['points'] ?? 0);
+            }
+        }
+
+        jsonResponse([
+            'success' => true,
+            'data' => [
+                'products' => $products,
+                'orders' => $orders,
+                'user_wallet' => $userWallet,
+                'user_points' => $userPoints
+            ]
+        ]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal memuat data toko: ' . $e->getMessage()], 500);
+    }
+}
+
+// 6. Action: Order Shop Product (Beli & Kirim Alamat)
+if ($action === 'order_shop_product') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $productId = trim((string)($in['product_id'] ?? ''));
+    $recipientName = trim((string)($in['recipient_name'] ?? ''));
+    $recipientPhone = trim((string)($in['recipient_phone'] ?? ''));
+    $shippingAddress = trim((string)($in['shipping_address'] ?? ''));
+    $notes = trim((string)($in['notes'] ?? ''));
+
+    if ($productId === '' || $recipientName === '' || $recipientPhone === '' || $shippingAddress === '') {
+        jsonResponse(['success' => false, 'message' => 'Semua kolom formulir pengiriman wajib diisi lengkap.'], 400);
+    }
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $pStmt = $pdo->prepare("SELECT * FROM `shop_products` WHERE id = :pid AND status = 'active' FOR UPDATE");
+        $pStmt->execute([':pid' => $productId]);
+        $product = $pStmt->fetch();
+        if (!$product) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Produk tidak ditemukan atau tidak tersedia.'], 404);
+        }
+
+        if ((int)$product['stock'] <= 0) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Stok produk ini sedang habis.'], 400);
+        }
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, points FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+        if (!$user) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+
+        $price = (int)$product['price_amount'];
+        $priceType = $product['price_type'] ?? 'saldo';
+
+        if ($priceType === 'points') {
+            if ((int)$user['points'] < $price) {
+                $pdo->rollBack();
+                jsonResponse(['success' => false, 'message' => 'Poin Anda tidak mencukupi untuk redeem produk ini.'], 400);
+            }
+            $newPoints = (int)$user['points'] - $price;
+            $upUser = $pdo->prepare("UPDATE `users` SET points = :pt WHERE id = :uid");
+            $upUser->execute([':pt' => $newPoints, ':uid' => $uid]);
+        } else {
+            if ((int)$user['wallet_balance'] < $price) {
+                $pdo->rollBack();
+                jsonResponse(['success' => false, 'message' => 'Saldo dompet tidak mencukupi untuk membeli produk ini. Silakan deposit terlebih dahulu.'], 400);
+            }
+            $newWallet = (int)$user['wallet_balance'] - $price;
+            $upUser = $pdo->prepare("UPDATE `users` SET wallet_balance = :wb WHERE id = :uid");
+            $upUser->execute([':wb' => $newWallet, ':uid' => $uid]);
+        }
+
+        $pdo->prepare("UPDATE `shop_products` SET stock = stock - 1 WHERE id = :pid")->execute([':pid' => $productId]);
+
+        $orderId = 'ORD-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $insOrder = $pdo->prepare("INSERT INTO `shop_orders` (id, user_id, username, product_id, product_name, amount, recipient_name, recipient_phone, shipping_address, notes, status, created_at) VALUES (:id, :uid, :uname, :pid, :pname, :amt, :rname, :rphone, :addr, :notes, 'pending', NOW())");
+        $insOrder->execute([
+            ':id' => $orderId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':pid' => $product['id'],
+            ':pname' => $product['name'],
+            ':amt' => $price,
+            ':rname' => $recipientName,
+            ':rphone' => $recipientPhone,
+            ':addr' => $shippingAddress,
+            ':notes' => $notes
+        ]);
+
+        $insMainTx = $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'shop_order', :amount, 'completed', 'Saldo Utama', 'wallet', :dest, :txid, NOW())");
+        $insMainTx->execute([
+            ':id' => 'TRX-' . $orderId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amount' => $price,
+            ':dest' => 'Pengiriman: ' . $product['name'],
+            ':txid' => $orderId
+        ]);
+
+        $pdo->commit();
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Pesanan berhasil dibuat! Admin akan memproses pengemasan dan mengirim ke alamat Anda.',
+            'data' => [
+                'order_id' => $orderId,
+                'product_name' => $product['name'],
+                'amount' => $price
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal memproses pesanan: ' . $e->getMessage()], 500);
+    }
+}
+
+// 7. Action: Admin Update Order Status
+if ($action === 'admin_update_order_status') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $orderId = trim((string)($in['order_id'] ?? ''));
+    $status = trim((string)($in['status'] ?? 'pending'));
+    $trackingNo = trim((string)($in['tracking_number'] ?? ''));
+
+    if ($orderId === '') {
+        jsonResponse(['success' => false, 'message' => 'ID Pesanan wajib diisi.'], 400);
+    }
+
+    try {
+        $st = $pdo->prepare("UPDATE `shop_orders` SET status = :st, tracking_number = :trk WHERE id = :id");
+        $st->execute([':st' => $status, ':trk' => $trackingNo, ':id' => $orderId]);
+        jsonResponse(['success' => true, 'message' => 'Status pesanan berhasil diperbarui.']);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal mengupdate pesanan: ' . $e->getMessage()], 500);
+    }
+}
+
+
+// Fungsi Evaluasi Jatuh Tempo Pinjaman, Auto-Deduct Saldo Utama, & Blokir Akun
+function processLoanDueAndAutoDeduct($pdo) {
+    try {
+        $stRate = $pdo->query("SELECT setting_value FROM `settings` WHERE setting_key = 'loan_block_threshold_months' LIMIT 1")->fetch();
+        $blockThreshold = (int)($stRate['setting_value'] ?? 2);
+        if ($blockThreshold < 1) $blockThreshold = 2;
+
+        // Ambil pinjaman approved yang due_date-nya sudah tiba/lewat dan belum lunas
+        $stmt = $pdo->query("SELECT * FROM `leader_loans` WHERE status = 'approved' AND repayment_status IN ('active', 'overdue') AND due_date IS NOT NULL AND due_date <= NOW()");
+        $overdueLoans = $stmt->fetchAll();
+
+        foreach ($overdueLoans as $loan) {
+            $loanId = $loan['id'];
+            $uid = $loan['user_id'];
+            $monthlyDue = (int)$loan['monthly_due_amount'];
+            if ($monthlyDue <= 0) {
+                $monthlyDue = (int)$loan['total_due_amount'] - (int)$loan['repaid_amount'];
+            }
+            $remaining = (int)$loan['total_due_amount'] - (int)$loan['repaid_amount'];
+            $deductAmount = min($monthlyDue, $remaining);
+
+            // Cek saldo member
+            $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, is_blocked FROM `users` WHERE id = :uid LIMIT 1");
+            $uStmt->execute([':uid' => $uid]);
+            $user = $uStmt->fetch();
+            if (!$user) continue;
+
+            $bal = (int)($user['wallet_balance'] ?? 0);
+
+            if ($bal >= $deductAmount && $deductAmount > 0) {
+                // Saldo cukup -> Auto potong saldo utama
+                $pdo->prepare("UPDATE `users` SET wallet_balance = wallet_balance - :amt WHERE id = :uid")->execute([':amt' => $deductAmount, ':uid' => $uid]);
+
+                $newRepaid = (int)$loan['repaid_amount'] + $deductAmount;
+                $isPaidOff = ($newRepaid >= (int)$loan['total_due_amount']);
+                $newStatus = $isPaidOff ? 'repaid' : 'active';
+                $mainStatus = $isPaidOff ? 'completed' : 'approved';
+
+                // Perpanjang jatuh tempo 30 hari ke depan jika belum lunas
+                $pdo->prepare("UPDATE `leader_loans` SET repaid_amount = :repaid, repayment_status = :repst, status = :st, due_date = DATE_ADD(NOW(), INTERVAL 30 DAY), unpaid_months_count = 0 WHERE id = :id")->execute([
+                    ':repaid' => $newRepaid,
+                    ':repst' => $newStatus,
+                    ':st' => $mainStatus,
+                    ':id' => $loanId
+                ]);
+
+                // Catat transaksi mutasi
+                $trxId = 'LOAN-DED-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+                $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, note, created_at) VALUES (:id, :uid, :uname, 'loan_repayment_auto', :amt, 'completed', 'Auto Debet Saldo Utama', 'Saldo Dompet', 'Pelunasan Pinjaman Leader', :txid, 'Potong Otomatis Tagihan Pinjaman Modal Leader (Jatuh Tempo)', NOW())")->execute([
+                    ':id' => $trxId,
+                    ':uid' => $uid,
+                    ':uname' => $user['username'],
+                    ':amt' => -$deductAmount,
+                    ':txid' => $loanId
+                ]);
+            } else {
+                // Saldo tidak mencukupi -> Tandai menunggak & tambah bulan telat
+                $unpaidMonths = (int)$loan['unpaid_months_count'] + 1;
+                $repStatus = 'overdue';
+
+                // Jika sudah melewati batas bulan tunggakan -> Blokir akun member!
+                if ($unpaidMonths >= $blockThreshold) {
+                    $repStatus = 'defaulted';
+                    $pdo->prepare("UPDATE `users` SET is_blocked = 1 WHERE id = :uid")->execute([':uid' => $uid]);
+                }
+
+                // Geser due_date 30 hari lagi untuk pengecekan bulan berikutnya
+                $pdo->prepare("UPDATE `leader_loans` SET repayment_status = :repst, unpaid_months_count = :unp, due_date = DATE_ADD(due_date, INTERVAL 30 DAY) WHERE id = :id")->execute([
+                    ':repst' => $repStatus,
+                    ':unp' => $unpaidMonths,
+                    ':id' => $loanId
+                ]);
+            }
+        }
+    } catch(Exception $eProc) {
+        error_log('processLoanDueAndAutoDeduct error: ' . $eProc->getMessage());
+    }
+}
+
+// 8. Action: Get Loan Data (Syarat 10 Sponsor Aktif, Riwayat & Tagihan Bulanan)
+if ($action === 'get_loan_data') {
+    ensureTablesExist($pdo);
+    processLoanDueAndAutoDeduct($pdo); // Evaluasi auto-deduct saldo utama & cek jatuh tempo
+
+    $uid = currentSessionUserId();
+    $isAdmin = (currentSessionRole() === 'admin');
+
+    $requiredSponsors = 10;
+    $activeSponsorsCount = 0;
+    $isEligible = false;
+    $userLoans = [];
+    $allLoans = [];
+    $activeBill = null;
+
+    // Load admin settings
+    $stRate = $pdo->query("SELECT setting_value FROM `settings` WHERE setting_key = 'loan_monthly_interest_rate' LIMIT 1")->fetch();
+    $monthlyInterestRate = isset($stRate['setting_value']) ? (float)$stRate['setting_value'] : 2.0;
+
+    $stBlock = $pdo->query("SELECT setting_value FROM `settings` WHERE setting_key = 'loan_block_threshold_months' LIMIT 1")->fetch();
+    $blockThresholdMonths = isset($stBlock['setting_value']) ? (int)$stBlock['setting_value'] : 2;
+
+    try {
+        if ($isAdmin) {
+            $lStmt = $pdo->query("SELECT * FROM `leader_loans` ORDER BY created_at DESC LIMIT 100");
+            $allLoans = $lStmt->fetchAll();
+        }
+
+        if ($uid !== '') {
+            $uStmt = $pdo->prepare("SELECT id, username, referral_code, wallet_balance, is_blocked FROM `users` WHERE id = :uid LIMIT 1");
+            $uStmt->execute([':uid' => $uid]);
+            $user = $uStmt->fetch();
+
+            if ($user && !empty($user['referral_code'])) {
+                $refCode = $user['referral_code'];
+                $spStmt = $pdo->prepare("SELECT COUNT(*) AS active_count FROM `users` WHERE referred_by = :ref AND role != 'admin' AND (status = 'active' OR is_blocked = 0 OR is_blocked IS NULL)");
+                $spStmt->execute([':ref' => $refCode]);
+                $activeSponsorsCount = (int)($spStmt->fetch()['active_count'] ?? 0);
+                $isEligible = ($activeSponsorsCount >= $requiredSponsors);
+            }
+
+            $myLoansStmt = $pdo->prepare("SELECT * FROM `leader_loans` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 20");
+            $myLoansStmt->execute([':uid' => $uid]);
+            $userLoans = $myLoansStmt->fetchAll();
+
+            foreach ($userLoans as $l) {
+                if ($l['status'] === 'approved' && in_array($l['repayment_status'], ['active', 'overdue', 'defaulted'])) {
+                    $activeBill = $l;
+                    break;
+                }
+            }
+        }
+
+        jsonResponse([
+            'success' => true,
+            'data' => [
+                'required_sponsors' => $requiredSponsors,
+                'active_sponsors_count' => $activeSponsorsCount,
+                'is_eligible' => $isEligible,
+                'loans' => $userLoans,
+                'all_loans' => $allLoans,
+                'active_bill' => $activeBill,
+                'settings' => [
+                    'monthly_interest_rate' => $monthlyInterestRate,
+                    'block_threshold_months' => $blockThresholdMonths
+                ]
+            ]
+        ]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal memuat data pinjaman: ' . $e->getMessage()], 500);
+    }
+}
+
+// 9. Action: Apply Leader Loan (Pengajuan Pinjaman Modal Cepat)
+if ($action === 'apply_leader_loan') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $loanAmount = (int)($in['loan_amount'] ?? 300000);
+    $purpose = trim((string)($in['purpose'] ?? ''));
+    $ktpNik = trim((string)($in['ktp_nik'] ?? ''));
+    $ktpName = trim((string)($in['ktp_name'] ?? ''));
+    $ktpImage = trim((string)($in['ktp_image'] ?? ''));
+    $bankName = trim((string)($in['bank_name'] ?? ''));
+    $accountNumber = trim((string)($in['account_number'] ?? ''));
+    $accountHolder = trim((string)($in['account_holder'] ?? ''));
+
+    if ($loanAmount < 100000 || $purpose === '' || $ktpNik === '' || $ktpName === '' || $bankName === '' || $accountNumber === '') {
+        jsonResponse(['success' => false, 'message' => 'Semua data formulir pengajuan pinjaman wajib diisi lengkap.'], 400);
+    }
+
+    try {
+        $uStmt = $pdo->prepare("SELECT id, username, referral_code FROM `users` WHERE id = :uid LIMIT 1");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+        if (!$user) {
+            jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+
+        $activeSponsorsCount = 0;
+        if (!empty($user['referral_code'])) {
+            $spStmt = $pdo->prepare("SELECT COUNT(*) AS active_count FROM `users` WHERE referred_by = :ref AND role != 'admin' AND (status = 'active' OR is_blocked = 0 OR is_blocked IS NULL)");
+            $spStmt->execute([':ref' => $user['referral_code']]);
+            $activeSponsorsCount = (int)($spStmt->fetch()['active_count'] ?? 0);
+        }
+
+        if ($activeSponsorsCount < 10) {
+            jsonResponse([
+                'success' => false,
+                'message' => 'Syarat pinjaman modal cepat leader belum terpenuhi: Wajib memiliki minimal 10 sponsor aktif (Anda baru memiliki ' . $activeSponsorsCount . ' sponsor aktif).'
+            ], 400);
+        }
+
+        $chkStmt = $pdo->prepare("SELECT id FROM `leader_loans` WHERE user_id = :uid AND status = 'pending' LIMIT 1");
+        $chkStmt->execute([':uid' => $uid]);
+        if ($chkStmt->fetch()) {
+            jsonResponse(['success' => false, 'message' => 'Anda masih memiliki permohonan pinjaman yang sedang dalam proses review admin.'], 400);
+        }
+
+        $loanId = 'LOAN-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $insLoan = $pdo->prepare("INSERT INTO `leader_loans` (id, user_id, username, loan_amount, active_sponsors_count, purpose, ktp_nik, ktp_name, ktp_image, bank_name, account_number, account_holder, status, created_at) VALUES (:id, :uid, :uname, :amt, :spcnt, :purp, :nik, :kname, :kimg, :bname, :accno, :accholder, 'pending', NOW())");
+        $insLoan->execute([
+            ':id' => $loanId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amt' => $loanAmount,
+            ':spcnt' => $activeSponsorsCount,
+            ':purp' => $purpose,
+            ':nik' => $ktpNik,
+            ':kname' => $ktpName,
+            ':kimg' => $ktpImage,
+            ':bname' => $bankName,
+            ':accno' => $accountNumber,
+            ':accholder' => $accountHolder
+        ]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Pengajuan pinjaman modal cepat leader Rp ' . number_format($loanAmount, 0, ',', '.') . ' berhasil dikirim! Menunggu persetujuan admin.',
+            'data' => [
+                'loan_id' => $loanId,
+                'loan_amount' => $loanAmount,
+                'status' => 'pending'
+            ]
+        ]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal mengajukan pinjaman: ' . $e->getMessage()], 500);
+    }
+}
+
+// 10. Action: Admin Approve Loan
+if ($action === 'admin_approve_loan') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $loanId = trim((string)($in['loan_id'] ?? ''));
+
+    if ($loanId === '') {
+        jsonResponse(['success' => false, 'message' => 'ID Pinjaman wajib diisi.'], 400);
+    }
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $lStmt = $pdo->prepare("SELECT * FROM `leader_loans` WHERE id = :id FOR UPDATE");
+        $lStmt->execute([':id' => $loanId]);
+        $loan = $lStmt->fetch();
+        if (!$loan) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Pinjaman tidak ditemukan.'], 404);
+        }
+
+        if ($loan['status'] !== 'pending') {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Pinjaman ini sudah diproses sebelumnya (' . $loan['status'] . ').'], 400);
+        }
+
+        // Ambil pengaturan bunga pinjaman
+        $stRate = $pdo->query("SELECT setting_value FROM `settings` WHERE setting_key = 'loan_monthly_interest_rate' LIMIT 1")->fetch();
+        $interestRate = isset($stRate['setting_value']) ? (float)$stRate['setting_value'] : 2.0;
+
+        $amt = (int)$loan['loan_amount'];
+        $interestAmount = (int)round($amt * ($interestRate / 100.0));
+        $totalDue = $amt + $interestAmount;
+        $monthlyDue = $totalDue;
+
+        $pdo->prepare("UPDATE `leader_loans` SET status = 'approved', repayment_status = 'active', interest_rate_percent = :ir, monthly_due_amount = :md, total_due_amount = :td, repaid_amount = 0, due_date = DATE_ADD(NOW(), INTERVAL 30 DAY), unpaid_months_count = 0 WHERE id = :id")->execute([
+            ':ir' => $interestRate,
+            ':md' => $monthlyDue,
+            ':td' => $totalDue,
+            ':id' => $loanId
+        ]);
+
+        $amt = (int)$loan['loan_amount'];
+        $pdo->prepare("UPDATE `users` SET wallet_balance = wallet_balance + :amt WHERE id = :uid")->execute([':amt' => $amt, ':uid' => $loan['user_id']]);
+
+        $insMainTx = $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'leader_loan', :amount, 'completed', 'Pencairan Pinjaman Leader', 'Modal Usaha', 'Saldo Utama', :txid, NOW())");
+        $insMainTx->execute([
+            ':id' => 'TRX-' . $loanId,
+            ':uid' => $loan['user_id'],
+            ':uname' => $loan['username'],
+            ':amount' => $amt,
+            ':txid' => $loanId
+        ]);
+
+        $pdo->commit();
+
+        jsonResponse(['success' => true, 'message' => 'Pinjaman berhasil disetujui! Dana Rp ' . number_format($amt, 0, ',', '.') . ' telah dicairkan ke saldo wallet member.']);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal menyetujui pinjaman: ' . $e->getMessage()], 500);
+    }
+}
+
+// 11. Action: Admin Reject Loan
+if ($action === 'admin_reject_loan') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $loanId = trim((string)($in['loan_id'] ?? ''));
+    $reason = trim((string)($in['reason'] ?? 'Persyaratan belum lengkap atau belum memenuhi S&K.'));
+
+    if ($loanId === '') {
+        jsonResponse(['success' => false, 'message' => 'ID Pinjaman wajib diisi.'], 400);
+    }
+
+    try {
+        $st = $pdo->prepare("UPDATE `leader_loans` SET status = 'rejected', rejection_reason = :rs WHERE id = :id");
+        $st->execute([':rs' => $reason, ':id' => $loanId]);
+        jsonResponse(['success' => true, 'message' => 'Pinjaman telah ditolak.']);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal menolak pinjaman: ' . $e->getMessage()], 500);
+    }
+}
+
+
+// 12. Action: Member Pay Leader Loan (Pengembalian Pinjaman / Bayar Tagihan)
+if ($action === 'pay_leader_loan') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $loanId = trim((string)($in['loan_id'] ?? ''));
+    $payAmount = (int)($in['amount'] ?? 0);
+
+    if ($loanId === '') {
+        jsonResponse(['success' => false, 'message' => 'ID Pinjaman wajib diisi.'], 400);
+    }
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $lStmt = $pdo->prepare("SELECT * FROM `leader_loans` WHERE id = :id AND user_id = :uid FOR UPDATE");
+        $lStmt->execute([':id' => $loanId, ':uid' => $uid]);
+        $loan = $lStmt->fetch();
+        if (!$loan) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Data pinjaman tidak ditemukan.'], 404);
+        }
+
+        if ($loan['status'] !== 'approved' || $loan['repayment_status'] === 'repaid') {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Pinjaman ini sudah lunas atau belum disetujui.'], 400);
+        }
+
+        $remaining = (int)$loan['total_due_amount'] - (int)$loan['repaid_amount'];
+        if ($payAmount <= 0) $payAmount = $remaining;
+        $payAmount = min($payAmount, $remaining);
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+
+        if ((int)$user['wallet_balance'] < $payAmount) {
+            $pdo->rollBack();
+            jsonResponse([
+                'success' => false,
+                'message' => 'Saldo dompet tidak mencukupi untuk membayar tagihan Rp ' . number_format($payAmount, 0, ',', '.') . ' (Saldo Anda: Rp ' . number_format($user['wallet_balance'], 0, ',', '.') . '). Silakan deposit saldo terlebih dahulu.'
+            ], 400);
+        }
+
+        // Potong dari saldo utama
+        $pdo->prepare("UPDATE `users` SET wallet_balance = wallet_balance - :amt WHERE id = :uid")->execute([':amt' => $payAmount, ':uid' => $uid]);
+
+        $newRepaid = (int)$loan['repaid_amount'] + $payAmount;
+        $isPaidOff = ($newRepaid >= (int)$loan['total_due_amount']);
+        $newRepStatus = $isPaidOff ? 'repaid' : 'active';
+        $mainStatus = $isPaidOff ? 'completed' : 'approved';
+
+        $pdo->prepare("UPDATE `leader_loans` SET repaid_amount = :repaid, repayment_status = :repst, status = :st, unpaid_months_count = 0 WHERE id = :id")->execute([
+            ':repaid' => $newRepaid,
+            ':repst' => $newRepStatus,
+            ':st' => $mainStatus,
+            ':id' => $loanId
+        ]);
+
+        // Jika akun terblokir karena tunggakan, buka blokir akun
+        $pdo->prepare("UPDATE `users` SET is_blocked = 0 WHERE id = :uid")->execute([':uid' => $uid]);
+
+        // Catat transaksi mutasi
+        $trxId = 'LOAN-PAY-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, note, created_at) VALUES (:id, :uid, :uname, 'loan_repayment', :amt, 'completed', 'Saldo Dompet Utama', 'Saldo Dompet', 'Pelunasan Pinjaman Leader', :txid, 'Pengembalian Tagihan Pinjaman Modal Leader', NOW())")->execute([
+            ':id' => $trxId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amt' => -$payAmount,
+            ':txid' => $loanId
+        ]);
+
+        $pdo->commit();
+
+        $msg = $isPaidOff 
+            ? 'Selamat! Pinjaman modal leader Anda sebesar Rp ' . number_format($loan['loan_amount'], 0, ',', '.') . ' telah LUNAS sepenuhnya.'
+            : 'Pembayaran tagihan pinjaman sebesar Rp ' . number_format($payAmount, 0, ',', '.') . ' berhasil! Sisa tagihan: Rp ' . number_format($remaining - $payAmount, 0, ',', '.');
+
+        jsonResponse(['success' => true, 'message' => $msg]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal memproses pembayaran tagihan: ' . $e->getMessage()], 500);
+    }
+}
+
+// 13. Action: Admin Save Loan Settings (Bunga & Batas Blokir Akun)
+if ($action === 'admin_save_loan_settings') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $interestRate = (float)($in['loan_monthly_interest_rate'] ?? 2.0);
+    $blockThreshold = (int)($in['loan_block_threshold_months'] ?? 2);
+
+    try {
+        $st1 = $pdo->prepare("INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES ('loan_monthly_interest_rate', :val, 'Suku bunga bulanan pinjaman modal leader (%)') ON DUPLICATE KEY UPDATE `setting_value` = :val2");
+        $st1->execute([':val' => (string)$interestRate, ':val2' => (string)$interestRate]);
+
+        $st2 = $pdo->prepare("INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES ('loan_block_threshold_months', :val, 'Batas bulan keterlambatan sebelum akun diblokir') ON DUPLICATE KEY UPDATE `setting_value` = :val2");
+        $st2->execute([':val' => (string)$blockThreshold, ':val2' => (string)$blockThreshold]);
+
+        jsonResponse(['success' => true, 'message' => 'Pengaturan pinjaman berhasil disimpan! Bunga: ' . $interestRate . '%, Toleransi tunggakan: ' . $blockThreshold . ' bulan.']);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal menyimpan pengaturan: ' . $e->getMessage()], 500);
+    }
+}
+
+
+// 14. Action: Apply Asset Contract (Kontrak Aset Perak Dividen Harian)
+if ($action === 'apply_asset_contract') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $grams = (float)($in['grams'] ?? 0);
+    $duration = (int)($in['duration_days'] ?? 14);
+
+    if ($grams <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Masukkan gramasi kontrak yang valid.'], 400);
+    }
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $u = $uStmt->fetch();
+
+        if ((float)$u['silver_balance'] < $grams) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Saldo perak tidak mencukupi (Saldo Anda: ' . number_format((float)$u['silver_balance'], 3) . ' Gram).'], 400);
+        }
+
+        // Lock silver balance
+        $pdo->prepare("UPDATE `users` SET silver_balance = silver_balance - :g WHERE id = :uid")->execute([':g' => $grams, ':uid' => $uid]);
+
+        $dailyRate = $duration >= 30 ? 1.2 : ($duration >= 14 ? 0.8 : 0.5);
+        $txId = 'CTR-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+
+        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'contract', 'silver', :g, :price, :tot, 'active', NOW())")->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $u['username'],
+            ':g' => $grams,
+            ':price' => $duration,
+            ':tot' => (int)($dailyRate * 100)
+        ]);
+
+        $pdo->commit();
+        jsonResponse([
+            'success' => true,
+            'message' => 'Kontrak aset ' . number_format($grams, 3) . ' Gram durasi ' . $duration . ' hari berhasil diaktifkan! Dividen harian: ' . $dailyRate . '% per hari.'
+        ]);
+    } catch(Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal mengaktifkan kontrak: ' . $e->getMessage()], 500);
+    }
+}
+
+// 15. Action: Save Silver Savings (Setor Tabungan Perak)
+if ($action === 'save_silver_savings') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $grams = (float)($in['grams'] ?? 0);
+
+    if ($grams <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Masukkan gramasi tabungan yang valid.'], 400);
+    }
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $u = $uStmt->fetch();
+
+        // Ambil harga beli perak
+        $st = $pdo->query("SELECT setting_value FROM `settings` WHERE setting_key = 'silver_buy_price' LIMIT 1")->fetch();
+        $buyPrice = isset($st['setting_value']) ? (int)$st['setting_value'] : 40000;
+        $totalCost = (int)round($grams * $buyPrice);
+
+        if ((int)$u['wallet_balance'] < $totalCost) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Saldo dompet utama tidak mencukupi untuk menabung ' . number_format($grams, 3) . ' Gram (Dibutuhkan: Rp ' . number_format($totalCost, 0, ',', '.') . ').'], 400);
+        }
+
+        // Potong saldo dan tambah gramasi perak
+        $pdo->prepare("UPDATE `users` SET wallet_balance = wallet_balance - :cost, silver_balance = silver_balance + :g WHERE id = :uid")->execute([
+            ':cost' => $totalCost,
+            ':g' => $grams,
+            ':uid' => $uid
+        ]);
+
+        $txId = 'SAV-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'savings', 'silver', :g, :price, :tot, 'completed', NOW())")->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $u['username'],
+            ':g' => $grams,
+            ':price' => $buyPrice,
+            ':tot' => $totalCost
+        ]);
+
+        $pdo->commit();
+        jsonResponse([
+            'success' => true,
+            'message' => 'Setoran tabungan perak ' . number_format($grams, 3) . ' Gram (Rp ' . number_format($totalCost, 0, ',', '.') . ') berhasil ditambahkan ke portofolio Anda!'
+        ]);
+    } catch(Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal memproses setoran tabungan: ' . $e->getMessage()], 500);
+    }
+}
+
+// 16. Action: Order Physical Minting (Pengajuan Cetak Logam Fisik)
+if ($action === 'order_physical_minting') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $grams = (float)($in['grams'] ?? 5);
+    $recName = trim((string)($in['recipient_name'] ?? ''));
+    $recPhone = trim((string)($in['recipient_phone'] ?? ''));
+    $address = trim((string)($in['shipping_address'] ?? ''));
+
+    if ($grams <= 0 || $recName === '' || $recPhone === '' || $address === '') {
+        jsonResponse(['success' => false, 'message' => 'Lengkapi nama, nomor WhatsApp, dan alamat pengiriman fisik.'], 400);
+    }
+
+    $mintingFee = 15000; // Biaya cetak & sertifikat resmi
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $u = $uStmt->fetch();
+
+        if ((float)$u['silver_balance'] < $grams) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Saldo perak digital tidak mencukupi untuk dicetak fisik.'], 400);
+        }
+        if ((int)$u['wallet_balance'] < $mintingFee) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Saldo dompet utama tidak mencukupi untuk biaya cetak & sertifikat resmi (Rp 15.000).'], 400);
+        }
+
+        $pdo->prepare("UPDATE `users` SET silver_balance = silver_balance - :g, wallet_balance = wallet_balance - :fee WHERE id = :uid")->execute([
+            ':g' => $grams,
+            ':fee' => $mintingFee,
+            ':uid' => $uid
+        ]);
+
+        $orderId = 'MINT-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $pdo->prepare("INSERT INTO `shop_orders` (id, user_id, username, product_id, product_name, amount, recipient_name, recipient_phone, shipping_address, notes, status, created_at) VALUES (:id, :uid, :uname, 'mint-physical', :pname, :amt, :rname, :rphone, :addr, :notes, 'pending', NOW())")->execute([
+            ':id' => $orderId,
+            ':uid' => $uid,
+            ':uname' => $u['username'],
+            ':pname' => 'Cetak Keping Fisik Perak Murni ' . number_format($grams, 0) . ' Gram Bersertifikat',
+            ':amt' => $mintingFee,
+            ':rname' => $recName,
+            ':rphone' => $recPhone,
+            ':addr' => $address,
+            ':notes' => 'Pengajuan cetak logam fisik bersertifikat'
+        ]);
+
+        $pdo->commit();
+        jsonResponse([
+            'success' => true,
+            'message' => 'Pengajuan cetak keping fisik perak murni ' . number_format($grams, 0) . ' Gram berhasil! Keping fisik akan segera dicetak dan dikirimkan ke alamat Anda.'
+        ]);
+    } catch(Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal mengajukan cetak fisik: ' . $e->getMessage()], 500);
+    }
+}
+
+// 17. Action: Claim Asset Reward (Klaim Bonus Hadiah Milestone)
+if ($action === 'claim_asset_reward') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $tier = trim((string)($in['tier'] ?? 'bronze'));
+
+    $rewards = [
+        'bronze' => ['req' => 10.0, 'bonus' => 0.25],
+        'silver' => ['req' => 25.0, 'bonus' => 0.75],
+        'gold' => ['req' => 50.0, 'bonus' => 2.0],
+        'platinum' => ['req' => 100.0, 'bonus' => 5.0]
+    ];
+
+    if (!isset($rewards[$tier])) {
+        jsonResponse(['success' => false, 'message' => 'Tier hadiah tidak valid.'], 400);
+    }
+
+    $rew = $rewards[$tier];
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $u = $uStmt->fetch();
+
+        if ((float)$u['silver_balance'] < $rew['req']) {
+            $pdo->rollBack();
+            jsonResponse([
+                'success' => false,
+                'message' => 'Anda belum mencapai target akumulasi ' . $rew['req'] . ' Gram untuk klaim hadiah tier ini (Aset Anda saat ini: ' . number_format((float)$u['silver_balance'], 3) . ' Gram).'
+            ], 400);
+        }
+
+        $pdo->prepare("UPDATE `users` SET silver_balance = silver_balance + :bonus WHERE id = :uid")->execute([':bonus' => $rew['bonus'], ':uid' => $uid]);
+
+        $txId = 'REW-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'reward', 'silver', :g, 0, 0, 'completed', NOW())")->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $u['username'],
+            ':g' => $rew['bonus']
+        ]);
+
+        $pdo->commit();
+        jsonResponse([
+            'success' => true,
+            'message' => 'Selamat! Bonus hadiah reward milestone sebesar ' . $rew['bonus'] . ' Gram telah berhasil ditambahkan ke saldo aset Anda.'
+        ]);
+    } catch(Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal klaim hadiah: ' . $e->getMessage()], 500);
+    }
 }
 
 // Default fallback

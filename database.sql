@@ -43,6 +43,12 @@ CREATE TABLE IF NOT EXISTS `users` (
   `phone` VARCHAR(32) DEFAULT NULL,
   `city` VARCHAR(64) DEFAULT NULL,
   `wallet_balance` BIGINT(20) DEFAULT 0,
+  `silver_balance` DECIMAL(10,4) DEFAULT 0.0000,
+  `silver_savings_balance` DECIMAL(10,4) DEFAULT 0.0000,
+  `silver_contract_balance` DECIMAL(10,4) DEFAULT 0.0000,
+  `gold_balance` DECIMAL(10,4) DEFAULT 0.0000,
+  `gold_savings_balance` DECIMAL(10,4) DEFAULT 0.0000,
+  `gold_contract_balance` DECIMAL(10,4) DEFAULT 0.0000,
   `affiliate_balance` BIGINT(20) DEFAULT 0,
   `points` INT(11) DEFAULT 0,
   `referral_code` VARCHAR(32) NOT NULL UNIQUE,
@@ -112,6 +118,78 @@ CREATE TABLE IF NOT EXISTS `settings` (
   `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+-- 7. Asset Transactions Table (Jual/Beli Emas/Perak)
+CREATE TABLE IF NOT EXISTS `asset_transactions` (
+  `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `user_id` VARCHAR(64) NOT NULL,
+  `username` VARCHAR(64) NOT NULL,
+  `type` VARCHAR(32) NOT NULL,
+  `asset_type` VARCHAR(32) DEFAULT 'silver',
+  `grams` DECIMAL(10,4) NOT NULL,
+  `price_per_gram` BIGINT(20) NOT NULL,
+  `total_amount` BIGINT(20) NOT NULL,
+  `status` VARCHAR(32) DEFAULT 'completed',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_asset_user` (`user_id`),
+  INDEX `idx_asset_type` (`type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 8. Shop Products Table
+CREATE TABLE IF NOT EXISTS `shop_products` (
+  `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `name` VARCHAR(128) NOT NULL,
+  `category` VARCHAR(64) DEFAULT 'offline',
+  `description` TEXT DEFAULT NULL,
+  `price_amount` BIGINT(20) NOT NULL,
+  `price_type` VARCHAR(32) DEFAULT 'saldo',
+  `image_url` TEXT DEFAULT NULL,
+  `stock` INT(11) DEFAULT 100,
+  `points_reward` INT(11) DEFAULT 10,
+  `status` VARCHAR(32) DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. Shop Orders Table
+CREATE TABLE IF NOT EXISTS `shop_orders` (
+  `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `user_id` VARCHAR(64) NOT NULL,
+  `username` VARCHAR(64) NOT NULL,
+  `product_id` VARCHAR(64) NOT NULL,
+  `product_name` VARCHAR(128) NOT NULL,
+  `amount` BIGINT(20) NOT NULL,
+  `recipient_name` VARCHAR(128) NOT NULL,
+  `recipient_phone` VARCHAR(32) NOT NULL,
+  `shipping_address` TEXT NOT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `tracking_number` VARCHAR(64) DEFAULT NULL,
+  `status` VARCHAR(32) DEFAULT 'pending',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_shop_order_user` (`user_id`),
+  INDEX `idx_shop_order_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. Leader Loans Table
+CREATE TABLE IF NOT EXISTS `leader_loans` (
+  `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `user_id` VARCHAR(64) NOT NULL,
+  `username` VARCHAR(64) NOT NULL,
+  `loan_amount` BIGINT(20) NOT NULL,
+  `active_sponsors_count` INT(11) NOT NULL,
+  `purpose` TEXT NOT NULL,
+  `ktp_nik` VARCHAR(32) DEFAULT NULL,
+  `ktp_name` VARCHAR(128) DEFAULT NULL,
+  `ktp_image` LONGTEXT DEFAULT NULL,
+  `bank_name` VARCHAR(64) DEFAULT NULL,
+  `account_number` VARCHAR(64) DEFAULT NULL,
+  `account_holder` VARCHAR(128) DEFAULT NULL,
+  `status` VARCHAR(32) DEFAULT 'pending',
+  `rejection_reason` TEXT DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_loan_user` (`user_id`),
+  INDEX `idx_loan_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ==============================================================================
 -- SEED DATA (INITIAL REAL RECORDS FOR PHPMYADMIN - CLEAN PRODUCTION)
 -- ==============================================================================
@@ -129,7 +207,19 @@ ON DUPLICATE KEY UPDATE `username` = VALUES(`username`);
 
 -- 4. Settings Seed
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES
-('general_settings', '{"appName":"AUTOTRADING","currency":"IDR","usdIdrRate":16250,"minDeposit":50000,"minWithdraw":50000,"withdrawFeePercent":10,"withdrawSchedule":{"enabled":true,"startHour":9,"endHour":21,"offMessage":"Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional."},"withdrawTerms":["Minimal Penarikan: Rp 50.000 per transaksi.","Biaya Admin: 10% dari nominal penarikan dana.","Jam Operasional WD: Buka setiap hari pukul 09:00 - 21:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.","Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).","Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."],"apkDownload":{"url":"https://autotrading.my.id/appautotrading.apk","version":"v2.4.0 (Official Release)","size":"18.5 MB","updatedAt":"2026-10-09","enabled":true},"email":{"verificationRequired":false,"adminNotificationOnRegister":true,"adminNotificationEmail":"admin@autotrading.my.id","welcomeEmailEnabled":true,"mailMethod":"smtp","smtp":{"host":"mail.autotrading.my.id","port":465,"secure":"ssl","user":"admin@autotrading.my.id","pass":"","fromName":"AUTOTRADING Official","fromEmail":"admin@autotrading.my.id"}},"profitCycleDurationHours":24,"autoProfitIntervalSeconds":86400,"weekendProfit":{"enabled":true,"offMessage":"Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin."},"weekendProfitEnabled":true,"todayProfitLossMode":{"isLoss":false,"lossRate":0,"message":"Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman."},"weeklyProfitHistory":[{"dayName":"Senin","date":"Senin","rate":1,"isLoss":false,"isWeekend":false},{"dayName":"Selasa","date":"Selasa","rate":1.5,"isLoss":false,"isWeekend":false},{"dayName":"Rabu","date":"Rabu","rate":1.2,"isLoss":false,"isWeekend":false},{"dayName":"Kamis","date":"Kamis","rate":1.35,"isLoss":false,"isWeekend":false},{"dayName":"Jumat","date":"Jumat","rate":1.15,"isLoss":false,"isWeekend":false},{"dayName":"Sabtu","date":"Sabtu","rate":null,"isLoss":false,"isWeekend":true},{"dayName":"Minggu","date":"Minggu","rate":null,"isLoss":false,"isWeekend":true}],"depositPointsReward":5,"dailyCheckIn":{"enabled":true,"rewardAmount":1000,"totalDays":7},"cs":{"whatsapp":"6281234567890","telegram":"https://t.me/autotrading_cs","waMessage":"Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform..."},"social":{"telegram":"https://t.me/autotrading_channel","instagram":"https://instagram.com/autotradingofficial","tiktok":"https://tiktok.com/@autotradingofficial","youtube":"https://youtube.com/@autotrading"},"kelasTrading":{"whatsapp":"https://wa.me/6281234567890?text=Halo%20Mentor%20AUTOTRADING,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi","telegram":"https://t.me/autotrading_official_channel","desc":"Komunitas edukasi trading AI, webinar eksklusif & sinyal pasar harian"},"sponsorBonusPercent":10,"rabatLevels":[{"level":1,"percent":5},{"level":2,"percent":3},{"level":3,"percent":1.5},{"level":4,"percent":0.5},{"level":5,"percent":0.2}],"levelTurnoverMilestones":[{"name":"Bronze Leader","minTurnover":25000000,"reward":1000000},{"name":"Silver Director","minTurnover":100000000,"reward":5000000},{"name":"Gold Ambassador","minTurnover":500000000,"reward":30000000},{"name":"Crown Diamond","minTurnover":2000000000,"reward":150000000}],"paymentGateways":{"banks":[{"id":"bca","name":"Bank Central Asia (BCA)","accountNo":"8271928374","accountName":"PT AUTOTRADING INVESTASI","active":true},{"id":"mandiri","name":"Bank Mandiri","accountNo":"1370029384721","accountName":"PT AUTOTRADING INVESTASI","active":true},{"id":"bri","name":"Bank BRI","accountNo":"034101002938531","accountName":"PT AUTOTRADING INVESTASI","active":true}],"qris":{"active":true,"merchantName":"AUTOTRADING OFFICIAL QRIS","nmid":"ID1029384756201","imageUrl":"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2"},"usdt":{"active":true,"trc20Address":"TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1","bep20Address":"0x71C4982aF12B76295328B83716d1029C837A5982"}}}', 'Platform global settings, withdraw rules, and commission rates')
+('general_settings', '{"appName":"AUTOTRADING","currency":"IDR","usdIdrRate":16250,"minDeposit":50000,"minWithdraw":50000,"withdrawFeePercent":10,"withdrawSchedule":{"enabled":true,"startHour":9,"endHour":21,"offMessage":"Layanan penarikan dana (WD) buka setiap hari pukul 09:00 - 21:00 WIB. Saldo Anda aman dan dapat ditarik pada jam operasional."},"withdrawTerms":["Minimal Penarikan: Rp 50.000 per transaksi.","Biaya Admin: 10% dari nominal penarikan dana.","Jam Operasional WD: Buka setiap hari pukul 09:00 - 21:00 WIB. Penarikan di luar jam operasional akan diproses pada jam kerja berikutnya.","Waktu Proses: Saldo masuk dalam hitungan 5 - 30 menit (maksimal 1x24 jam kerja).","Proteksi Modal Terkunci: Modal paket investasi yang sedang aktif dikunci otomatis oleh sistem hingga durasi kontrak selesai dan tidak dapat ditarik mendahului periode."],"apkDownload":{"url":"https://autotrading.my.id/appautotrading.apk","version":"v2.4.0 (Official Release)","size":"18.5 MB","updatedAt":"2026-10-09","enabled":true},"email":{"verificationRequired":false,"adminNotificationOnRegister":true,"adminNotificationEmail":"admin@autotrading.my.id","welcomeEmailEnabled":true,"mailMethod":"smtp","smtp":{"host":"mail.autotrading.my.id","port":465,"secure":"ssl","user":"admin@autotrading.my.id","pass":"","fromName":"AUTOTRADING Official","fromEmail":"admin@autotrading.my.id"}},"profitCycleDurationHours":24,"autoProfitIntervalSeconds":86400,"weekendProfit":{"enabled":true,"offMessage":"Pasar Keuangan & Trading Libur di Akhir Pekan (Sabtu & Minggu). Dividen profit akan kembali berjalan aktif hari Senin."},"weekendProfitEnabled":true,"todayProfitLossMode":{"isLoss":false,"lossRate":0,"message":"Hari ini pasar mengalami fluktuasi / Loss (Dividen Profit 0%). Fitur proteksi modal menjaga saldo pokok Anda tetap 100% aman."},"weeklyProfitHistory":[{"dayName":"Senin","date":"Senin","rate":1,"isLoss":false,"isWeekend":false},{"dayName":"Selasa","date":"Selasa","rate":1.5,"isLoss":false,"isWeekend":false},{"dayName":"Rabu","date":"Rabu","rate":1.2,"isLoss":false,"isWeekend":false},{"dayName":"Kamis","date":"Kamis","rate":1.35,"isLoss":false,"isWeekend":false},{"dayName":"Jumat","date":"Jumat","rate":1.15,"isLoss":false,"isWeekend":false},{"dayName":"Sabtu","date":"Sabtu","rate":null,"isLoss":false,"isWeekend":true},{"dayName":"Minggu","date":"Minggu","rate":null,"isLoss":false,"isWeekend":true}],"depositPointsReward":5,"dailyCheckIn":{"enabled":true,"rewardAmount":1000,"totalDays":7},"cs":{"whatsapp":"6281234567890","telegram":"https://t.me/autotrading_cs","waMessage":"Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform..."},"social":{"telegram":"https://t.me/autotrading_channel","instagram":"https://instagram.com/autotradingofficial","tiktok":"https://tiktok.com/@autotradingofficial","youtube":"https://youtube.com/@autotrading"},"kelasTrading":{"whatsapp":"https://wa.me/6281234567890?text=Halo%20Mentor%20AUTOTRADING,%20saya%20ingin%20bergabung%20ke%20Kelas%20Trading%20Resmi","telegram":"https://t.me/autotrading_official_channel","desc":"Komunitas edukasi trading AI, webinar eksklusif & sinyal pasar harian"},"sponsorBonusPercent":10,"rabatLevels":[{"level":1,"percent":5},{"level":2,"percent":3},{"level":3,"percent":1.5},{"level":4,"percent":0.5},{"level":5,"percent":0.2}],"levelTurnoverMilestones":[{"name":"Bronze Leader","minTurnover":25000000,"reward":1000000},{"name":"Silver Director","minTurnover":100000000,"reward":5000000},{"name":"Gold Ambassador","minTurnover":500000000,"reward":30000000},{"name":"Crown Diamond","minTurnover":2000000000,"reward":150000000}],"paymentGateways":{"banks":[{"id":"bca","name":"Bank Central Asia (BCA)","accountNo":"8271928374","accountName":"PT AUTOTRADING INVESTASI","active":true},{"id":"mandiri","name":"Bank Mandiri","accountNo":"1370029384721","accountName":"PT AUTOTRADING INVESTASI","active":true},{"id":"bri","name":"Bank BRI","accountNo":"034101002938531","accountName":"PT AUTOTRADING INVESTASI","active":true}],"qris":{"active":true,"merchantName":"AUTOTRADING OFFICIAL QRIS","nmid":"ID1029384756201","imageUrl":"https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2"},"usdt":{"active":true,"trc20Address":"TXv7qL98HqN8sP2uYx9B9m34j9KxL0qWp1","bep20Address":"0x71C4982aF12B76295328B83716d1029C837A5982"}}}', 'Platform global settings, withdraw rules, and commission rates'),
+('silver_buy_price', '18500', 'Harga beli perak per gram (Rp)'),
+('silver_sell_price', '17200', 'Harga jual perak per gram (Rp)'),
+('silver_cashback_balance', '15.0', 'Saldo cashback perak (Gram)'),
+('silver_cashback_yield', '0.50', 'Hasil cashback perak harian (Gram)'),
+('gold_buy_price', '1350000', 'Harga beli emas per gram (Rp)'),
+('gold_sell_price', '1300000', 'Harga jual emas per gram (Rp)'),
+('gold_cashback_balance', '10.0', 'Saldo cashback emas (Gram)'),
+('gold_cashback_yield', '0.45', 'Hasil cashback emas harian (Gram)'),
+('minting_fee_silver', '25000', 'Biaya cetak perak fisik per gram (Rp)'),
+('minting_fee_gold', '50000', 'Biaya cetak emas fisik per gram (Rp)'),
+('price_history_silver', '[{"date":"24 Okt","price":17000},{"date":"25 Okt","price":17100},{"date":"26 Okt","price":17050},{"date":"27 Okt","price":17150},{"date":"28 Okt","price":17100},{"date":"29 Okt","price":17200},{"date":"30 Okt","price":17200}]', 'Riwayat harga perak 7 hari'),
+('price_history_gold', '[{"date":"24 Okt","price":1280000},{"date":"25 Okt","price":1285000},{"date":"26 Okt","price":1290000},{"date":"27 Okt","price":1295000},{"date":"28 Okt","price":1290000},{"date":"29 Okt","price":1300000},{"date":"30 Okt","price":1300000}]', 'Riwayat harga emas 7 hari')
 ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`);
 
 -- 5. Unified System State Seed (Clean Production)
