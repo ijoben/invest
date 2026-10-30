@@ -622,7 +622,7 @@
     function showAppPopup({ title, message, type = 'info', icon, confirmText = 'OK, Mengerti', cancelText = 'Batal', showCancel = false, onConfirm, onCancel }) {
       const overlay = document.getElementById('appCustomPopupOverlay');
       if (!overlay) {
-        alert(message);
+        console.warn('[Popup Warning]', message);
         return;
       }
       const iconWrap = document.getElementById('appPopupIconWrap');
