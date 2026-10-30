@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pinjaman Modal Cepat Leader - AUTOTRADING</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    :root {
+      --primary-navy: #0F172A;
+      --primary-blue: #2563EB;
+      --primary-gold: #F59E0B;
+      --primary-green: #10B981;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+    }
+    body {
+      background-color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+    .top-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #FFFFFF;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: #0F172A;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 8px;
+    }
+    .back-btn:hover {
+      background: #F1F5F9;
+    }
+    .page-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* HERO BADGE & S&K BANNER */
+    .hero-banner {
+      background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+      border-radius: 20px;
+      padding: 20px;
+      color: #FFFFFF;
+      margin-bottom: 18px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+    }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #FBBF24;
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .hero-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+      line-height: 1.25;
+    }
+    .hero-subtitle {
+      font-size: 12px;
+      color: #94A3B8;
+      line-height: 1.45;
+    }
+
+    /* ELIGIBILITY CARD */
+    .active-loan-bill-card {
+      background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+      border: 1.5px solid #FDBA74;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 14px rgba(234, 88, 12, 0.08);
+    }
+    .eligibility-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      border: 1.5px solid #E2E8F0;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .eligibility-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .eligibility-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .qualification-badge {
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 8px;
+      text-transform: uppercase;
+    }
+    .badge-eligible {
+      background: #DCFCE7;
+      color: #166534;
+      border: 1px solid #86EFAC;
+    }
+    .badge-not-eligible {
+      background: #FEF3C7;
+      color: #92400E;
+      border: 1px solid #FCD34D;
+    }
+    .progress-bar-bg {
+      background: #F1F5F9;
+      height: 10px;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #F59E0B, #10B981);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    /* S&K BULLET BOX */
+    .terms-box {
+      background: #F8FAFC;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.5;
+      margin-top: 10px;
+      border-left: 3px solid #F59E0B;
+    }
+    .terms-box strong {
+      color: #0F172A;
+    }
+
+    /* FORM CARD */
+    .form-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      border: 1.5px solid #E2E8F0;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .plafon-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .plafon-btn {
+      padding: 12px 6px;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 12px;
+      background: #FFFFFF;
+      font-size: 13px;
+      font-weight: 800;
+      color: #334155;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .plafon-btn.active {
+      border-color: #2563EB;
+      background: #EFF6FF;
+      color: #1D4ED8;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 5px;
+      display: block;
+    }
+    .input-field {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px 13px;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 10px;
+      font-size: 13.5px;
+      color: #0F172A;
+      outline: none;
+    }
+    .input-field:focus {
+      border-color: #2563EB;
+    }
+    .btn-submit-loan {
+      width: 100%;
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+      transition: all 0.15s ease;
+      margin-top: 10px;
+    }
+    .btn-submit-loan:disabled {
+      background: #94A3B8;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* LOAN HISTORY */
+    .history-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      border: 1.5px solid #E2E8F0;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .loan-item {
+      padding: 12px 0;
+      border-bottom: 1px dashed #E2E8F0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .loan-item:last-child {
+      border-bottom: none;
+    }
+  
+    /* === MODERN ATTRACTIVE APP POPUP DIALOG === */
+    .app-popup-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999999;
+      padding: 20px;
+      animation: appPopupFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes appPopupFade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .app-popup-card {
+      background: #ffffff;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 360px;
+      padding: 26px 22px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      animation: appPopupZoom 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes appPopupZoom {
+      from { transform: scale(0.88); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .app-popup-icon-wrap {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      background: #F0FDF4;
+      color: #16A34A;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+    }
+    .app-popup-icon-wrap.error {
+      background: #FEF2F2;
+      color: #DC2626;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+    }
+    .app-popup-icon-wrap.warning {
+      background: #FFFBEB;
+      color: #D97706;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15);
+    }
+    .app-popup-icon-wrap.info {
+      background: #EFF6FF;
+      color: #2563EB;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    }
+    .app-popup-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .app-popup-message {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #64748B;
+      margin-bottom: 22px;
+      white-space: pre-line;
+      word-break: break-word;
+    }
+    .app-popup-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .app-popup-btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .app-popup-btn-confirm {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+    .app-popup-btn-confirm:hover {
+      filter: brightness(1.05);
+    }
+    .app-popup-btn-cancel {
+      background: #F1F5F9;
+      color: #64748B;
+    }
+    .app-popup-btn-cancel:hover {
+      background: #E2E8F0;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav class="top-navbar">
+    <button type="button" class="back-btn" onclick="window.location.href='./'">
+      <span>‹</span> Beranda
+    </button>
+    <div class="page-title">Pinjaman Modal Cepat Leader</div>
+    <div style="width: 50px;"></div>
+  </nav>
+
+  <div class="container">
+
+    <!-- HERO BANNER -->
+    <div class="hero-banner">
+      <div class="hero-tag">⭐ KHUSUS LEADER AKTIF</div>
+      <div class="hero-title">Modal Cepat Hingga Rp 1.000.000</div>
+      <div class="hero-subtitle">
+        Fasilitas pinjaman modal kerja tanpa bunga untuk memperluas jaringan dan percepatan omzet tim leader AUTOTRADING.
+      </div>
+    </div>
+
+    <!-- ELIGIBILITY & S&K CHECKER -->
+    <div class="eligibility-card">
+      <div class="eligibility-header">
+        <span class="eligibility-title">Syarat &amp; Ketentuan Kualifikasi</span>
+        <span class="qualification-badge badge-not-eligible" id="qualificationBadge">Pengecekan...</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+        <span style="color: #64748B;">Sponsor Aktif Terverifikasi:</span>
+        <strong id="activeSponsorCountDisplay" style="color: #0F172A;">0 / 10 Sponsor</strong>
+      </div>
+
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="sponsorProgressBar"></div>
+      </div>
+
+      <div class="terms-box">
+        📌 <strong>Syarat &amp; Ketentuan Wajib:</strong>
+        <ul style="margin: 6px 0 0 16px; padding: 0; line-height: 1.5;">
+          <li>Memiliki <strong>minimal 10 sponsor/referral aktif</strong> yang telah aktivasi/deposit di bawah akun Anda.</li>
+          <li>Suku bunga tagihan pengembalian bulanan flat sesuai kebijakan sistem (<strong id="displayInterestRateTerm">2% per bulan</strong>).</li>
+          <li>Tagihan pengembalian pinjaman wajib dibayar setiap bulan. Jika tanggal jatuh tempo tiba dan belum dibayar, sistem akan <strong>memotong otomatis dari saldo dompet utama</strong> Anda.</li>
+          <li>Apabila saldo utama tidak mencukupi dan menunggak selama <strong>2 bulan berturut-turut</strong>, akun member Anda akan <strong>otomatis diblokir permanen oleh sistem</strong>.</li>
+        </ul>
+      </div>
+
+      
+    </div>
+
+    <!-- KARTU NOTIFIKASI TAGIHAN BULANAN PINJAMAN AKTIF -->
+    <div class="active-loan-bill-card" id="activeLoanBillCard" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 18px;" id="billIcon">⚠️</span>
+          <strong style="font-size: 14px; color: #9A3412;" id="billHeaderTitle">Tagihan Pinjaman Modal Aktif</strong>
+        </div>
+        <span class="qualification-badge" id="billStatusBadge" style="background: #FEE2E2; color: #DC2626; border-color: #FCA5A5;">Jatuh Tempo</span>
+      </div>
+
+      <div style="background: rgba(255, 255, 255, 0.7); border-radius: 10px; padding: 12px; margin-bottom: 12px; border: 1px solid rgba(251, 146, 60, 0.2);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+          <span style="color: #64748B;">Pokok Pinjaman:</span>
+          <strong id="billPrincipal" style="color: #0F172A;">Rp 0</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+          <span style="color: #64748B;">Suku Bunga Bulanan:</span>
+          <span id="billInterestRate" style="color: #0F172A; font-weight: 700;">2%</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+          <span style="color: #64748B;">Total Tagihan (Pokok + Bunga):</span>
+          <strong id="billTotalDue" style="color: #EA580C; font-size: 13.5px;">Rp 0</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+          <span style="color: #64748B;">Sudah Dikembalikan:</span>
+          <span id="billRepaid" style="color: #16A34A; font-weight: 700;">Rp 0</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #CBD5E1; font-size: 13px;">
+          <span style="color: #334155; font-weight: 700;">Sisa Tagihan Harus Dibayar:</span>
+          <strong id="billRemaining" style="color: #DC2626; font-size: 15px;">Rp 0</strong>
+        </div>
+      </div>
+
+      <div style="font-size: 11.5px; color: #431407; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+        <span>📅 Jatuh Tempo: <strong id="billDueDateDisplay">-</strong></span>
+        <span id="billCountdownDays" style="font-weight: 700; color: #EA580C;">Tersisa 30 Hari</span>
+      </div>
+
+      <div style="font-size: 10.5px; color: #7C2D12; background: #FFEDD5; padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; line-height: 1.4;">
+        ℹ️ <strong>Auto-Debet:</strong> Jika tidak dilunasi sebelum tanggal jatuh tempo, saldo dompet utama Anda otomatis dipotong. Jika menunggak berbulan-bulan, akun Anda otomatis diblokir sistem.
+      </div>
+
+      <button type="button" class="btn-submit-loan" id="btnPayLoanBill" onclick="openPayBillModal()" style="background: linear-gradient(135deg, #EA580C 0%, #C2410C 100%); margin: 0;">
+        💳 Bayar / Lunasi Tagihan Sekarang
+      </button>
+    </div>
+
+    <!-- MODAL PEMBAYARAN TAGIHAN PINJAMAN -->
+    <div class="modal-overlay" id="payBillModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 999; align-items: center; justify-content: center; padding: 16px;">
+      <div style="background: #fff; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <strong style="font-size: 15px; color: #0F172A;">Pembayaran Tagihan Pinjaman</strong>
+          <button type="button" onclick="closePayBillModal()" style="background: none; border: none; font-size: 20px; color: #64748B; cursor: pointer;">&times;</button>
+        </div>
+
+        <div style="background: #F1F5F9; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; color: #334155;">
+          <div>Saldo Utama Anda: <strong id="modalUserBalanceDisplay">Rp 0</strong></div>
+          <div style="margin-top: 4px;">Sisa Tagihan: <strong id="modalBillRemainingDisplay" style="color: #DC2626;">Rp 0</strong></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nominal Pembayaran (Rp):</label>
+          <input type="number" class="input-field" id="payBillAmountInput" placeholder="Masukkan jumlah bayar">
+          <div style="font-size: 10.5px; color: #64748B; margin-top: 4px;">
+            *Dana dipotong langsung dari saldo dompet utama Anda.
+          </div>
+        </div>
+
+        <button type="button" class="btn-submit-loan" id="btnConfirmPayBill" onclick="submitLoanRepayment()" style="background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);">
+          Konfirmasi Pembayaran
+        </button>
+      </div>
+    </div>
+
+    <!-- FORMULIR LENGKAP PENGAJUAN PINJAMAN -->
+    <div class="form-card">
+      <div class="section-title">
+        <span>📝</span> Formulir Pengajuan Pinjaman
+      </div>
+
+      <!-- Pilihan Plafon -->
+      <label class="form-label">Pilih Jumlah Pinjaman Modal:</label>
+      <div class="plafon-grid">
+        <button type="button" class="plafon-btn active" id="btnPlafon300" onclick="setPlafon(300000)">
+          Rp 300 rb
+        </button>
+        <button type="button" class="plafon-btn" id="btnPlafon500" onclick="setPlafon(500000)">
+          Rp 500 rb
+        </button>
+        <button type="button" class="plafon-btn" id="btnPlafon1000" onclick="setPlafon(1000000)">
+          Rp 1 Juta
+        </button>
+      </div>
+      <input type="hidden" id="loanAmountInput" value="300000">
+
+      <!-- Keperluan Modal -->
+      <div class="form-group">
+        <label class="form-label">Tujuan / Keperluan Modal:</label>
+        <input type="text" class="input-field" id="loanPurposeInput" placeholder="Contoh: Operasional edukasi tim dan promosi offline">
+      </div>
+
+      <!-- Data Identitas -->
+      <div class="form-group">
+        <label class="form-label">Nama Lengkap (Sesuai KTP):</label>
+        <input type="text" class="input-field" id="ktpNameInput" placeholder="Nama lengkap Anda">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor Induk Kependudukan (NIK KTP):</label>
+        <input type="text" maxlength="16" class="input-field" id="ktpNikInput" placeholder="16 digit NIK KTP">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor WhatsApp Aktif:</label>
+        <input type="tel" class="input-field" id="ktpPhoneInput" placeholder="Contoh: 081234567890">
+      </div>
+
+      <!-- Data Rekening Pencairan -->
+      <div style="font-weight: 800; font-size: 13px; color: #0F172A; margin: 16px 0 8px 0; border-top: 1px dashed #E2E8F0; padding-top: 12px;">
+        💳 Rekening Tujuan Pencairan
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Bank / E-Wallet:</label>
+        <input type="text" class="input-field" id="loanBankNameInput" placeholder="Contoh: BCA / BRI / Mandiri / DANA">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor Rekening / No. HP E-Wallet:</label>
+        <input type="text" class="input-field" id="loanAccountNumberInput" placeholder="Nomor rekening Anda">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Pemilik Rekening:</label>
+        <input type="text" class="input-field" id="loanAccountHolderInput" placeholder="Harus sama dengan nama pemohon">
+      </div>
+
+      <!-- Dokumen KTP -->
+      <div class="form-group">
+        <label class="form-label">Unggah Foto KTP / Dokumen Identitas (Opsional / Siap Verifikasi):</label>
+        <input type="file" accept="image/*" class="input-field" id="ktpImageInput">
+      </div>
+
+      <!-- Terms Checkbox -->
+      <div style="display: flex; align-items: flex-start; gap: 8px; margin: 16px 0;">
+        <input type="checkbox" id="loanTermsCheckbox" style="margin-top: 3px;">
+        <label for="loanTermsCheckbox" style="font-size: 11px; color: #475569; line-height: 1.4;">
+          Saya menyetujui seluruh Syarat &amp; Ketentuan Pinjaman Modal Cepat Leader dan berkomitmen mengembalikan pinjaman sesuai kesepakatan bagi hasil komunitas.
+        </label>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="button" class="btn-submit-loan" id="btnSubmitLoan" onclick="submitLoanApplication()" disabled>
+        Kirim Pengajuan Pinjaman Modal
+      </button>
+      <div id="lockWarningText" style="font-size: 11px; color: #DC2626; text-align: center; margin-top: 8px;">
+        Tombol terkunci: Anda belum memenuhi syarat 10 sponsor aktif.
+      </div>
+    </div>
+
+    <!-- RIWAYAT PENGAJUAN PINJAMAN -->
+    <div class="history-card">
+      <div class="section-title">
+        <span>📋</span> Riwayat Pengajuan Pinjaman Saya
+      </div>
+      <div id="loanHistoryList">
+        <div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px;">Memuat riwayat pengajuan...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API_URL = 'api/index.php';
+    var loanData = {
+      required_sponsors: 10,
+      active_sponsors_count: 0,
+      is_eligible: false,
+      loans: []
+    };
+    let base64Ktp = '';
+
+    
+    // Modern Attractive Dialog System
+    function showAppPopup({ title, message, type = 'info', icon, confirmText = 'OK, Mengerti', cancelText = 'Batal', showCancel = false, onConfirm, onCancel }) {
+      const overlay = document.getElementById('appCustomPopupOverlay');
+      if (!overlay) {
+        alert(message);
+        return;
+      }
+      const iconWrap = document.getElementById('appPopupIconWrap');
+      const iconSpan = document.getElementById('appPopupIcon');
+      const titleEl = document.getElementById('appPopupTitle');
+      const msgEl = document.getElementById('appPopupMessage');
+      const btnConfirm = document.getElementById('appPopupBtnConfirm');
+      const btnCancel = document.getElementById('appPopupBtnCancel');
+
+      titleEl.innerText = title || 'Pemberitahuan';
+      msgEl.innerText = message || '';
+
+      iconWrap.className = 'app-popup-icon-wrap ' + (type || 'info');
+      if (icon) {
+        iconSpan.innerText = icon;
+      } else if (type === 'success') {
+        iconSpan.innerText = '✅';
+      } else if (type === 'error') {
+        iconSpan.innerText = '❌';
+      } else if (type === 'warning') {
+        iconSpan.innerText = '⚠️';
+      } else {
+        iconSpan.innerText = '💡';
+      }
+
+      btnConfirm.innerText = confirmText;
+      btnCancel.innerText = cancelText;
+      btnCancel.style.display = showCancel ? 'block' : 'none';
+
+      btnConfirm.onclick = () => {
+        overlay.style.display = 'none';
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+      btnCancel.onclick = () => {
+        overlay.style.display = 'none';
+        if (typeof onCancel === 'function') onCancel();
+      };
+
+      overlay.style.display = 'flex';
+    }
+
+    // Comprehensive session detection
+    // Comprehensive session & user detection
+    function getSessionToken() {
+      const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : null) ||
+                    (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : null) ||
+                    (typeof localStorage !== 'undefined' ? localStorage.getItem('at_token') : null) || '';
+      if (token) return token;
+      try {
+        const u = JSON.parse(localStorage.getItem('at_user_session') || localStorage.getItem('autotrading_user') || '{}');
+        if (u && (u.sessionToken || u.token)) return u.sessionToken || u.token;
+      } catch (e) {}
+      return '';
+    }
+
+    function getCurrentUserLocal() {
+      let userId = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_user_id') : null) ||
+                   (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_user_id') : null) ||
+                   (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('fgt_session_user_id') : null);
+
+      try {
+        const rawDb = localStorage.getItem('autotrading_db');
+        if (rawDb) {
+          const db = JSON.parse(rawDb);
+          if (db.currentUser && (!userId || String(db.currentUser.id) === String(userId) || String(db.currentUser.username).toLowerCase() === String(userId).toLowerCase())) {
+            return db.currentUser;
+          }
+          if (userId && Array.isArray(db.users)) {
+            const found = db.users.find(u => String(u.id) === String(userId) || String(u.username).toLowerCase() === String(userId).toLowerCase());
+            if (found) return found;
+          }
+          if (db.currentUser) return db.currentUser;
+        }
+      } catch (e) {}
+
+      try {
+        const u = JSON.parse(localStorage.getItem('at_user_session') || localStorage.getItem('autotrading_user') || '{}');
+        if (u && (u.id || u.username || u.name || u.fullName)) return u;
+      } catch (e) {}
+
+      return null;
+    }
+
+    function getActiveUserId() {
+      const u = getCurrentUserLocal();
+      if (u && u.id) return String(u.id);
+      const uid = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_user_id') : null) ||
+                  (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_user_id') : null) ||
+                  (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('fgt_session_user_id') : null);
+      return uid ? String(uid) : '';
+    }
+
+    function isMemberLoggedIn() {
+      return Boolean(getSessionToken() || getCurrentUserLocal() || getActiveUserId());
+    }
+
+    function checkMemberAccess() {
+      if (!isMemberLoggedIn()) {
+        showAppPopup({
+          title: 'Akses Khusus Member',
+          message: 'Layanan Pinjaman Modal Cepat Leader hanya dapat diakses khusus member terdaftar AUTOTRADING.\n\nSilakan login ke akun Anda untuk mengecek kualifikasi sponsor dan mengajukan pinjaman.',
+          type: 'info',
+          confirmText: 'Login Sekarang',
+          cancelText: 'Kembali',
+          onConfirm: () => { window.location.href = './#login'; },
+          onCancel: () => { window.location.href = './'; }
+        });
+        return false;
+      }
+      return true;
+    }
+
+    function getApiUrl(action) {
+      const token = getSessionToken();
+      const uid = getActiveUserId();
+      let url = `${API_URL}?action=${encodeURIComponent(action)}`;
+      if (token) url += `&sessionToken=${encodeURIComponent(token)}`;
+      if (uid) url += `&userId=${encodeURIComponent(uid)}`;
+      return url;
+    }
+
+    function getAuthFetchOptions(method = 'GET', body = null) {
+      const token = getSessionToken();
+      const uid = getActiveUserId();
+      const headers = { 'Accept': 'application/json' };
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+      }
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+        headers['X-Session-Token'] = token;
+      }
+      if (uid) {
+        headers['X-User-Id'] = uid;
+      }
+      const opts = {
+        method,
+        headers,
+        credentials: 'include'
+      };
+      if (body) {
+        const bodyObj = (typeof body === 'string') ? JSON.parse(body) : { ...body };
+        if (token && !bodyObj.sessionToken) bodyObj.sessionToken = token;
+        if (uid && !bodyObj.userId) bodyObj.userId = uid;
+        opts.body = JSON.stringify(bodyObj);
+      }
+      return opts;
+    }
+
+    function handleApiSessionToken(json) {
+      if (!json) return;
+      const t = json.sessionToken || (json.data && json.data.session_token);
+      if (t) {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', t);
+          if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', t);
+        } catch (e) {}
+      }
+    }
+
+    function formatRupiah(num) {
+      return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+    }
+
+    function setPlafon(amount) {
+      document.getElementById('loanAmountInput').value = amount;
+      document.getElementById('btnPlafon300').classList.toggle('active', amount === 300000);
+      document.getElementById('btnPlafon500').classList.toggle('active', amount === 500000);
+      document.getElementById('btnPlafon1000').classList.toggle('active', amount === 1000000);
+    }
+
+    async function loadLoanData() {
+      try {
+        const res = await fetch(getApiUrl('get_loan_data'), getAuthFetchOptions('GET'));
+        const json = await res.json();
+        if (json.success && json.data) {
+          handleApiSessionToken(json);
+          loanData = json.data;
+          renderLoanUI();
+        }
+      } catch (e) {
+        console.error('Error fetching loan data:', e);
+      }
+    }
+
+    let isSimulationMode = false;
+
+    function renderLoanUI() {
+      const cnt = loanData.active_sponsors_count || 0;
+      const req = loanData.required_sponsors || 10;
+      const pct = Math.min(100, Math.round((cnt / req) * 100));
+
+      document.getElementById('activeSponsorCountDisplay').innerText = `${cnt} / ${req} Sponsor Aktif`;
+      document.getElementById('sponsorProgressBar').style.width = pct + '%';
+
+      const badge = document.getElementById('qualificationBadge');
+      const submitBtn = document.getElementById('btnSubmitLoan');
+      const lockWarn = document.getElementById('lockWarningText');
+
+      if (loanData.is_eligible) {
+        badge.className = 'qualification-badge badge-eligible';
+        badge.innerText = '✓ Lolos Kualifikasi';
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('disabled');
+        lockWarn.style.display = 'none';
+      } else {
+        badge.className = 'qualification-badge badge-not-eligible';
+        badge.innerText = `Kurang ${req - cnt} Sponsor`;
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('disabled', 'disabled');
+        lockWarn.style.display = 'block';
+        lockWarn.innerText = `Tombol terkunci: Anda baru memiliki ${cnt} sponsor aktif (Dibutuhkan ${req} sponsor aktif).`;
+      }
+
+      // Pre-fill user data
+      try {
+        const u = JSON.parse(localStorage.getItem('at_user_session') || localStorage.getItem('autotrading_user') || '{}');
+        if (u.fullName && !document.getElementById('ktpNameInput').value) document.getElementById('ktpNameInput').value = u.fullName;
+        if (u.phone && !document.getElementById('ktpPhoneInput').value) document.getElementById('ktpPhoneInput').value = u.phone;
+        if (u.bankName && !document.getElementById('loanBankNameInput').value) document.getElementById('loanBankNameInput').value = u.bankName;
+        if (u.accountNumber && !document.getElementById('loanAccountNumberInput').value) document.getElementById('loanAccountNumberInput').value = u.accountNumber;
+        if (u.accountHolder && !document.getElementById('loanAccountHolderInput').value) document.getElementById('loanAccountHolderInput').value = u.accountHolder;
+      } catch(e) {}
+
+      // Render Active Bill
+      const billCard = document.getElementById('activeLoanBillCard');
+      const activeBill = loanData.active_bill;
+
+      if (loanData.settings && loanData.settings.monthly_interest_rate) {
+        const elRate = document.getElementById('displayInterestRateTerm');
+        if (elRate) elRate.innerText = loanData.settings.monthly_interest_rate + '% per bulan';
+      }
+
+      if (activeBill && activeBill.repayment_status !== 'repaid') {
+        billCard.style.display = 'block';
+        const principal = parseInt(activeBill.loan_amount) || 0;
+        const totalDue = parseInt(activeBill.total_due_amount) || principal;
+        const repaid = parseInt(activeBill.repaid_amount) || 0;
+        const remaining = Math.max(0, totalDue - repaid);
+        const isOverdue = activeBill.repayment_status === 'overdue' || activeBill.repayment_status === 'defaulted';
+
+        document.getElementById('billPrincipal').innerText = formatRupiah(principal);
+        document.getElementById('billInterestRate').innerText = (activeBill.interest_rate_percent || 2) + '%';
+        document.getElementById('billTotalDue').innerText = formatRupiah(totalDue);
+        document.getElementById('billRepaid').innerText = formatRupiah(repaid);
+        document.getElementById('billRemaining').innerText = formatRupiah(remaining);
+        document.getElementById('billDueDateDisplay').innerText = activeBill.due_date ? activeBill.due_date.substring(0, 10) : '30 Hari lagi';
+
+        const stBadge = document.getElementById('billStatusBadge');
+        if (activeBill.repayment_status === 'defaulted') {
+          stBadge.innerText = 'DIBLOKIR: Tunggakan Lewat Batas';
+          stBadge.style.background = '#7F1D1D';
+          stBadge.style.color = '#FEF2F2';
+          document.getElementById('billCountdownDays').innerText = '⚠️ Akun Diblokir Sementara';
+        } else if (isOverdue) {
+          stBadge.innerText = 'MENUNGGAK';
+          stBadge.style.background = '#DC2626';
+          stBadge.style.color = '#FFFFFF';
+          document.getElementById('billCountdownDays').innerText = '⚠️ Segera Lunasi Tagihan';
+        } else {
+          stBadge.innerText = 'AKTIF BERJALAN';
+          stBadge.style.background = '#FEF3C7';
+          stBadge.style.color = '#D97706';
+          document.getElementById('billCountdownDays').innerText = 'Jatuh Tempo Bulanan';
+        }
+
+        // Store active bill ID for payment modal
+        window.activeLoanBillId = activeBill.id;
+        window.activeLoanRemaining = remaining;
+      } else {
+        billCard.style.display = 'none';
+      }
+
+      // Render History
+      const histWrap = document.getElementById('loanHistoryList');
+      const loans = loanData.loans || [];
+
+      if (loans.length === 0) {
+        histWrap.innerHTML = '<div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px;">Belum ada pengajuan pinjaman modal.</div>';
+      } else {
+        histWrap.innerHTML = loans.map(l => {
+          let stColor = '#D97706';
+          let stLabel = 'Menunggu Review Admin';
+          if (l.status === 'approved') {
+            stColor = '#16A34A';
+            stLabel = 'Disetujui & Dicairkan';
+          } else if (l.status === 'rejected') {
+            stColor = '#DC2626';
+            stLabel = 'Ditolak: ' + (l.rejection_reason || 'Syarat belum lengkap');
+          }
+
+          return `
+            <div class="loan-item">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="font-size: 13.5px; color: #0F172A;">${formatRupiah(l.loan_amount)}</strong>
+                <span style="font-size: 10.5px; font-weight: 800; color: ${stColor};">${stLabel}</span>
+              </div>
+              <div style="font-size: 11px; color: #64748B;">
+                Tujuan: ${l.purpose}<br>
+                Pencairan: ${l.bank_name} - ${l.account_number} (${l.account_holder})
+              </div>
+              <div style="font-size: 10px; color: #94A3B8; text-align: right;">
+                Waktu Pengajuan: ${l.created_at || 'Baru saja'}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Handle KTP Image Base64
+    document.getElementById('ktpImageInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          base64Ktp = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    async function submitLoanApplication() {
+      if (!loanData.is_eligible) {
+        showAppPopup({ title: 'Syarat Belum Terpenuhi', message: 'Anda belum memenuhi syarat 10 sponsor aktif di bawah Anda.', type: 'warning' });
+        return;
+      }
+
+      const amount = parseInt(document.getElementById('loanAmountInput').value) || 300000;
+      const purpose = document.getElementById('loanPurposeInput').value.trim();
+      const ktpName = document.getElementById('ktpNameInput').value.trim();
+      const ktpNik = document.getElementById('ktpNikInput').value.trim();
+      const ktpPhone = document.getElementById('ktpPhoneInput').value.trim();
+      const bankName = document.getElementById('loanBankNameInput').value.trim();
+      const accountNumber = document.getElementById('loanAccountNumberInput').value.trim();
+      const accountHolder = document.getElementById('loanAccountHolderInput').value.trim();
+      const termsAccepted = document.getElementById('loanTermsCheckbox').checked;
+
+      if (!purpose || !ktpName || !ktpNik || !bankName || !accountNumber) {
+        showAppPopup({ title: 'Form Belum Lengkap', message: 'Mohon isi seluruh data formulir pengajuan pinjaman dengan lengkap termasuk foto KTP.', type: 'warning' });
+        return;
+      }
+
+      if (!termsAccepted) {
+        showAppPopup({ title: 'Persetujuan S&K', message: 'Anda harus mencentang persetujuan Syarat & Ketentuan Pinjaman.', type: 'warning' });
+        return;
+      }
+
+      if (!isMemberLoggedIn()) {
+        showAppPopup({
+          title: 'Login Diperlukan',
+          message: 'Sesi login Anda telah berakhir atau belum aktif. Silakan login ke akun member Anda.',
+          type: 'info',
+          confirmText: 'Login Sekarang',
+          onConfirm: () => { window.location.href = './#login'; }
+        });
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitLoan');
+      btn.disabled = true;
+      btn.innerText = 'Mengirim Formulir...';
+
+      try {
+        const res = await fetch(getApiUrl('apply_leader_loan'), getAuthFetchOptions('POST', {
+          loan_amount: amount,
+          purpose: purpose,
+          ktp_nik: ktpNik,
+          ktp_name: ktpName,
+          ktp_phone: ktpPhone,
+          ktp_image: base64Ktp,
+          bank_name: bankName,
+          account_number: accountNumber,
+          account_holder: accountHolder
+        }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.auth || res.status === 401) {
+          showAppPopup({ title: 'Login Diperlukan', message: json.message || 'Sesi login telah berakhir. Silakan login kembali.', type: 'info', confirmText: 'Login Sekarang', onConfirm: () => { window.location.href = './#login'; } });
+          return;
+        }
+        if (json.success) {
+          showAppPopup({ title: 'Pengajuan Berhasil', message: json.message, type: 'success', onConfirm: () => { document.getElementById('loanPurposeInput').value = ''; loadLoanData(); } });
+        } else {
+          showAppPopup({ title: 'Pengajuan Gagal', message: json.message || 'Gagal mengirim pengajuan.', type: 'error' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan koneksi server: ' + e.message, type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Kirim Pengajuan Pinjaman Modal';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkMemberAccess();
+      loadLoanData();
+    });
+
+    function openPayBillModal() {
+      const modal = document.getElementById('payBillModal');
+      modal.style.display = 'flex';
+      const rem = window.activeLoanRemaining || 0;
+      document.getElementById('modalBillRemainingDisplay').innerText = formatRupiah(rem);
+      document.getElementById('payBillAmountInput').value = rem;
+
+      try {
+        const u = JSON.parse(localStorage.getItem('at_user_session') || localStorage.getItem('autotrading_user') || '{}');
+        document.getElementById('modalUserBalanceDisplay').innerText = formatRupiah(u.walletBalance || u.balance || 0);
+      } catch(e) {}
+    }
+
+    function closePayBillModal() {
+      document.getElementById('payBillModal').style.display = 'none';
+    }
+
+    async function submitLoanRepayment() {
+      const loanId = window.activeLoanBillId;
+      if (!loanId) {
+        showAppPopup({ title: 'Tidak Ada Tagihan', message: 'Tidak ada tagihan pinjaman aktif yang dipilih.', type: 'warning' });
+        return;
+      }
+
+      const amt = parseInt(document.getElementById('payBillAmountInput').value) || 0;
+      if (amt <= 0) {
+        showAppPopup({ title: 'Nominal Tidak Valid', message: 'Masukkan jumlah pembayaran yang valid.', type: 'warning' });
+        return;
+      }
+
+      if (!isMemberLoggedIn()) {
+        showAppPopup({
+          title: 'Login Diperlukan',
+          message: 'Silakan login terlebih dahulu untuk melakukan pembayaran tagihan.',
+          type: 'info',
+          confirmText: 'Login Sekarang',
+          onConfirm: () => { window.location.href = './#login'; }
+        });
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmPayBill');
+      btn.disabled = true;
+      btn.innerText = 'Memproses Pembayaran...';
+
+      try {
+        const res = await fetch(getApiUrl('pay_leader_loan'), getAuthFetchOptions('POST', {
+          loan_id: loanId,
+          amount: amt
+        }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.auth || res.status === 401) {
+          showAppPopup({ title: 'Login Diperlukan', message: json.message || 'Sesi login telah berakhir. Silakan login kembali.', type: 'info', confirmText: 'Login Sekarang', onConfirm: () => { window.location.href = './#login'; } });
+          return;
+        }
+        if (json.success) {
+          showAppPopup({ title: 'Pembayaran Sukses', message: json.message, type: 'success', onConfirm: () => { closePayBillModal(); loadLoanData(); } });
+        } else {
+          showAppPopup({ title: 'Pembayaran Gagal', message: json.message || 'Gagal memproses pembayaran tagihan.', type: 'error' });
+        }
+      } catch(e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan koneksi server: ' + e.message, type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Konfirmasi Pembayaran';
+      }
+    }
+  </script>
+
+  <!-- MODERN ATTRACTIVE APP POPUP DIALOG -->
+  <div id="appCustomPopupOverlay" class="app-popup-overlay" style="display: none;">
+    <div class="app-popup-card">
+      <div class="app-popup-icon-wrap" id="appPopupIconWrap">
+        <span id="appPopupIcon">✨</span>
+      </div>
+      <div class="app-popup-title" id="appPopupTitle">Pemberitahuan</div>
+      <div class="app-popup-message" id="appPopupMessage">Pesan informasi</div>
+      <div class="app-popup-actions" id="appPopupActions">
+        <button type="button" class="app-popup-btn app-popup-btn-cancel" id="appPopupBtnCancel" style="display: none;">Batal</button>
+        <button type="button" class="app-popup-btn app-popup-btn-confirm" id="appPopupBtnConfirm">OK, Mengerti</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

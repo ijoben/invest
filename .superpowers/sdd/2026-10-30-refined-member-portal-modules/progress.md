@@ -34,4 +34,9 @@ Task 4: completed
 - Strict member access gate enforcing authentication on boot.
 - scratch/test_toko_page.cjs verified 100% PASS.
 
-Task 5: in_progress
+Task 5: completed
+- pinjaman.html enforces strict member access gate check on page load.
+- Unauthenticated visitors are prompted with clean custom popup to login or return to home.
+- scratch/test_pinjaman_page.cjs verified 100% PASS.
+
+Task 6: in_progress
