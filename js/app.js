@@ -489,7 +489,7 @@ Object.assign(App, {
       // Logo resmi bawaan dipakai bila admin belum mengisi webSettings.logoUrl,
       // supaya header TIDAK kembali ke ikon perisai lama ("logo lama") setelah
       // deploy/reset setting. Bila file hilang, onerror kembali ke teks.
-      const fallbackLogoUrl = 'uploads/logo-autotrading-horizontal.svg?v=20261029';
+      const fallbackLogoUrl = 'uploads/logo-autotrading-horizontal.svg?v=20261030_v3';
       if (ws.logoUrl) {
         renderBrandLogo(ws.logoUrl);
       } else if (fallbackLogoUrl) {

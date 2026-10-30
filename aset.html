@@ -2,6 +2,9 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="uploads/logo-favicon.png?v=20261030_v3">
+  <link rel="shortcut icon" href="uploads/logo-favicon.png?v=20261030_v3">
+  <link rel="apple-touch-icon" href="uploads/logo-favicon.png?v=20261030_v3">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Aset Logam Mulia (Perak &amp; Emas) - AUTOTRADING</title>
   <link rel="stylesheet" href="css/style.css">
@@ -715,10 +718,10 @@
     <!-- TAB SWITCHER: PERAK & EMAS -->
     <div class="tab-switcher-wrap">
       <button type="button" class="tab-btn active tab-perak" id="tabPerakBtn" onclick="switchAssetTab('silver')">
-        <span>🪙</span> Tab Perak (99.9%)
+        <span>🪙</span> Perak
       </button>
       <button type="button" class="tab-btn tab-emas" id="tabEmasBtn" onclick="switchAssetTab('gold')">
-        <span>👑</span> Tab Emas (99.99%)
+        <span>👑</span> Emas
       </button>
     </div>
 
@@ -953,15 +956,10 @@
 
   <!-- MODAL BELI ASET (DENGAN CEK SALDO DOMPET & SHORTFALL DEPOSIT) -->
   <div class="modal-overlay" id="beliModal">
-    <div class="modal-box">
+    <div class="modal-box" style="max-height: 90vh; overflow-y: auto;">
       <div class="modal-header">
-        <div class="modal-title" id="beliModalTitle">Beli Aset Perak</div>
+        <div class="modal-title" id="beliModalTitle">Beli Aset Logam Mulia</div>
         <button class="modal-close" onclick="closeBeliModal()">&times;</button>
-      </div>
-
-      <div class="wallet-bal-pill">
-        <span>Saldo Utama Anda:</span>
-        <strong id="userWalletDisplay">Rp 0</strong>
       </div>
 
       <div class="form-group">
@@ -969,28 +967,89 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Jumlah Gram (Editable):</label>
+        <label class="form-label">Jumlah Gram Pembelian:</label>
         <input type="number" step="0.001" min="0.001" class="input-field" id="beliGramsInput" placeholder="Contoh: 5" value="5" oninput="syncBeliFromGrams()">
       </div>
 
       <div class="form-group">
-        <label class="form-label">Total Harga (Rp, Editable):</label>
+        <label class="form-label">Total Harga Pembelian (Rp):</label>
         <input type="number" step="1000" class="input-field" id="beliAmountInput" placeholder="Contoh: 200000" oninput="syncBeliFromAmount()">
       </div>
 
-      <!-- Shortfall Notification & Deposit Shortcut -->
-      <div id="beliShortfallBox" style="display: none;" class="shortfall-alert">
-        <div>
-          ⚠️ <strong>Saldo Utama Tidak Mencukupi</strong>
-          <div style="font-size: 11px; margin-top: 2px;" id="beliShortfallText">Kurang Rp 0</div>
+      <!-- Pilihan Metode Pembayaran: Wallet Utama vs Deposit Langsung -->
+      <div class="form-group" style="margin-top: 6px;">
+        <label class="form-label" style="font-weight: 800; color: #0F172A;">Pilih Metode Pembayaran:</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div class="pay-method-card active" id="payMethodWallet" onclick="selectBuyPayMethod('wallet')" style="border: 2px solid #00B368; background: #ECFDF5; border-radius: 12px; padding: 10px; cursor: pointer; text-align: left;">
+            <div style="font-size: 18px; margin-bottom: 2px;">💳</div>
+            <strong style="font-size: 11.5px; color: #065F46; display: block;">Potong Saldo</strong>
+            <span style="font-size: 10px; color: #047857;" id="buyWalletBalNote">Saldo: Rp 0</span>
+          </div>
+          <div class="pay-method-card" id="payMethodDirectDepo" onclick="selectBuyPayMethod('deposit')" style="border: 2px solid #CBD5E1; background: #FFFFFF; border-radius: 12px; padding: 10px; cursor: pointer; text-align: left;">
+            <div style="font-size: 18px; margin-bottom: 2px;">⚡</div>
+            <strong style="font-size: 11.5px; color: #1E293B; display: block;">Deposit Langsung</strong>
+            <span style="font-size: 10px; color: #64748B;">Transfer Bank / QRIS</span>
+          </div>
         </div>
-        <button type="button" class="btn-deposit-shortcut" id="btnBeliDepositShortcut" onclick="redirectToDepositShortfall()">
-          Deposit Sekarang (Kurang Rp 0)
-        </button>
       </div>
 
-      <div style="font-size: 11px; color: #64748B; margin-bottom: 14px;" id="beliBalanceSufficiencyNotice">
-        * Pembelian otomatis memotong dari Saldo Utama dompet Anda dan langsung masuk ke Saldo Siap Jual.
+      <!-- Mode 1: Potong Saldo Dompet Utama -->
+      <div id="buyWalletSection">
+        <div class="wallet-bal-pill" style="margin-bottom: 10px;">
+          <span>Saldo Utama Tersedia:</span>
+          <strong id="userWalletDisplay">Rp 0</strong>
+        </div>
+
+        <!-- Shortfall Notification & Shortcut jika saldo kurang -->
+        <div id="beliShortfallBox" style="display: none;" class="shortfall-alert">
+          <div>
+            ⚠️ <strong>Saldo Utama Tidak Mencukupi</strong>
+            <div style="font-size: 11px; margin-top: 2px;" id="beliShortfallText">Kurang Rp 0</div>
+          </div>
+          <button type="button" class="btn-deposit-shortcut" id="btnBeliDepositShortcut" onclick="selectBuyPayMethod('deposit')">
+            ⚡ Bayar Lewat Deposit Langsung Sekarang
+          </button>
+        </div>
+
+        <div style="font-size: 11px; color: #64748B; margin-bottom: 14px;" id="beliBalanceSufficiencyNotice">
+          * Pembelian otomatis memotong dari Saldo Utama dompet Anda dan langsung masuk ke Saldo Siap Jual.
+        </div>
+      </div>
+
+      <!-- Mode 2: Deposit Langsung (Transfer Bank / QRIS) -->
+      <div id="buyDirectDepoSection" style="display: none; background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 14px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+          <span style="font-size: 16px;">🏦</span>
+          <strong style="font-size: 12.5px; color: #0F172A;">Rekening Tujuan Transfer Resmi:</strong>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px; padding: 10px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 10px; font-weight: 800; color: #2563EB; background: #DBEAFE; padding: 2px 6px; border-radius: 6px;">SEABANK</span>
+              <div style="font-size: 14px; font-weight: 900; color: #0F172A; font-family: monospace; margin: 4px 0;" id="depoBankAcc">901284135116</div>
+              <div style="font-size: 11px; color: #64748B;">a/n EDY IRAWAN</div>
+            </div>
+            <button type="button" onclick="copyToClipboard('901284135116', 'Nomor Rekening SEABANK berhasil disalin!')" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #0F172A; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px; cursor: pointer;">
+              📋 Salin
+            </button>
+          </div>
+        </div>
+
+        <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 10px; padding: 10px; margin-bottom: 10px; font-size: 11.5px; color: #92400E;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Total Tagihan + Kode Unik:</span>
+            <strong style="font-size: 13.5px; color: #B45309;" id="buyDepoTotalWithCode">Rp 0</strong>
+          </div>
+          <div style="font-size: 10px; margin-top: 4px; color: #78350F;">
+            * Transfer tepat hingga 3 digit terakhir agar sistem dapat memverifikasi pembayaran Anda otomatis.
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-size: 11px;">Nama Pengirim Rekening (Sesuai M-Banking):</label>
+          <input type="text" class="input-field" id="buyDepoSellerName" placeholder="Contoh: Budi Santoso" style="padding: 9px 12px; font-size: 12px;">
+        </div>
       </div>
 
       <button type="button" class="btn-action-beli" style="width: 100%; border-radius: 12px;" id="btnConfirmBeli" onclick="submitBeliAset()">
@@ -1128,20 +1187,31 @@
     </div>
   </div>
 
-  <!-- 3. MODAL CICIL -->
+  <!-- 3. MODAL CICIL LOGAM FISIK (FORMULIR LENGKAP PROFESIONAL) -->
   <div class="modal-overlay" id="modalCicil">
-    <div class="modal-box">
+    <div class="modal-box" style="max-height: 92vh; overflow-y: auto;">
       <div class="modal-header">
-        <div class="modal-title">📅 Program Cicil Logam Fisik</div>
+        <div class="modal-title" id="cicilModalHeaderTitle">📅 Pengajuan Cicilan Logam Fisik</div>
         <button type="button" class="modal-close" onclick="closeModalCicil()">&times;</button>
       </div>
-      <p style="font-size: 12px; color: #64748B; margin-bottom: 14px;">
-        Miliki keping logam mulia fisik bersertifikat resmi dengan angsuran ringan flat 0% bunga promo.
+      <p style="font-size: 11.5px; color: #64748B; margin-bottom: 12px;">
+        Miliki keping logam mulia fisik bersertifikat asli dengan angsuran ringan flat. Logam fisik resmi akan dikirimkan ke alamat terdaftar setelah seluruh angsuran lunas.
       </p>
 
+      <!-- 1. Pilihan Logam Mulia -->
       <div class="form-group">
-        <label class="form-label">Pilih Ukuran Keping Logam Fisik:</label>
+        <label class="form-label" style="font-weight: 800;">1. Pilih Jenis Logam Mulia:</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" class="tenor-btn active" id="cicilMetalPerakBtn" onclick="setCicilMetal('silver')">🥈 Perak (99.9%)</button>
+          <button type="button" class="tenor-btn" id="cicilMetalEmasBtn" onclick="setCicilMetal('gold')">🥇 Emas (99.99%)</button>
+        </div>
+      </div>
+
+      <!-- 2. Pilihan Kepingan -->
+      <div class="form-group">
+        <label class="form-label" style="font-weight: 800;">2. Pilih Ukuran Kepingan Fisik:</label>
         <div class="tenor-btn-group">
+          <button type="button" class="tenor-btn" id="btnKeping5" onclick="setCicilKeping(5)">5 Gr</button>
           <button type="button" class="tenor-btn active" id="btnKeping10" onclick="setCicilKeping(10)">10 Gr</button>
           <button type="button" class="tenor-btn" id="btnKeping25" onclick="setCicilKeping(25)">25 Gr</button>
           <button type="button" class="tenor-btn" id="btnKeping50" onclick="setCicilKeping(50)">50 Gr</button>
@@ -1149,41 +1219,122 @@
         </div>
       </div>
 
+      <!-- 3. Pilihan Tenor Angsuran -->
       <div class="form-group">
-        <label class="form-label">Pilih Tenor Angsuran:</label>
+        <label class="form-label" style="font-weight: 800;">3. Pilih Tenor Waktu Cicilan:</label>
         <div class="tenor-btn-group">
           <button type="button" class="tenor-btn active" id="btnTenorCicil3" onclick="setCicilTenor(3)">3 Bulan</button>
           <button type="button" class="tenor-btn" id="btnTenorCicil6" onclick="setCicilTenor(6)">6 Bulan</button>
           <button type="button" class="tenor-btn" id="btnTenorCicil12" onclick="setCicilTenor(12)">12 Bulan</button>
+          <button type="button" class="tenor-btn" id="btnTenorCicil24" onclick="setCicilTenor(24)">24 Bulan</button>
         </div>
       </div>
 
-      <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; margin-bottom: 14px; border: 1px solid #E2E8F0; font-size: 12px;">
+      <!-- Ringkasan Perhitungan Pembiayaan -->
+      <div style="background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%); border-radius: 12px; padding: 12px; margin-bottom: 14px; border: 1.5px solid #CBD5E1; font-size: 12px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
           <span style="color: #64748B;">Total Nilai Keping:</span>
-          <strong id="cicilTotalHargaLabel">Rp 0</strong>
+          <strong id="cicilTotalHargaLabel" style="color: #0F172A;">Rp 0</strong>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
           <span style="color: #64748B;">Uang Muka (DP 20%):</span>
           <strong id="cicilDpLabel" style="color: #2563EB;">Rp 0</strong>
         </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span style="color: #64748B;">Cicilan per Bulan:</span>
-          <strong id="cicilAngsuranLabel" style="color: #047857;">Rp 0 / bln</strong>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #64748B;">Sisa Pokok Angsuran:</span>
+          <strong id="cicilPokokLabel" style="color: #475569;">Rp 0</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-top: 1px dashed #CBD5E1; padding-top: 6px; margin-top: 4px;">
+          <span style="color: #0F172A; font-weight: 700;">Angsuran Flat Bulanan:</span>
+          <strong id="cicilAngsuranLabel" style="color: #059669; font-size: 13.5px;">Rp 0 / bln</strong>
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Nama Lengkap Pemohon:</label>
-        <input type="text" class="input-field" id="cicilNameInput" placeholder="Nama sesuai KTP">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Nomor WhatsApp Aktif:</label>
-        <input type="text" class="input-field" id="cicilPhoneInput" placeholder="Contoh: 08123456789">
+      <!-- 4. Data Pribadi Lengkap Pemohon -->
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div style="font-size: 12.5px; font-weight: 800; color: #0F172A; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+          <span>👤</span> Data Pribadi Pemohon Sesuai KTP
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap (Sesuai KTP): <span style="color:#EF4444;">*</span></label>
+          <input type="text" class="input-field" id="cicilNameInput" placeholder="Contoh: Budi Santoso">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nomor NIK KTP (16 Digit): <span style="color:#EF4444;">*</span></label>
+          <input type="text" maxlength="16" class="input-field" id="cicilNikInput" placeholder="Contoh: 3201xxxxxxxxxxxx">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div class="form-group">
+            <label class="form-label">WhatsApp Aktif: <span style="color:#EF4444;">*</span></label>
+            <input type="tel" class="input-field" id="cicilPhoneInput" placeholder="08xxxxxxxxxx">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Aktif:</label>
+            <input type="email" class="input-field" id="cicilEmailInput" placeholder="nama@email.com">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Pekerjaan / Sumber Penghasilan:</label>
+          <select class="input-field" id="cicilOccupationInput">
+            <option value="Karyawan Swasta">Karyawan Swasta</option>
+            <option value="Wiraswasta / Pengusaha">Wiraswasta / Pengusaha</option>
+            <option value="PNS / Pegawai BUMN">PNS / Pegawai BUMN</option>
+            <option value="Profesional / Dokter / Ahli">Profesional / Ahli</option>
+            <option value="Pedagang / UMKM">Pedagang / UMKM</option>
+            <option value="Freelancer / Lainnya">Freelancer / Lainnya</option>
+          </select>
+        </div>
       </div>
 
-      <button type="button" class="btn-action-beli" style="width: 100%; border-radius: 12px;" onclick="submitCicilAset()">
-        Ajukan Rencana Cicilan
+      <!-- 5. Alamat Lengkap Pengiriman Logam Fisik Saat Lunas -->
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div style="font-size: 12.5px; font-weight: 800; color: #0F172A; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+          <span>📍</span> Alamat Lengkap Pengiriman Fisik (Saat Lunas)
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Alamat Domisili (Jalan, No Rumah, RT/RW): <span style="color:#EF4444;">*</span></label>
+          <textarea class="input-field" id="cicilAddressInput" rows="2" placeholder="Nama Jalan, Blok/Nomor, RT/RW, Kelurahan, Kecamatan, Kota/Kabupaten, Kode Pos" style="resize: vertical;"></textarea>
+        </div>
+      </div>
+
+      <!-- 6. Upload Foto KTP Pemohon -->
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div style="font-size: 12.5px; font-weight: 800; color: #0F172A; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+          <span>🪪</span> Foto / Pindai e-KTP Pemohon
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <input type="file" accept="image/*" class="input-field" id="cicilKtpFileInput" onchange="handleCicilKtpFile(this)" style="padding: 7px 10px; font-size: 11px;">
+        </div>
+        <div id="cicilKtpPreviewBox" style="display: none; text-align: center; margin-top: 6px;">
+          <img id="cicilKtpPreviewImg" src="" style="max-height: 140px; border-radius: 8px; border: 1px solid #CBD5E1; object-fit: contain;" alt="KTP Preview">
+        </div>
+      </div>
+
+      <!-- 7. Pilihan Metode Bayar Uang Muka (DP 20%) -->
+      <div class="form-group">
+        <label class="form-label" style="font-weight: 800;">7. Metode Pembayaran Uang Muka (DP 20%):</label>
+        <select class="input-field" id="cicilDpPaymentMethod">
+          <option value="wallet">Potong Saldo Dompet Utama (Cepat &amp; Instan)</option>
+          <option value="transfer">Transfer Bank / QRIS Manual (Verifikasi Admin)</option>
+        </select>
+      </div>
+
+      <!-- 8. Persetujuan S&K -->
+      <div style="display: flex; gap: 8px; align-items: flex-start; margin-bottom: 16px; font-size: 11px; color: #475569;">
+        <input type="checkbox" id="cicilTermsAgreement" style="margin-top: 2px; width: 16px; height: 16px; accent-color: #00B368;">
+        <label for="cicilTermsAgreement" style="cursor: pointer;">
+          Saya menyatakan data yang saya isi adalah benar dan menyetujui Syarat &amp; Ketentuan Program Cicilan Logam Mulia Fisik AUTOTRADING (keping fisik bersertifikat asli dikirimkan ke alamat tertera setelah cicilan lunas).
+        </label>
+      </div>
+
+      <button type="button" class="btn-action-beli" style="width: 100%; border-radius: 12px; font-size: 13.5px; padding: 12px;" onclick="submitCicilAset()">
+        Kirim Permohonan Cicilan Fisik
       </button>
     </div>
   </div>
@@ -1722,9 +1873,65 @@
     }
 
     // Modal Beli & Jual Controllers
+    let currentBuyPayMethod = 'wallet';
+    let buyDepoUniqueCode = 247;
+
+    function selectBuyPayMethod(method) {
+      currentBuyPayMethod = method;
+      const cardWallet = document.getElementById('payMethodWallet');
+      const cardDepo = document.getElementById('payMethodDirectDepo');
+      const secWallet = document.getElementById('buyWalletSection');
+      const secDepo = document.getElementById('buyDirectDepoSection');
+      const btnConfirm = document.getElementById('btnConfirmBeli');
+
+      if (method === 'wallet') {
+        if (cardWallet) {
+          cardWallet.style.border = '2px solid #00B368';
+          cardWallet.style.background = '#ECFDF5';
+        }
+        if (cardDepo) {
+          cardDepo.style.border = '2px solid #CBD5E1';
+          cardDepo.style.background = '#FFFFFF';
+        }
+        if (secWallet) secWallet.style.display = 'block';
+        if (secDepo) secDepo.style.display = 'none';
+        if (btnConfirm) btnConfirm.innerText = 'Konfirmasi Beli Sekarang (Potong Saldo)';
+        syncBeliFromGrams();
+      } else {
+        if (cardWallet) {
+          cardWallet.style.border = '2px solid #CBD5E1';
+          cardWallet.style.background = '#FFFFFF';
+        }
+        if (cardDepo) {
+          cardDepo.style.border = '2px solid #2563EB';
+          cardDepo.style.background = '#EFF6FF';
+        }
+        if (secWallet) secWallet.style.display = 'none';
+        if (secDepo) secDepo.style.display = 'block';
+        if (btnConfirm) {
+          btnConfirm.innerText = 'Kirim Tiket & Pesan Aset via Transfer Bank';
+          btnConfirm.disabled = false;
+          btnConfirm.style.opacity = '1';
+        }
+        syncBeliFromGrams();
+      }
+    }
+
+    function copyToClipboard(text, msg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showAppPopup({ title: 'Disalin!', message: msg || 'Berhasil disalin ke papan klip.', type: 'info' });
+        });
+      } else {
+        showAppPopup({ title: 'Nomor Rekening', message: 'Nomor: ' + text, type: 'info' });
+      }
+    }
+
     function openBeliModal() {
       if (!checkMemberAccess()) return;
       document.getElementById('beliModal').style.display = 'flex';
+      buyDepoUniqueCode = Math.floor(100 + Math.random() * 899);
+      selectBuyPayMethod('wallet');
       syncBeliFromGrams();
     }
     function closeBeliModal() {
@@ -1733,20 +1940,35 @@
 
     function syncBeliFromGrams() {
       const isGold = (currentAssetType === 'gold');
-      const buyPrice = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
+      const buyPrice = isGold ? (currentData.gold_buy_price || 1350000) : (currentData.silver_buy_price || 18500);
       const g = parseFloat(document.getElementById('beliGramsInput').value) || 0;
       const total = Math.round(g * buyPrice);
       document.getElementById('beliAmountInput').value = total;
-      checkBeliShortfall(total);
+      
+      const balNote = document.getElementById('buyWalletBalNote');
+      if (balNote) balNote.innerText = 'Saldo: ' + formatRupiah(currentData.wallet_balance || 0);
+
+      const depoCodeLabel = document.getElementById('buyDepoTotalWithCode');
+      if (depoCodeLabel) depoCodeLabel.innerText = formatRupiah(total + buyDepoUniqueCode);
+
+      if (currentBuyPayMethod === 'wallet') {
+        checkBeliShortfall(total);
+      }
     }
 
     function syncBeliFromAmount() {
       const isGold = (currentAssetType === 'gold');
-      const buyPrice = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
+      const buyPrice = isGold ? (currentData.gold_buy_price || 1350000) : (currentData.silver_buy_price || 18500);
       const amt = parseFloat(document.getElementById('beliAmountInput').value) || 0;
       const g = buyPrice > 0 ? (amt / buyPrice) : 0;
       document.getElementById('beliGramsInput').value = g.toFixed(3);
-      checkBeliShortfall(amt);
+      
+      const depoCodeLabel = document.getElementById('buyDepoTotalWithCode');
+      if (depoCodeLabel) depoCodeLabel.innerText = formatRupiah(amt + buyDepoUniqueCode);
+
+      if (currentBuyPayMethod === 'wallet') {
+        checkBeliShortfall(amt);
+      }
     }
 
     let activeBeliShortfall = 0;
@@ -1759,8 +1981,8 @@
       if (wallet < totalCost) {
         activeBeliShortfall = totalCost - wallet;
         box.style.display = 'flex';
-        document.getElementById('beliShortfallText').innerText = `Saldo dompet Anda ${formatRupiah(wallet)}, kurang ${formatRupiah(activeBeliShortfall)} untuk transaksi ini.`;
-        btnDeposit.innerText = `Deposit Sekarang (Kurang ${formatRupiah(activeBeliShortfall)})`;
+        document.getElementById('beliShortfallText').innerText = 'Saldo dompet Anda ' + formatRupiah(wallet) + ', kurang ' + formatRupiah(activeBeliShortfall) + ' untuk transaksi ini.';
+        btnDeposit.innerText = '⚡ Bayar Lewat Deposit Langsung Sekarang';
         btnConfirm.disabled = true;
         btnConfirm.style.opacity = '0.5';
       } else {
@@ -1769,11 +1991,6 @@
         btnConfirm.disabled = false;
         btnConfirm.style.opacity = '1';
       }
-    }
-
-    function redirectToDepositShortfall() {
-      const amount = activeBeliShortfall > 0 ? activeBeliShortfall : 50000;
-      window.location.href = `./#deposit?amount=${amount}`;
     }
 
     function openJualModal() {
@@ -1794,7 +2011,7 @@
 
     function syncJualFromGrams() {
       const isGold = (currentAssetType === 'gold');
-      const sellPrice = isGold ? currentData.gold_sell_price : currentData.silver_sell_price;
+      const sellPrice = isGold ? (currentData.gold_sell_price || 1300000) : (currentData.silver_sell_price || 17200);
       const g = parseFloat(document.getElementById('jualGramsInput').value) || 0;
       const proceeds = Math.round(g * sellPrice);
       document.getElementById('jualAmountPreview').value = formatRupiah(proceeds);
@@ -1811,8 +2028,41 @@
 
       const btn = document.getElementById('btnConfirmBeli');
       btn.disabled = true;
-      btn.innerText = 'Memproses Pembelian...';
 
+      // Jalur 1: Deposit Langsung via Bank Transfer / QRIS
+      if (currentBuyPayMethod === 'deposit') {
+        btn.innerText = 'Membuat Tiket Pembayaran...';
+        const senderName = document.getElementById('buyDepoSellerName')?.value.trim() || '';
+        try {
+          const res = await fetch(getApiUrl('buy_asset_direct_deposit'), getAuthFetchOptions('POST', {
+            metal_type: currentAssetType,
+            grams: grams,
+            payment_channel: 'seabank',
+            sender_name: senderName
+          }));
+          const json = await res.json();
+          handleApiSessionToken(json);
+          if (json.success) {
+            showAppPopup({
+              title: 'Tiket Pembayaran Berhasil Dibuat!',
+              message: 'Tiket pemesanan ' + grams + ' gr ' + (isGold ? 'Emas' : 'Perak') + ' telah dibuat (' + json.data.ticket_id + ').\n\nSilakan transfer TEPAT senilai:\n' + formatRupiah(json.data.final_amount) + '\n\nke rekening SEABANK: 901284135116 (a/n EDY IRAWAN).\n\nLogam fisik akan langsung dikreditkan ke saldo akun Anda setelah dana diterima.',
+              type: 'success',
+              onConfirm: () => { closeBeliModal(); loadAssetData(); }
+            });
+          } else {
+            showAppPopup({ title: 'Gagal Membuat Tiket', message: json.message || 'Gagal memproses deposit.', type: 'error' });
+          }
+        } catch (e) {
+          showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+        } finally {
+          btn.disabled = false;
+          btn.innerText = 'Kirim Tiket & Pesan Aset via Transfer Bank';
+        }
+        return;
+      }
+
+      // Jalur 2: Potong Saldo Utama
+      btn.innerText = 'Memproses Pembelian...';
       const actionEndpoint = isGold ? 'buy_gold_asset' : 'buy_silver_asset';
       try {
         const res = await fetch(getApiUrl(actionEndpoint), getAuthFetchOptions('POST', { grams }));
@@ -1831,7 +2081,7 @@
         showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
       } finally {
         btn.disabled = false;
-        btn.innerText = 'Konfirmasi Beli Sekarang';
+        btn.innerText = 'Konfirmasi Beli Sekarang (Potong Saldo)';
       }
     }
 
@@ -1848,7 +2098,7 @@
       if (grams > liquidBal) {
         showAppPopup({
           title: 'Saldo Likuid Tidak Cukup',
-          message: `Saldo ${isGold ? 'emas' : 'perak'} siap jual Anda hanya ${formatNumber(liquidBal, 3)} gram. Saldo tabungan dan kontrak aktif terkunci dan tidak dapat dicairkan langsung.`,
+          message: 'Saldo ' + (isGold ? 'emas' : 'perak') + ' siap jual Anda hanya ' + formatNumber(liquidBal, 3) + ' gram. Saldo tabungan dan kontrak aktif terkunci dan tidak dapat dicairkan langsung.',
           type: 'warning'
         });
         return;
@@ -1904,7 +2154,7 @@
     }
     function calcContractPreview() {
       const isGold = (currentAssetType === 'gold');
-      const sellP = isGold ? currentData.gold_sell_price : currentData.silver_sell_price;
+      const sellP = isGold ? (currentData.gold_sell_price || 1300000) : (currentData.silver_sell_price || 17200);
       const g = parseFloat(document.getElementById('contractGramsInput').value) || 0;
       const totalYield = g * (selectedContractDailyRate / 100) * selectedContractTenor;
       document.getElementById('previewTotalDividenLabel').innerText = formatNumber(totalYield, 3) + ' Gram (Est. ' + formatRupiah(Math.round(totalYield * sellP)) + ')';
@@ -1949,7 +2199,7 @@
     function closeModalTabungan() { document.getElementById('modalTabungan').style.display = 'none'; }
     function calcTabunganPreview() {
       const isGold = (currentAssetType === 'gold');
-      const buyP = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
+      const buyP = isGold ? (currentData.gold_buy_price || 1350000) : (currentData.silver_buy_price || 18500);
       const g = parseFloat(document.getElementById('tabunganGramsInput').value) || 0;
       document.getElementById('tabunganCostPreview').value = formatRupiah(Math.round(g * buyP));
     }
@@ -1977,66 +2227,152 @@
       }
     }
 
-    // Sub-Feature 3: Cicil
+    // Sub-Feature 3: Cicilan Logam Mulia Fisik Lengkap
+    let selectedCicilMetal = 'silver';
     let selectedCicilKeping = 10;
     let selectedCicilTenor = 3;
+    let base64CicilKtp = '';
+
+    function setCicilMetal(metal) {
+      selectedCicilMetal = metal;
+      const bSilver = document.getElementById('cicilMetalPerakBtn');
+      const bGold = document.getElementById('cicilMetalEmasBtn');
+      if (bSilver) bSilver.classList.toggle('active', metal === 'silver');
+      if (bGold) bGold.classList.toggle('active', metal === 'gold');
+      calcCicilSummary();
+    }
+
+    function setCicilKeping(grams) {
+      selectedCicilKeping = grams;
+      ['5', '10', '25', '50', '100'].forEach(k => {
+        const b = document.getElementById('btnKeping' + k);
+        if (b) b.classList.toggle('active', parseInt(k) === grams);
+      });
+      calcCicilSummary();
+    }
+
+    function setCicilTenor(months) {
+      selectedCicilTenor = months;
+      ['3', '6', '12', '24'].forEach(t => {
+        const b = document.getElementById('btnTenorCicil' + t);
+        if (b) b.classList.toggle('active', parseInt(t) === months);
+      });
+      calcCicilSummary();
+    }
+
+    function calcCicilSummary() {
+      const isGold = (selectedCicilMetal === 'gold');
+      const buyP = isGold ? (currentData.gold_buy_price || 1350000) : (currentData.silver_buy_price || 18500);
+      const totalVal = Math.round(selectedCicilKeping * buyP);
+      const dp = Math.round(totalVal * 0.20);
+      const sisaPokok = totalVal - dp;
+      const angsuran = Math.round(sisaPokok / selectedCicilTenor);
+
+      const lblTotal = document.getElementById('cicilTotalHargaLabel');
+      const lblDp = document.getElementById('cicilDpLabel');
+      const lblPokok = document.getElementById('cicilPokokLabel');
+      const lblAngsuran = document.getElementById('cicilAngsuranLabel');
+
+      if (lblTotal) lblTotal.innerText = formatRupiah(totalVal);
+      if (lblDp) lblDp.innerText = formatRupiah(dp);
+      if (lblPokok) lblPokok.innerText = formatRupiah(sisaPokok);
+      if (lblAngsuran) lblAngsuran.innerText = formatRupiah(angsuran) + ' / bln';
+    }
+
+    function handleCicilKtpFile(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        base64CicilKtp = e.target.result;
+        const box = document.getElementById('cicilKtpPreviewBox');
+        const img = document.getElementById('cicilKtpPreviewImg');
+        if (img) img.src = base64CicilKtp;
+        if (box) box.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+
     function openModalCicil() {
       if (!checkMemberAccess()) return;
       const u = getCurrentUserLocal();
       if (u) {
         if (u.fullName || u.name) document.getElementById('cicilNameInput').value = u.fullName || u.name;
         if (u.phone) document.getElementById('cicilPhoneInput').value = u.phone;
+        if (u.email) document.getElementById('cicilEmailInput').value = u.email;
+        if (u.address) document.getElementById('cicilAddressInput').value = u.address;
       }
+      setCicilMetal(currentAssetType);
       setCicilKeping(10);
       setCicilTenor(3);
       document.getElementById('modalCicil').style.display = 'flex';
     }
-    function closeModalCicil() { document.getElementById('modalCicil').style.display = 'none'; }
-    function setCicilKeping(grams) {
-      selectedCicilKeping = grams;
-      ['10', '25', '50', '100'].forEach(k => {
-        const b = document.getElementById('btnKeping' + k);
-        if (b) b.classList.toggle('active', parseInt(k) === grams);
-      });
-      calcCicilSummary();
+
+    function closeModalCicil() {
+      document.getElementById('modalCicil').style.display = 'none';
     }
-    function setCicilTenor(months) {
-      selectedCicilTenor = months;
-      ['3', '6', '12'].forEach(t => {
-        const b = document.getElementById('btnTenorCicil' + t);
-        if (b) b.classList.toggle('active', parseInt(t) === months);
-      });
-      calcCicilSummary();
-    }
-    function calcCicilSummary() {
-      const isGold = (currentAssetType === 'gold');
-      const buyP = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
-      const totalVal = selectedCicilKeping * buyP;
-      const dp = Math.round(totalVal * 0.20);
-      const remaining = totalVal - dp;
-      const angsuran = Math.round(remaining / selectedCicilTenor);
-      document.getElementById('cicilTotalHargaLabel').innerText = formatRupiah(totalVal);
-      document.getElementById('cicilDpLabel').innerText = formatRupiah(dp);
-      document.getElementById('cicilAngsuranLabel').innerText = formatRupiah(angsuran) + ' / bln';
-    }
-    function submitCicilAset() {
+
+    async function submitCicilAset() {
+      if (!checkMemberAccess()) return;
       const name = document.getElementById('cicilNameInput').value.trim();
+      const nik = document.getElementById('cicilNikInput').value.trim();
       const phone = document.getElementById('cicilPhoneInput').value.trim();
-      if (!name || !phone) {
-        showAppPopup({ title: 'Form Belum Lengkap', message: 'Lengkapi Nama Lengkap dan Nomor WhatsApp Pemohon cicilan.', type: 'warning' });
+      const email = document.getElementById('cicilEmailInput')?.value.trim() || '';
+      const occupation = document.getElementById('cicilOccupationInput')?.value || '';
+      const address = document.getElementById('cicilAddressInput').value.trim();
+      const dpMethod = document.getElementById('cicilDpPaymentMethod')?.value || 'wallet';
+      const agreed = document.getElementById('cicilTermsAgreement')?.checked;
+
+      if (!name) {
+        showAppPopup({ title: 'Nama Belum Diisi', message: 'Masukkan Nama Lengkap sesuai KTP pemohon.', type: 'warning' });
         return;
       }
-      const isGold = (currentAssetType === 'gold');
-      const buyP = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
-      const totalVal = selectedCicilKeping * buyP;
-      const dp = Math.round(totalVal * 0.20);
-      const angsuran = Math.round((totalVal - dp) / selectedCicilTenor);
-      showAppPopup({
-        title: 'Pengajuan Cicilan Diterima',
-        message: `Pengajuan cicilan keping fisik ${selectedCicilKeping} Gram ${isGold ? 'Emas' : 'Perak'} (Tenor ${selectedCicilTenor} Bulan) berhasil diajukan.\n\nUang Muka: ${formatRupiah(dp)}\nAngsuran: ${formatRupiah(angsuran)}/bulan\n\nAdmin akan segera menghubungi WhatsApp Anda (${phone}).`,
-        type: 'success',
-        onConfirm: () => { closeModalCicil(); }
-      });
+      if (!nik || nik.length < 16) {
+        showAppPopup({ title: 'NIK Tidak Lengkap', message: 'Nomor Induk Kependudukan (NIK KTP) harus 16 digit angka.', type: 'warning' });
+        return;
+      }
+      if (!phone) {
+        showAppPopup({ title: 'WhatsApp Belum Diisi', message: 'Nomor WhatsApp aktif diperlukan untuk verifikasi dan notifikasi tagihan.', type: 'warning' });
+        return;
+      }
+      if (!address) {
+        showAppPopup({ title: 'Alamat Belum Diisi', message: 'Alamat lengkap pengiriman diperlukan untuk pengiriman fisik logam mulia saat lunas.', type: 'warning' });
+        return;
+      }
+      if (!agreed) {
+        showAppPopup({ title: 'Persetujuan S&K', message: 'Harap centang persetujuan Syarat & Ketentuan Cicilan Logam Fisik.', type: 'warning' });
+        return;
+      }
+
+      try {
+        const res = await fetch(getApiUrl('submit_metal_installment'), getAuthFetchOptions('POST', {
+          metal_type: selectedCicilMetal,
+          grams: selectedCicilKeping,
+          tenor_months: selectedCicilTenor,
+          full_name: name,
+          nik: nik,
+          phone: phone,
+          email: email,
+          occupation: occupation,
+          shipping_address: address,
+          ktp_image: base64CicilKtp,
+          dp_payment_method: dpMethod
+        }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.success) {
+          showAppPopup({
+            title: 'Pengajuan Cicilan Berhasil!',
+            message: json.message || 'Permohonan cicilan Anda telah terkirim ke sistem. Petugas admin akan segera memeriksa kelengkapan data.',
+            type: 'success',
+            onConfirm: () => { closeModalCicil(); loadAssetData(); }
+          });
+        } else {
+          showAppPopup({ title: 'Pengajuan Gagal', message: json.message || 'Gagal memproses pengajuan cicilan.', type: 'error' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      }
     }
 
     // Sub-Feature 4: Cetak Fisik (Biaya Cetak Dinamis)

@@ -232,3 +232,31 @@ INSERT INTO `fgt_system_state` (`state_key`, `data_json`) VALUES
 ON DUPLICATE KEY UPDATE `data_json` = VALUES(`data_json`);
 
 COMMIT;
+
+
+-- -----------------------------------------------------------------------------
+-- TABEL: metal_installments (Rencana Cicilan Logam Fisik Perak & Emas)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `metal_installments` (
+  `id` VARCHAR(32) NOT NULL PRIMARY KEY,
+  `user_id` VARCHAR(64) NOT NULL,
+  `username` VARCHAR(64) DEFAULT NULL,
+  `metal_type` VARCHAR(16) NOT NULL DEFAULT 'silver',
+  `grams` DECIMAL(12,3) NOT NULL DEFAULT 10.000,
+  `tenor_months` INT NOT NULL DEFAULT 12,
+  `total_value` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `dp_amount` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `monthly_installment` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+  `full_name` VARCHAR(128) NOT NULL,
+  `nik` VARCHAR(32) NOT NULL,
+  `phone` VARCHAR(32) NOT NULL,
+  `email` VARCHAR(128) DEFAULT NULL,
+  `occupation` VARCHAR(64) DEFAULT NULL,
+  `shipping_address` TEXT NOT NULL,
+  `ktp_image` LONGTEXT DEFAULT NULL,
+  `dp_payment_method` VARCHAR(32) NOT NULL DEFAULT 'wallet',
+  `status` VARCHAR(32) NOT NULL DEFAULT 'pending',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_user` (`user_id`),
+  INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

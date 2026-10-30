@@ -109,6 +109,11 @@ Options -Indexes
         Header set Cache-Control "no-cache, must-revalidate"
     </FilesMatch>
 
+    # Logo & Favicon Branding: Revalidasi cepat agar penggantian logo langsung tampil instan
+    <FilesMatch "(logo|favicon).*.(jpg|jpeg|png|webp|svg|ico)$">
+        Header set Cache-Control "public, max-age=3600, must-revalidate"
+    </FilesMatch>
+
     # Media, Gambar & Font: Cache browser 30 hari (Hemat Bandwidth 100%)
     <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico|woff|woff2|ttf|eot)$">
         Header set Cache-Control "public, max-age=2592000, immutable"

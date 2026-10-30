@@ -650,7 +650,32 @@ function ensureTablesExist($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
         // 13. Tabel leader_loans (Pinjaman Modal Cepat Leader)
-        $pdo->exec("CREATE TABLE IF NOT EXISTS `leader_loans` (
+        
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `metal_installments` (
+      `id` VARCHAR(32) NOT NULL PRIMARY KEY,
+      `user_id` VARCHAR(64) NOT NULL,
+      `username` VARCHAR(64) DEFAULT NULL,
+      `metal_type` VARCHAR(16) NOT NULL DEFAULT 'silver',
+      `grams` DECIMAL(12,3) NOT NULL DEFAULT 10.000,
+      `tenor_months` INT NOT NULL DEFAULT 12,
+      `total_value` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+      `dp_amount` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+      `monthly_installment` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+      `full_name` VARCHAR(128) NOT NULL,
+      `nik` VARCHAR(32) NOT NULL,
+      `phone` VARCHAR(32) NOT NULL,
+      `email` VARCHAR(128) DEFAULT NULL,
+      `occupation` VARCHAR(64) DEFAULT NULL,
+      `shipping_address` TEXT NOT NULL,
+      `ktp_image` LONGTEXT DEFAULT NULL,
+      `dp_payment_method` VARCHAR(32) NOT NULL DEFAULT 'wallet',
+      `status` VARCHAR(32) NOT NULL DEFAULT 'pending',
+      `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX `idx_user` (`user_id`),
+      INDEX `idx_status` (`status`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `leader_loans` (
             `id` VARCHAR(64) NOT NULL PRIMARY KEY,
             `user_id` VARCHAR(64) NOT NULL,
             `username` VARCHAR(64) NOT NULL,
@@ -12048,6 +12073,210 @@ if ($action === 'claim_asset_reward') {
     } catch(Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         jsonResponse(['success' => false, 'message' => 'Gagal klaim hadiah: ' . $e->getMessage()], 500);
+    }
+}
+
+
+// 18. Action: Submit Metal Installment Application (Pengajuan Cicilan Logam Fisik Lengkap)
+if ($action === 'submit_metal_installment') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $metalType = strtolower(trim((string)($in['metal_type'] ?? 'silver')));
+    if ($metalType !== 'gold') $metalType = 'silver';
+    $grams = floatval($in['grams'] ?? 10);
+    if ($grams <= 0) $grams = 10;
+    $tenor = intval($in['tenor_months'] ?? 12);
+    if ($tenor <= 0) $tenor = 12;
+
+    $fullName = trim((string)($in['full_name'] ?? ''));
+    $nik = trim((string)($in['nik'] ?? ''));
+    $phone = trim((string)($in['phone'] ?? ''));
+    $email = trim((string)($in['email'] ?? ''));
+    $occupation = trim((string)($in['occupation'] ?? ''));
+    $shippingAddress = trim((string)($in['shipping_address'] ?? ''));
+    $ktpImage = trim((string)($in['ktp_image'] ?? ''));
+    $dpMethod = trim((string)($in['dp_payment_method'] ?? 'wallet'));
+
+    if ($fullName === '' || $nik === '' || $phone === '' || $shippingAddress === '') {
+        jsonResponse(['success' => false, 'message' => 'Formulir belum lengkap. Nama, NIK KTP, WhatsApp, dan Alamat Pengiriman wajib diisi.'], 400);
+    }
+
+    // Hitung harga resmi saat ini
+    $settingKey = ($metalType === 'gold') ? 'gold_buy_price' : 'silver_buy_price';
+    $defaultPrice = ($metalType === 'gold') ? 1350000 : 18500;
+    $buyPrice = $defaultPrice;
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = :sk LIMIT 1");
+        $st->execute([':sk' => $settingKey]);
+        $r = $st->fetch();
+        if ($r && (int)$r['setting_value'] > 0) $buyPrice = (int)$r['setting_value'];
+    } catch (Exception $e) {}
+
+    $totalVal = (int)round($grams * $buyPrice);
+    $dpAmount = (int)round($totalVal * 0.20);
+    $monthlyInst = (int)round(($totalVal - $dpAmount) / $tenor);
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+        if (!$user) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+
+        // Jika bayar DP lewat saldo dompet
+        if ($dpMethod === 'wallet') {
+            $curWallet = (int)($user['wallet_balance'] ?? 0);
+            if ($curWallet < $dpAmount) {
+                $pdo->rollBack();
+                $shortfall = $dpAmount - $curWallet;
+                jsonResponse([
+                    'success' => false,
+                    'message' => 'Saldo dompet tidak mencukupi untuk pembayaran Uang Muka (DP 20%). Kurang Rp ' . number_format($shortfall, 0, ',', '.') . '. Pilih metode Transfer atau lakukan deposit.',
+                    'shortfall' => $shortfall,
+                    'required_dp' => $dpAmount
+                ], 400);
+            }
+            $newWallet = $curWallet - $dpAmount;
+            $pdo->prepare("UPDATE `users` SET wallet_balance = :wb WHERE id = :uid")->execute([':wb' => $newWallet, ':uid' => $uid]);
+
+            // Catat transaksi ledger
+            $txId = 'DP-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+            $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'cicil_dp', :amount, 'completed', 'Saldo Utama', 'wallet', 'DP Cicilan Logam', :txid, NOW())")->execute([
+                ':id' => 'TRX-' . $txId,
+                ':uid' => $uid,
+                ':uname' => $user['username'],
+                ':amount' => $dpAmount,
+                ':txid' => $txId
+            ]);
+        }
+
+        $cicilId = 'CCL-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $insCicil = $pdo->prepare("INSERT INTO `metal_installments` (id, user_id, username, metal_type, grams, tenor_months, total_value, dp_amount, monthly_installment, full_name, nik, phone, email, occupation, shipping_address, ktp_image, dp_payment_method, status, created_at) VALUES (:id, :uid, :uname, :mtype, :grams, :tenor, :total, :dp, :monthly, :fname, :nik, :phone, :email, :occ, :addr, :ktp, :dpmethod, 'pending', NOW())");
+        $insCicil->execute([
+            ':id' => $cicilId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':mtype' => $metalType,
+            ':grams' => $grams,
+            ':tenor' => $tenor,
+            ':total' => $totalVal,
+            ':dp' => $dpAmount,
+            ':monthly' => $monthlyInst,
+            ':fname' => $fullName,
+            ':nik' => $nik,
+            ':phone' => $phone,
+            ':email' => $email,
+            ':occ' => $occupation,
+            ':addr' => $shippingAddress,
+            ':ktp' => $ktpImage,
+            ':dpmethod' => $dpMethod
+        ]);
+
+        $pdo->commit();
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Pengajuan cicilan logam fisik ' . $grams . ' Gram ' . ($metalType === 'gold' ? 'Emas' : 'Perak') . ' berhasil dikirim! Tim admin akan segera memverifikasi kelengkapan berkas Anda.',
+            'data' => [
+                'installment_id' => $cicilId,
+                'metal_type' => $metalType,
+                'grams' => $grams,
+                'tenor_months' => $tenor,
+                'total_value' => $totalVal,
+                'dp_amount' => $dpAmount,
+                'monthly_installment' => $monthlyInst
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal memproses pengajuan cicilan: ' . $e->getMessage()], 500);
+    }
+}
+
+// 19. Action: Buy Asset Direct Deposit (Pembelian Aset dengan Tiket Deposit Langsung)
+if ($action === 'buy_asset_direct_deposit') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $metalType = strtolower(trim((string)($in['metal_type'] ?? 'silver')));
+    if ($metalType !== 'gold') $metalType = 'silver';
+    $grams = floatval($in['grams'] ?? 0);
+    if ($grams <= 0) {
+        jsonResponse(['success' => false, 'message' => 'Gramasi pembelian harus lebih dari 0.'], 400);
+    }
+
+    $channel = trim((string)($in['payment_channel'] ?? 'bank'));
+    $senderName = trim((string)($in['sender_name'] ?? ''));
+
+    // Ambil harga terkini
+    $settingKey = ($metalType === 'gold') ? 'gold_buy_price' : 'silver_buy_price';
+    $defaultPrice = ($metalType === 'gold') ? 1350000 : 18500;
+    $buyPrice = $defaultPrice;
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = :sk LIMIT 1");
+        $st->execute([':sk' => $settingKey]);
+        $r = $st->fetch();
+        if ($r && (int)$r['setting_value'] > 0) $buyPrice = (int)$r['setting_value'];
+    } catch (Exception $e) {}
+
+    $baseAmount = (int)round($grams * $buyPrice);
+    // Tambah kode unik 3 digit acak agar unik
+    $uniqueCode = mt_rand(100, 999);
+    $finalAmount = $baseAmount + $uniqueCode;
+    $ticketId = 'DEP-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $user = $uStmt->fetch();
+
+        // Buat tiket deposit langsung
+        $ins = $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'deposit', :amt, 'awaiting_payment', :pm, 'bank', :dest, :txid, NOW())");
+        $ins->execute([
+            ':id' => $ticketId,
+            ':uid' => $uid,
+            ':uname' => $user['username'],
+            ':amt' => $finalAmount,
+            ':pm' => ($channel === 'qris' ? 'QRIS Official' : 'Transfer Bank'),
+            ':dest' => 'Beli Langsung ' . $grams . ' Gr ' . ($metalType === 'gold' ? 'Emas' : 'Perak'),
+            ':txid' => 'BUY-DIRECT-' . $metalType . '-' . $grams
+        ]);
+
+        $pdo->commit();
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Tiket pembayaran deposit beli langsung berhasil dibuat. Silakan transfer tepat Rp ' . number_format($finalAmount, 0, ',', '.') . ' ke rekening yang tertera.',
+            'data' => [
+                'ticket_id' => $ticketId,
+                'metal_type' => $metalType,
+                'grams' => $grams,
+                'base_amount' => $baseAmount,
+                'unique_code' => $uniqueCode,
+                'final_amount' => $finalAmount,
+                'payment_channel' => $channel
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal membuat tiket pembayaran: ' . $e->getMessage()], 500);
     }
 }
 
