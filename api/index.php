@@ -597,6 +597,27 @@ function ensureTablesExist($pdo) {
             INDEX `idx_asset_type` (`type`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+        // 10b. Tabel asset_contracts (Kontrak Aset Dividen Harian & Cashback)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `asset_contracts` (
+            `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+            `user_id` VARCHAR(64) NOT NULL,
+            `username` VARCHAR(64) NOT NULL,
+            `asset_type` VARCHAR(16) NOT NULL DEFAULT 'silver',
+            `grams` DECIMAL(10,4) NOT NULL,
+            `duration_days` INT(11) NOT NULL,
+            `daily_rate_percent` DECIMAL(5,2) NOT NULL,
+            `daily_yield_grams` DECIMAL(10,4) NOT NULL,
+            `total_yield_grams` DECIMAL(10,4) NOT NULL,
+            `status` VARCHAR(32) NOT NULL DEFAULT 'active',
+            `start_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `end_date` DATETIME NOT NULL,
+            `last_yield_date` DATETIME DEFAULT NULL,
+            `accumulated_yield_grams` DECIMAL(10,4) NOT NULL DEFAULT 0.0000,
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_contract_user` (`user_id`),
+            INDEX `idx_contract_status` (`status`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
         // 11. Tabel shop_products (Toko Online / Produk Fisik)
         $pdo->exec("CREATE TABLE IF NOT EXISTS `shop_products` (
             `id` VARCHAR(64) NOT NULL PRIMARY KEY,
@@ -680,6 +701,7 @@ function ensureTablesExist($pdo) {
             `user_id` VARCHAR(64) NOT NULL,
             `username` VARCHAR(64) NOT NULL,
             `loan_amount` BIGINT(20) NOT NULL,
+            `tenor_months` INT(11) DEFAULT 1,
             `active_sponsors_count` INT(11) NOT NULL,
             `purpose` TEXT NOT NULL,
             `ktp_nik` VARCHAR(32) DEFAULT NULL,
@@ -713,6 +735,10 @@ function ensureTablesExist($pdo) {
                 $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `unpaid_months_count` INT(11) DEFAULT 0 AFTER `due_date`");
                 $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `repayment_status` VARCHAR(32) DEFAULT 'pending' AFTER `unpaid_months_count`");
             }
+            $colTenor = $pdo->query("SHOW COLUMNS FROM `leader_loans` LIKE 'tenor_months'")->fetch();
+            if (!$colTenor) {
+                $pdo->exec("ALTER TABLE `leader_loans` ADD COLUMN `tenor_months` INT(11) DEFAULT 1 AFTER `loan_amount`");
+            }
         } catch(Exception $eCols) {}
 
         try {
@@ -730,7 +756,13 @@ function ensureTablesExist($pdo) {
                 ('minting_fee_silver', '25000', 'Biaya cetak perak fisik per gram (Rp)'),
                 ('minting_fee_gold', '50000', 'Biaya cetak emas fisik per gram (Rp)'),
                 ('price_history_silver', '[{\"date\":\"24 Okt\",\"price\":17000},{\"date\":\"25 Okt\",\"price\":17100},{\"date\":\"26 Okt\",\"price\":17050},{\"date\":\"27 Okt\",\"price\":17150},{\"date\":\"28 Okt\",\"price\":17100},{\"date\":\"29 Okt\",\"price\":17200},{\"date\":\"30 Okt\",\"price\":17200}]', 'Riwayat harga perak 7 hari'),
-                ('price_history_gold', '[{\"date\":\"24 Okt\",\"price\":1280000},{\"date\":\"25 Okt\",\"price\":1285000},{\"date\":\"26 Okt\",\"price\":1290000},{\"date\":\"27 Okt\",\"price\":1295000},{\"date\":\"28 Okt\",\"price\":1290000},{\"date\":\"29 Okt\",\"price\":1300000},{\"date\":\"30 Okt\",\"price\":1300000}]', 'Riwayat harga emas 7 hari')
+                ('price_history_gold', '[{\"date\":\"24 Okt\",\"price\":1280000},{\"date\":\"25 Okt\",\"price\":1285000},{\"date\":\"26 Okt\",\"price\":1290000},{\"date\":\"27 Okt\",\"price\":1295000},{\"date\":\"28 Okt\",\"price\":1290000},{\"date\":\"29 Okt\",\"price\":1300000},{\"date\":\"30 Okt\",\"price\":1300000}]', 'Riwayat harga emas 7 hari'),
+                ('contract_rates_silver', '{\"30\":0.3,\"150\":0.5,\"365\":0.8}', 'Persentase dividen kontrak harian perak untuk tenor 30, 150, 365 hari'),
+                ('contract_rates_gold', '{\"30\":0.25,\"150\":0.45,\"365\":0.75}', 'Persentase dividen kontrak harian emas untuk tenor 30, 150, 365 hari'),
+                ('welcome_popup_config', '{\"enabled\":true,\"title\":\"Selamat Datang di Auto Trading!\",\"banner_url\":\"assets/img/welcome-banner.jpg\",\"points\":[\"bisa beli aset perak\",\"bisa beli aset emas\",\"bisa nabung untuk masa depan\",\"bisa invest dengan profit variatif setiap hari\",\"belanja online\",\"pinjaman khsus member aktif ( leader )\"]}', 'Konfigurasi iklan pop-up selamat datang setelah login'),
+                ('gift_bonus_silver_reward', '0.010', 'Hadiah klaim bonus harian perak (Gram)'),
+                ('gift_bonus_gold_reward', '0.005', 'Hadiah klaim bonus harian emas (Gram)'),
+                ('gift_bonus_points_reward', '10', 'Hadiah klaim bonus poin reward')
             ");
         } catch(Exception $eSet) {}
 
@@ -10549,21 +10581,82 @@ if ($action === 'admin_profit_normalize') {
 
 // === MODULE EXTENSIONS: ASET, TOKO, PINJAMAN ===
 
+// Fungsi Evaluasi Selesai Kontrak Aset Dividen (Maturity Check)
+// Mengembalikan modal pokok + akumulasi total dividen ke saldo likuid aset
+function processMaturedAssetContracts($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT * FROM `asset_contracts` WHERE status = 'active' AND end_date <= NOW()");
+        $maturedContracts = $stmt ? $stmt->fetchAll() : [];
+
+        foreach ($maturedContracts as $c) {
+            $cid = $c['id'];
+            $uid = $c['user_id'];
+            $assetType = ($c['asset_type'] === 'gold') ? 'gold' : 'silver';
+            $principal = (float)$c['grams'];
+            $duration = (int)$c['duration_days'];
+            $dailyYieldGrams = (float)$c['daily_yield_grams'];
+            $totalYield = round($dailyYieldGrams * $duration, 4);
+            $totalReturn = round($principal + $totalYield, 4);
+
+            if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+            if ($assetType === 'gold') {
+                $pdo->prepare("UPDATE `users` SET 
+                    gold_contract_balance = GREATEST(0, gold_contract_balance - :principal),
+                    gold_balance = gold_balance + :totalReturn
+                    WHERE id = :uid
+                ")->execute([':principal' => $principal, ':totalReturn' => $totalReturn, ':uid' => $uid]);
+            } else {
+                $pdo->prepare("UPDATE `users` SET 
+                    silver_contract_balance = GREATEST(0, silver_contract_balance - :principal),
+                    silver_balance = silver_balance + :totalReturn
+                    WHERE id = :uid
+                ")->execute([':principal' => $principal, ':totalReturn' => $totalReturn, ':uid' => $uid]);
+            }
+
+            $pdo->prepare("UPDATE `asset_contracts` SET status = 'completed', accumulated_yield_grams = :accYield WHERE id = :cid")
+                ->execute([':accYield' => $totalYield, ':cid' => $cid]);
+
+            $txId = 'CTR-MAT-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+            $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'contract_maturity', :atype, :g, 0, 0, 'completed', NOW())")->execute([
+                ':id' => $txId,
+                ':uid' => $uid,
+                ':uname' => $c['username'],
+                ':atype' => $assetType,
+                ':g' => $totalReturn
+            ]);
+
+            $pdo->commit();
+        }
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('processMaturedAssetContracts error: ' . $e->getMessage());
+    }
+}
+
 // 1. Action: Get Asset Data (Perak & Emas)
 if ($action === 'get_asset_data') {
     ensureTablesExist($pdo);
+    processMaturedAssetContracts($pdo);
     $uid = currentSessionUserId();
     
     // Default prices & parameters
     $silverBuyPrice = 18500;
     $silverSellPrice = 17200;
-    $silverCashbackBal = 15.0000;
-    $silverCashbackYield = 0.5000;
+    $silverCashbackBal = 0.0000;
+    $silverCashbackYield = 0.0000;
     
     $goldBuyPrice = 1350000;
     $goldSellPrice = 1300000;
-    $goldCashbackBal = 10.0000;
-    $goldCashbackYield = 0.4500;
+    $goldCashbackBal = 0.0000;
+    $goldCashbackYield = 0.0000;
+
+    $contractRatesSilver = ['30' => 0.3, '150' => 0.5, '365' => 0.8];
+    $contractRatesGold = ['30' => 0.25, '150' => 0.45, '365' => 0.75];
+
+    $giftBonusSilver = 0.0100;
+    $giftBonusGold = 0.0050;
+    $giftBonusPoints = 10;
 
     $mintingFeeSilver = 25000;
     $mintingFeeGold = 50000;
@@ -10592,7 +10685,9 @@ if ($action === 'get_asset_data') {
         $st = $pdo->prepare("SELECT setting_key, setting_value FROM `settings` WHERE setting_key IN (
             'silver_buy_price', 'silver_sell_price', 'silver_cashback_balance', 'silver_cashback_yield', 'silver_last_update',
             'gold_buy_price', 'gold_sell_price', 'gold_cashback_balance', 'gold_cashback_yield', 'gold_last_update',
-            'minting_fee_silver', 'minting_fee_gold', 'price_history_silver', 'price_history_gold'
+            'minting_fee_silver', 'minting_fee_gold', 'price_history_silver', 'price_history_gold',
+            'contract_rates_silver', 'contract_rates_gold',
+            'gift_bonus_silver_reward', 'gift_bonus_gold_reward', 'gift_bonus_points_reward'
         )");
         $st->execute();
         $rows = $st->fetchAll();
@@ -10601,12 +10696,8 @@ if ($action === 'get_asset_data') {
             $v = $r['setting_value'];
             if ($k === 'silver_buy_price') $silverBuyPrice = (int)$v;
             if ($k === 'silver_sell_price') $silverSellPrice = (int)$v;
-            if ($k === 'silver_cashback_balance') $silverCashbackBal = (float)$v;
-            if ($k === 'silver_cashback_yield') $silverCashbackYield = (float)$v;
             if ($k === 'gold_buy_price') $goldBuyPrice = (int)$v;
             if ($k === 'gold_sell_price') $goldSellPrice = (int)$v;
-            if ($k === 'gold_cashback_balance') $goldCashbackBal = (float)$v;
-            if ($k === 'gold_cashback_yield') $goldCashbackYield = (float)$v;
             if ($k === 'minting_fee_silver') $mintingFeeSilver = (int)$v;
             if ($k === 'minting_fee_gold') $mintingFeeGold = (int)$v;
             if ($k === 'silver_last_update' || $k === 'gold_last_update') $updateTime = $v;
@@ -10618,6 +10709,17 @@ if ($action === 'get_asset_data') {
                 $dec = json_decode($v, true);
                 if (is_array($dec) && !empty($dec)) $priceHistoryGold = $dec;
             }
+            if ($k === 'contract_rates_silver' && !empty($v)) {
+                $dec = json_decode($v, true);
+                if (is_array($dec)) $contractRatesSilver = $dec;
+            }
+            if ($k === 'contract_rates_gold' && !empty($v)) {
+                $dec = json_decode($v, true);
+                if (is_array($dec)) $contractRatesGold = $dec;
+            }
+            if ($k === 'gift_bonus_silver_reward' && !empty($v)) $giftBonusSilver = (float)$v;
+            if ($k === 'gift_bonus_gold_reward' && !empty($v)) $giftBonusGold = (float)$v;
+            if ($k === 'gift_bonus_points_reward' && !empty($v)) $giftBonusPoints = (int)$v;
         }
     } catch (Exception $e) {}
 
@@ -10630,6 +10732,7 @@ if ($action === 'get_asset_data') {
     $walletBalance = 0;
     $points = 0;
     $txs = [];
+    $activeContracts = [];
 
     if ($uid !== '') {
         try {
@@ -10646,10 +10749,38 @@ if ($action === 'get_asset_data') {
                 $walletBalance = (int)($user['wallet_balance'] ?? 0);
                 $points = (int)($user['points'] ?? 0);
             }
+
+            // Req 1 & 2: Saldo cashback dan hasil cashback mengacu ke kontrak aktif dividen yang sedang berjalan
+            $cbSilStmt = $pdo->prepare("SELECT COALESCE(SUM(grams), 0) AS total_principal, COALESCE(SUM(daily_yield_grams), 0) AS total_daily_yield FROM `asset_contracts` WHERE user_id = :uid AND asset_type = 'silver' AND status = 'active'");
+            $cbSilStmt->execute([':uid' => $uid]);
+            $cbSil = $cbSilStmt->fetch();
+            if ($cbSil) {
+                $silverCashbackBal = (float)$cbSil['total_principal'];
+                $silverCashbackYield = (float)$cbSil['total_daily_yield'];
+            }
+
+            $cbGoldStmt = $pdo->prepare("SELECT COALESCE(SUM(grams), 0) AS total_principal, COALESCE(SUM(daily_yield_grams), 0) AS total_daily_yield FROM `asset_contracts` WHERE user_id = :uid AND asset_type = 'gold' AND status = 'active'");
+            $cbGoldStmt->execute([':uid' => $uid]);
+            $cbGold = $cbGoldStmt->fetch();
+            if ($cbGold) {
+                $goldCashbackBal = (float)$cbGold['total_principal'];
+                $goldCashbackYield = (float)$cbGold['total_daily_yield'];
+            }
+
+            $ctrStmt = $pdo->prepare("SELECT * FROM `asset_contracts` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 20");
+            $ctrStmt->execute([':uid' => $uid]);
+            $activeContracts = $ctrStmt->fetchAll();
+
             $txStmt = $pdo->prepare("SELECT * FROM `asset_transactions` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 50");
             $txStmt->execute([':uid' => $uid]);
             $txs = $txStmt->fetchAll();
+
+            $claimCheck = $pdo->prepare("SELECT COUNT(*) FROM `asset_transactions` WHERE user_id = :uid AND type = 'gift_bonus' AND DATE(created_at) = CURDATE()");
+            $claimCheck->execute([':uid' => $uid]);
+            $hasClaimedGiftToday = ((int)$claimCheck->fetchColumn() > 0);
         } catch (Exception $e) {}
+    } else {
+        $hasClaimedGiftToday = false;
     }
 
     jsonResponse([
@@ -10669,6 +10800,7 @@ if ($action === 'get_asset_data') {
             'estimated_rupiah' => (int)round($silverBalance * $silverSellPrice),
             'price_history_silver' => $priceHistorySilver,
             'minting_fee_silver' => $mintingFeeSilver,
+            'contract_rates_silver' => $contractRatesSilver,
             // Emas
             'gold_buy_price' => $goldBuyPrice,
             'gold_sell_price' => $goldSellPrice,
@@ -10681,7 +10813,14 @@ if ($action === 'get_asset_data') {
             'gold_estimated_rupiah' => (int)round($goldBalance * $goldSellPrice),
             'price_history_gold' => $priceHistoryGold,
             'minting_fee_gold' => $mintingFeeGold,
-            // Umum
+            'contract_rates_gold' => $contractRatesGold,
+            // Hadiah Bonus Klaim
+            'gift_bonus_silver_reward' => $giftBonusSilver,
+            'gift_bonus_gold_reward' => $giftBonusGold,
+            'gift_bonus_points_reward' => $giftBonusPoints,
+            'has_claimed_gift_today' => $hasClaimedGiftToday,
+            // Kontrak & Umum
+            'user_contracts' => $activeContracts,
             'wallet_balance' => $walletBalance,
             'points' => $points,
             'last_update' => $updateTime,
@@ -11106,7 +11245,28 @@ if ($action === 'admin_save_asset_prices') {
             $up->execute([':k' => 'price_history_gold', ':v' => is_string($historyGold) ? $historyGold : json_encode($historyGold), ':d' => 'Riwayat Grafik Emas']);
         }
 
-        jsonResponse(['success' => true, 'message' => 'Pengaturan harga aset perak, emas, dan biaya cetak berhasil diperbarui.']);
+        // Req 3: Masa kontrak & persentase dividen harian (30, 150, 365 hari)
+        if (isset($in['contract_rates_silver'])) {
+            $cSilVal = is_array($in['contract_rates_silver']) ? json_encode($in['contract_rates_silver']) : (string)$in['contract_rates_silver'];
+            $up->execute([':k' => 'contract_rates_silver', ':v' => $cSilVal, ':d' => 'Persentase dividen harian kontrak perak']);
+        }
+        if (isset($in['contract_rates_gold'])) {
+            $cGoldVal = is_array($in['contract_rates_gold']) ? json_encode($in['contract_rates_gold']) : (string)$in['contract_rates_gold'];
+            $up->execute([':k' => 'contract_rates_gold', ':v' => $cGoldVal, ':d' => 'Persentase dividen harian kontrak emas']);
+        }
+
+        // Pengaturan Hadiah Klaim Bonus Perak & Emas
+        if (isset($in['gift_bonus_silver_reward'])) {
+            $up->execute([':k' => 'gift_bonus_silver_reward', ':v' => (string)(float)$in['gift_bonus_silver_reward'], ':d' => 'Hadiah bonus klaim harian perak (Gram)']);
+        }
+        if (isset($in['gift_bonus_gold_reward'])) {
+            $up->execute([':k' => 'gift_bonus_gold_reward', ':v' => (string)(float)$in['gift_bonus_gold_reward'], ':d' => 'Hadiah bonus klaim harian emas (Gram)']);
+        }
+        if (isset($in['gift_bonus_points_reward'])) {
+            $up->execute([':k' => 'gift_bonus_points_reward', ':v' => (string)(int)$in['gift_bonus_points_reward'], ':d' => 'Hadiah bonus klaim poin reward']);
+        }
+
+        jsonResponse(['success' => true, 'message' => 'Pengaturan harga aset perak, emas, bonus, dan biaya cetak berhasil diperbarui.']);
     } catch (Exception $e) {
         jsonResponse(['success' => false, 'message' => 'Gagal menyimpan harga aset: ' . $e->getMessage()], 500);
     }
@@ -11125,7 +11285,7 @@ if ($action === 'admin_save_shop_product') {
     $name = trim((string)($in['name'] ?? ''));
     $category = trim((string)($in['category'] ?? 'online'));
     $description = trim((string)($in['description'] ?? ''));
-    $priceAmount = (int)($in['price_amount'] ?? 0);
+    $priceAmount = (int)($in['price_amount'] ?? $in['price'] ?? 0);
     $priceType = trim((string)($in['price_type'] ?? 'saldo'));
     $imageUrl = trim((string)($in['image_url'] ?? ''));
     $stock = (int)($in['stock'] ?? 100);
@@ -11136,7 +11296,7 @@ if ($action === 'admin_save_shop_product') {
         jsonResponse(['success' => false, 'message' => 'Nama produk dan harga wajib diisi dengan benar.'], 400);
     }
 
-    if ($id === '') {
+    if ($id === '' || $id === '0' || $id === 'null') {
         $id = 'prod-' . strtolower(substr(md5(uniqid(mt_rand(), true)), 0, 8));
     }
 
@@ -11188,6 +11348,168 @@ if ($action === 'admin_delete_shop_product') {
     } catch (Exception $e) {
         jsonResponse(['success' => false, 'message' => 'Gagal menghapus produk: ' . $e->getMessage()], 500);
     }
+}
+
+// 4d. Action: Claim Asset Gift Bonus (Ikon Hadiah Perak & Emas)
+if ($action === 'claim_asset_gift_bonus') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    // Cek apakah member sudah klaim hadiah hari ini
+    $cStmt = $pdo->prepare("SELECT COUNT(*) FROM `asset_transactions` WHERE user_id = :uid AND type = 'gift_bonus' AND DATE(created_at) = CURDATE()");
+    $cStmt->execute([':uid' => $uid]);
+    if ((int)$cStmt->fetchColumn() > 0) {
+        jsonResponse(['success' => false, 'message' => 'Anda sudah mengklaim hadiah bonus aset hari ini. Silakan kembali besok!'], 400);
+    }
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $metal = strtolower(trim((string)($in['metal_type'] ?? 'silver')));
+    if (!in_array($metal, ['silver', 'gold'])) {
+        $metal = 'silver';
+    }
+
+    // Ambil reward dari settings
+    $silverReward = 0.0100;
+    $goldReward = 0.0050;
+    $pointsReward = 10;
+    try {
+        $st = $pdo->prepare("SELECT setting_key, setting_value FROM `settings` WHERE setting_key IN ('gift_bonus_silver_reward', 'gift_bonus_gold_reward', 'gift_bonus_points_reward')");
+        $st->execute();
+        foreach ($st->fetchAll() as $r) {
+            if ($r['setting_key'] === 'gift_bonus_silver_reward' && !empty($r['setting_value'])) $silverReward = (float)$r['setting_value'];
+            if ($r['setting_key'] === 'gift_bonus_gold_reward' && !empty($r['setting_value'])) $goldReward = (float)$r['setting_value'];
+            if ($r['setting_key'] === 'gift_bonus_points_reward' && !empty($r['setting_value'])) $pointsReward = (int)$r['setting_value'];
+        }
+    } catch(Exception $e) {}
+
+    $claimGrams = ($metal === 'gold') ? $goldReward : $silverReward;
+    $metalName = ($metal === 'gold') ? 'Emas' : 'Perak';
+    $balanceField = ($metal === 'gold') ? 'gold_balance' : 'silver_balance';
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $uStmt = $pdo->prepare("SELECT id, username, {$balanceField}, points FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $u = $uStmt->fetch();
+        if (!$u) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'User tidak ditemukan.'], 404);
+        }
+
+        // Kreditkan gram bonus dan poin
+        $pdo->prepare("UPDATE `users` SET {$balanceField} = {$balanceField} + :g, points = points + :pts WHERE id = :uid")
+            ->execute([':g' => $claimGrams, ':pts' => $pointsReward, ':uid' => $uid]);
+
+        $txId = 'GIFT-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at)
+            VALUES (:id, :uid, :uname, 'gift_bonus', :atype, :g, 0, :pts, 'completed', NOW())
+        ")->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $u['username'],
+            ':atype' => $metal,
+            ':g' => $claimGrams,
+            ':pts' => $pointsReward
+        ]);
+
+        $pdo->commit();
+        jsonResponse([
+            'success' => true,
+            'message' => "Selamat! Anda berhasil mengklaim bonus harian {$claimGrams} Gram {$metalName} & +{$pointsReward} Poin!",
+            'data' => [
+                'metal_type' => $metal,
+                'reward_grams' => $claimGrams,
+                'reward_points' => $pointsReward
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal mengklaim hadiah bonus: ' . $e->getMessage()], 500);
+    }
+}
+
+// 4e. Action: Admin Save Welcome Login Popup (Iklan Banner & Pesan Promo)
+if ($action === 'admin_save_welcome_popup') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+
+    $enabled = !empty($in['enabled']);
+    $title = trim((string)($in['title'] ?? 'Selamat Datang di Auto Trading!'));
+    $bannerUrl = trim((string)($in['banner_url'] ?? 'assets/img/welcome-banner.jpg'));
+    $points = $in['points'] ?? [
+        "bisa beli aset perak",
+        "bisa beli aset emas",
+        "bisa nabung untuk masa depan",
+        "bisa invest dengan profit variatif setiap hari",
+        "belanja online",
+        "pinjaman khsus member aktif ( leader )"
+    ];
+    if (is_string($points)) {
+        $points = array_values(array_filter(array_map('trim', explode("\n", $points))));
+    }
+
+    $config = [
+        'enabled' => $enabled,
+        'title' => $title,
+        'banner_url' => $bannerUrl,
+        'points' => $points
+    ];
+
+    try {
+        $st = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) 
+            VALUES ('welcome_popup_config', :v, 'Konfigurasi iklan pop-up selamat datang setelah login')
+            ON DUPLICATE KEY UPDATE setting_value = :v, updated_at = NOW()");
+        $st->execute([':v' => json_encode($config)]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Pengaturan pop-up promo selamat datang berhasil disimpan!',
+            'data' => $config
+        ]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal menyimpan pengaturan pop-up: ' . $e->getMessage()], 500);
+    }
+}
+
+// 4f. Action: Get Welcome Popup Config (Untuk Tampilan Member saat Login)
+if ($action === 'get_welcome_popup') {
+    ensureTablesExist($pdo);
+    $config = [
+        'enabled' => true,
+        'title' => 'Selamat Datang di Auto Trading!',
+        'banner_url' => 'assets/img/welcome-banner.jpg',
+        'points' => [
+            "bisa beli aset perak",
+            "bisa beli aset emas",
+            "bisa nabung untuk masa depan",
+            "bisa invest dengan profit variatif setiap hari",
+            "belanja online",
+            "pinjaman khsus member aktif ( leader )"
+        ]
+    ];
+
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'welcome_popup_config' LIMIT 1");
+        $st->execute();
+        $row = $st->fetch();
+        if ($row && !empty($row['setting_value'])) {
+            $dec = json_decode($row['setting_value'], true);
+            if (is_array($dec)) {
+                $config = array_merge($config, $dec);
+            }
+        }
+    } catch (Exception $e) {}
+
+    jsonResponse(['success' => true, 'data' => $config]);
 }
 
 // 5. Action: Get Shop Data
@@ -11489,6 +11811,11 @@ if ($action === 'get_loan_data') {
     $stBlock = $pdo->query("SELECT setting_value FROM `settings` WHERE setting_key = 'loan_block_threshold_months' LIMIT 1")->fetch();
     $blockThresholdMonths = isset($stBlock['setting_value']) ? (int)$stBlock['setting_value'] : 2;
 
+    $userLoanTier = 1;
+    $maxLoanLimit = 300000;
+    $nextTierLimit = 500000;
+    $repaidLoansCount = 0;
+
     try {
         if ($isAdmin) {
             $lStmt = $pdo->query("SELECT * FROM `leader_loans` ORDER BY created_at DESC LIMIT 100");
@@ -11506,6 +11833,28 @@ if ($action === 'get_loan_data') {
                 $spStmt->execute([':ref' => $refCode]);
                 $activeSponsorsCount = (int)($spStmt->fetch()['active_count'] ?? 0);
                 $isEligible = ($activeSponsorsCount >= $requiredSponsors);
+            }
+
+            // Req 4: Hitung riwayat pinjaman lunas untuk menentukan tier & limit plafon
+            // Pinjaman ke-1: DILOCK 300 rb
+            // Pinjaman ke-2: Naik ke 500 rb
+            // Pinjaman ke-3+: Naik ke 1 Juta
+            $repStmt = $pdo->prepare("SELECT COUNT(*) FROM `leader_loans` WHERE user_id = :uid AND (status = 'completed' OR repayment_status = 'repaid')");
+            $repStmt->execute([':uid' => $uid]);
+            $repaidLoansCount = (int)$repStmt->fetchColumn();
+
+            if ($repaidLoansCount === 0) {
+                $userLoanTier = 1;
+                $maxLoanLimit = 300000;
+                $nextTierLimit = 500000;
+            } elseif ($repaidLoansCount === 1) {
+                $userLoanTier = 2;
+                $maxLoanLimit = 500000;
+                $nextTierLimit = 1000000;
+            } else {
+                $userLoanTier = 3;
+                $maxLoanLimit = 1000000;
+                $nextTierLimit = null;
             }
 
             $myLoansStmt = $pdo->prepare("SELECT * FROM `leader_loans` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 20");
@@ -11526,6 +11875,10 @@ if ($action === 'get_loan_data') {
                 'required_sponsors' => $requiredSponsors,
                 'active_sponsors_count' => $activeSponsorsCount,
                 'is_eligible' => $isEligible,
+                'user_loan_tier' => $userLoanTier,
+                'max_loan_limit' => $maxLoanLimit,
+                'next_tier_limit' => $nextTierLimit,
+                'repaid_loans_count' => $repaidLoansCount,
                 'loans' => $userLoans,
                 'all_loans' => $allLoans,
                 'active_bill' => $activeBill,
@@ -11551,6 +11904,7 @@ if ($action === 'apply_leader_loan') {
 
     $in = json_decode(file_get_contents('php://input'), true) ?: [];
     $loanAmount = (int)($in['loan_amount'] ?? 300000);
+    $tenorMonths = max(1, min(12, (int)($in['tenor_months'] ?? 1)));
     $purpose = trim((string)($in['purpose'] ?? ''));
     $ktpNik = trim((string)($in['ktp_nik'] ?? ''));
     $ktpName = trim((string)($in['ktp_name'] ?? ''));
@@ -11585,6 +11939,22 @@ if ($action === 'apply_leader_loan') {
             ], 400);
         }
 
+        // Req 4: Validasi Tier Plafon Pinjaman
+        $repStmt = $pdo->prepare("SELECT COUNT(*) FROM `leader_loans` WHERE user_id = :uid AND (status = 'completed' OR repayment_status = 'repaid')");
+        $repStmt->execute([':uid' => $uid]);
+        $repaidCount = (int)$repStmt->fetchColumn();
+
+        $maxAllowed = 300000;
+        if ($repaidCount === 1) $maxAllowed = 500000;
+        elseif ($repaidCount >= 2) $maxAllowed = 1000000;
+
+        if ($loanAmount > $maxAllowed) {
+            $tierMsg = ($repaidCount === 0)
+                ? 'Untuk pinjaman leader pertama kali, plafon maksimal DILOCK ke Rp 300.000. Setelah pinjaman pertama lunas dengan lancar, plafon terbuka ke Rp 500.000 hingga Rp 1.000.000.'
+                : 'Plafon pinjaman maksimal Anda saat ini adalah Rp ' . number_format($maxAllowed, 0, ',', '.') . '. Selesaikan pembayaran pinjaman dengan lancar untuk membuka limit berikutnya hingga Rp 1.000.000.';
+            jsonResponse(['success' => false, 'message' => $tierMsg], 400);
+        }
+
         $chkStmt = $pdo->prepare("SELECT id FROM `leader_loans` WHERE user_id = :uid AND status = 'pending' LIMIT 1");
         $chkStmt->execute([':uid' => $uid]);
         if ($chkStmt->fetch()) {
@@ -11592,12 +11962,13 @@ if ($action === 'apply_leader_loan') {
         }
 
         $loanId = 'LOAN-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
-        $insLoan = $pdo->prepare("INSERT INTO `leader_loans` (id, user_id, username, loan_amount, active_sponsors_count, purpose, ktp_nik, ktp_name, ktp_image, bank_name, account_number, account_holder, status, created_at) VALUES (:id, :uid, :uname, :amt, :spcnt, :purp, :nik, :kname, :kimg, :bname, :accno, :accholder, 'pending', NOW())");
+        $insLoan = $pdo->prepare("INSERT INTO `leader_loans` (id, user_id, username, loan_amount, tenor_months, active_sponsors_count, purpose, ktp_nik, ktp_name, ktp_image, bank_name, account_number, account_holder, status, created_at) VALUES (:id, :uid, :uname, :amt, :tenor, :spcnt, :purp, :nik, :kname, :kimg, :bname, :accno, :accholder, 'pending', NOW())");
         $insLoan->execute([
             ':id' => $loanId,
             ':uid' => $uid,
             ':uname' => $user['username'],
             ':amt' => $loanAmount,
+            ':tenor' => $tenorMonths,
             ':spcnt' => $activeSponsorsCount,
             ':purp' => $purpose,
             ':nik' => $ktpNik,
@@ -11610,10 +11981,11 @@ if ($action === 'apply_leader_loan') {
 
         jsonResponse([
             'success' => true,
-            'message' => 'Pengajuan pinjaman modal cepat leader Rp ' . number_format($loanAmount, 0, ',', '.') . ' berhasil dikirim! Menunggu persetujuan admin.',
+            'message' => 'Pengajuan pinjaman modal cepat leader Rp ' . number_format($loanAmount, 0, ',', '.') . ' (Tenor ' . $tenorMonths . ' Bulan) berhasil dikirim! Menunggu persetujuan admin.',
             'data' => [
                 'loan_id' => $loanId,
                 'loan_amount' => $loanAmount,
+                'tenor_months' => $tenorMonths,
                 'status' => 'pending'
             ]
         ]);
@@ -11657,10 +12029,12 @@ if ($action === 'admin_approve_loan') {
         $stRate = $pdo->query("SELECT setting_value FROM `settings` WHERE setting_key = 'loan_monthly_interest_rate' LIMIT 1")->fetch();
         $interestRate = isset($stRate['setting_value']) ? (float)$stRate['setting_value'] : 2.0;
 
+        $tenorMonths = max(1, (int)($loan['tenor_months'] ?? 1));
         $amt = (int)$loan['loan_amount'];
         $interestAmount = (int)round($amt * ($interestRate / 100.0));
-        $totalDue = $amt + $interestAmount;
-        $monthlyDue = $totalDue;
+        $monthlyPrincipal = (int)round($amt / $tenorMonths);
+        $monthlyDue = $monthlyPrincipal + $interestAmount;
+        $totalDue = $monthlyDue * $tenorMonths;
 
         $pdo->prepare("UPDATE `leader_loans` SET status = 'approved', repayment_status = 'active', interest_rate_percent = :ir, monthly_due_amount = :md, total_due_amount = :td, repaid_amount = 0, due_date = DATE_ADD(NOW(), INTERVAL 30 DAY), unpaid_months_count = 0 WHERE id = :id")->execute([
             ':ir' => $interestRate,
@@ -11783,6 +12157,24 @@ if ($action === 'pay_leader_loan') {
         // Jika akun terblokir karena tunggakan, buka blokir akun
         $pdo->prepare("UPDATE `users` SET is_blocked = 0 WHERE id = :uid")->execute([':uid' => $uid]);
 
+        // Req 6: Bagi yang lunas dan bayar sebelum / tepat pada tanggal jatuh tempo, dapatkan reward +50 Poin
+        $bonusPoints = 0;
+        if ($isPaidOff) {
+            $dueTs = !empty($loan['due_date']) ? strtotime($loan['due_date']) : time();
+            $isOnTime = (time() <= $dueTs);
+            if ($isOnTime) {
+                $bonusPoints = 50;
+                $pdo->prepare("UPDATE `users` SET points = points + 50 WHERE id = :uid")->execute([':uid' => $uid]);
+                $trxPtsId = 'PTS-BONUS-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+                $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, note, created_at) VALUES (:id, :uid, :uname, 'points_bonus', 50, 'completed', 'Bonus Tepat Waktu', 'Reward Point', 'Poin Reward', :txid, 'Bonus +50 Poin Pelunasan Pinjaman Sebelum Jatuh Tempo', NOW())")->execute([
+                    ':id' => $trxPtsId,
+                    ':uid' => $uid,
+                    ':uname' => $user['username'],
+                    ':txid' => $loanId
+                ]);
+            }
+        }
+
         // Catat transaksi mutasi
         $trxId = 'LOAN-PAY-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
         $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, note, created_at) VALUES (:id, :uid, :uname, 'loan_repayment', :amt, 'completed', 'Saldo Dompet Utama', 'Saldo Dompet', 'Pelunasan Pinjaman Leader', :txid, 'Pengembalian Tagihan Pinjaman Modal Leader', NOW())")->execute([
@@ -11796,10 +12188,15 @@ if ($action === 'pay_leader_loan') {
         $pdo->commit();
 
         $msg = $isPaidOff 
-            ? 'Selamat! Pinjaman modal leader Anda sebesar Rp ' . number_format($loan['loan_amount'], 0, ',', '.') . ' telah LUNAS sepenuhnya.'
-            : 'Pembayaran tagihan pinjaman sebesar Rp ' . number_format($payAmount, 0, ',', '.') . ' berhasil! Sisa tagihan: Rp ' . number_format($remaining - $payAmount, 0, ',', '.');
+            ? ('Selamat! Pinjaman modal leader Anda sebesar Rp ' . number_format($loan['loan_amount'], 0, ',', '.') . ' telah LUNAS sepenuhnya.' . ($bonusPoints > 0 ? ' Anda mendapatkan reward istimewa +50 Poin karena melunasi sebelum jatuh tempo! 🎉' : ''))
+            : ('Pembayaran tagihan pinjaman sebesar Rp ' . number_format($payAmount, 0, ',', '.') . ' berhasil! Sisa tagihan: Rp ' . number_format($remaining - $payAmount, 0, ',', '.'));
 
-        jsonResponse(['success' => true, 'message' => $msg]);
+        jsonResponse([
+            'success' => true,
+            'message' => $msg,
+            'is_paid_off' => $isPaidOff,
+            'bonus_points_awarded' => $bonusPoints
+        ]);
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         jsonResponse(['success' => false, 'message' => 'Gagal memproses pembayaran tagihan: ' . $e->getMessage()], 500);
@@ -11832,7 +12229,8 @@ if ($action === 'admin_save_loan_settings') {
 }
 
 
-// 14. Action: Apply Asset Contract (Kontrak Aset Perak Dividen Harian)
+// 14. Action: Apply Asset Contract (Kontrak Aset Perak/Emas Dividen Harian & Cashback)
+// Req 1, 2, 3: Tenor 30, 150, 365 hari, modal masuk saldo cashback, yield harian masuk hasil cashback, cair ke saldo likuid saat selesai
 if ($action === 'apply_asset_contract') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
@@ -11843,43 +12241,92 @@ if ($action === 'apply_asset_contract') {
 
     $in = json_decode(file_get_contents('php://input'), true) ?: [];
     $grams = (float)($in['grams'] ?? 0);
-    $duration = (int)($in['duration_days'] ?? 14);
+    $duration = (int)($in['duration_days'] ?? 30);
+    $assetType = (isset($in['asset_type']) && $in['asset_type'] === 'gold') ? 'gold' : 'silver';
 
     if ($grams <= 0) {
         jsonResponse(['success' => false, 'message' => 'Masukkan gramasi kontrak yang valid.'], 400);
     }
+    if (!in_array($duration, [30, 150, 365])) {
+        if ($duration <= 0) $duration = 30;
+    }
+
+    // Load contract rates from settings
+    $contractRatesSilver = ['30' => 0.3, '150' => 0.5, '365' => 0.8];
+    $contractRatesGold = ['30' => 0.25, '150' => 0.45, '365' => 0.75];
+    try {
+        $st = $pdo->query("SELECT setting_key, setting_value FROM `settings` WHERE setting_key IN ('contract_rates_silver', 'contract_rates_gold')")->fetchAll();
+        foreach ($st as $row) {
+            if ($row['setting_key'] === 'contract_rates_silver' && !empty($row['setting_value'])) {
+                $dec = json_decode($row['setting_value'], true);
+                if (is_array($dec)) $contractRatesSilver = $dec;
+            }
+            if ($row['setting_key'] === 'contract_rates_gold' && !empty($row['setting_value'])) {
+                $dec = json_decode($row['setting_value'], true);
+                if (is_array($dec)) $contractRatesGold = $dec;
+            }
+        }
+    } catch(Exception $e) {}
+
+    $rates = ($assetType === 'gold') ? $contractRatesGold : $contractRatesSilver;
+    $dailyRate = isset($rates[(string)$duration]) ? (float)$rates[(string)$duration] : 0.5;
+
+    $dailyYieldGrams = round($grams * ($dailyRate / 100.0), 4);
+    $totalYieldGrams = round($dailyYieldGrams * $duration, 4);
 
     try {
         if (!$pdo->inTransaction()) $pdo->beginTransaction();
 
-        $uStmt = $pdo->prepare("SELECT id, username, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $balanceField = ($assetType === 'gold') ? 'gold_balance' : 'silver_balance';
+        $contractField = ($assetType === 'gold') ? 'gold_contract_balance' : 'silver_contract_balance';
+
+        $uStmt = $pdo->prepare("SELECT id, username, {$balanceField} FROM `users` WHERE id = :uid FOR UPDATE");
         $uStmt->execute([':uid' => $uid]);
         $u = $uStmt->fetch();
 
-        if ((float)$u['silver_balance'] < $grams) {
+        if ((float)$u[$balanceField] < $grams) {
             $pdo->rollBack();
-            jsonResponse(['success' => false, 'message' => 'Saldo perak tidak mencukupi (Saldo Anda: ' . number_format((float)$u['silver_balance'], 3) . ' Gram).'], 400);
+            $assetName = ($assetType === 'gold') ? 'Emas' : 'Perak';
+            jsonResponse(['success' => false, 'message' => "Saldo {$assetName} siap jual tidak mencukupi (Saldo Anda: " . number_format((float)$u[$balanceField], 3) . " Gram)."], 400);
         }
 
-        // Lock silver balance
-        $pdo->prepare("UPDATE `users` SET silver_balance = silver_balance - :g WHERE id = :uid")->execute([':g' => $grams, ':uid' => $uid]);
+        // Pindahkan dari saldo likuid ke saldo kontrak
+        $pdo->prepare("UPDATE `users` SET {$balanceField} = {$balanceField} - :g, {$contractField} = {$contractField} + :g WHERE id = :uid")
+            ->execute([':g' => $grams, ':uid' => $uid]);
 
-        $dailyRate = $duration >= 30 ? 1.2 : ($duration >= 14 ? 0.8 : 0.5);
-        $txId = 'CTR-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $contractId = 'CTR-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
 
-        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'contract', 'silver', :g, :price, :tot, 'active', NOW())")->execute([
+        $pdo->prepare("INSERT INTO `asset_contracts` 
+            (id, user_id, username, asset_type, grams, duration_days, daily_rate_percent, daily_yield_grams, total_yield_grams, status, start_date, end_date, created_at)
+            VALUES (:id, :uid, :uname, :atype, :g, :dur, :rate, :dy, :ty, 'active', NOW(), DATE_ADD(NOW(), INTERVAL :dur DAY), NOW())
+        ")->execute([
+            ':id' => $contractId,
+            ':uid' => $uid,
+            ':uname' => $u['username'],
+            ':atype' => $assetType,
+            ':g' => $grams,
+            ':dur' => $duration,
+            ':rate' => $dailyRate,
+            ':dy' => $dailyYieldGrams,
+            ':ty' => $totalYieldGrams
+        ]);
+
+        $txId = 'TX-' . $contractId;
+        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'contract', :atype, :g, :price, :tot, 'active', NOW())")->execute([
             ':id' => $txId,
             ':uid' => $uid,
             ':uname' => $u['username'],
+            ':atype' => $assetType,
             ':g' => $grams,
             ':price' => $duration,
-            ':tot' => (int)($dailyRate * 100)
+            ':tot' => (int)round($dailyRate * 100)
         ]);
 
         $pdo->commit();
+        $assetName = ($assetType === 'gold') ? 'Emas' : 'Perak';
         jsonResponse([
             'success' => true,
-            'message' => 'Kontrak aset ' . number_format($grams, 3) . ' Gram durasi ' . $duration . ' hari berhasil diaktifkan! Dividen harian: ' . $dailyRate . '% per hari.'
+            'message' => "Kontrak dividen {$assetName} " . number_format($grams, 3) . " Gram tenor {$duration} hari berhasil diaktifkan! Modal terproteksi 100%, dividen harian {$dailyRate}%/hari (" . number_format($dailyYieldGrams, 3) . " g/hr)."
         ]);
     } catch(Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();

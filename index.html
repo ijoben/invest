@@ -103,6 +103,169 @@
   <!-- CSS Stylesheets -->
   <link rel="stylesheet" href="css/style.css?v=20261018_full_audit">
   <link rel="stylesheet" href="css/responsive.css?v=20261018_full_audit">
+<style>
+  /* Floating CS Widget Styles (media_1793379021428_41aea5ac.jpg) */
+  .floating-cs-container {
+    position: fixed;
+    bottom: 145px;
+    right: 12px;
+    z-index: 960;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    pointer-events: auto;
+  }
+  .floating-cs-pill-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px 8px 10px;
+    background: linear-gradient(135deg, #B91C1C 0%, #DC2626 50%, #991B1B 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border-radius: 9999px;
+    box-shadow: 0 10px 24px rgba(220, 38, 38, 0.45), 0 2px 6px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+  }
+  .floating-cs-pill-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 12px 28px rgba(220, 38, 38, 0.55);
+  }
+  .floating-cs-pill-btn:active {
+    transform: translateY(0) scale(0.97);
+  }
+  .cs-pill-icon-wrap {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cs-pill-online-dot {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 8px;
+    height: 8px;
+    background: #10B981;
+    border: 1.5px solid #1E293B;
+    border-radius: 50%;
+  }
+  .cs-pill-text {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+  .cs-pill-chevron {
+    font-size: 13px;
+    font-weight: 700;
+    color: #FFFFFF;
+    transition: transform 0.2s ease;
+  }
+  .floating-cs-card {
+    width: 310px;
+    max-width: calc(100vw - 28px);
+    background: #18181B;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    padding: 16px 18px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75);
+    margin-bottom: 12px;
+    animation: csFadeIn 0.22s ease-out;
+  }
+  @keyframes csFadeIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .cs-online-badge {
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: #34D399;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 9999px;
+    padding: 3px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cs-online-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10B981;
+  }
+  .cs-close-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #27272A;
+    border: none;
+    color: #94A3B8;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  .cs-close-btn:hover {
+    background: #3F3F46;
+    color: #FFFFFF;
+  }
+  .cs-item-card {
+    background: #27272A;
+    border-radius: 14px;
+    padding: 11px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 10px;
+  }
+  .cs-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cs-icon-wa {
+    background: rgba(220, 38, 38, 0.16);
+    border: 1px solid rgba(220, 38, 38, 0.35);
+  }
+  .cs-icon-tg {
+    background: rgba(2, 132, 199, 0.16);
+    border: 1px solid rgba(2, 132, 199, 0.35);
+  }
+  .cs-btn {
+    font-size: 11.5px;
+    font-weight: 800;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .cs-btn:hover {
+    transform: scale(1.04);
+  }
+  .cs-btn-chat {
+    background: #DC2626;
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  }
+  .cs-btn-join {
+    background: #0284C7;
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45);
+  }
+</style>
 </head>
 <body>
 
@@ -1472,6 +1635,75 @@
       <!-- ====================================================================
            8. FLOATING TESTIMONIAL BUTTON (Bottom Right above Nav)
            ==================================================================== -->
+      
+      <!-- ====================================================================
+           7b. FLOATING CUSTOMER SERVICE (CS) WIDGET (WA & TELEGRAM)
+           Matching media_1793379021428_41aea5ac.jpg
+           ==================================================================== -->
+      <div class="floating-cs-container" id="floatingCsContainer">
+        <!-- Floating CS Popup Card -->
+        <div class="floating-cs-card" id="floatingCsCard" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="cs-online-badge">
+              <span class="cs-online-dot"></span>
+              Online 24/7
+            </span>
+            <button type="button" class="cs-close-btn" onclick="toggleCsWidget(false)" aria-label="Tutup Layanan CS">&times;</button>
+          </div>
+          <h4 style="margin: 12px 0 2px 0; font-size: 15px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.2px;">Layanan &amp; Komunitas</h4>
+          <p style="margin: 0 0 14px 0; font-size: 11.5px; color: #94A3B8;">Hubungi admin atau pantau channel resmi:</p>
+
+          <!-- Item 1: Chat Admin CS (WhatsApp) -->
+          <div class="cs-item-card">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="cs-icon-box cs-icon-wa">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight: 800; font-size: 13.5px; color: #FFFFFF;">Chat Admin CS</div>
+                <div style="font-size: 10.5px; color: #94A3B8;">Bantuan deposit, penarikan &amp; akun</div>
+              </div>
+            </div>
+            <a id="csLinkWhatsapp" href="https://wa.me/6281234567890?text=Halo%20Admin%20CS%20AUTOTRADING,%20saya%20butuh%20bantuan..." target="_blank" rel="noopener noreferrer" class="cs-btn cs-btn-chat">
+              CHAT
+            </a>
+          </div>
+
+          <!-- Item 2: Channel Resmi (Telegram) -->
+          <div class="cs-item-card">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="cs-icon-box cs-icon-tg">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight: 800; font-size: 13.5px; color: #FFFFFF;">Channel Resmi</div>
+                <div style="font-size: 10.5px; color: #94A3B8;">Pengumuman dividen, promo &amp; event</div>
+              </div>
+            </div>
+            <a id="csLinkTelegram" href="https://t.me/autotrading_channel" target="_blank" rel="noopener noreferrer" class="cs-btn cs-btn-join">
+              GABUNG
+            </a>
+          </div>
+        </div>
+
+        <!-- Floating Red Pill Button -->
+        <button type="button" class="floating-cs-pill-btn" id="floatingCsPillBtn" onclick="toggleCsWidget()" aria-label="Layanan Bantuan CS">
+          <div class="cs-pill-icon-wrap">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="cs-pill-online-dot"></span>
+          </div>
+          <span class="cs-pill-text">Chat Admin</span>
+          <span class="cs-pill-chevron" id="csPillChevron">˅</span>
+        </button>
+      </div>
+
       <button class="floating-testimonial-fab" id="floatingTestimonialFab" onclick="App.openTestimonialModal()" aria-label="Buka Testimoni Penarikan Member" title="Lihat Bukti Penarikan Member">
         <div class="fab-pulse-ring"></div>
         <div class="fab-icon-box">
@@ -3623,6 +3855,66 @@
   </div>
 
   <!-- Toast Notification Container -->
+  
+  <!-- ======================================================================
+       MODAL: POP-UP PROMO SELAMAT DATANG (WELCOME PROMO LOGIN)
+       6 Poin Keunggulan, Banner Iklan & Editable Admin
+       ====================================================================== -->
+  <div class="modal-backdrop" id="modalWelcomeLogin" style="display: none; align-items: center; justify-content: center; z-index: 99999;">
+    <div class="modal-sheet" style="max-width: 420px; width: 92%; border-radius: 20px; padding: 0; overflow: hidden; background: #0F172A; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+      <!-- Banner Image -->
+      <div style="position: relative; width: 100%; height: 160px; background: #1E293B; overflow: hidden;">
+        <img id="welcomePopupBannerImg" src="assets/img/welcome-banner.jpg" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=900&auto=format&fit=crop&q=80'">
+        <button type="button" onclick="closeWelcomePopup()" style="position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">&times;</button>
+        <div style="position: absolute; bottom: 8px; left: 12px; background: rgba(220, 38, 38, 0.9); color: #fff; font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 9999px; letter-spacing: 0.5px;">
+          PROMO SPESIAL MEMBER
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div style="padding: 18px 20px 20px 20px;">
+        <h3 id="welcomePopupTitle" style="margin: 0 0 10px 0; font-size: 17px; font-weight: 800; color: #FFFFFF; line-height: 1.3;">
+          Selamat Datang di Auto Trading!
+        </h3>
+        <p style="margin: 0 0 14px 0; font-size: 12px; color: #94A3B8;">
+          Nikmati berbagai fitur eksklusif dan peluang cuan maksimal di ekosistem platform:
+        </p>
+
+        <!-- 6 Poin Keunggulan -->
+        <div id="welcomePopupPointsContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
+            <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
+            <span>bisa beli aset perak</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
+            <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
+            <span>bisa beli aset emas</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
+            <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
+            <span>bisa nabung untuk masa depan</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
+            <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
+            <span>bisa invest dengan profit variatif setiap hari</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
+            <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
+            <span>belanja online</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
+            <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
+            <span>pinjaman khsus member aktif ( leader )</span>
+          </div>
+        </div>
+
+        <button type="button" class="btn-cta-gold" style="width: 100%; border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 800;" onclick="closeWelcomePopup()">
+          <span>Mulai Eksplorasi Sekarang 🚀</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Javascript Modules Entry Point -->
@@ -3670,6 +3962,90 @@
       } catch(e) {}
       window.location.href = path;
     }
+  </script>
+
+
+  <script>
+    let _csWidgetOpen = false;
+    function toggleCsWidget(forceState) {
+      const card = document.getElementById('floatingCsCard');
+      const chevron = document.getElementById('csPillChevron');
+      if (!card) return;
+      _csWidgetOpen = (forceState !== undefined) ? forceState : !_csWidgetOpen;
+      card.style.display = _csWidgetOpen ? 'block' : 'none';
+      if (chevron) {
+        chevron.style.transform = _csWidgetOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+      }
+
+      // Sync WhatsApp & Telegram contacts from DB settings if available
+      try {
+        if (typeof DB !== 'undefined' && DB.get) {
+          const db = DB.get();
+          if (db && db.settings && db.settings.cs) {
+            const cs = db.settings.cs;
+            if (cs.whatsapp && document.getElementById('csLinkWhatsapp')) {
+              const cleanWa = String(cs.whatsapp).replace(/[^0-9]/g, '');
+              document.getElementById('csLinkWhatsapp').href = 'https://wa.me/' + cleanWa + '?text=Halo%20Admin%20CS%20AUTOTRADING,%20saya%20butuh%20bantuan...';
+            }
+            if (cs.telegram && document.getElementById('csLinkTelegram')) {
+              document.getElementById('csLinkTelegram').href = cs.telegram;
+            }
+          }
+        }
+      } catch(e) {}
+    }
+
+    function closeWelcomePopup() {
+      const modal = document.getElementById('modalWelcomeLogin');
+      if (modal) modal.style.display = 'none';
+      try {
+        sessionStorage.setItem('at_welcome_popup_dismissed', 'true');
+      } catch(e) {}
+    }
+
+    async function checkAndShowWelcomePopup() {
+      try {
+        if (sessionStorage.getItem('at_welcome_popup_dismissed') === 'true') {
+          return;
+        }
+        const res = await fetch('api/index.php?action=get_welcome_popup');
+        const json = await res.json();
+        if (json.success && json.data && json.data.enabled) {
+          const d = json.data;
+          const modal = document.getElementById('modalWelcomeLogin');
+          if (!modal) return;
+          const titleEl = document.getElementById('welcomePopupTitle');
+          const imgEl = document.getElementById('welcomePopupBannerImg');
+          const container = document.getElementById('welcomePopupPointsContainer');
+
+          if (titleEl && d.title) titleEl.textContent = d.title;
+          if (imgEl && d.banner_url) imgEl.src = d.banner_url;
+          if (container && Array.isArray(d.points) && d.points.length > 0) {
+            container.innerHTML = d.points.map(pt => '<div style="display:flex; align-items:flex-start; gap:10px; font-size:12.5px; color:#F1F5F9;"><span style="color:#22C55E; font-size:14px; font-weight:800; line-height:1.2;">✓</span><span>' + pt + '</span></div>').join('');
+          }
+          modal.style.display = 'flex';
+        }
+      } catch(e) {
+        console.warn('Welcome popup check:', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if user is logged in before showing welcome login popup
+      setTimeout(() => {
+        let isLogged = false;
+        try {
+          if (typeof Auth !== 'undefined' && Auth.isLoggedIn) {
+            isLogged = Auth.isLoggedIn();
+          } else if (localStorage.getItem('autotrading_session_token') || sessionStorage.getItem('autotrading_session_token')) {
+            isLogged = true;
+          }
+        } catch(e) {}
+        if (isLogged) {
+          checkAndShowWelcomePopup();
+        }
+      }, 1200);
+    });
   </script>
 
 </body>

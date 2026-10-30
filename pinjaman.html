@@ -454,8 +454,16 @@
           <strong id="billPrincipal" style="color: #0F172A;">Rp 0</strong>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+          <span style="color: #64748B;">Tenor Pinjaman:</span>
+          <strong id="billTenorDisplay" style="color: #0F172A;">1 Bulan</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
           <span style="color: #64748B;">Suku Bunga Bulanan:</span>
           <span id="billInterestRate" style="color: #0F172A; font-weight: 700;">2%</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
+          <span style="color: #64748B;">Tagihan Per Bulan:</span>
+          <strong id="billMonthlyDueDisplay" style="color: #EA580C; font-weight: 800;">Rp 0 / bln</strong>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px;">
           <span style="color: #64748B;">Total Tagihan (Pokok + Bunga):</span>
@@ -469,6 +477,11 @@
           <span style="color: #334155; font-weight: 700;">Sisa Tagihan Harus Dibayar:</span>
           <strong id="billRemaining" style="color: #DC2626; font-size: 15px;">Rp 0</strong>
         </div>
+      </div>
+
+      <div style="background: #FEF3C7; border: 1px dashed #F59E0B; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 11px; color: #92400E; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 18px;">🎁</span>
+        <div><strong>Bonus +50 Poin Reward:</strong> Lunasi pinjaman ini sebelum atau tepat pada tanggal jatuh tempo untuk mendapatkan reward +50 Poin ke akun Anda!</div>
       </div>
 
       <div style="font-size: 11.5px; color: #431407; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
@@ -518,6 +531,17 @@
         <span>📝</span> Formulir Pengajuan Pinjaman
       </div>
 
+      <!-- Plafon Bertingkat (Tier Limit) -->
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 12px; font-weight: 700; color: #1E293B;">Plafon Maksimal Anda:</span>
+          <span id="tierBadgeDisplay" style="background: #EFF6FF; color: #2563EB; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 6px;">Tier 1 (Pinjaman Pertama)</span>
+        </div>
+        <div style="font-size: 11px; color: #64748B; line-height: 1.4;" id="tierHelperNotice">
+          Plafon pinjaman pertama DILOCK ke Rp 300.000. Pelunasan pinjaman secara lancar akan membuka limit berikutnya ke Rp 500.000 hingga Rp 1.000.000.
+        </div>
+      </div>
+
       <!-- Pilihan Plafon -->
       <label class="form-label">Pilih Jumlah Pinjaman Modal:</label>
       <div class="plafon-grid">
@@ -525,13 +549,56 @@
           Rp 300 rb
         </button>
         <button type="button" class="plafon-btn" id="btnPlafon500" onclick="setPlafon(500000)">
-          Rp 500 rb
+          Rp 500 rb <span id="lockIcon500" style="font-size: 10px;">🔒</span>
         </button>
         <button type="button" class="plafon-btn" id="btnPlafon1000" onclick="setPlafon(1000000)">
-          Rp 1 Juta
+          Rp 1 Juta <span id="lockIcon1000" style="font-size: 10px;">🔒</span>
         </button>
       </div>
       <input type="hidden" id="loanAmountInput" value="300000">
+
+      <!-- Pilihan Tenor Pinjaman -->
+      <div class="form-group" style="margin-top: 14px;">
+        <label class="form-label">Pilih Jangka Waktu (Tenor):</label>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+          <button type="button" class="plafon-btn active" id="btnTenorMonth1" onclick="setLoanTenor(1)">1 Bulan</button>
+          <button type="button" class="plafon-btn" id="btnTenorMonth3" onclick="setLoanTenor(3)">3 Bulan</button>
+          <button type="button" class="plafon-btn" id="btnTenorMonth6" onclick="setLoanTenor(6)">6 Bulan</button>
+        </div>
+        <input type="hidden" id="loanTenorInput" value="1">
+      </div>
+
+      <!-- Simulasi Notifikasi Rincian Tagihan Bulanan -->
+      <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 12px; margin-bottom: 16px; font-size: 12px;">
+        <div style="font-weight: 800; color: #166534; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+          <span>📊 Rincian Tagihan Per Bulan &amp; Tenor</span>
+          <span style="font-size: 10.5px; background: #DCFCE7; color: #15803D; padding: 2px 6px; border-radius: 4px;">Flat Bulanan</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span style="color: #4B5563;">Pokok Pinjaman:</span>
+          <strong id="simLoanPrincipal" style="color: #0F172A;">Rp 300.000</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span style="color: #4B5563;">Lama Tenor:</span>
+          <strong id="simLoanTenor" style="color: #0F172A;">1 Bulan</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span style="color: #4B5563;">Bunga Bulanan:</span>
+          <span id="simLoanInterestRate" style="color: #0F172A; font-weight: 700;">2.0% (Rp 6.000 / bln)</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #86EFAC;">
+          <span style="color: #166534; font-weight: 700;">Tagihan per Bulan:</span>
+          <strong id="simLoanMonthlyDue" style="color: #15803D; font-size: 13.5px;">Rp 306.000 / bulan</strong>
+        </div>
+      </div>
+
+      <!-- Incentive Card: Bonus +50 Poin -->
+      <div style="background: #FFFBEB; border: 1px dashed #F59E0B; border-radius: 12px; padding: 10px 12px; margin-bottom: 16px; font-size: 11.5px; color: #92400E; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 20px;">🎁</span>
+        <div>
+          <strong>Bonus +50 Poin Reward:</strong> Khusus member yang melunasi pinjaman sebelum atau tepat pada tanggal jatuh tempo, sistem otomatis menambahkan <strong>+50 Poin</strong> ke akun Anda!
+        </div>
+      </div>
 
       <!-- Keperluan Modal -->
       <div class="form-group">
@@ -790,11 +857,57 @@
       return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
     }
 
+    let selectedLoanPlafon = 300000;
+    let selectedLoanTenor = 1;
+
     function setPlafon(amount) {
+      const maxLimit = (loanData && loanData.max_loan_limit) ? loanData.max_loan_limit : 300000;
+      if (amount > maxLimit) {
+        const tierNotice = (maxLimit === 300000)
+          ? 'Plafon pinjaman pertama DILOCK ke Rp 300.000. Selesaikan pinjaman pertama dengan lancar untuk membuka plafon Rp 500.000.'
+          : 'Plafon Rp 1.000.000 terbuka setelah Anda menyelesaikan pinjaman berikutnya dengan lancar.';
+        showAppPopup({
+          title: 'Plafon Belum Terbuka 🔒',
+          message: tierNotice,
+          type: 'info'
+        });
+        return;
+      }
+      selectedLoanPlafon = amount;
       document.getElementById('loanAmountInput').value = amount;
       document.getElementById('btnPlafon300').classList.toggle('active', amount === 300000);
       document.getElementById('btnPlafon500').classList.toggle('active', amount === 500000);
       document.getElementById('btnPlafon1000').classList.toggle('active', amount === 1000000);
+      calcLoanSimulation();
+    }
+
+    function setLoanTenor(months) {
+      selectedLoanTenor = months;
+      document.getElementById('loanTenorInput').value = months;
+      [1, 3, 6].forEach(m => {
+        const btn = document.getElementById('btnTenorMonth' + m);
+        if (btn) btn.classList.toggle('active', m === months);
+      });
+      calcLoanSimulation();
+    }
+
+    function calcLoanSimulation() {
+      const amount = selectedLoanPlafon || 300000;
+      const tenor = selectedLoanTenor || 1;
+      const rate = (loanData && loanData.settings && loanData.settings.monthly_interest_rate) ? Number(loanData.settings.monthly_interest_rate) : 2.0;
+
+      const monthlyInterest = Math.round(amount * (rate / 100));
+      const monthlyPrincipal = Math.round(amount / tenor);
+      const monthlyTotal = monthlyPrincipal + monthlyInterest;
+
+      const elP = document.getElementById('simLoanPrincipal');
+      if (elP) elP.innerText = formatRupiah(amount);
+      const elT = document.getElementById('simLoanTenor');
+      if (elT) elT.innerText = tenor + ' Bulan';
+      const elR = document.getElementById('simLoanInterestRate');
+      if (elR) elR.innerText = rate + '% (' + formatRupiah(monthlyInterest) + ' / bln)';
+      const elD = document.getElementById('simLoanMonthlyDue');
+      if (elD) elD.innerText = formatRupiah(monthlyTotal) + ' / bulan';
     }
 
     async function loadLoanData() {
@@ -840,6 +953,54 @@
         lockWarn.innerText = `Tombol terkunci: Anda baru memiliki ${cnt} sponsor aktif (Dibutuhkan ${req} sponsor aktif).`;
       }
 
+      // Tier limits update (Req 4: Plafon pertama dilock 300rb, lancar naik 500rb, lalu 1jt)
+      const maxLimit = (loanData && loanData.max_loan_limit) ? loanData.max_loan_limit : 300000;
+      const userTier = (loanData && loanData.user_loan_tier) ? loanData.user_loan_tier : 1;
+      const repaidCnt = (loanData && loanData.repaid_loans_count) ? loanData.repaid_loans_count : 0;
+
+      const tierBadge = document.getElementById('tierBadgeDisplay');
+      const tierHelper = document.getElementById('tierHelperNotice');
+      const lock500 = document.getElementById('lockIcon500');
+      const lock1000 = document.getElementById('lockIcon1000');
+      const btn500 = document.getElementById('btnPlafon500');
+      const btn1000 = document.getElementById('btnPlafon1000');
+
+      if (userTier === 1 || maxLimit <= 300000) {
+        if (tierBadge) {
+          tierBadge.innerText = 'Tier 1 (Pinjaman Pertama - Plafon Rp 300 rb)';
+          tierBadge.style.background = '#EFF6FF';
+          tierBadge.style.color = '#2563EB';
+        }
+        if (tierHelper) tierHelper.innerText = 'Plafon pinjaman pertama DILOCK ke Rp 300.000. Lunasi pinjaman pertama tepat waktu untuk membuka plafon Rp 500.000.';
+        if (lock500) lock500.style.display = 'inline';
+        if (lock1000) lock1000.style.display = 'inline';
+        if (btn500) btn500.style.opacity = '0.6';
+        if (btn1000) btn1000.style.opacity = '0.6';
+      } else if (userTier === 2 || maxLimit <= 500000) {
+        if (tierBadge) {
+          tierBadge.innerText = 'Tier 2 (Plafon Rp 500 rb)';
+          tierBadge.style.background = '#FEF3C7';
+          tierBadge.style.color = '#B45309';
+        }
+        if (tierHelper) tierHelper.innerText = 'Selamat! Plafon pinjaman Anda telah naik ke Rp 500.000. Lunasi pinjaman ini tepat waktu untuk membuka limit maksimal Rp 1.000.000.';
+        if (lock500) lock500.style.display = 'none';
+        if (lock1000) lock1000.style.display = 'inline';
+        if (btn500) btn500.style.opacity = '1';
+        if (btn1000) btn1000.style.opacity = '0.6';
+      } else {
+        if (tierBadge) {
+          tierBadge.innerText = 'Tier 3 (Plafon Maksimal Rp 1 Juta)';
+          tierBadge.style.background = '#DCFCE7';
+          tierBadge.style.color = '#15803D';
+        }
+        if (tierHelper) tierHelper.innerText = 'Hebat! Anda memiliki rekam jejak lancar (' + repaidCnt + ' pinjaman lunas). Seluruh plafon hingga Rp 1.000.000 telah terbuka penuh!';
+        if (lock500) lock500.style.display = 'none';
+        if (lock1000) lock1000.style.display = 'none';
+        if (btn500) btn500.style.opacity = '1';
+        if (btn1000) btn1000.style.opacity = '1';
+      }
+      calcLoanSimulation();
+
       // Pre-fill user data
       try {
         const u = JSON.parse(localStorage.getItem('at_user_session') || localStorage.getItem('autotrading_user') || '{}');
@@ -868,6 +1029,13 @@
         const isOverdue = activeBill.repayment_status === 'overdue' || activeBill.repayment_status === 'defaulted';
 
         document.getElementById('billPrincipal').innerText = formatRupiah(principal);
+        const elTenor = document.getElementById('billTenorDisplay');
+        if (elTenor) elTenor.innerText = (activeBill.tenor_months || 1) + ' Bulan';
+        const elMonthlyDue = document.getElementById('billMonthlyDueDisplay');
+        if (elMonthlyDue) {
+          const mDue = activeBill.monthly_due_amount || activeBill.total_due_amount || principal;
+          elMonthlyDue.innerText = formatRupiah(mDue) + ' / bln';
+        }
         document.getElementById('billInterestRate').innerText = (activeBill.interest_rate_percent || 2) + '%';
         document.getElementById('billTotalDue').innerText = formatRupiah(totalDue);
         document.getElementById('billRepaid').innerText = formatRupiah(repaid);
@@ -955,6 +1123,7 @@
       }
 
       const amount = parseInt(document.getElementById('loanAmountInput').value) || 300000;
+      const tenorMonths = parseInt(document.getElementById('loanTenorInput').value) || 1;
       const purpose = document.getElementById('loanPurposeInput').value.trim();
       const ktpName = document.getElementById('ktpNameInput').value.trim();
       const ktpNik = document.getElementById('ktpNikInput').value.trim();
@@ -992,6 +1161,7 @@
       try {
         const res = await fetch(getApiUrl('apply_leader_loan'), getAuthFetchOptions('POST', {
           loan_amount: amount,
+          tenor_months: tenorMonths,
           purpose: purpose,
           ktp_nik: ktpNik,
           ktp_name: ktpName,

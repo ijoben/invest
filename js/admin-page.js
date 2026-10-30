@@ -2612,6 +2612,7 @@ Object.assign(AdminPage, {
 
     if (tabId === 'pengaturan') {
       this.renderWebSettings();
+      this.loadWelcomePopupAdmin();
     }
 
     if (tabId === 'kontak_kelas') {
@@ -5906,9 +5907,18 @@ Object.assign(AdminPage, {
   },
 
   // === MODULE HANDLERS: ASET, TOKO, PINJAMAN ===
+  async adminFetch(url, options = {}) {
+    const headers = (typeof DB !== 'undefined' && DB.getAuthHeaders) ? DB.getAuthHeaders(options.headers || {}) : { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    return fetch(url, {
+      ...options,
+      headers: headers,
+      credentials: 'include'
+    });
+  },
+
   async loadAssetAdmin() {
     try {
-      const res = await fetch('api/index.php?action=get_asset_data');
+      const res = await this.adminFetch('api/index.php?action=get_asset_data');
       const json = await res.json();
       if (json.success && json.data) {
         const d = json.data;
@@ -5928,6 +5938,12 @@ Object.assign(AdminPage, {
         if (sHist && d.price_history_silver) {
           sHist.value = typeof d.price_history_silver === 'string' ? d.price_history_silver : JSON.stringify(d.price_history_silver);
         }
+        if (d.contract_rates_silver) {
+          const crs = typeof d.contract_rates_silver === 'string' ? JSON.parse(d.contract_rates_silver) : d.contract_rates_silver;
+          if (document.getElementById('adminSilverContractRate30')) document.getElementById('adminSilverContractRate30').value = crs['30'] || 0.30;
+          if (document.getElementById('adminSilverContractRate150')) document.getElementById('adminSilverContractRate150').value = crs['150'] || 0.50;
+          if (document.getElementById('adminSilverContractRate365')) document.getElementById('adminSilverContractRate365').value = crs['365'] || 0.80;
+        }
 
         // Emas
         const gBuy = document.getElementById('adminGoldBuyPrice');
@@ -5944,6 +5960,23 @@ Object.assign(AdminPage, {
         if (gFee) gFee.value = d.minting_fee_gold || 85000;
         if (gHist && d.price_history_gold) {
           gHist.value = typeof d.price_history_gold === 'string' ? d.price_history_gold : JSON.stringify(d.price_history_gold);
+        }
+        if (d.contract_rates_gold) {
+          const crg = typeof d.contract_rates_gold === 'string' ? JSON.parse(d.contract_rates_gold) : d.contract_rates_gold;
+          if (document.getElementById('adminGoldContractRate30')) document.getElementById('adminGoldContractRate30').value = crg['30'] || 0.25;
+          if (document.getElementById('adminGoldContractRate150')) document.getElementById('adminGoldContractRate150').value = crg['150'] || 0.45;
+          if (document.getElementById('adminGoldContractRate365')) document.getElementById('adminGoldContractRate365').value = crg['365'] || 0.75;
+        }
+
+        // Hadiah Bonus Klaim Ikon
+        if (d.gift_bonus_silver_reward !== undefined && document.getElementById('adminGiftBonusSilver')) {
+          document.getElementById('adminGiftBonusSilver').value = d.gift_bonus_silver_reward;
+        }
+        if (d.gift_bonus_gold_reward !== undefined && document.getElementById('adminGiftBonusGold')) {
+          document.getElementById('adminGiftBonusGold').value = d.gift_bonus_gold_reward;
+        }
+        if (d.gift_bonus_points_reward !== undefined && document.getElementById('adminGiftBonusPoints')) {
+          document.getElementById('adminGiftBonusPoints').value = d.gift_bonus_points_reward;
         }
 
         const tbody = document.getElementById('adminAssetTxTableBody');
@@ -5983,6 +6016,10 @@ Object.assign(AdminPage, {
     let sHist = document.getElementById('adminPriceHistorySilver')?.value || '';
     try { sHist = JSON.parse(sHist); } catch (e) { sHist = sHist.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n)); }
 
+    const sR30 = parseFloat(document.getElementById('adminSilverContractRate30')?.value) || 0.30;
+    const sR150 = parseFloat(document.getElementById('adminSilverContractRate150')?.value) || 0.50;
+    const sR365 = parseFloat(document.getElementById('adminSilverContractRate365')?.value) || 0.80;
+
     const gBuy = parseInt(document.getElementById('adminGoldBuyPrice')?.value) || 1450000;
     const gSell = parseInt(document.getElementById('adminGoldSellPrice')?.value) || 1380000;
     const gCbBal = parseFloat(document.getElementById('adminGoldCashbackBal')?.value) || 10;
@@ -5991,10 +6028,17 @@ Object.assign(AdminPage, {
     let gHist = document.getElementById('adminPriceHistoryGold')?.value || '';
     try { gHist = JSON.parse(gHist); } catch (e) { gHist = gHist.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n)); }
 
+    const gR30 = parseFloat(document.getElementById('adminGoldContractRate30')?.value) || 0.25;
+    const gR150 = parseFloat(document.getElementById('adminGoldContractRate150')?.value) || 0.45;
+    const gR365 = parseFloat(document.getElementById('adminGoldContractRate365')?.value) || 0.75;
+
+    const giftSil = parseFloat(document.getElementById('adminGiftBonusSilver')?.value) || 0.010;
+    const giftGold = parseFloat(document.getElementById('adminGiftBonusGold')?.value) || 0.005;
+    const giftPts = parseInt(document.getElementById('adminGiftBonusPoints')?.value) || 10;
+
     try {
-      const res = await fetch('api/index.php?action=admin_save_asset_prices', {
+      const res = await this.adminFetch('api/index.php?action=admin_save_asset_prices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           silver_buy_price: sBuy,
           silver_sell_price: sSell,
@@ -6002,13 +6046,19 @@ Object.assign(AdminPage, {
           silver_cashback_yield: sCbYield,
           minting_fee_silver: sFee,
           price_history_silver: sHist,
+          contract_rates_silver: { '30': sR30, '150': sR150, '365': sR365 },
 
           gold_buy_price: gBuy,
           gold_sell_price: gSell,
           gold_cashback_balance: gCbBal,
           gold_cashback_yield: gCbYield,
           minting_fee_gold: gFee,
-          price_history_gold: gHist
+          price_history_gold: gHist,
+          contract_rates_gold: { '30': gR30, '150': gR150, '365': gR365 },
+
+          gift_bonus_silver_reward: giftSil,
+          gift_bonus_gold_reward: giftGold,
+          gift_bonus_points_reward: giftPts
         })
       });
       const json = await res.json();
@@ -6026,7 +6076,7 @@ Object.assign(AdminPage, {
   _cachedShopProducts: [],
   async loadShopProductsAdmin() {
     try {
-      const res = await fetch('api/index.php?action=get_shop_data');
+      const res = await this.adminFetch('api/index.php?action=get_shop_data');
       const json = await res.json();
       if (json.success && json.data) {
         const prods = json.data.products || [];
@@ -6037,23 +6087,24 @@ Object.assign(AdminPage, {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94A3B8; padding:20px;">Belum ada produk di Toko Online. Klik \"Tambah Produk Toko Baru\" untuk menambahkan produk.</td></tr>';
           } else {
             tbody.innerHTML = prods.map(p => {
-              const active = p.is_active != 0;
+              const active = p.is_active != 0 && p.status !== 'inactive';
               const stock = Number(p.stock) || 0;
               const points = Number(p.points_reward) || 10;
+              const priceVal = Number(p.price_amount !== undefined ? p.price_amount : p.price) || 0;
               const imgHtml = p.image_url ? 
                 '<img src="' + p.image_url + '" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #334155;">' :
                 '<div style="width:40px; height:40px; border-radius:6px; background:#1E293B; display:flex; align-items:center; justify-content:center; font-size:16px;">📦</div>';
 
               return '<tr>' +
                 '<td>' + imgHtml + '</td>' +
-                '<td><strong>' + p.name + '</strong><div style="font-size:10px; color:#94A3B8;">Kategori: ' + (p.category || 'Merchandise') + '</div></td>' +
-                '<td style="color:#F59E0B; font-weight:700;">Rp ' + Number(p.price).toLocaleString('id-ID') + '</td>' +
+                '<td><strong>' + p.name + '</strong><div style="font-size:10px; color:#94A3B8;">Kategori: ' + (p.category || 'online') + '</div></td>' +
+                '<td style="color:#F59E0B; font-weight:700;">Rp ' + priceVal.toLocaleString('id-ID') + '</td>' +
                 '<td><span class="admin-badge ' + (stock > 0 ? 'admin-badge-info' : 'admin-badge-danger') + '">' + (stock > 0 ? stock + ' unit' : 'Habis (0)') + '</span></td>' +
                 '<td><span class="admin-badge admin-badge-warning">+' + points + ' Poin</span></td>' +
                 '<td><span class="admin-badge ' + (active ? 'admin-badge-success' : 'admin-badge-danger') + '">' + (active ? 'Aktif' : 'Nonaktif') + '</span></td>' +
                 '<td style="text-align:right;">' +
-                  '<button type="button" class="admin-btn-action-secondary" style="padding:4px 8px; font-size:11px; margin-right:4px;" onclick="AdminPage.openEditShopProductModal(' + p.id + ')">Edit</button>' +
-                  '<button type="button" class="admin-btn-action-danger" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.deleteShopProduct(' + p.id + ')">Hapus</button>' +
+                  '<button type="button" class="admin-btn-action-secondary" style="padding:4px 8px; font-size:11px; margin-right:4px;" onclick="AdminPage.openEditShopProductModal(\'' + p.id + '\')">Edit</button>' +
+                  '<button type="button" class="admin-btn-action-danger" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.deleteShopProduct(\'' + p.id + '\')">Hapus</button>' +
                 '</td>' +
               '</tr>';
             }).join('');
@@ -6071,7 +6122,7 @@ Object.assign(AdminPage, {
     document.getElementById('shopProductModalId').value = '';
     document.getElementById('shopProductModalHeaderTitle').textContent = 'Tambah Produk Toko Online';
     document.getElementById('shopProductModalName').value = '';
-    document.getElementById('shopProductModalCategory').value = 'Merchandise';
+    document.getElementById('shopProductModalCategory').value = 'online';
     document.getElementById('shopProductModalPrice').value = '';
     document.getElementById('shopProductModalStock').value = '10';
     document.getElementById('shopProductModalPoints').value = '10';
@@ -6096,13 +6147,13 @@ Object.assign(AdminPage, {
     document.getElementById('shopProductModalId').value = p.id;
     document.getElementById('shopProductModalHeaderTitle').textContent = 'Edit Produk: ' + p.name;
     document.getElementById('shopProductModalName').value = p.name || '';
-    document.getElementById('shopProductModalCategory').value = p.category || 'Merchandise';
-    document.getElementById('shopProductModalPrice').value = p.price || '';
+    document.getElementById('shopProductModalCategory').value = p.category || 'online';
+    document.getElementById('shopProductModalPrice').value = (p.price_amount !== undefined ? p.price_amount : p.price) || '';
     document.getElementById('shopProductModalStock').value = p.stock !== undefined ? p.stock : 10;
     document.getElementById('shopProductModalPoints').value = p.points_reward !== undefined ? p.points_reward : 10;
     document.getElementById('shopProductModalImage').value = p.image_url || '';
     document.getElementById('shopProductModalDesc').value = p.description || '';
-    document.getElementById('shopProductModalActive').value = (p.is_active != 0) ? '1' : '0';
+    document.getElementById('shopProductModalActive').value = (p.is_active != 0 && p.status !== 'inactive') ? '1' : '0';
 
     const preview = document.getElementById('shopProductPreviewImg');
     const placeholder = document.getElementById('shopProductPreviewPlaceholder');
@@ -6153,7 +6204,7 @@ Object.assign(AdminPage, {
   async saveShopProduct() {
     const id = document.getElementById('shopProductModalId')?.value;
     const name = document.getElementById('shopProductModalName')?.value.trim();
-    const category = document.getElementById('shopProductModalCategory')?.value || 'Merchandise';
+    const category = document.getElementById('shopProductModalCategory')?.value || 'online';
     const price = parseFloat(document.getElementById('shopProductModalPrice')?.value) || 0;
     const stock = parseInt(document.getElementById('shopProductModalStock')?.value) || 0;
     const points = parseInt(document.getElementById('shopProductModalPoints')?.value) || 10;
@@ -6171,19 +6222,20 @@ Object.assign(AdminPage, {
     }
 
     try {
-      const res = await fetch('api/index.php?action=admin_save_shop_product', {
+      const res = await this.adminFetch('api/index.php?action=admin_save_shop_product', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: id ? parseInt(id) : 0,
+          id: id || '',
           name: name,
           category: category,
           price: price,
+          price_amount: price,
           stock: stock,
           points_reward: points,
           image_url: imageUrl,
           description: description,
-          is_active: isActive
+          is_active: isActive,
+          status: isActive ? 'active' : 'inactive'
         })
       });
       const json = await res.json();
@@ -6202,9 +6254,8 @@ Object.assign(AdminPage, {
   async deleteShopProduct(id) {
     if (!confirm('Yakin ingin menghapus produk toko ini?')) return;
     try {
-      const res = await fetch('api/index.php?action=admin_delete_shop_product', {
+      const res = await this.adminFetch('api/index.php?action=admin_delete_shop_product', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: id })
       });
       const json = await res.json();
@@ -6221,7 +6272,7 @@ Object.assign(AdminPage, {
 
   async loadShopOrdersAdmin() {
     try {
-      const res = await fetch('api/index.php?action=get_shop_data');
+      const res = await this.adminFetch('api/index.php?action=get_shop_data');
       const json = await res.json();
       if (json.success && json.data) {
         const orders = json.data.orders || [];
@@ -6277,9 +6328,8 @@ Object.assign(AdminPage, {
     const trackingNo = resiInp ? resiInp.value.trim() : '';
 
     try {
-      const res = await fetch('api/index.php?action=admin_update_order_status', {
+      const res = await this.adminFetch('api/index.php?action=admin_update_order_status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_id: orderId,
           status: status,
@@ -6300,7 +6350,7 @@ Object.assign(AdminPage, {
 
   async loadLeaderLoansAdmin() {
     try {
-      const res = await fetch('api/index.php?action=get_loan_data');
+      const res = await this.adminFetch('api/index.php?action=get_loan_data');
       const json = await res.json();
       if (json.success && json.data) {
         const loans = json.data.all_loans || [];
@@ -6399,9 +6449,8 @@ Object.assign(AdminPage, {
     const threshold = parseInt(document.getElementById('adminLoanBlockThreshold')?.value) || 2;
 
     try {
-      const res = await fetch('api/index.php?action=admin_save_loan_settings', {
+      const res = await this.adminFetch('api/index.php?action=admin_save_loan_settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           loan_monthly_interest_rate: rate,
           loan_block_threshold_months: threshold
@@ -6423,9 +6472,8 @@ Object.assign(AdminPage, {
     if (!confirm('Apakah Anda yakin ingin MENYETUJUI pinjaman ini? Saldo modal akan langsung dicairkan ke saldo wallet member.')) return;
 
     try {
-      const res = await fetch('api/index.php?action=admin_approve_loan', {
+      const res = await this.adminFetch('api/index.php?action=admin_approve_loan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loan_id: loanId })
       });
       const json = await res.json();
@@ -6445,9 +6493,8 @@ Object.assign(AdminPage, {
     if (!reason) return;
 
     try {
-      const res = await fetch('api/index.php?action=admin_reject_loan', {
+      const res = await this.adminFetch('api/index.php?action=admin_reject_loan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loan_id: loanId, reason: reason })
       });
       const json = await res.json();
@@ -6456,6 +6503,88 @@ Object.assign(AdminPage, {
         this.loadLeaderLoansAdmin();
       } else {
         this.showToast('error', json.message || 'Gagal menolak pinjaman.');
+      }
+    } catch (e) {
+      this.showToast('error', 'Koneksi error: ' + e.message);
+    }
+  },
+
+  // === WELCOME POPUP PROMO SETTINGS ===
+  async loadWelcomePopupAdmin() {
+    try {
+      const res = await fetch('api/index.php?action=get_welcome_popup');
+      const json = await res.json();
+      if (json.success && json.data) {
+        const d = json.data;
+        const actInp = document.getElementById('adminWelcomePopupActive');
+        const titleInp = document.getElementById('adminWelcomePopupTitle');
+        const bannerInp = document.getElementById('adminWelcomePopupBanner');
+        const pointsInp = document.getElementById('adminWelcomePopupPoints');
+        const prev = document.getElementById('adminWelcomeBannerPreview');
+
+        if (actInp) actInp.value = d.enabled ? '1' : '0';
+        if (titleInp) titleInp.value = d.title || 'Selamat Datang di Auto Trading!';
+        if (bannerInp) bannerInp.value = d.banner_url || 'assets/img/welcome-banner.jpg';
+        if (prev && d.banner_url) {
+          prev.src = d.banner_url;
+          prev.style.display = 'block';
+        }
+        if (pointsInp && Array.isArray(d.points)) {
+          pointsInp.value = d.points.join('\n');
+        }
+      }
+    } catch (e) {
+      console.error('Error loading welcome popup admin:', e);
+    }
+  },
+
+  previewWelcomeBanner(url) {
+    const prev = document.getElementById('adminWelcomeBannerPreview');
+    if (prev) {
+      if (url && url.trim()) {
+        prev.src = url.trim();
+        prev.style.display = 'block';
+      } else {
+        prev.style.display = 'none';
+      }
+    }
+  },
+
+  handleWelcomeBannerUpload(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const urlInp = document.getElementById('adminWelcomePopupBanner');
+      if (urlInp) urlInp.value = dataUrl;
+      this.previewWelcomeBanner(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  },
+
+  async saveWelcomePopup() {
+    const active = document.getElementById('adminWelcomePopupActive')?.value === '1';
+    const title = document.getElementById('adminWelcomePopupTitle')?.value.trim() || 'Selamat Datang di Auto Trading!';
+    const bannerUrl = document.getElementById('adminWelcomePopupBanner')?.value.trim() || 'assets/img/welcome-banner.jpg';
+    const pointsRaw = document.getElementById('adminWelcomePopupPoints')?.value || '';
+    const points = pointsRaw.split('\n').map(s => s.trim()).filter(Boolean);
+
+    try {
+      const res = await this.adminFetch('api/index.php?action=admin_save_welcome_popup', {
+        method: 'POST',
+        body: JSON.stringify({
+          enabled: active,
+          title: title,
+          banner_url: bannerUrl,
+          points: points
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        this.showToast('success', json.message || 'Pengaturan pop-up promo berhasil disimpan!');
+      } else {
+        this.showToast('error', json.message || 'Gagal menyimpan pengaturan pop-up.');
       }
     } catch (e) {
       this.showToast('error', 'Koneksi error: ' + e.message);

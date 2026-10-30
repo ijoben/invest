@@ -1112,9 +1112,9 @@
       <div class="form-group">
         <label class="form-label">Pilih Durasi Kontrak (Tenor):</label>
         <div class="tenor-btn-group">
-          <button type="button" class="tenor-btn active" id="btnTenor7" onclick="setContractTenor(7, 0.5)">7 Hari (0.5%/hr)</button>
-          <button type="button" class="tenor-btn" id="btnTenor14" onclick="setContractTenor(14, 0.8)">14 Hari (0.8%/hr)</button>
-          <button type="button" class="tenor-btn" id="btnTenor30" onclick="setContractTenor(30, 1.2)">30 Hari (1.2%/hr)</button>
+          <button type="button" class="tenor-btn active" id="btnTenor30" onclick="setContractTenor(30)">30 Hari (<span id="labelRateTenor30">0.3%</span>/hr)</button>
+          <button type="button" class="tenor-btn" id="btnTenor150" onclick="setContractTenor(150)">150 Hari (<span id="labelRateTenor150">0.5%</span>/hr)</button>
+          <button type="button" class="tenor-btn" id="btnTenor365" onclick="setContractTenor(365)">365 Hari / 1 Thn (<span id="labelRateTenor365">0.8%</span>/hr)</button>
         </div>
       </div>
 
@@ -1129,15 +1129,19 @@
       <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; margin-bottom: 16px; border: 1px solid #E2E8F0; font-size: 12px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
           <span style="color: #64748B;">Dividen Harian:</span>
-          <strong id="previewDailyRateLabel" style="color: #047857;">0.5% / hari</strong>
+          <strong id="previewDailyRateLabel" style="color: #047857;">0.3% / hari</strong>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-          <span style="color: #64748B;">Estimasi Total Hasil:</span>
-          <strong id="previewTotalDividenLabel" style="color: #0F172A;">0.175 Gram</strong>
+          <span style="color: #64748B;">Estimasi Hasil Dividen:</span>
+          <strong id="previewTotalDividenLabel" style="color: #0F172A;">0.450 Gram</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #64748B;">Pengembalian Akhir Kontrak:</span>
+          <strong id="previewTotalMaturityLabel" style="color: #2563EB;">5.450 Gram (Pokok + Dividen)</strong>
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span style="color: #64748B;">Status Modal:</span>
-          <span style="color: #15803D; font-weight: 700;">100% Terproteksi</span>
+          <span style="color: #15803D; font-weight: 700;">100% Terproteksi &amp; Masuk Saldo Likuid Saat Selesai</span>
         </div>
       </div>
 
@@ -1389,15 +1393,34 @@
     </div>
   </div>
 
-  <!-- 5. MODAL HADIAH MILESTONE -->
+  <!-- 5. MODAL HADIAH MILESTONE & BONUS HARIAN ADMIN -->
   <div class="modal-overlay" id="modalHadiah">
     <div class="modal-box">
       <div class="modal-header">
-        <div class="modal-title">🎁 Bonus Hadiah Milestone Portofolio</div>
+        <div class="modal-title">🎁 Bonus Hadiah &amp; Klaim Reward</div>
         <button type="button" class="modal-close" onclick="closeModalHadiah()">&times;</button>
       </div>
-      <p style="font-size: 12px; color: #64748B; margin-bottom: 14px;">
-        Dapatkan bonus gramasi gratis setiap portofolio akumulasi kepemilikan aset Anda mencapai milestone target!
+
+      <!-- Klaim Bonus Harian (Editable dari Admin) -->
+      <div style="background: linear-gradient(135deg, #FEF3C7, #FDE68A); border: 1px solid #F59E0B; border-radius: 14px; padding: 16px; margin-bottom: 16px; text-align: center;">
+        <div style="font-size: 28px; margin-bottom: 4px;">🎁</div>
+        <div style="font-size: 15px; font-weight: 800; color: #92400E;" id="giftBonusModalTitle">Klaim Hadiah Harian Platform</div>
+        <p style="font-size: 11.5px; color: #78350F; margin: 6px 0 12px 0;" id="giftBonusModalDesc">
+          Klaim bonus cuma-cuma dari manajemen setiap hari! Hadiah otomatis masuk ke saldo portofolio Anda.
+        </p>
+        <div style="background: rgba(255,255,255,0.85); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; color: #78350F;">Hadiah Klaim:</span>
+          <strong id="giftBonusAmountDisplay" style="font-size: 13.5px; color: #B45309;">+0.010 Gram Perak &amp; +10 Poin</strong>
+        </div>
+        <div>
+          <button type="button" id="btnClaimGiftBonus" class="btn-action-beli" style="width: 100%; border-radius: 12px; font-weight: 800;" onclick="submitClaimGiftBonus()">
+            🎁 Klaim Bonus Hadiah Sekarang
+          </button>
+        </div>
+      </div>
+
+      <p style="font-size: 12px; color: #64748B; margin-bottom: 12px; font-weight: 700;">
+        Milestone Target Akumulasi Portofolio:
       </p>
 
       <div class="reward-tier-card">
@@ -2133,23 +2156,49 @@
     // Sub-Feature 1: Kontrak
     let selectedContractTenor = 7;
     let selectedContractDailyRate = 0.5;
+    function getContractRatesForCurrentAsset() {
+      const isGold = (currentAssetType === 'gold');
+      if (isGold) {
+        return currentData.contract_rates_gold || { '30': 0.25, '150': 0.45, '365': 0.75 };
+      } else {
+        return currentData.contract_rates_silver || { '30': 0.3, '150': 0.5, '365': 0.8 };
+      }
+    }
+
+    function updateContractTenorLabels() {
+      const rates = getContractRatesForCurrentAsset();
+      const r30 = rates['30'] || (currentAssetType === 'gold' ? 0.25 : 0.3);
+      const r150 = rates['150'] || (currentAssetType === 'gold' ? 0.45 : 0.5);
+      const r365 = rates['365'] || (currentAssetType === 'gold' ? 0.75 : 0.8);
+
+      const el30 = document.getElementById('labelRateTenor30');
+      if (el30) el30.innerText = r30 + '%';
+      const el150 = document.getElementById('labelRateTenor150');
+      if (el150) el150.innerText = r150 + '%';
+      const el365 = document.getElementById('labelRateTenor365');
+      if (el365) el365.innerText = r365 + '%';
+    }
+
     function openModalKontrak() {
       if (!checkMemberAccess()) return;
       const isGold = (currentAssetType === 'gold');
       const bal = isGold ? (currentData.gold_balance || 0) : (currentData.silver_balance || 0);
       document.getElementById('kontrakUserSilverBal').innerText = formatNumber(bal, 3) + ' Gram';
-      setContractTenor(7, 0.5);
+      updateContractTenorLabels();
+      setContractTenor(30);
       document.getElementById('modalKontrak').style.display = 'flex';
     }
     function closeModalKontrak() { document.getElementById('modalKontrak').style.display = 'none'; }
-    function setContractTenor(days, rate) {
+    function setContractTenor(days, forcedRate) {
       selectedContractTenor = days;
-      selectedContractDailyRate = rate;
-      ['7', '14', '30'].forEach(d => {
+      const rates = getContractRatesForCurrentAsset();
+      selectedContractDailyRate = (forcedRate !== undefined) ? forcedRate : (rates[String(days)] || 0.5);
+
+      ['30', '150', '365'].forEach(d => {
         const b = document.getElementById('btnTenor' + d);
         if (b) b.classList.toggle('active', parseInt(d) === days);
       });
-      document.getElementById('previewDailyRateLabel').innerText = rate + '% / hari';
+      document.getElementById('previewDailyRateLabel').innerText = selectedContractDailyRate + '% / hari';
       calcContractPreview();
     }
     function calcContractPreview() {
@@ -2157,7 +2206,12 @@
       const sellP = isGold ? (currentData.gold_sell_price || 1300000) : (currentData.silver_sell_price || 17200);
       const g = parseFloat(document.getElementById('contractGramsInput').value) || 0;
       const totalYield = g * (selectedContractDailyRate / 100) * selectedContractTenor;
+      const totalMaturity = g + totalYield;
       document.getElementById('previewTotalDividenLabel').innerText = formatNumber(totalYield, 3) + ' Gram (Est. ' + formatRupiah(Math.round(totalYield * sellP)) + ')';
+      const elMat = document.getElementById('previewTotalMaturityLabel');
+      if (elMat) {
+        elMat.innerText = formatNumber(totalMaturity, 3) + ' Gram (Pokok + Dividen)';
+      }
     }
     async function submitKontrakAset() {
       if (!checkMemberAccess()) return;
@@ -2431,10 +2485,72 @@
       if (!checkMemberAccess()) return;
       const isGold = (currentAssetType === 'gold');
       const bal = isGold ? (currentData.gold_balance || 0) : (currentData.silver_balance || 0);
-      document.getElementById('hadiahUserSilverBal').innerText = formatNumber(bal, 3) + ` Gram ${isGold ? 'Emas' : 'Perak'}`;
+      const userBalEl = document.getElementById('hadiahUserSilverBal');
+      if (userBalEl) userBalEl.innerText = formatNumber(bal, 3) + ` Gram ${isGold ? 'Emas' : 'Perak'}`;
+
+      // Update Tampilan Hadiah Bonus
+      const rewardGrams = isGold ? (currentData.gift_bonus_gold_reward || 0.005) : (currentData.gift_bonus_silver_reward || 0.010);
+      const rewardPts = currentData.gift_bonus_points_reward || 10;
+      const rewardMetal = isGold ? 'Emas' : 'Perak';
+      const dispEl = document.getElementById('giftBonusAmountDisplay');
+      if (dispEl) {
+        dispEl.innerText = `+${rewardGrams} Gram ${rewardMetal} & +${rewardPts} Poin`;
+      }
+      const titleEl = document.getElementById('giftBonusModalTitle');
+      if (titleEl) {
+        titleEl.innerText = `Klaim Hadiah Harian ${rewardMetal}`;
+      }
+
+      const btnClaim = document.getElementById('btnClaimGiftBonus');
+      if (btnClaim) {
+        if (currentData.has_claimed_gift_today) {
+          btnClaim.disabled = true;
+          btnClaim.innerText = '✅ Sudah Diklaim Hari Ini';
+          btnClaim.style.background = '#64748B';
+        } else {
+          btnClaim.disabled = false;
+          btnClaim.innerText = '🎁 Klaim Bonus Hadiah Sekarang';
+          btnClaim.style.background = '';
+        }
+      }
+
       document.getElementById('modalHadiah').style.display = 'flex';
     }
     function closeModalHadiah() { document.getElementById('modalHadiah').style.display = 'none'; }
+
+    async function submitClaimGiftBonus() {
+      if (!checkMemberAccess()) return;
+      const btn = document.getElementById('btnClaimGiftBonus');
+      btn.disabled = true;
+      btn.innerText = 'Mengklaim Hadiah...';
+      try {
+        const res = await fetch(getApiUrl('claim_asset_gift_bonus'), getAuthFetchOptions('POST', { metal_type: currentAssetType }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.success) {
+          showAppPopup({
+            title: 'Klaim Hadiah Berhasil!',
+            message: json.message || 'Selamat! Bonus aset telah berhasil masuk ke saldo portofolio Anda.',
+            type: 'success',
+            onConfirm: () => { closeModalHadiah(); loadAssetData(); }
+          });
+        } else {
+          showAppPopup({
+            title: 'Info Klaim',
+            message: json.message || 'Gagal klaim hadiah bonus.',
+            type: 'warning'
+          });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      } finally {
+        if (!currentData.has_claimed_gift_today) {
+          btn.disabled = false;
+          btn.innerText = '🎁 Klaim Bonus Hadiah Sekarang';
+        }
+      }
+    }
+
     async function submitKlaimHadiah(tier) {
       if (!checkMemberAccess()) return;
       try {

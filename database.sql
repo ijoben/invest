@@ -135,6 +135,27 @@ CREATE TABLE IF NOT EXISTS `asset_transactions` (
   INDEX `idx_asset_type` (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 7b. Asset Contracts Table (Kontrak Aset Dividen Harian & Saldo Cashback)
+CREATE TABLE IF NOT EXISTS `asset_contracts` (
+  `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `user_id` VARCHAR(64) NOT NULL,
+  `username` VARCHAR(64) NOT NULL,
+  `asset_type` VARCHAR(16) NOT NULL DEFAULT 'silver',
+  `grams` DECIMAL(10,4) NOT NULL,
+  `duration_days` INT(11) NOT NULL,
+  `daily_rate_percent` DECIMAL(5,2) NOT NULL,
+  `daily_yield_grams` DECIMAL(10,4) NOT NULL,
+  `total_yield_grams` DECIMAL(10,4) NOT NULL,
+  `status` VARCHAR(32) NOT NULL DEFAULT 'active',
+  `start_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `end_date` DATETIME NOT NULL,
+  `last_yield_date` DATETIME DEFAULT NULL,
+  `accumulated_yield_grams` DECIMAL(10,4) NOT NULL DEFAULT 0.0000,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_contract_user` (`user_id`),
+  INDEX `idx_contract_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 8. Shop Products Table
 CREATE TABLE IF NOT EXISTS `shop_products` (
   `id` VARCHAR(64) NOT NULL PRIMARY KEY,
@@ -175,6 +196,7 @@ CREATE TABLE IF NOT EXISTS `leader_loans` (
   `user_id` VARCHAR(64) NOT NULL,
   `username` VARCHAR(64) NOT NULL,
   `loan_amount` BIGINT(20) NOT NULL,
+  `tenor_months` INT(11) DEFAULT 1,
   `active_sponsors_count` INT(11) NOT NULL,
   `purpose` TEXT NOT NULL,
   `ktp_nik` VARCHAR(32) DEFAULT NULL,
@@ -185,6 +207,13 @@ CREATE TABLE IF NOT EXISTS `leader_loans` (
   `account_holder` VARCHAR(128) DEFAULT NULL,
   `status` VARCHAR(32) DEFAULT 'pending',
   `rejection_reason` TEXT DEFAULT NULL,
+  `interest_rate_percent` DECIMAL(5,2) DEFAULT 2.00,
+  `monthly_due_amount` BIGINT(20) DEFAULT 0,
+  `total_due_amount` BIGINT(20) DEFAULT 0,
+  `repaid_amount` BIGINT(20) DEFAULT 0,
+  `due_date` DATETIME DEFAULT NULL,
+  `unpaid_months_count` INT(11) DEFAULT 0,
+  `repayment_status` VARCHAR(32) DEFAULT 'pending',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_loan_user` (`user_id`),
   INDEX `idx_loan_status` (`status`)
@@ -219,7 +248,13 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES
 ('minting_fee_silver', '25000', 'Biaya cetak perak fisik per gram (Rp)'),
 ('minting_fee_gold', '50000', 'Biaya cetak emas fisik per gram (Rp)'),
 ('price_history_silver', '[{"date":"24 Okt","price":17000},{"date":"25 Okt","price":17100},{"date":"26 Okt","price":17050},{"date":"27 Okt","price":17150},{"date":"28 Okt","price":17100},{"date":"29 Okt","price":17200},{"date":"30 Okt","price":17200}]', 'Riwayat harga perak 7 hari'),
-('price_history_gold', '[{"date":"24 Okt","price":1280000},{"date":"25 Okt","price":1285000},{"date":"26 Okt","price":1290000},{"date":"27 Okt","price":1295000},{"date":"28 Okt","price":1290000},{"date":"29 Okt","price":1300000},{"date":"30 Okt","price":1300000}]', 'Riwayat harga emas 7 hari')
+('price_history_gold', '[{"date":"24 Okt","price":1280000},{"date":"25 Okt","price":1285000},{"date":"26 Okt","price":1290000},{"date":"27 Okt","price":1295000},{"date":"28 Okt","price":1290000},{"date":"29 Okt","price":1300000},{"date":"30 Okt","price":1300000}]', 'Riwayat harga emas 7 hari'),
+('contract_rates_silver', '{"30":0.3,"150":0.5,"365":0.8}', 'Persentase dividen kontrak harian perak untuk tenor 30, 150, 365 hari'),
+('contract_rates_gold', '{"30":0.25,"150":0.45,"365":0.75}', 'Persentase dividen kontrak harian emas untuk tenor 30, 150, 365 hari'),
+('welcome_popup_config', '{"enabled":true,"title":"Selamat Datang di Auto Trading!","banner_url":"assets/img/welcome-banner.jpg","points":["bisa beli aset perak","bisa beli aset emas","bisa nabung untuk masa depan","bisa invest dengan profit variatif setiap hari","belanja online","pinjaman khsus member aktif ( leader )"]}', 'Konfigurasi iklan pop-up selamat datang setelah login'),
+('gift_bonus_silver_reward', '0.010', 'Hadiah klaim bonus harian perak (Gram)'),
+('gift_bonus_gold_reward', '0.005', 'Hadiah klaim bonus harian emas (Gram)'),
+('gift_bonus_points_reward', '10', 'Hadiah klaim bonus poin reward')
 ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`);
 
 -- 5. Unified System State Seed (Clean Production)
