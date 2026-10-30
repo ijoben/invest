@@ -13,13 +13,14 @@
   <meta name="theme-color" content="#0F172A">
   <meta name="apple-mobile-web-app-title" content="AUTOTRADING Admin">
   
-  <!-- Favicon SVG -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23C89338'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
+  <!-- Favicon resmi (logo baru, bukan ikon perisai lama) -->
+  <link rel="icon" type="image/svg+xml" href="uploads/logo-ai-trading.svg?v=20261029b">
+  <link rel="apple-touch-icon" href="uploads/logo-favicon.png?v=20261029b">
   
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261018_full_audit">
-  <link rel="stylesheet" href="css/admin.css?v=20261018_full_audit">
-  <link rel="stylesheet" href="css/responsive.css?v=20261018_full_audit">
+  <link rel="stylesheet" href="css/style.css?v=20261029_profit_fix2">
+  <link rel="stylesheet" href="css/admin.css?v=20261029_profit_fix2">
+  <link rel="stylesheet" href="css/responsive.css?v=20261029_profit_fix2">
   <!-- Early Theme & Branding Initializer -->
   <script>
     (function() {
@@ -149,6 +150,21 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
           <span>Konfirmasi Penarikan</span>
           <span class="admin-nav-badge" id="badgePendingWd">0</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="aset_perak">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8"/></svg>
+          <span>Aset Perak &amp; Emas</span>
+          <span class="admin-nav-badge" style="background: #10B981;">Logam</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="toko_orders">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span>Toko Online &amp; Pesanan</span>
+          <span class="admin-nav-badge" id="badgePendingShopOrders" style="background: #F59E0B;">0</span>
+        </button>
+        <button class="admin-nav-btn" data-tab="leader_loans">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          <span>Pinjaman Leader (S&amp;K)</span>
+          <span class="admin-nav-badge" id="badgePendingLoans" style="background: #2563EB;">0</span>
         </button>
         <button class="admin-nav-btn" data-tab="redemptions">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
@@ -1637,6 +1653,280 @@
           </table>
         </div>
         <div class="admin-pagination" id="redemptionsPagination"></div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         11B. PANEL KELOLA ASET PERAK & EMAS
+         ==================================================================== -->
+    <section id="pane-aset_perak" class="admin-view-panel">
+      <!-- Setting Harga Perak & Emas, Cashback, Biaya Cetak, dan Grafik -->
+      <div class="admin-card" style="margin-bottom: 20px;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🪙 Pengaturan Dual Aset: Perak &amp; Emas (Harga, Cashback, Cetak Fisik &amp; Grafik)</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Atur harga beli dan jual real-time, saldo &amp; yield cashback harian, biaya cetak fisik per gram, serta data riwayat tren grafik 7 hari untuk Perak dan Emas.</p>
+          </div>
+          <button type="button" class="admin-btn-action-primary" onclick="AdminPage.saveAssetPrices()">
+            <span>💾 Simpan Pengaturan Semua Logam</span>
+          </button>
+        </div>
+        <div style="padding: 16px;">
+          <!-- Subsection 1: Aset Perak -->
+          <div style="background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 18px;">🥈</span>
+              <strong style="font-size: 14px; color: #E2E8F0;">Pengaturan Aset Perak (Silver Bullion)</strong>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 12px;">
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Harga Beli Perak / Gram (Rp):</label>
+                <input type="number" class="form-input" id="adminSilverBuyPrice" placeholder="40000" value="40000">
+                <small style="font-size: 10px; color: #94A3B8;">Harga member membeli perak dari sistem.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Harga Jual Perak / Gram (Rp):</label>
+                <input type="number" class="form-input" id="adminSilverSellPrice" placeholder="35000" value="35000">
+                <small style="font-size: 10px; color: #94A3B8;">Harga jual perak likuid member ke sistem.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Saldo Cashback Perak (Gram):</label>
+                <input type="number" step="0.001" class="form-input" id="adminSilverCashbackBal" placeholder="105" value="105">
+                <small style="font-size: 10px; color: #94A3B8;">Tampil di kartu cashback perak member.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Hasil Cashback Perak (Gram/Hari):</label>
+                <input type="number" step="0.001" class="form-input" id="adminSilverCashbackYield" placeholder="4.136" value="4.136">
+                <small style="font-size: 10px; color: #94A3B8;">Yield harian cashback perak member.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Biaya Cetak Fisik Perak / Gram (Rp):</label>
+                <input type="number" class="form-input" id="adminMintingFeeSilver" placeholder="25000" value="25000">
+                <small style="font-size: 10px; color: #94A3B8;">Ongkos cetak fisik &amp; sertifikat per gram.</small>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Data Riwayat Tren Grafik Perak 7 Hari (JSON array atau koma):</label>
+              <input type="text" class="form-input" id="adminPriceHistorySilver" placeholder="[38000, 38500, 39000, 39200, 39500, 39800, 40000]" value="[38000, 38500, 39000, 39200, 39500, 39800, 40000]">
+              <small style="font-size: 10px; color: #94A3B8;">Dihubungkan langsung ke kurva grafik SVG perak di halaman member.</small>
+            </div>
+          </div>
+
+          <!-- Subsection 2: Aset Emas -->
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.28); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 18px;">🥇</span>
+              <strong style="font-size: 14px; color: #FBBF24;">Pengaturan Aset Emas (Gold Bullion)</strong>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 12px;">
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Harga Beli Emas / Gram (Rp):</label>
+                <input type="number" class="form-input" id="adminGoldBuyPrice" placeholder="1450000" value="1450000">
+                <small style="font-size: 10px; color: #94A3B8;">Harga member membeli emas dari sistem.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Harga Jual Emas / Gram (Rp):</label>
+                <input type="number" class="form-input" id="adminGoldSellPrice" placeholder="1380000" value="1380000">
+                <small style="font-size: 10px; color: #94A3B8;">Harga jual emas likuid member ke sistem.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Saldo Cashback Emas (Gram):</label>
+                <input type="number" step="0.001" class="form-input" id="adminGoldCashbackBal" placeholder="10" value="10">
+                <small style="font-size: 10px; color: #94A3B8;">Tampil di kartu cashback emas member.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Hasil Cashback Emas (Gram/Hari):</label>
+                <input type="number" step="0.001" class="form-input" id="adminGoldCashbackYield" placeholder="0.35" value="0.35">
+                <small style="font-size: 10px; color: #94A3B8;">Yield harian cashback emas member.</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Biaya Cetak Fisik Emas / Gram (Rp):</label>
+                <input type="number" class="form-input" id="adminMintingFeeGold" placeholder="85000" value="85000">
+                <small style="font-size: 10px; color: #94A3B8;">Ongkos cetak fisik &amp; sertifikat per gram.</small>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Data Riwayat Tren Grafik Emas 7 Hari (JSON array atau koma):</label>
+              <input type="text" class="form-input" id="adminPriceHistoryGold" placeholder="[1410000, 1415000, 1420000, 1430000, 1435000, 1445000, 1450000]" value="[1410000, 1415000, 1420000, 1430000, 1435000, 1445000, 1450000]">
+              <small style="font-size: 10px; color: #94A3B8;">Dihubungkan langsung ke kurva grafik SVG emas di halaman member.</small>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="button" class="admin-btn-action-primary" onclick="AdminPage.saveAssetPrices()">
+              <span>💾 Simpan Semua Pengaturan Logam (Perak &amp; Emas)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Riwayat Transaksi Aset Seluruh Member -->
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📋 Riwayat Transaksi Jual &amp; Beli Aset Seluruh Member</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Seluruh catatan transaksi beli (potong wallet) dan jual (masuk wallet) aset perak/emas.</p>
+          </div>
+          <button type="button" class="admin-btn-action-secondary" onclick="AdminPage.loadAssetAdmin()">
+            <span>🔄 Refresh</span>
+          </button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width: 120px;">ID Transaksi</th>
+                <th style="width: 130px;">Waktu</th>
+                <th style="width: 120px;">Username</th>
+                <th style="width: 90px;">Tipe</th>
+                <th style="width: 110px;">Gramasi</th>
+                <th style="width: 120px;">Harga / Gram</th>
+                <th style="width: 130px;">Total Rp</th>
+                <th style="width: 100px;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="adminAssetTxTableBody">
+              <tr><td colspan="8" style="text-align:center; color:#94A3B8; padding:20px;">Memuat data transaksi aset...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         11C. PANEL TOKO ONLINE: PRODUK & PESANAN EKSPEDISI
+         ==================================================================== -->
+    <section id="pane-toko_orders" class="admin-view-panel">
+      <!-- Card 1: CRUD Produk Toko Online -->
+      <div class="admin-card" style="margin-bottom: 20px;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">🛍️ Kelola Katalog Produk Toko Online</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Tambah, edit foto/harga/stok/deskripsi, dan atur bonus reward point untuk setiap produk di Toko Online.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="admin-btn-action-secondary" onclick="AdminPage.loadShopProductsAdmin()">
+              <span>🔄 Refresh Produk</span>
+            </button>
+            <button type="button" class="admin-btn-action-primary" onclick="AdminPage.openAddShopProductModal()">
+              <span>➕ Tambah Produk Toko Baru</span>
+            </button>
+          </div>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width: 80px;">Foto</th>
+                <th style="min-width: 200px;">Nama Produk &amp; Kategori</th>
+                <th style="width: 120px;">Harga (Rp)</th>
+                <th style="width: 90px;">Stok Unit</th>
+                <th style="width: 110px;">Bonus Poin</th>
+                <th style="width: 90px;">Status</th>
+                <th style="width: 150px; text-align: right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminShopProductsTableBody">
+              <tr><td colspan="7" style="text-align:center; color:#94A3B8; padding:20px;">Memuat produk toko online...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Card 2: Pesanan Toko Online & Ekspedisi -->
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">📦 Pesanan Toko Online &amp; Ekspedisi</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Daftar order produk merchandise member. Input nomor resi pengiriman untuk melacak pesanan.</p>
+          </div>
+          <button type="button" class="admin-btn-action-secondary" onclick="AdminPage.loadShopOrdersAdmin()">
+            <span>🔄 Refresh Pesanan</span>
+          </button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width: 110px;">Order ID</th>
+                <th style="width: 130px;">Waktu</th>
+                <th style="width: 110px;">Username</th>
+                <th style="min-width: 160px;">Produk</th>
+                <th style="width: 110px;">Total Rp</th>
+                <th style="min-width: 220px;">Penerima &amp; Alamat Pengiriman</th>
+                <th style="width: 110px;">Status</th>
+                <th style="width: 180px;">No. Resi &amp; Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="adminShopOrdersTableBody">
+              <tr><td colspan="8" style="text-align:center; color:#94A3B8; padding:20px;">Memuat pesanan toko...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         11D. PANEL PINJAMAN MODAL CEPAT LEADER (S&K 10 SPONSOR AKTIF)
+         ==================================================================== -->
+    <section id="pane-leader_loans" class="admin-view-panel">
+      <!-- Pengaturan Suku Bunga & Batas Tunggakan Blokir Akun -->
+      <div class="admin-card" style="margin-bottom: 20px;">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">⚙️ Pengaturan Bunga &amp; Batas Keterlambatan Pinjaman</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Atur suku bunga pengembalian bulanan dan batas bulan keterlambatan sebelum akun otomatis diblokir sistem.</p>
+          </div>
+        </div>
+        <div style="padding: 16px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Suku Bunga Bulanan (%):</label>
+              <input type="number" step="0.1" class="form-input" id="adminLoanInterestRate" placeholder="2.0" value="2.0">
+              <small style="font-size: 10px; color: #94A3B8;">Diterapkan otomatis pada total tagihan pinjaman saat disetujui admin.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Toleransi Tunggakan Sebelum Blokir (Bulan):</label>
+              <input type="number" min="1" max="12" class="form-input" id="adminLoanBlockThreshold" placeholder="2" value="2">
+              <small style="font-size: 10px; color: #94A3B8;">Jika saldo tidak cukup didebet selama X bulan, akun otomatis diblokir.</small>
+            </div>
+          </div>
+          <button type="button" class="admin-btn-action-primary" onclick="AdminPage.saveLoanSettings()">
+            <span>💾 Simpan Pengaturan Pinjaman</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div>
+            <h3 class="admin-card-title">💳 Pengajuan Pinjaman Modal Cepat Leader</h3>
+            <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Verifikasi syarat minimal 10 sponsor aktif di bawah pemohon. Setujui untuk mencairkan saldo modal otomatis.</p>
+          </div>
+          <button type="button" class="admin-btn-action-secondary" onclick="AdminPage.loadLeaderLoansAdmin()">
+            <span>🔄 Refresh</span>
+          </button>
+        </div>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width: 110px;">Loan ID</th>
+                <th style="width: 120px;">Waktu</th>
+                <th style="width: 110px;">Username</th>
+                <th style="width: 120px;">Jumlah Pinjaman</th>
+                <th style="width: 130px;">Sponsor Aktif</th>
+                <th style="min-width: 180px;">Tujuan &amp; KTP</th>
+                <th style="min-width: 180px;">Rekening Pencairan</th>
+                <th style="width: 100px;">Status</th>
+                <th style="width: 170px; text-align: right;">Aksi Admin</th>
+              </tr>
+            </thead>
+            <tbody id="adminLeaderLoansTableBody">
+              <tr><td colspan="9" style="text-align:center; color:#94A3B8; padding:20px;">Memuat permohonan pinjaman...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -3186,11 +3476,11 @@
 
       <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap;">
         <button type="button" class="btn-admin-action" onclick="AdminPage.loadProfitAudit()" style="padding: 9px 14px; font-weight: 700;">🔄 Periksa Ulang</button>
-        <button type="button" id="admProfitRepairBtn" class="btn-admin-action delete" disabled onclick="AdminPage.repairProfitData()" style="background: #0284C7; color: #FFFFFF; border: 1px solid #075985; font-weight: 800; padding: 9px 16px; opacity: 0.55;">🛠️ Perbaiki Data Profit</button>
+        <button type="button" id="admProfitRepairBtn" class="btn-admin-action delete" disabled onclick="AdminPage.repairProfitData()" style="background: #0284C7; color: #FFFFFF; border: 1px solid #075985; font-weight: 800; padding: 9px 16px; opacity: 0.55;">🛠️ Normalisasi Profit</button>
       </div>
 
       <div style="margin-top: 12px; font-size: 11px; color: #64748B; line-height: 1.55;">
-        Perbaikan hanya menyamakan <b style="color:#94A3B8;">persen &amp; nominal pada riwayat profit</b> serta nilai pending yang akan dibayar. Saldo, total profit, sisa hari paket, dan transaksi yang sudah tercatat <b style="color:#94A3B8;">tidak diubah</b>.
+        Normalisasi menghitung ulang setiap hari dari kalender paket: <b style="color:#94A3B8;">nominal = modal &times; rate paket hari itu</b>. Profit dobel, nominal di luar rentang paket, dan total yang menumpuk dibuang; sisa hari ikut disesuaikan. Saldo dompet &amp; transaksi yang sudah tercatat <b style="color:#94A3B8;">tidak diubah</b>. Aman dijalankan berulang.
       </div>
     </div>
   </div>
@@ -3597,6 +3887,92 @@
     </div>
   </div>
 
+  <!-- Modal Add / Edit Toko Online Product -->
+  <div class="modal-backdrop" id="modalShopProductAdmin">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 class="modal-title" id="shopProductModalHeaderTitle">Tambah Produk Toko Online</h3>
+        <button class="modal-close-btn" onclick="AdminPage.closeShopProductModal()">&times;</button>
+      </div>
+
+      <input type="hidden" id="shopProductModalId">
+
+      <!-- Upload / URL Image & Preview -->
+      <div class="form-group">
+        <label class="form-label">Upload Foto Produk (Dari Komputer / HP):</label>
+        <div class="banner-file-input-wrapper">
+          <input type="file" id="shopProductModalFileInput" accept="image/*" class="form-input" style="padding: 7px 10px;" onchange="AdminPage.handleShopProductFile(this)">
+        </div>
+        <div class="form-label" style="margin-top: 6px; font-size: 11px; color: #94A3B8;">Atau Masukkan URL Foto Produk:</div>
+        <input type="url" class="form-input" id="shopProductModalImage" placeholder="https://... atau data:image/..." style="font-size: 12px;" oninput="AdminPage.handleShopProductUrl(this.value)">
+      </div>
+
+      <!-- Live Image Preview Box -->
+      <div class="form-group">
+        <label class="form-label">Pratinjau Foto Produk:</label>
+        <div class="banner-upload-preview" id="shopProductUploadPreviewBox">
+          <div class="preview-placeholder" id="shopProductPreviewPlaceholder">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            <span>Pilih file gambar atau masukkan URL untuk melihat pratinjau</span>
+          </div>
+          <img id="shopProductPreviewImg" src="" style="display: none; max-height: 160px; object-fit: contain;" alt="Shop Product Preview">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Produk: <span style="color: #EF4444;">*</span></label>
+        <input type="text" class="form-input" id="shopProductModalName" placeholder="Contoh: Logam Mulia Perak 10 Gram Edisi Khusus">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Kategori Produk:</label>
+          <select class="form-select" id="shopProductModalCategory">
+            <option value="Merchandise">Merchandise</option>
+            <option value="Perhiasan">Perhiasan</option>
+            <option value="Aksesoris">Aksesoris</option>
+            <option value="Alat Cetak">Alat Cetak</option>
+            <option value="Logam Mulia">Logam Mulia</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Harga Jual (Rp): <span style="color: #EF4444;">*</span></label>
+          <input type="number" class="form-input" id="shopProductModalPrice" placeholder="Contoh: 350000" min="0">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Jumlah Stok (Unit): <span style="color: #EF4444;">*</span></label>
+          <input type="number" class="form-input" id="shopProductModalStock" placeholder="Contoh: 25" min="0" value="10">
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label">Bonus Poin Reward / Pembelian: <span style="color: #EF4444;">*</span></label>
+          <input type="number" class="form-input" id="shopProductModalPoints" placeholder="Contoh: 10" min="0" value="10">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Deskripsi Lengkap Produk:</label>
+        <textarea class="form-input" id="shopProductModalDesc" rows="3" placeholder="Jelaskan spesifikasi, bahan, kemasan, atau garansi produk..." style="resize: vertical; font-size: 12px;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status Produk:</label>
+        <select class="form-select" id="shopProductModalActive">
+          <option value="1">Aktif (Tampil di Toko Online)</option>
+          <option value="0">Nonaktif (Sembunyikan)</option>
+        </select>
+      </div>
+
+      <button type="button" class="admin-btn-action-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 6px;" onclick="AdminPage.saveShopProduct()">
+        <span>💾 Simpan Produk Toko Online</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Modal Add / Edit Reward Point Catalog -->
   <div class="modal-backdrop" id="adminRewardModal">
     <div class="modal-sheet">
@@ -3947,7 +4323,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Admin Page Script -->
-  <script type="module" src="js/admin-page.js?v=20261018_full_audit"></script>
+  <script type="module" src="js/admin-page.js?v=20261029_profit_fix2"></script>
 
 </body>
 </html>

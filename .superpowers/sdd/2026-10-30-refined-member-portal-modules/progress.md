@@ -39,4 +39,11 @@ Task 5: completed
 - Unauthenticated visitors are prompted with clean custom popup to login or return to home.
 - scratch/test_pinjaman_page.cjs verified 100% PASS.
 
-Task 6: in_progress
+Task 6: completed
+- Removed duplicate sidebar links and duplicate panes in admin.html.
+- Upgraded pane-aset_perak with independent controls for Silver & Gold buy/sell prices, cashback balances/yields, minting fees, and 7-day price chart history strings.
+- Implemented Toko Online product CRUD table (#adminShopProductsTableBody) and modal (#modalShopProductAdmin) supporting live image upload/URL preview, category, price, stock, and points reward.
+- Implemented loadAssetAdmin, saveAssetPrices, loadShopProductsAdmin, openAddShopProductModal, openEditShopProductModal, saveShopProduct, and deleteShopProduct in js/admin-page.js.
+- scratch/test_admin_portal.cjs verified 100% PASS.
+
+Task 7: in_progress
