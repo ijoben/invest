@@ -58,4 +58,9 @@ Task 8: completed
 - Fixed fallback alert in pinjaman.html, ensuring zero native alerts in all member portals.
 - Full syntax validation of all HTML and JS scripts verified 100% PASS.
 
-Task 9: in_progress
+Task 9: completed
+- Deployed 31 core files and assets to live cPanel production server via FTP (cpanel-sync.mjs).
+- Verified clean URLs: https://autotrading.my.id/aset (200 OK), https://autotrading.my.id/toko (200 OK), https://autotrading.my.id/pinjaman (200 OK).
+- Verified live APIs: get_asset_data, get_shop_data, get_loan_data (all 200 OK with complete dual asset and reward schema).
+- Verified live homepage branding to Toko Online and active member gate.
+- Live verification suite (scratch/verify_live_production.cjs) passed 100% (7/7 checks passed).
