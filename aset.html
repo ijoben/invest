@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aset Logam Mulia (Perak &amp; Emas) - AUTOTRADING</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    :root {
+      --primary-green: #00B368;
+      --primary-green-dark: #008F52;
+      --accent-red: #EF4444;
+      --accent-red-dark: #DC2626;
+      --gold-primary: #D97706;
+      --gold-dark: #B45309;
+      --silver-primary: #475569;
+      --silver-dark: #334155;
+      --card-bg: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+    }
+    body {
+      background-color: #F8FAFC;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+    .top-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: #FFFFFF;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: #0F172A;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 8px;
+    }
+    .back-btn:hover {
+      background: #F1F5F9;
+    }
+    .page-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* TAB SWITCHER (PERAK & EMAS) */
+    .tab-switcher-wrap {
+      display: flex;
+      background: #E2E8F0;
+      border-radius: 16px;
+      padding: 4px;
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: none;
+      font-size: 13.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      color: #64748B;
+      background: transparent;
+    }
+    .tab-btn.active.tab-perak {
+      background: #FFFFFF;
+      color: #1E293B;
+      box-shadow: 0 4px 12px rgba(71, 85, 105, 0.15);
+    }
+    .tab-btn.active.tab-emas {
+      background: #FFFFFF;
+      color: #B45309;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);
+    }
+
+    /* CARD ASET LOGAM MULIA (METALLIC GRADIENTS & ART) */
+    .asset-card-main {
+      border-radius: 22px;
+      padding: 22px;
+      color: #FFFFFF;
+      margin-bottom: 18px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    .asset-card-silver {
+      background: linear-gradient(135deg, #475569 0%, #334155 50%, #1E293B 100%);
+      box-shadow: 0 12px 28px -6px rgba(51, 65, 85, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .asset-card-gold {
+      background: linear-gradient(135deg, #D97706 0%, #B45309 50%, #78350F 100%);
+      box-shadow: 0 12px 28px -6px rgba(217, 119, 6, 0.45);
+      border: 1px solid rgba(254, 240, 138, 0.25);
+    }
+    .asset-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .asset-tag {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.18);
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .estimated-pill {
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 4px 12px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+    
+    .asset-visual-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 12px 0 16px 0;
+    }
+    .total-grams-display {
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      line-height: 1;
+    }
+    .total-grams-unit {
+      font-size: 16px;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    /* 3D BULLION ILLUSTRATIONS (SVG) */
+    .bullion-art-wrap {
+      width: 90px;
+      height: 60px;
+      filter: drop-shadow(0 8px 12px rgba(0,0,0,0.35));
+      transition: transform 0.3s ease;
+    }
+    .bullion-art-wrap:hover {
+      transform: scale(1.05) rotate(-2deg);
+    }
+
+    /* TRANSLUCENT PILL TILES */
+    .pills-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .translucent-pill {
+      background: rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 9px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .pill-label {
+      font-size: 11px;
+      opacity: 0.88;
+      font-weight: 500;
+    }
+    .pill-value {
+      font-size: 14.5px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+    .update-timestamp {
+      font-size: 10.5px;
+      opacity: 0.85;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ACTION BUTTONS (BELI & JUAL) */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .btn-action-beli {
+      background: #00C26F;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 0;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 194, 111, 0.35);
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    .btn-action-beli:hover {
+      background: #00AB61;
+      transform: translateY(-1px);
+    }
+    .btn-action-jual {
+      background: #EF4444;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 0;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    .btn-action-jual:hover {
+      background: #DC2626;
+      transform: translateY(-1px);
+    }
+
+    /* SEGREGATED BALANCES BREAKDOWN CARD */
+    .breakdown-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      border: 1px solid #E2E8F0;
+      margin-bottom: 20px;
+    }
+    .breakdown-header {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: #F8FAFC;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      border: 1px solid #F1F5F9;
+    }
+    .breakdown-label-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .breakdown-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot-liquid { background: #10B981; }
+    .dot-savings { background: #F59E0B; }
+    .dot-contract { background: #3B82F6; }
+    .breakdown-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #1E293B;
+    }
+    .breakdown-sub {
+      font-size: 10.5px;
+      color: #64748B;
+    }
+    .breakdown-value {
+      text-align: right;
+    }
+    .breakdown-grams {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .breakdown-rp {
+      font-size: 10.5px;
+      color: #64748B;
+    }
+    .breakdown-note {
+      font-size: 11px;
+      color: #64748B;
+      line-height: 1.5;
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: #FFFBEB;
+      border-radius: 8px;
+      border: 1px solid #FEF3C7;
+    }
+
+    /* INTERACTIVE PRICE TREND CHART */
+    .chart-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      border: 1px solid #E2E8F0;
+      margin-bottom: 20px;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .chart-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chart-time-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: #00B368;
+      background: #ECFDF5;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+    .chart-svg-container {
+      width: 100%;
+      height: 160px;
+      position: relative;
+    }
+    .chart-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .chart-stats-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 11px;
+      color: #64748B;
+      border-top: 1px dashed #E2E8F0;
+      padding-top: 8px;
+    }
+
+    /* 5 QUICK FEATURE ICONS */
+    .feature-icons-bar {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 16px 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      margin-bottom: 22px;
+      border: 1px solid #E2E8F0;
+    }
+    .feature-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      color: #475569;
+      transition: transform 0.15s ease;
+    }
+    .feature-item:hover {
+      transform: translateY(-2px);
+      color: #0F172A;
+    }
+    .feature-icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid #F1F5F9;
+    }
+    .feature-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    /* TRANSACTION HISTORY SECTION */
+    .section-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      border: 1px solid #E2E8F0;
+      margin-bottom: 24px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .filter-chips-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .filter-chip {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid #CBD5E1;
+      background: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .filter-chip.active {
+      background: #0F172A;
+      color: #FFFFFF;
+      border-color: #0F172A;
+    }
+
+    .tx-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border-radius: 12px;
+      background: #F8FAFC;
+      margin-bottom: 8px;
+      border: 1px solid #F1F5F9;
+    }
+    .tx-type-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+    .badge-buy { background: #DCFCE7; color: #15803D; }
+    .badge-sell { background: #FEE2E2; color: #B91C1C; }
+    .badge-gold { background: #FEF3C7; color: #B45309; }
+    .badge-silver { background: #E2E8F0; color: #334155; }
+
+    /* MODAL WINDOWS */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #FFFFFF;
+      border-radius: 22px;
+      width: 100%;
+      max-width: 440px;
+      padding: 22px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      border: 1px solid #E2E8F0;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #94A3B8;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .input-field {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1.5px solid #CBD5E1;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0F172A;
+      box-sizing: border-box;
+      outline: none;
+      font-family: inherit;
+    }
+    .input-field:focus {
+      border-color: #00B368;
+    }
+    .wallet-bal-pill {
+      background: #F1F5F9;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      color: #475569;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .shortfall-alert {
+      background: #FFFBEB;
+      border: 1.5px solid #FCD34D;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: #92400E;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .btn-deposit-shortcut {
+      background: linear-gradient(135deg, #F59E0B, #D97706);
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 12.5px;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);
+    }
+
+    /* === MODERN ATTRACTIVE APP POPUP DIALOG === */
+    .app-popup-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999999;
+      padding: 20px;
+      animation: appPopupFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes appPopupFade { from { opacity: 0; } to { opacity: 1; } }
+    .app-popup-card {
+      background: #ffffff;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 360px;
+      padding: 26px 22px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      animation: appPopupZoom 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes appPopupZoom { from { transform: scale(0.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .app-popup-icon-wrap {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      background: #F0FDF4;
+      color: #16A34A;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+    }
+    .app-popup-icon-wrap.error { background: #FEF2F2; color: #DC2626; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15); }
+    .app-popup-icon-wrap.warning { background: #FFFBEB; color: #D97706; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15); }
+    .app-popup-icon-wrap.info { background: #EFF6FF; color: #2563EB; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15); }
+    .app-popup-title { font-size: 18px; font-weight: 800; color: #0F172A; margin-bottom: 8px; line-height: 1.3; }
+    .app-popup-message { font-size: 13px; line-height: 1.6; color: #64748B; margin-bottom: 22px; white-space: pre-line; word-break: break-word; }
+    .app-popup-actions { display: flex; gap: 10px; }
+    .app-popup-btn {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .app-popup-btn-confirm { background: linear-gradient(135deg, #10B981, #059669); color: #ffffff; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); }
+    .app-popup-btn-cancel { background: #F1F5F9; color: #64748B; }
+
+    .tenor-btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tenor-btn {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1.5px solid #CBD5E1;
+      background: #F8FAFC;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tenor-btn.active { border-color: #00C26F; background: #ECFDF5; color: #047857; }
+    .reward-tier-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .reward-tier-title { font-size: 13px; font-weight: 800; color: #0F172A; }
+    .reward-tier-desc { font-size: 11px; color: #64748B; margin-top: 2px; }
+    .reward-tier-btn {
+      padding: 6px 12px;
+      background: #10B981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav class="top-navbar">
+    <button type="button" class="back-btn" onclick="window.location.href='./'">
+      <span>‹</span> Beranda
+    </button>
+    <div class="page-title">Aset Logam Mulia</div>
+    <div style="font-size: 12px; font-weight: 700; color: #00B368;" id="userGreeting">Member</div>
+  </nav>
+
+  <div class="container">
+
+    <!-- TAB SWITCHER: PERAK & EMAS -->
+    <div class="tab-switcher-wrap">
+      <button type="button" class="tab-btn active tab-perak" id="tabPerakBtn" onclick="switchAssetTab('silver')">
+        <span>🪙</span> Tab Perak (99.9%)
+      </button>
+      <button type="button" class="tab-btn tab-emas" id="tabEmasBtn" onclick="switchAssetTab('gold')">
+        <span>👑</span> Tab Emas (99.99%)
+      </button>
+    </div>
+
+    <!-- MAIN ASSET CARD (METALLIC + 3D BULLION ART) -->
+    <div class="asset-card-main asset-card-silver" id="mainAssetCard">
+      <div class="asset-card-top">
+        <span class="asset-tag" id="assetBadgeLabel">🪙 Perak Murni 99.9%</span>
+        <span class="estimated-pill" id="estimatedRupiah">Estimasi Rp 0</span>
+      </div>
+
+      <div class="asset-visual-row">
+        <div>
+          <div style="font-size: 11.5px; opacity: 0.85; margin-bottom: 4px;" id="totalAsetTitle">Total Aset Perak Kamu</div>
+          <div class="total-grams-display">
+            <span id="totalAssetGrams">0,000</span>
+            <span class="total-grams-unit">Gram</span>
+          </div>
+        </div>
+
+        <!-- 3D Bullion Illustration Graphic -->
+        <div class="bullion-art-wrap" id="bullionIllustration">
+          <!-- Realistic SVG Silver / Gold Bar -->
+          <svg viewBox="0 0 100 65" width="100%" height="100%" id="silverBarSvg">
+            <defs>
+              <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FFFFFF"/>
+                <stop offset="25%" stop-color="#E2E8F0"/>
+                <stop offset="50%" stop-color="#94A3B8"/>
+                <stop offset="75%" stop-color="#CBD5E1"/>
+                <stop offset="100%" stop-color="#64748B"/>
+              </linearGradient>
+              <linearGradient id="silverBevel" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8"/>
+                <stop offset="100%" stop-color="#475569" stop-opacity="0.8"/>
+              </linearGradient>
+            </defs>
+            <polygon points="12,12 88,12 96,52 4,52" fill="url(#silverGrad)" stroke="#475569" stroke-width="1.5"/>
+            <polygon points="18,18 82,18 88,46 12,46" fill="url(#silverBevel)" opacity="0.35"/>
+            <rect x="22" y="22" width="56" height="20" rx="3" fill="none" stroke="#FFFFFF" stroke-width="0.8" opacity="0.6"/>
+            <text x="50" y="31" font-size="6.5" font-weight="900" fill="#1E293B" text-anchor="middle" letter-spacing="0.5">FINE SILVER</text>
+            <text x="50" y="38" font-size="5.5" font-weight="800" fill="#334155" text-anchor="middle">999 · 100g</text>
+          </svg>
+          <svg viewBox="0 0 100 65" width="100%" height="100%" id="goldBarSvg" style="display: none;">
+            <defs>
+              <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FEF08A"/>
+                <stop offset="25%" stop-color="#FACC15"/>
+                <stop offset="50%" stop-color="#CA8A04"/>
+                <stop offset="75%" stop-color="#EAB308"/>
+                <stop offset="100%" stop-color="#854D0E"/>
+              </linearGradient>
+              <linearGradient id="goldBevel" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FFFBEB" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#713F12" stop-opacity="0.8"/>
+              </linearGradient>
+            </defs>
+            <polygon points="12,12 88,12 96,52 4,52" fill="url(#goldGrad)" stroke="#78350F" stroke-width="1.5"/>
+            <polygon points="18,18 82,18 88,46 12,46" fill="url(#goldBevel)" opacity="0.4"/>
+            <rect x="22" y="22" width="56" height="20" rx="3" fill="none" stroke="#FEF08A" stroke-width="0.8" opacity="0.8"/>
+            <text x="50" y="31" font-size="6.5" font-weight="900" fill="#451A03" text-anchor="middle" letter-spacing="0.5">FINE GOLD</text>
+            <text x="50" y="38" font-size="5.5" font-weight="800" fill="#78350F" text-anchor="middle">999.9 · 100g</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Row 1: Harga Beli & Harga Jual -->
+      <div class="pills-grid">
+        <div class="translucent-pill">
+          <span class="pill-label">Harga Beli</span>
+          <span class="pill-value" id="hargaBeliDisplay">Rp 0/gr</span>
+        </div>
+        <div class="translucent-pill">
+          <span class="pill-label">Harga Jual</span>
+          <span class="pill-value" id="hargaJualDisplay">Rp 0/gr</span>
+        </div>
+      </div>
+
+      <!-- Row 2: Saldo Cashback & Hasil Cashback -->
+      <div class="pills-grid">
+        <div class="translucent-pill">
+          <span class="pill-label">Saldo Cashback</span>
+          <span class="pill-value" id="saldoCashbackDisplay">0 g</span>
+        </div>
+        <div class="translucent-pill">
+          <span class="pill-label">Hasil Cashback</span>
+          <span class="pill-value" id="hasilCashbackDisplay">0 g</span>
+        </div>
+      </div>
+
+      <!-- Timestamp -->
+      <div class="update-timestamp">
+        <span>🕒</span>
+        <span id="updateHargaDisplay">Update harga: -</span>
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS: BELI & JUAL -->
+    <div class="actions-grid">
+      <button type="button" class="btn-action-beli" id="btnOpenBeliModal" onclick="openBeliModal()">
+        BELI ASET
+      </button>
+      <button type="button" class="btn-action-jual" id="btnOpenJualModal" onclick="openJualModal()">
+        JUAL ASET
+      </button>
+    </div>
+
+    <!-- RINCIAN PORTOFOLIO & LIKUIDITAS -->
+    <div class="breakdown-card">
+      <div class="breakdown-header">
+        <span>💼</span>
+        <span>Rincian Likuiditas Portofolio</span>
+      </div>
+
+      <!-- 1. Saldo Siap Jual (Likuid) -->
+      <div class="breakdown-item">
+        <div class="breakdown-label-wrap">
+          <div class="breakdown-dot dot-liquid"></div>
+          <div>
+            <div class="breakdown-title">Saldo Siap Jual (Likuid)</div>
+            <div class="breakdown-sub">Bisa dijual langsung ke saldo tunai kapanpun</div>
+          </div>
+        </div>
+        <div class="breakdown-value">
+          <div class="breakdown-grams" id="breakdownLiquidGrams">0,000 Gr</div>
+          <div class="breakdown-rp" id="breakdownLiquidRp">Est. Rp 0</div>
+        </div>
+      </div>
+
+      <!-- 2. Saldo Tabungan Fisik -->
+      <div class="breakdown-item">
+        <div class="breakdown-label-wrap">
+          <div class="breakdown-dot dot-savings"></div>
+          <div>
+            <div class="breakdown-title">Saldo Tabungan Fisik</div>
+            <div class="breakdown-sub">Disimpan untuk akumulasi cetak keping batangan</div>
+          </div>
+        </div>
+        <div class="breakdown-value">
+          <div class="breakdown-grams" id="breakdownSavingsGrams">0,000 Gr</div>
+          <div class="breakdown-rp" id="breakdownSavingsRp">Est. Rp 0</div>
+        </div>
+      </div>
+
+      <!-- 3. Saldo Kontrak Aktif -->
+      <div class="breakdown-item">
+        <div class="breakdown-label-wrap">
+          <div class="breakdown-dot dot-contract"></div>
+          <div>
+            <div class="breakdown-title">Saldo Kontrak Aktif</div>
+            <div class="breakdown-sub">Sedang berjalan menghasilkan dividen harian</div>
+          </div>
+        </div>
+        <div class="breakdown-value">
+          <div class="breakdown-grams" id="breakdownContractGrams">0,000 Gr</div>
+          <div class="breakdown-rp" id="breakdownContractRp">Est. Rp 0</div>
+        </div>
+      </div>
+
+      <div class="breakdown-note">
+        💡 <strong>Proteksi Saldo:</strong> Hanya <em>Saldo Siap Jual (Likuid)</em> yang dapat dijual langsung. Saldo tabungan dan kontrak aktif dipisahkan secara sistematis agar tidak bercampur dan terlindungi hingga masa kontrak berakhir.
+      </div>
+    </div>
+
+    <!-- DYNAMIC SVG PRICE TREND CHART -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">
+          <span>📈</span>
+          <span id="chartHeadingTitle">Grafik Tren Harga Perak</span>
+        </div>
+        <span class="chart-time-badge">7 Hari Terakhir</span>
+      </div>
+
+      <div class="chart-svg-container" id="chartContainer">
+        <svg class="chart-svg" id="assetChartSvg" viewBox="0 0 380 140">
+          <!-- Rendered via JS -->
+        </svg>
+      </div>
+
+      <div class="chart-stats-row">
+        <div>Terendah: <strong id="chartStatMin">Rp 0</strong></div>
+        <div>Tertinggi: <strong id="chartStatMax">Rp 0</strong></div>
+        <div>Sekarang: <strong id="chartStatCur" style="color: #00B368;">Rp 0</strong></div>
+      </div>
+    </div>
+
+    <!-- 5 QUICK FEATURE ICONS -->
+    <div class="feature-icons-bar">
+      <div class="feature-item" onclick="openModalKontrak()">
+        <div class="feature-icon-circle">📜</div>
+        <span class="feature-label">Kontrak</span>
+      </div>
+      <div class="feature-item" onclick="openModalTabungan()">
+        <div class="feature-icon-circle">💰</div>
+        <span class="feature-label">Tabungan</span>
+      </div>
+      <div class="feature-item" onclick="openModalCicil()">
+        <div class="feature-icon-circle">📅</div>
+        <span class="feature-label" id="labelFeatureCicil">Cicil Perak</span>
+      </div>
+      <div class="feature-item" onclick="openModalCetak()">
+        <div class="feature-icon-circle">🪙</div>
+        <span class="feature-label">Cetak Fisik</span>
+      </div>
+      <div class="feature-item" onclick="openModalHadiah()">
+        <div class="feature-icon-circle">🎁</div>
+        <span class="feature-label">Hadiah</span>
+      </div>
+    </div>
+
+    <!-- RIWAYAT TRANSAKSI ASET -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📋 Riwayat Transaksi Aset</div>
+        <span style="font-size: 11px; color: var(--text-muted);" id="txCountBadge">0 Transaksi</span>
+      </div>
+
+      <!-- Filter Chips -->
+      <div class="filter-chips-row">
+        <button type="button" class="filter-chip active" onclick="setTxFilter('all')">Semua</button>
+        <button type="button" class="filter-chip" onclick="setTxFilter('trade')">Jual/Beli Likuid</button>
+        <button type="button" class="filter-chip" onclick="setTxFilter('savings')">Tabungan</button>
+        <button type="button" class="filter-chip" onclick="setTxFilter('contract')">Kontrak</button>
+      </div>
+
+      <div id="assetTxList">
+        <div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px;">Memuat riwayat...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL BELI ASET (DENGAN CEK SALDO DOMPET & SHORTFALL DEPOSIT) -->
+  <div class="modal-overlay" id="beliModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="beliModalTitle">Beli Aset Perak</div>
+        <button class="modal-close" onclick="closeBeliModal()">&times;</button>
+      </div>
+
+      <div class="wallet-bal-pill">
+        <span>Saldo Utama Anda:</span>
+        <strong id="userWalletDisplay">Rp 0</strong>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" id="modalHargaBeliLabel">Harga Beli: Rp 0 / gram</label>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Jumlah Gram (Editable):</label>
+        <input type="number" step="0.001" min="0.001" class="input-field" id="beliGramsInput" placeholder="Contoh: 5" value="5" oninput="syncBeliFromGrams()">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Total Harga (Rp, Editable):</label>
+        <input type="number" step="1000" class="input-field" id="beliAmountInput" placeholder="Contoh: 200000" oninput="syncBeliFromAmount()">
+      </div>
+
+      <!-- Shortfall Notification & Deposit Shortcut -->
+      <div id="beliShortfallBox" style="display: none;" class="shortfall-alert">
+        <div>
+          ⚠️ <strong>Saldo Utama Tidak Mencukupi</strong>
+          <div style="font-size: 11px; margin-top: 2px;" id="beliShortfallText">Kurang Rp 0</div>
+        </div>
+        <button type="button" class="btn-deposit-shortcut" id="btnBeliDepositShortcut" onclick="redirectToDepositShortfall()">
+          Deposit Sekarang (Kurang Rp 0)
+        </button>
+      </div>
+
+      <div style="font-size: 11px; color: #64748B; margin-bottom: 14px;" id="beliBalanceSufficiencyNotice">
+        * Pembelian otomatis memotong dari Saldo Utama dompet Anda dan langsung masuk ke Saldo Siap Jual.
+      </div>
+
+      <button type="button" class="btn-action-beli" style="width: 100%; border-radius: 12px;" id="btnConfirmBeli" onclick="submitBeliAset()">
+        Konfirmasi Beli Sekarang
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL JUAL ASET (DIBATASI STRICTLY SALDO LIKUID) -->
+  <div class="modal-overlay" id="jualModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="jualModalTitle">Jual Aset Perak Cair</div>
+        <button class="modal-close" onclick="closeJualModal()">&times;</button>
+      </div>
+
+      <div class="wallet-bal-pill">
+        <span>Saldo Siap Jual (Likuid):</span>
+        <strong id="userLiquidBalDisplay" style="color: #10B981;">0,000 Gram</strong>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" id="modalHargaJualLabel">Harga Jual: Rp 0 / gram</label>
+      </div>
+
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin-bottom: 0;">Jumlah Gram yang Dijual:</label>
+          <button type="button" style="background: none; border: none; color: #00B368; font-size: 11px; font-weight: 800; cursor: pointer;" onclick="setJualMax()">Jual Semua (Maks)</button>
+        </div>
+        <input type="number" step="0.001" min="0.001" class="input-field" id="jualGramsInput" placeholder="Contoh: 5" value="1" oninput="syncJualFromGrams()">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Estimasi Dana Cair ke Saldo Utama (Rp):</label>
+        <input type="text" class="input-field" id="jualAmountPreview" readonly style="background: #F8FAFC; color: #16A34A; font-weight: 800;">
+      </div>
+
+      <div style="font-size: 11px; color: #64748B; margin-bottom: 14px;">
+        * Dana penjualan akan langsung ditambahkan ke Saldo Utama Anda. Penjualan hanya dapat diproses dari <strong>Saldo Siap Jual (Likuid)</strong>.
+      </div>
+
+      <button type="button" class="btn-action-jual" style="width: 100%; border-radius: 12px;" id="btnConfirmJual" onclick="submitJualAset()">
+        Konfirmasi Jual &amp; Cairkan
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. MODAL KONTRAK ASET -->
+  <div class="modal-overlay" id="modalKontrak">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">📜 Kontrak Aset Dividen Harian</div>
+        <button type="button" class="modal-close" onclick="closeModalKontrak()">&times;</button>
+      </div>
+      <p style="font-size: 12px; color: #64748B; margin-bottom: 14px;">
+        Kunci saldo aset Anda untuk mendapatkan dividen hasil harian terproteksi dan modal kembali utuh saat masa kontrak selesai.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Pilih Durasi Kontrak (Tenor):</label>
+        <div class="tenor-btn-group">
+          <button type="button" class="tenor-btn active" id="btnTenor7" onclick="setContractTenor(7, 0.5)">7 Hari (0.5%/hr)</button>
+          <button type="button" class="tenor-btn" id="btnTenor14" onclick="setContractTenor(14, 0.8)">14 Hari (0.8%/hr)</button>
+          <button type="button" class="tenor-btn" id="btnTenor30" onclick="setContractTenor(30, 1.2)">30 Hari (1.2%/hr)</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Gramasi yang Dikontrakkan (Gram):</label>
+        <input type="number" step="0.001" min="1" class="input-field" id="contractGramsInput" value="5" oninput="calcContractPreview()">
+        <div style="font-size: 11px; color: #64748B; margin-top: 4px;">
+          Saldo Siap Jual Anda: <strong id="kontrakUserSilverBal">0.000 Gram</strong>
+        </div>
+      </div>
+
+      <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; margin-bottom: 16px; border: 1px solid #E2E8F0; font-size: 12px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #64748B;">Dividen Harian:</span>
+          <strong id="previewDailyRateLabel" style="color: #047857;">0.5% / hari</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #64748B;">Estimasi Total Hasil:</span>
+          <strong id="previewTotalDividenLabel" style="color: #0F172A;">0.175 Gram</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: #64748B;">Status Modal:</span>
+          <span style="color: #15803D; font-weight: 700;">100% Terproteksi</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn-action-beli" style="width: 100%; border-radius: 12px;" id="btnSubmitKontrak" onclick="submitKontrakAset()">
+        Aktifkan Kontrak Aset
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. MODAL TABUNGAN -->
+  <div class="modal-overlay" id="modalTabungan">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">💰 Tabungan Aset Fisik</div>
+        <button type="button" class="modal-close" onclick="closeModalTabungan()">&times;</button>
+      </div>
+      <p style="font-size: 12px; color: #64748B; margin-bottom: 14px;">
+        Akumulasi kepemilikan aset secara bertahap dari saldo utama dompet Anda untuk persiapan cetak fisik.
+      </p>
+
+      <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+          <span style="color: #166534; font-weight: 700;">Progress Target Tabungan:</span>
+          <strong id="tabunganProgressLabel" style="color: #15803D;">0 / 50 Gram (0%)</strong>
+        </div>
+        <div style="background: #DCFCE7; border-radius: 6px; height: 8px; width: 100%; overflow: hidden;">
+          <div id="tabunganProgressBar" style="background: #10B981; height: 100%; width: 0%; transition: width 0.3s;"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Setor Gramasi Tabungan (Gram):</label>
+        <input type="number" step="0.001" min="0.1" class="input-field" id="tabunganGramsInput" value="1" oninput="calcTabunganPreview()">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Total Debet Saldo Dompet (Rp):</label>
+        <input type="text" class="input-field" id="tabunganCostPreview" readonly style="background: #F8FAFC; color: #0F172A;">
+        <div style="font-size: 11px; color: #64748B; margin-top: 4px;">
+          Saldo Dompet Anda: <strong id="tabunganUserWalletBal">Rp 0</strong>
+        </div>
+      </div>
+
+      <button type="button" class="btn-action-beli" style="width: 100%; border-radius: 12px;" id="btnSubmitTabungan" onclick="submitTabunganAset()">
+        Setor Tabungan Sekarang
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. MODAL CICIL -->
+  <div class="modal-overlay" id="modalCicil">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">📅 Program Cicil Logam Fisik</div>
+        <button type="button" class="modal-close" onclick="closeModalCicil()">&times;</button>
+      </div>
+      <p style="font-size: 12px; color: #64748B; margin-bottom: 14px;">
+        Miliki keping logam mulia fisik bersertifikat resmi dengan angsuran ringan flat 0% bunga promo.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Pilih Ukuran Keping Logam Fisik:</label>
+        <div class="tenor-btn-group">
+          <button type="button" class="tenor-btn active" id="btnKeping10" onclick="setCicilKeping(10)">10 Gr</button>
+          <button type="button" class="tenor-btn" id="btnKeping25" onclick="setCicilKeping(25)">25 Gr</button>
+          <button type="button" class="tenor-btn" id="btnKeping50" onclick="setCicilKeping(50)">50 Gr</button>
+          <button type="button" class="tenor-btn" id="btnKeping100" onclick="setCicilKeping(100)">100 Gr</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Pilih Tenor Angsuran:</label>
+        <div class="tenor-btn-group">
+          <button type="button" class="tenor-btn active" id="btnTenorCicil3" onclick="setCicilTenor(3)">3 Bulan</button>
+          <button type="button" class="tenor-btn" id="btnTenorCicil6" onclick="setCicilTenor(6)">6 Bulan</button>
+          <button type="button" class="tenor-btn" id="btnTenorCicil12" onclick="setCicilTenor(12)">12 Bulan</button>
+        </div>
+      </div>
+
+      <div style="background: #F8FAFC; border-radius: 12px; padding: 12px; margin-bottom: 14px; border: 1px solid #E2E8F0; font-size: 12px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #64748B;">Total Nilai Keping:</span>
+          <strong id="cicilTotalHargaLabel">Rp 0</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="color: #64748B;">Uang Muka (DP 20%):</span>
+          <strong id="cicilDpLabel" style="color: #2563EB;">Rp 0</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: #64748B;">Cicilan per Bulan:</span>
+          <strong id="cicilAngsuranLabel" style="color: #047857;">Rp 0 / bln</strong>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Lengkap Pemohon:</label>
+        <input type="text" class="input-field" id="cicilNameInput" placeholder="Nama sesuai KTP">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nomor WhatsApp Aktif:</label>
+        <input type="text" class="input-field" id="cicilPhoneInput" placeholder="Contoh: 08123456789">
+      </div>
+
+      <button type="button" class="btn-action-beli" style="width: 100%; border-radius: 12px;" onclick="submitCicilAset()">
+        Ajukan Rencana Cicilan
+      </button>
+    </div>
+  </div>
+
+  <!-- 4. MODAL CETAK FISIK (BIAYA CETAK DARI ADMIN) -->
+  <div class="modal-overlay" id="modalCetak">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">🪙 Cetak Logam Fisik Bersertifikat</div>
+        <button type="button" class="modal-close" onclick="closeModalCetak()">&times;</button>
+      </div>
+      <p style="font-size: 12px; color: #64748B; margin-bottom: 14px;">
+        Tukarkan gramasi aset digital Anda menjadi logam mulia fisik bersertifikat resmi pabrikan dan dikirim langsung ke alamat rumah Anda.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Pilih Ukuran Batangan Fisik:</label>
+        <select class="input-field" id="cetakGramsSelect" onchange="updateCetakFeeDisplay()">
+          <option value="5">Batangan 5 Gram</option>
+          <option value="10">Batangan 10 Gram</option>
+          <option value="25">Batangan 25 Gram</option>
+          <option value="50">Batangan 50 Gram</option>
+          <option value="100">Batangan 100 Gram</option>
+        </select>
+      </div>
+
+      <div style="background: #F1F5F9; border-radius: 10px; padding: 10px; margin-bottom: 12px; font-size: 12px; display: flex; justify-content: space-between;">
+        <span style="color: #64748B;">Biaya Cetak &amp; Sertifikat:</span>
+        <strong id="biayaCetakDisplay" style="color: #0F172A;">Rp 25.000 / gram</strong>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Penerima Paket:</label>
+        <input type="text" class="input-field" id="cetakRecipientName" placeholder="Nama penerima paket">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nomor WhatsApp / Telp Penerima:</label>
+        <input type="text" class="input-field" id="cetakRecipientPhone" placeholder="08xxxxxxxxxx">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alamat Lengkap Pengiriman:</label>
+        <textarea class="input-field" id="cetakAddress" rows="2" placeholder="Nama Jalan, RT/RW, Kelurahan, Kecamatan, Kota, Kode Pos" style="resize: vertical;"></textarea>
+      </div>
+
+      <div style="font-size: 11px; color: #64748B; margin-bottom: 14px;" id="cetakFootnote">
+        * Biaya cetak resmi akan dipotong dari saldo dompet utama. Gramasi aset digital Anda akan dikurangi sejumlah keping yang dicetak.
+      </div>
+
+      <button type="button" class="btn-action-beli" style="width: 100%; border-radius: 12px;" id="btnSubmitCetak" onclick="submitCetakAset()">
+        Ajukan Pencetakan &amp; Kirim
+      </button>
+    </div>
+  </div>
+
+  <!-- 5. MODAL HADIAH MILESTONE -->
+  <div class="modal-overlay" id="modalHadiah">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">🎁 Bonus Hadiah Milestone Portofolio</div>
+        <button type="button" class="modal-close" onclick="closeModalHadiah()">&times;</button>
+      </div>
+      <p style="font-size: 12px; color: #64748B; margin-bottom: 14px;">
+        Dapatkan bonus gramasi gratis setiap portofolio akumulasi kepemilikan aset Anda mencapai milestone target!
+      </p>
+
+      <div class="reward-tier-card">
+        <div>
+          <div class="reward-tier-title">🥉 Tier Bronze (10 Gram)</div>
+          <div class="reward-tier-desc">Bonus Hadiah: <strong>+0.25 Gram Aset</strong></div>
+        </div>
+        <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('bronze')">Klaim</button>
+      </div>
+
+      <div class="reward-tier-card">
+        <div>
+          <div class="reward-tier-title">🥈 Tier Silver (25 Gram)</div>
+          <div class="reward-tier-desc">Bonus Hadiah: <strong>+0.75 Gram Aset</strong></div>
+        </div>
+        <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('silver')">Klaim</button>
+      </div>
+
+      <div class="reward-tier-card">
+        <div>
+          <div class="reward-tier-title">🥇 Tier Gold (50 Gram)</div>
+          <div class="reward-tier-desc">Bonus Hadiah: <strong>+2.00 Gram Aset</strong></div>
+        </div>
+        <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('gold')">Klaim</button>
+      </div>
+
+      <div class="reward-tier-card">
+        <div>
+          <div class="reward-tier-title">💎 Tier Platinum (100 Gram)</div>
+          <div class="reward-tier-desc">Bonus Hadiah: <strong>+5.00 Gram Aset</strong></div>
+        </div>
+        <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('platinum')">Klaim</button>
+      </div>
+
+      <div style="font-size: 11px; text-align: center; color: #64748B; margin-top: 10px;">
+        Saldo portofolio Anda saat ini: <strong id="hadiahUserSilverBal">0.000 Gram</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODERN ATTRACTIVE APP POPUP DIALOG -->
+  <div id="appCustomPopupOverlay" class="app-popup-overlay" style="display: none;">
+    <div class="app-popup-card">
+      <div class="app-popup-icon-wrap" id="appPopupIconWrap">
+        <span id="appPopupIcon">✨</span>
+      </div>
+      <div class="app-popup-title" id="appPopupTitle">Pemberitahuan</div>
+      <div class="app-popup-message" id="appPopupMessage">Pesan informasi</div>
+      <div class="app-popup-actions" id="appPopupActions">
+        <button type="button" class="app-popup-btn app-popup-btn-cancel" id="appPopupBtnCancel" style="display: none;">Batal</button>
+        <button type="button" class="app-popup-btn app-popup-btn-confirm" id="appPopupBtnConfirm">OK, Mengerti</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'api/index.php';
+    let currentAssetType = 'silver'; // 'silver' | 'gold'
+    let currentData = {
+      silver_buy_price: 18500,
+      silver_sell_price: 17200,
+      silver_balance: 0,
+      silver_savings_balance: 0,
+      silver_contract_balance: 0,
+      cashback_balance: 15,
+      cashback_yield: 0.5,
+      minting_fee_silver: 25000,
+      price_history_silver: [],
+
+      gold_buy_price: 1350000,
+      gold_sell_price: 1300000,
+      gold_balance: 0,
+      gold_savings_balance: 0,
+      gold_contract_balance: 0,
+      gold_cashback_balance: 10,
+      gold_cashback_yield: 0.45,
+      minting_fee_gold: 50000,
+      price_history_gold: [],
+
+      wallet_balance: 0,
+      points: 0,
+      last_update: '',
+      transactions: []
+    };
+    let currentTxFilter = 'all';
+
+    function showAppPopup({ title, message, type = 'info', confirmText = 'OK, Mengerti', cancelText = null, onConfirm = null, onCancel = null }) {
+      const overlay = document.getElementById('appCustomPopupOverlay');
+      const iconWrap = document.getElementById('appPopupIconWrap');
+      const iconSpan = document.getElementById('appPopupIcon');
+      const titleEl = document.getElementById('appPopupTitle');
+      const msgEl = document.getElementById('appPopupMessage');
+      const btnConfirm = document.getElementById('appPopupBtnConfirm');
+      const btnCancel = document.getElementById('appPopupBtnCancel');
+
+      iconWrap.className = 'app-popup-icon-wrap';
+      if (type === 'success') {
+        iconWrap.classList.add('success');
+        iconSpan.innerHTML = '✓';
+      } else if (type === 'error') {
+        iconWrap.classList.add('error');
+        iconSpan.innerHTML = '✕';
+      } else if (type === 'warning') {
+        iconWrap.classList.add('warning');
+        iconSpan.innerHTML = '⚠️';
+      } else {
+        iconWrap.classList.add('info');
+        iconSpan.innerHTML = 'ℹ️';
+      }
+
+      titleEl.innerText = title || 'Informasi';
+      msgEl.innerText = message || '';
+      btnConfirm.innerText = confirmText;
+
+      if (cancelText) {
+        btnCancel.style.display = 'block';
+        btnCancel.innerText = cancelText;
+      } else {
+        btnCancel.style.display = 'none';
+      }
+
+      btnConfirm.onclick = () => {
+        overlay.style.display = 'none';
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+
+      btnCancel.onclick = () => {
+        overlay.style.display = 'none';
+        if (typeof onCancel === 'function') onCancel();
+      };
+
+      overlay.style.display = 'flex';
+    }
+
+    function getSessionToken() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('sessionToken') || urlParams.get('token');
+        if (urlToken) return urlToken;
+        if (typeof localStorage !== 'undefined') {
+          const t = localStorage.getItem('autotrading_session_token') || localStorage.getItem('session_token') || localStorage.getItem('fgt_session_token');
+          if (t) return t;
+        }
+        if (typeof sessionStorage !== 'undefined') {
+          const t = sessionStorage.getItem('autotrading_session_token') || sessionStorage.getItem('session_token') || sessionStorage.getItem('fgt_session_token');
+          if (t) return t;
+        }
+      } catch (e) {}
+      return '';
+    }
+
+    function getCurrentUserLocal() {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const u = localStorage.getItem('autotrading_user') || localStorage.getItem('current_user') || localStorage.getItem('fgt_user');
+          if (u) return JSON.parse(u);
+        }
+        if (typeof sessionStorage !== 'undefined') {
+          const u = sessionStorage.getItem('autotrading_user') || sessionStorage.getItem('current_user') || sessionStorage.getItem('fgt_user');
+          if (u) return JSON.parse(u);
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function getActiveUserId() {
+      const u = getCurrentUserLocal();
+      if (u && u.id) return String(u.id);
+      const uid = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_user_id') : null) ||
+                  (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_user_id') : null) ||
+                  (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('fgt_session_user_id') : null);
+      return uid ? String(uid) : '';
+    }
+
+    function isMemberLoggedIn() {
+      return Boolean(getSessionToken() || getCurrentUserLocal() || getActiveUserId());
+    }
+
+    function checkMemberAccess() {
+      if (!isMemberLoggedIn()) {
+        showAppPopup({
+          title: 'Akses Khusus Member',
+          message: 'Menu Portofolio Aset Logam Mulia hanya dapat diakses oleh member resmi AUTOTRADING.\n\nSilakan login terlebih dahulu untuk mengelola aset emas dan perak Anda.',
+          type: 'info',
+          confirmText: 'Login Sekarang',
+          cancelText: 'Kembali',
+          onConfirm: () => { window.location.href = './#login'; },
+          onCancel: () => { window.location.href = './'; }
+        });
+        return false;
+      }
+      return true;
+    }
+
+    function getApiUrl(action) {
+      const token = getSessionToken();
+      const uid = getActiveUserId();
+      let url = `${API_URL}?action=${encodeURIComponent(action)}`;
+      if (token) url += `&sessionToken=${encodeURIComponent(token)}`;
+      if (uid) url += `&userId=${encodeURIComponent(uid)}`;
+      return url;
+    }
+
+    function getAuthFetchOptions(method = 'GET', body = null) {
+      const token = getSessionToken();
+      const uid = getActiveUserId();
+      const headers = { 'Accept': 'application/json' };
+      if (body) headers['Content-Type'] = 'application/json';
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+        headers['X-Session-Token'] = token;
+      }
+      if (uid) headers['X-User-Id'] = uid;
+      const opts = { method, headers, credentials: 'include' };
+      if (body) {
+        const bodyObj = (typeof body === 'string') ? JSON.parse(body) : { ...body };
+        if (token && !bodyObj.sessionToken) bodyObj.sessionToken = token;
+        if (uid && !bodyObj.userId) bodyObj.userId = uid;
+        opts.body = JSON.stringify(bodyObj);
+      }
+      return opts;
+    }
+
+    function handleApiSessionToken(json) {
+      if (!json) return;
+      const t = json.sessionToken || (json.data && json.data.session_token);
+      if (t) {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', t);
+          if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', t);
+        } catch (e) {}
+      }
+    }
+
+    function formatRupiah(num) {
+      return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+    }
+
+    function formatNumber(num, dec = 3) {
+      return Number(num || 0).toLocaleString('id-ID', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    }
+
+    async function loadAssetData() {
+      try {
+        const res = await fetch(getApiUrl('get_asset_data'), getAuthFetchOptions('GET'));
+        const json = await res.json();
+        if (json.success && json.data) {
+          handleApiSessionToken(json);
+          currentData = { ...currentData, ...json.data };
+          renderUI();
+        }
+      } catch (e) {
+        console.error('Error fetching asset data:', e);
+      }
+    }
+
+    function switchAssetTab(type) {
+      currentAssetType = type;
+      const perakBtn = document.getElementById('tabPerakBtn');
+      const emasBtn = document.getElementById('tabEmasBtn');
+      const card = document.getElementById('mainAssetCard');
+      const silverSvg = document.getElementById('silverBarSvg');
+      const goldSvg = document.getElementById('goldBarSvg');
+
+      if (type === 'silver') {
+        perakBtn.classList.add('active');
+        emasBtn.classList.remove('active');
+        card.className = 'asset-card-main asset-card-silver';
+        silverSvg.style.display = 'block';
+        goldSvg.style.display = 'none';
+        document.getElementById('labelFeatureCicil').innerText = 'Cicil Perak';
+      } else {
+        emasBtn.classList.add('active');
+        perakBtn.classList.remove('active');
+        card.className = 'asset-card-main asset-card-gold';
+        silverSvg.style.display = 'none';
+        goldSvg.style.display = 'block';
+        document.getElementById('labelFeatureCicil').innerText = 'Cicil Emas';
+      }
+      renderUI();
+    }
+
+    function renderUI() {
+      const isGold = (currentAssetType === 'gold');
+      const u = getCurrentUserLocal();
+      if (u && (u.username || u.fullName)) {
+        document.getElementById('userGreeting').innerText = u.username || u.fullName;
+      }
+
+      // Active Prices & Balances
+      const buyPrice = isGold ? (currentData.gold_buy_price || 1350000) : (currentData.silver_buy_price || 18500);
+      const sellPrice = isGold ? (currentData.gold_sell_price || 1300000) : (currentData.silver_sell_price || 17200);
+      const liquidBal = isGold ? Number(currentData.gold_balance || 0) : Number(currentData.silver_balance || 0);
+      const savingsBal = isGold ? Number(currentData.gold_savings_balance || 0) : Number(currentData.silver_savings_balance || 0);
+      const contractBal = isGold ? Number(currentData.gold_contract_balance || 0) : Number(currentData.silver_contract_balance || 0);
+      const totalBal = liquidBal + savingsBal + contractBal;
+      const estRp = Math.round(liquidBal * sellPrice);
+
+      const cashbackBal = isGold ? (currentData.gold_cashback_balance || 10) : (currentData.cashback_balance || 15);
+      const cashbackYield = isGold ? (currentData.gold_cashback_yield || 0.45) : (currentData.cashback_yield || 0.50);
+
+      // Card Header & Titles
+      document.getElementById('assetBadgeLabel').innerHTML = isGold ? '👑 Emas Murni 99.99%' : '🪙 Perak Murni 99.9%';
+      document.getElementById('totalAsetTitle').innerText = isGold ? 'Total Aset Emas Kamu' : 'Total Aset Perak Kamu';
+      document.getElementById('totalAssetGrams').innerText = formatNumber(totalBal, 3);
+      document.getElementById('estimatedRupiah').innerText = 'Estimasi ' + formatRupiah(estRp);
+
+      document.getElementById('hargaBeliDisplay').innerText = formatRupiah(buyPrice) + '/gr';
+      document.getElementById('hargaJualDisplay').innerText = formatRupiah(sellPrice) + '/gr';
+      document.getElementById('saldoCashbackDisplay').innerText = formatNumber(cashbackBal, 1) + ' g';
+      document.getElementById('hasilCashbackDisplay').innerText = formatNumber(cashbackYield, 3) + ' g';
+
+      if (currentData.last_update) {
+        document.getElementById('updateHargaDisplay').innerText = 'Update harga: ' + currentData.last_update;
+      }
+
+      // Breakdown Items
+      document.getElementById('breakdownLiquidGrams').innerText = formatNumber(liquidBal, 3) + ' Gr';
+      document.getElementById('breakdownLiquidRp').innerText = 'Est. ' + formatRupiah(Math.round(liquidBal * sellPrice));
+
+      document.getElementById('breakdownSavingsGrams').innerText = formatNumber(savingsBal, 3) + ' Gr';
+      document.getElementById('breakdownSavingsRp').innerText = 'Est. ' + formatRupiah(Math.round(savingsBal * sellPrice));
+
+      document.getElementById('breakdownContractGrams').innerText = formatNumber(contractBal, 3) + ' Gr';
+      document.getElementById('breakdownContractRp').innerText = 'Est. ' + formatRupiah(Math.round(contractBal * sellPrice));
+
+      // Modal Labels
+      document.getElementById('userWalletDisplay').innerText = formatRupiah(currentData.wallet_balance);
+      document.getElementById('userLiquidBalDisplay').innerText = formatNumber(liquidBal, 3) + ' Gram';
+      document.getElementById('beliModalTitle').innerText = isGold ? 'Beli Aset Emas Murni' : 'Beli Aset Perak Murni';
+      document.getElementById('jualModalTitle').innerText = isGold ? 'Jual Aset Emas (Cair ke Saldo)' : 'Jual Aset Perak (Cair ke Saldo)';
+      document.getElementById('modalHargaBeliLabel').innerText = 'Harga Beli: ' + formatRupiah(buyPrice) + ' / gram';
+      document.getElementById('modalHargaJualLabel').innerText = 'Harga Jual: ' + formatRupiah(sellPrice) + ' / gram';
+
+      // Render Price Chart
+      renderPriceChart();
+
+      // Render Transactions
+      renderTransactions();
+
+      // Sync Cetak Modal Fee
+      updateCetakFeeDisplay();
+    }
+
+    // Dynamic SVG Price Trend Chart
+    function renderPriceChart() {
+      const isGold = (currentAssetType === 'gold');
+      const chartTitle = document.getElementById('chartHeadingTitle');
+      chartTitle.innerText = isGold ? 'Grafik Tren Harga Emas' : 'Grafik Tren Harga Perak';
+
+      let history = isGold ? currentData.price_history_gold : currentData.price_history_silver;
+      if (!Array.isArray(history) || history.length === 0) {
+        const curP = isGold ? currentData.gold_sell_price : currentData.silver_sell_price;
+        history = [
+          { date: '24 Okt', price: curP - (isGold ? 20000 : 200) },
+          { date: '25 Okt', price: curP - (isGold ? 15000 : 100) },
+          { date: '26 Okt', price: curP - (isGold ? 10000 : 150) },
+          { date: '27 Okt', price: curP - (isGold ? 5000 : 50) },
+          { date: '28 Okt', price: curP - (isGold ? 10000 : 100) },
+          { date: '29 Okt', price: curP },
+          { date: '30 Okt', price: curP }
+        ];
+      }
+
+      const prices = history.map(h => Number(h.price));
+      const minP = Math.min(...prices);
+      const maxP = Math.max(...prices);
+      const curP = prices[prices.length - 1];
+
+      document.getElementById('chartStatMin').innerText = formatRupiah(minP);
+      document.getElementById('chartStatMax').innerText = formatRupiah(maxP);
+      document.getElementById('chartStatCur').innerText = formatRupiah(curP);
+
+      const svg = document.getElementById('assetChartSvg');
+      const w = 380;
+      const h = 130;
+      const padding = 24;
+      const range = (maxP - minP) || 1;
+
+      const pts = history.map((item, idx) => {
+        const x = padding + (idx * (w - 2 * padding)) / (history.length - 1);
+        const y = h - padding - ((item.price - minP) / range) * (h - 2 * padding);
+        return { x, y, ...item };
+      });
+
+      const strokeColor = isGold ? '#D97706' : '#3B82F6';
+      const fillColor = isGold ? 'rgba(217, 119, 6, 0.15)' : 'rgba(59, 130, 246, 0.15)';
+
+      let pathD = `M ${pts[0].x} ${pts[0].y}`;
+      for (let i = 1; i < pts.length; i++) {
+        pathD += ` L ${pts[i].x} ${pts[i].y}`;
+      }
+      const areaD = `${pathD} L ${pts[pts.length - 1].x} ${h - padding} L ${pts[0].x} ${h - padding} Z`;
+
+      let svgContent = `
+        <defs>
+          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.0"/>
+          </linearGradient>
+        </defs>
+        <line x1="${padding}" y1="${h - padding}" x2="${w - padding}" y2="${h - padding}" stroke="#E2E8F0" stroke-width="1"/>
+        <path d="${areaD}" fill="url(#chartGrad)"/>
+        <path d="${pathD}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+
+      pts.forEach(p => {
+        svgContent += `
+          <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#FFFFFF" stroke="${strokeColor}" stroke-width="2"/>
+          <text x="${p.x}" y="${h - 8}" font-size="8.5" fill="#64748B" text-anchor="middle" font-weight="600">${p.date}</text>
+        `;
+      });
+
+      svg.innerHTML = svgContent;
+    }
+
+    function setTxFilter(filter) {
+      currentTxFilter = filter;
+      document.querySelectorAll('.filter-chip').forEach(c => {
+        c.classList.toggle('active', c.innerText.toLowerCase().includes(filter === 'all' ? 'semua' : filter));
+      });
+      renderTransactions();
+    }
+
+    function renderTransactions() {
+      const txWrap = document.getElementById('assetTxList');
+      const isGold = (currentAssetType === 'gold');
+      const allTxs = currentData.transactions || [];
+
+      // Filter by asset type and category
+      const targetAsset = isGold ? 'gold' : 'silver';
+      let filtered = allTxs.filter(t => (t.asset_type || 'silver') === targetAsset);
+
+      if (currentTxFilter === 'trade') {
+        filtered = filtered.filter(t => t.type === 'buy' || t.type === 'sell');
+      } else if (currentTxFilter === 'savings') {
+        filtered = filtered.filter(t => t.type === 'savings');
+      } else if (currentTxFilter === 'contract') {
+        filtered = filtered.filter(t => t.type === 'contract');
+      }
+
+      document.getElementById('txCountBadge').innerText = filtered.length + ' Transaksi';
+
+      if (filtered.length === 0) {
+        txWrap.innerHTML = `<div style="text-align: center; padding: 22px; color: #94A3B8; font-size: 12px;">Belum ada riwayat transaksi ${isGold ? 'emas' : 'perak'} untuk filter ini.</div>`;
+        return;
+      }
+
+      txWrap.innerHTML = filtered.map(t => {
+        const isBuy = t.type === 'buy';
+        const isGoldTx = t.asset_type === 'gold';
+        return `
+          <div class="tx-item">
+            <div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="tx-type-badge ${isBuy ? 'badge-buy' : 'badge-sell'}">${isBuy ? 'BELI' : 'JUAL'}</span>
+                <span class="tx-type-badge ${isGoldTx ? 'badge-gold' : 'badge-silver'}">${isGoldTx ? 'EMAS' : 'PERAK'}</span>
+                <strong style="font-size: 13px; color: #0F172A;">${formatNumber(t.grams, 3)} Gram</strong>
+              </div>
+              <div style="font-size: 10.5px; color: #64748B; margin-top: 2px;">
+                @ ${formatRupiah(t.price_per_gram)}/gr · ${t.created_at || 'Baru saja'}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 13px; font-weight: 800; color: ${isBuy ? '#DC2626' : '#16A34A'};">
+                ${isBuy ? '-' : '+'}${formatRupiah(t.total_amount)}
+              </div>
+              <span style="font-size: 9.5px; color: #16A34A; font-weight: 700;">Selesai</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Modal Beli & Jual Controllers
+    function openBeliModal() {
+      if (!checkMemberAccess()) return;
+      document.getElementById('beliModal').style.display = 'flex';
+      syncBeliFromGrams();
+    }
+    function closeBeliModal() {
+      document.getElementById('beliModal').style.display = 'none';
+    }
+
+    function syncBeliFromGrams() {
+      const isGold = (currentAssetType === 'gold');
+      const buyPrice = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
+      const g = parseFloat(document.getElementById('beliGramsInput').value) || 0;
+      const total = Math.round(g * buyPrice);
+      document.getElementById('beliAmountInput').value = total;
+      checkBeliShortfall(total);
+    }
+
+    function syncBeliFromAmount() {
+      const isGold = (currentAssetType === 'gold');
+      const buyPrice = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
+      const amt = parseFloat(document.getElementById('beliAmountInput').value) || 0;
+      const g = buyPrice > 0 ? (amt / buyPrice) : 0;
+      document.getElementById('beliGramsInput').value = g.toFixed(3);
+      checkBeliShortfall(amt);
+    }
+
+    let activeBeliShortfall = 0;
+    function checkBeliShortfall(totalCost) {
+      const wallet = Number(currentData.wallet_balance || 0);
+      const box = document.getElementById('beliShortfallBox');
+      const btnDeposit = document.getElementById('btnBeliDepositShortcut');
+      const btnConfirm = document.getElementById('btnConfirmBeli');
+
+      if (wallet < totalCost) {
+        activeBeliShortfall = totalCost - wallet;
+        box.style.display = 'flex';
+        document.getElementById('beliShortfallText').innerText = `Saldo dompet Anda ${formatRupiah(wallet)}, kurang ${formatRupiah(activeBeliShortfall)} untuk transaksi ini.`;
+        btnDeposit.innerText = `Deposit Sekarang (Kurang ${formatRupiah(activeBeliShortfall)})`;
+        btnConfirm.disabled = true;
+        btnConfirm.style.opacity = '0.5';
+      } else {
+        activeBeliShortfall = 0;
+        box.style.display = 'none';
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+      }
+    }
+
+    function redirectToDepositShortfall() {
+      const amount = activeBeliShortfall > 0 ? activeBeliShortfall : 50000;
+      window.location.href = `./#deposit?amount=${amount}`;
+    }
+
+    function openJualModal() {
+      if (!checkMemberAccess()) return;
+      document.getElementById('jualModal').style.display = 'flex';
+      syncJualFromGrams();
+    }
+    function closeJualModal() {
+      document.getElementById('jualModal').style.display = 'none';
+    }
+
+    function setJualMax() {
+      const isGold = (currentAssetType === 'gold');
+      const liquidBal = isGold ? (currentData.gold_balance || 0) : (currentData.silver_balance || 0);
+      document.getElementById('jualGramsInput').value = Number(liquidBal).toFixed(3);
+      syncJualFromGrams();
+    }
+
+    function syncJualFromGrams() {
+      const isGold = (currentAssetType === 'gold');
+      const sellPrice = isGold ? currentData.gold_sell_price : currentData.silver_sell_price;
+      const g = parseFloat(document.getElementById('jualGramsInput').value) || 0;
+      const proceeds = Math.round(g * sellPrice);
+      document.getElementById('jualAmountPreview').value = formatRupiah(proceeds);
+    }
+
+    async function submitBeliAset() {
+      if (!checkMemberAccess()) return;
+      const isGold = (currentAssetType === 'gold');
+      const grams = parseFloat(document.getElementById('beliGramsInput').value) || 0;
+      if (grams <= 0) {
+        showAppPopup({ title: 'Input Tidak Valid', message: 'Masukkan jumlah gram yang valid.', type: 'warning' });
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmBeli');
+      btn.disabled = true;
+      btn.innerText = 'Memproses Pembelian...';
+
+      const actionEndpoint = isGold ? 'buy_gold_asset' : 'buy_silver_asset';
+      try {
+        const res = await fetch(getApiUrl(actionEndpoint), getAuthFetchOptions('POST', { grams }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.auth || res.status === 401) {
+          showAppPopup({ title: 'Login Diperlukan', message: json.message || 'Sesi login telah berakhir.', type: 'info', confirmText: 'Login Sekarang', onConfirm: () => { window.location.href = './#login'; } });
+          return;
+        }
+        if (json.success) {
+          showAppPopup({ title: 'Pembelian Berhasil!', message: json.message, type: 'success', onConfirm: () => { closeBeliModal(); loadAssetData(); } });
+        } else {
+          showAppPopup({ title: 'Pembelian Gagal', message: json.message || 'Gagal memproses pembelian aset.', type: 'error' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Konfirmasi Beli Sekarang';
+      }
+    }
+
+    async function submitJualAset() {
+      if (!checkMemberAccess()) return;
+      const isGold = (currentAssetType === 'gold');
+      const grams = parseFloat(document.getElementById('jualGramsInput').value) || 0;
+      const liquidBal = isGold ? (currentData.gold_balance || 0) : (currentData.silver_balance || 0);
+
+      if (grams <= 0) {
+        showAppPopup({ title: 'Input Tidak Valid', message: 'Masukkan jumlah gram yang valid.', type: 'warning' });
+        return;
+      }
+      if (grams > liquidBal) {
+        showAppPopup({
+          title: 'Saldo Likuid Tidak Cukup',
+          message: `Saldo ${isGold ? 'emas' : 'perak'} siap jual Anda hanya ${formatNumber(liquidBal, 3)} gram. Saldo tabungan dan kontrak aktif terkunci dan tidak dapat dicairkan langsung.`,
+          type: 'warning'
+        });
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmJual');
+      btn.disabled = true;
+      btn.innerText = 'Memproses Penjualan...';
+
+      const actionEndpoint = isGold ? 'sell_gold_asset' : 'sell_silver_asset';
+      try {
+        const res = await fetch(getApiUrl(actionEndpoint), getAuthFetchOptions('POST', { grams }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.auth || res.status === 401) {
+          showAppPopup({ title: 'Login Diperlukan', message: json.message || 'Sesi login telah berakhir.', type: 'info', confirmText: 'Login Sekarang', onConfirm: () => { window.location.href = './#login'; } });
+          return;
+        }
+        if (json.success) {
+          showAppPopup({ title: 'Penjualan Berhasil!', message: json.message, type: 'success', onConfirm: () => { closeJualModal(); loadAssetData(); } });
+        } else {
+          showAppPopup({ title: 'Penjualan Gagal', message: json.message || 'Gagal memproses penjualan aset.', type: 'error' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Konfirmasi Jual & Cairkan';
+      }
+    }
+
+    // Sub-Feature 1: Kontrak
+    let selectedContractTenor = 7;
+    let selectedContractDailyRate = 0.5;
+    function openModalKontrak() {
+      if (!checkMemberAccess()) return;
+      const isGold = (currentAssetType === 'gold');
+      const bal = isGold ? (currentData.gold_balance || 0) : (currentData.silver_balance || 0);
+      document.getElementById('kontrakUserSilverBal').innerText = formatNumber(bal, 3) + ' Gram';
+      setContractTenor(7, 0.5);
+      document.getElementById('modalKontrak').style.display = 'flex';
+    }
+    function closeModalKontrak() { document.getElementById('modalKontrak').style.display = 'none'; }
+    function setContractTenor(days, rate) {
+      selectedContractTenor = days;
+      selectedContractDailyRate = rate;
+      ['7', '14', '30'].forEach(d => {
+        const b = document.getElementById('btnTenor' + d);
+        if (b) b.classList.toggle('active', parseInt(d) === days);
+      });
+      document.getElementById('previewDailyRateLabel').innerText = rate + '% / hari';
+      calcContractPreview();
+    }
+    function calcContractPreview() {
+      const isGold = (currentAssetType === 'gold');
+      const sellP = isGold ? currentData.gold_sell_price : currentData.silver_sell_price;
+      const g = parseFloat(document.getElementById('contractGramsInput').value) || 0;
+      const totalYield = g * (selectedContractDailyRate / 100) * selectedContractTenor;
+      document.getElementById('previewTotalDividenLabel').innerText = formatNumber(totalYield, 3) + ' Gram (Est. ' + formatRupiah(Math.round(totalYield * sellP)) + ')';
+    }
+    async function submitKontrakAset() {
+      if (!checkMemberAccess()) return;
+      const grams = parseFloat(document.getElementById('contractGramsInput').value) || 0;
+      if (grams <= 0) { showAppPopup({ title: 'Input Tidak Valid', message: 'Masukkan gramasi kontrak yang valid.', type: 'warning' }); return; }
+      const btn = document.getElementById('btnSubmitKontrak');
+      btn.disabled = true;
+      btn.innerText = 'Memproses...';
+      try {
+        const res = await fetch(getApiUrl('apply_asset_contract'), getAuthFetchOptions('POST', { grams, duration_days: selectedContractTenor, asset_type: currentAssetType }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.success) {
+          showAppPopup({ title: 'Kontrak Aktif', message: json.message, type: 'success', onConfirm: () => { closeModalKontrak(); loadAssetData(); } });
+        } else {
+          showAppPopup({ title: 'Gagal Mengaktifkan', message: json.message || 'Gagal mengaktifkan kontrak.', type: 'error' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Aktifkan Kontrak Aset';
+      }
+    }
+
+    // Sub-Feature 2: Tabungan
+    function openModalTabungan() {
+      if (!checkMemberAccess()) return;
+      const isGold = (currentAssetType === 'gold');
+      const bal = isGold ? (currentData.gold_balance || 0) : (currentData.silver_balance || 0);
+      const target = isGold ? 10 : 50;
+      const pct = Math.min(100, Math.round((bal / target) * 100));
+      document.getElementById('tabunganProgressLabel').innerText = formatNumber(bal, 2) + ' / ' + target + ' Gram (' + pct + '%)';
+      document.getElementById('tabunganProgressBar').style.width = pct + '%';
+      document.getElementById('tabunganUserWalletBal').innerText = formatRupiah(currentData.wallet_balance || 0);
+      calcTabunganPreview();
+      document.getElementById('modalTabungan').style.display = 'flex';
+    }
+    function closeModalTabungan() { document.getElementById('modalTabungan').style.display = 'none'; }
+    function calcTabunganPreview() {
+      const isGold = (currentAssetType === 'gold');
+      const buyP = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
+      const g = parseFloat(document.getElementById('tabunganGramsInput').value) || 0;
+      document.getElementById('tabunganCostPreview').value = formatRupiah(Math.round(g * buyP));
+    }
+    async function submitTabunganAset() {
+      if (!checkMemberAccess()) return;
+      const grams = parseFloat(document.getElementById('tabunganGramsInput').value) || 0;
+      if (grams <= 0) { showAppPopup({ title: 'Input Tidak Valid', message: 'Masukkan gramasi tabungan yang valid.', type: 'warning' }); return; }
+      const btn = document.getElementById('btnSubmitTabungan');
+      btn.disabled = true;
+      btn.innerText = 'Menyimpan...';
+      try {
+        const res = await fetch(getApiUrl('save_silver_savings'), getAuthFetchOptions('POST', { grams, asset_type: currentAssetType }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.success) {
+          showAppPopup({ title: 'Tabungan Berhasil', message: json.message, type: 'success', onConfirm: () => { closeModalTabungan(); loadAssetData(); } });
+        } else {
+          showAppPopup({ title: 'Gagal Menabung', message: json.message || 'Gagal memproses setoran tabungan.', type: 'error' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Setor Tabungan Sekarang';
+      }
+    }
+
+    // Sub-Feature 3: Cicil
+    let selectedCicilKeping = 10;
+    let selectedCicilTenor = 3;
+    function openModalCicil() {
+      if (!checkMemberAccess()) return;
+      const u = getCurrentUserLocal();
+      if (u) {
+        if (u.fullName || u.name) document.getElementById('cicilNameInput').value = u.fullName || u.name;
+        if (u.phone) document.getElementById('cicilPhoneInput').value = u.phone;
+      }
+      setCicilKeping(10);
+      setCicilTenor(3);
+      document.getElementById('modalCicil').style.display = 'flex';
+    }
+    function closeModalCicil() { document.getElementById('modalCicil').style.display = 'none'; }
+    function setCicilKeping(grams) {
+      selectedCicilKeping = grams;
+      ['10', '25', '50', '100'].forEach(k => {
+        const b = document.getElementById('btnKeping' + k);
+        if (b) b.classList.toggle('active', parseInt(k) === grams);
+      });
+      calcCicilSummary();
+    }
+    function setCicilTenor(months) {
+      selectedCicilTenor = months;
+      ['3', '6', '12'].forEach(t => {
+        const b = document.getElementById('btnTenorCicil' + t);
+        if (b) b.classList.toggle('active', parseInt(t) === months);
+      });
+      calcCicilSummary();
+    }
+    function calcCicilSummary() {
+      const isGold = (currentAssetType === 'gold');
+      const buyP = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
+      const totalVal = selectedCicilKeping * buyP;
+      const dp = Math.round(totalVal * 0.20);
+      const remaining = totalVal - dp;
+      const angsuran = Math.round(remaining / selectedCicilTenor);
+      document.getElementById('cicilTotalHargaLabel').innerText = formatRupiah(totalVal);
+      document.getElementById('cicilDpLabel').innerText = formatRupiah(dp);
+      document.getElementById('cicilAngsuranLabel').innerText = formatRupiah(angsuran) + ' / bln';
+    }
+    function submitCicilAset() {
+      const name = document.getElementById('cicilNameInput').value.trim();
+      const phone = document.getElementById('cicilPhoneInput').value.trim();
+      if (!name || !phone) {
+        showAppPopup({ title: 'Form Belum Lengkap', message: 'Lengkapi Nama Lengkap dan Nomor WhatsApp Pemohon cicilan.', type: 'warning' });
+        return;
+      }
+      const isGold = (currentAssetType === 'gold');
+      const buyP = isGold ? currentData.gold_buy_price : currentData.silver_buy_price;
+      const totalVal = selectedCicilKeping * buyP;
+      const dp = Math.round(totalVal * 0.20);
+      const angsuran = Math.round((totalVal - dp) / selectedCicilTenor);
+      showAppPopup({
+        title: 'Pengajuan Cicilan Diterima',
+        message: `Pengajuan cicilan keping fisik ${selectedCicilKeping} Gram ${isGold ? 'Emas' : 'Perak'} (Tenor ${selectedCicilTenor} Bulan) berhasil diajukan.\n\nUang Muka: ${formatRupiah(dp)}\nAngsuran: ${formatRupiah(angsuran)}/bulan\n\nAdmin akan segera menghubungi WhatsApp Anda (${phone}).`,
+        type: 'success',
+        onConfirm: () => { closeModalCicil(); }
+      });
+    }
+
+    // Sub-Feature 4: Cetak Fisik (Biaya Cetak Dinamis)
+    function openModalCetak() {
+      if (!checkMemberAccess()) return;
+      const u = getCurrentUserLocal();
+      if (u) {
+        if (u.fullName || u.name) document.getElementById('cetakRecipientName').value = u.fullName || u.name;
+        if (u.phone) document.getElementById('cetakRecipientPhone').value = u.phone;
+        if (u.address) document.getElementById('cetakAddress').value = u.address;
+      }
+      updateCetakFeeDisplay();
+      document.getElementById('modalCetak').style.display = 'flex';
+    }
+    function closeModalCetak() { document.getElementById('modalCetak').style.display = 'none'; }
+    function updateCetakFeeDisplay() {
+      const isGold = (currentAssetType === 'gold');
+      const fee = isGold ? (currentData.minting_fee_gold || 50000) : (currentData.minting_fee_silver || 25000);
+      const grams = parseFloat(document.getElementById('cetakGramsSelect').value) || 5;
+      const totalFee = fee * grams;
+      const feeEl = document.getElementById('biayaCetakDisplay');
+      if (feeEl) feeEl.innerText = `${formatRupiah(fee)} / gram (${formatRupiah(totalFee)} total)`;
+    }
+    async function submitCetakAset() {
+      if (!checkMemberAccess()) return;
+      const grams = parseFloat(document.getElementById('cetakGramsSelect').value) || 5;
+      const recName = document.getElementById('cetakRecipientName').value.trim();
+      const recPhone = document.getElementById('cetakRecipientPhone').value.trim();
+      const addr = document.getElementById('cetakAddress').value.trim();
+      if (!recName || !recPhone || !addr) {
+        showAppPopup({ title: 'Form Belum Lengkap', message: 'Lengkapi Nama Penerima, Nomor WhatsApp, dan Alamat Lengkap Pengiriman.', type: 'warning' });
+        return;
+      }
+      const btn = document.getElementById('btnSubmitCetak');
+      btn.disabled = true;
+      btn.innerText = 'Mengirim Permohonan...';
+      try {
+        const res = await fetch(getApiUrl('order_physical_minting'), getAuthFetchOptions('POST', { grams, recipient_name: recName, recipient_phone: recPhone, shipping_address: addr, asset_type: currentAssetType }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.success) {
+          showAppPopup({ title: 'Permohonan Berhasil', message: json.message, type: 'success', onConfirm: () => { closeModalCetak(); loadAssetData(); } });
+        } else {
+          showAppPopup({ title: 'Gagal Mengajukan', message: json.message || 'Gagal mengajukan cetak fisik.', type: 'error' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Ajukan Pencetakan & Kirim';
+      }
+    }
+
+    // Sub-Feature 5: Hadiah
+    function openModalHadiah() {
+      if (!checkMemberAccess()) return;
+      const isGold = (currentAssetType === 'gold');
+      const bal = isGold ? (currentData.gold_balance || 0) : (currentData.silver_balance || 0);
+      document.getElementById('hadiahUserSilverBal').innerText = formatNumber(bal, 3) + ` Gram ${isGold ? 'Emas' : 'Perak'}`;
+      document.getElementById('modalHadiah').style.display = 'flex';
+    }
+    function closeModalHadiah() { document.getElementById('modalHadiah').style.display = 'none'; }
+    async function submitKlaimHadiah(tier) {
+      if (!checkMemberAccess()) return;
+      try {
+        const res = await fetch(getApiUrl('claim_asset_reward'), getAuthFetchOptions('POST', { tier, asset_type: currentAssetType }));
+        const json = await res.json();
+        handleApiSessionToken(json);
+        if (json.success) {
+          showAppPopup({ title: 'Klaim Berhasil!', message: json.message, type: 'success', onConfirm: () => { closeModalHadiah(); loadAssetData(); } });
+        } else {
+          showAppPopup({ title: 'Target Belum Tercapai', message: json.message || 'Gagal melakukan klaim hadiah.', type: 'warning' });
+        }
+      } catch (e) {
+        showAppPopup({ title: 'Gangguan Koneksi', message: 'Terjadi kesalahan: ' + e.message, type: 'error' });
+      }
+    }
+
+    // Boot
+    document.addEventListener('DOMContentLoaded', () => {
+      checkMemberAccess();
+      loadAssetData();
+    });
+  </script>
+
+</body>
+</html>

@@ -16,4 +16,14 @@ Task 2: completed
 - order_shop_product deducts stock and awards +10 points reward to user points balance.
 - scratch/test_backend_modules.cjs verified 100% PASS.
 
-Task 3: in_progress
+Task 3: completed
+- Dual Asset tab switcher (Tab Perak & Tab Emas) with metallic styling and 3D realistic SVG bullion illustrations.
+- Rincian Likuiditas Portofolio clearly segregates Saldo Siap Jual (Likuid), Saldo Tabungan Fisik, and Saldo Kontrak Aktif.
+- Interactive SVG price trend charts with 7-day historical prices and high/low stats.
+- Buy modal with realtime wallet balance check and one-click deposit shortcut with exact shortfall.
+- Sell modal strictly bounded by liquid balance with "Jual Semua" helper.
+- Dynamic minting fee in Cetak Fisik modal.
+- Strict member access gate enforcing authentication on boot.
+- scratch/test_aset_page.cjs verified 100% PASS.
+
+Task 4: in_progress
