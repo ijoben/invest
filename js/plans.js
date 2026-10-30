@@ -137,6 +137,26 @@ export const Plans = {
     return !!(last && last.day === dayNo && last.status === 'pending_claim');
   },
 
+  // Daftar tanggal yield kanonik (ISO) dari start sampai end. Logika ini HARUS
+  // sama dengan buildYieldDateList() di api/index.php: weekend dilewati hanya
+  // bila admin menetapkan "LIBUR".
+  getYieldDates(startIso, endIso) {
+    const out = [];
+    if (!startIso || !endIso || startIso > endIso) return out;
+    const weekendEnabled = this.isWeekendProfitEnabled();
+    const startTs = Date.parse(startIso + 'T00:00:00Z');
+    const endTs = Date.parse(endIso + 'T00:00:00Z');
+    if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) return out;
+    for (let ts = startTs; ts <= endTs; ts += 86400000) {
+      const d = new Date(ts);
+      const dow = d.getUTCDay(); // 0 Minggu, 6 Sabtu
+      if (weekendEnabled || (dow !== 0 && dow !== 6)) {
+        out.push(d.toISOString().slice(0, 10));
+      }
+    }
+    return out;
+  },
+
   // Synchronize user investments with real timestamps (handles completed cycles)
   syncUserInvestments(userId) {
     if (!userId) return [];
@@ -202,15 +222,97 @@ export const Plans = {
         }
       });
 
-      // 2. Strict T-1 rule: pendingProfitClaim ONLY includes yields from past days (date < todayWib) that have not been claimed.
-      //    Hanya dihitung ulang bila history lokal memang ada. History kosong
-      //    (mis. baru sync dari server) tidak boleh menihilkan pendingProfitClaim.
-      if (inv.history.length > 0) {
+      // 2. Pending T-1 yang otoritatif:
+      //    - Hanya hari kontrak yang sudah lewat & BELUM dibayar (>= daysElapsed)
+      //      yang boleh tampil sebagai pending.
+      //    - Baris pending lama di luar daftar itu dibuang, sehingga snapshot
+      //      browser tidak bisa membayar ulang hari yang sudah lunas.
+      //    - Hari yang terlewat (member tidak buka dashboard) diisi otomatis,
+      //      jadi angka pending di layar = yang akan dibayar server.
+      const durationDays = Math.max(1, Number(inv.durationDays) || 30);
+      const startIso = DB.parseDateToIso(inv.startDate || inv.createdAt);
+      const yDate = new Date(todayWib + 'T00:00:00Z');
+      yDate.setUTCDate(yDate.getUTCDate() - 1);
+      const yesterdayIso = yDate.toISOString().slice(0, 10);
+      const paidDays = Math.max(0, Math.min(durationDays, Number(inv.daysElapsed) || 0));
+      const yieldDates = startIso
+        ? this.getYieldDates(startIso, yesterdayIso).slice(0, durationDays)
+        : [];
+      // Paket lama (sebelum mesin profit kanonik) hanya boleh menampilkan SATU
+      // hari pending: data klaim kumulatif lama tidak bisa dipastikan, jadi
+      // jangan sampai normalisasi memicu klaim susulan besar. Paket baru tetap
+      // boleh mengejar semua hari yang terlewat.
+      const catchUpAllowed = !!startIso && startIso >= '2026-10-29';
+      // Bila sudah klaim hari ini, seluruh yield yang jatuh tempo sudah dibayar
+      // server; jangan biarkan baris pending lama tampil lagi.
+      const expectedPendingDates = hasClaimedToday
+        ? []
+        : yieldDates.slice(paidDays, catchUpAllowed ? undefined : paidDays + 1);
+
+      if (inv.history.length > 0 || expectedPendingDates.length > 0) {
+        const expectedSet = new Set(expectedPendingDates);
+        const byDate = new Map();
+        const kept = [];
+        inv.history.forEach(h => {
+          const hIso = DB.parseDateToIso(h.date);
+          const st = h.status || '';
+          // Pending lama yang bukan hak hari ini -> buang.
+          if (st === 'pending_claim' && !expectedSet.has(hIso)) {
+            modified = true;
+            return;
+          }
+          // in_progress dari hari lampau tidak boleh menggantung selamanya.
+          if (st === 'in_progress' && hIso && hIso < todayWib) {
+            modified = true;
+            return;
+          }
+          if (hIso && byDate.has(hIso)) {
+            modified = true;
+            return; // satu baris per tanggal
+          }
+          if (hIso) byDate.set(hIso, h);
+          kept.push(h);
+        });
+        inv.history = kept;
+
+        expectedPendingDates.forEach((iso, idx) => {
+          const existing = byDate.get(iso);
+          // Baris claimed = sudah dibayar; jangan pernah dihidupkan lagi.
+          if (existing && existing.status === 'claimed') return;
+          const rate = this.getDeterministicDailyRate(inv, iso);
+          const amount = this.computeProfitAmount(inv.capital, rate);
+          if (existing) {
+            if (existing.status !== 'pending_claim') {
+              existing.status = 'pending_claim';
+              modified = true;
+            }
+            if (Number(existing.rate) !== rate || Number(existing.amount) !== amount) {
+              existing.rate = rate;
+              existing.amount = amount;
+              modified = true;
+            }
+          } else {
+            const row = {
+              day: Math.min(durationDays, paidDays + idx + 1),
+              date: iso,
+              rate: rate,
+              amount: amount,
+              status: 'pending_claim'
+            };
+            inv.history.push(row);
+            byDate.set(iso, row);
+            modified = true;
+          }
+        });
+
+        inv.history.sort((a, b) => {
+          const aIso = DB.parseDateToIso(a.date) || '';
+          const bIso = DB.parseDateToIso(b.date) || '';
+          return aIso.localeCompare(bIso);
+        });
+
         const pastPendingAmount = inv.history
-          .filter(h => {
-            const hIso = DB.parseDateToIso(h.date);
-            return hIso && hIso < todayWib && h.status === 'pending_claim';
-          })
+          .filter(h => h.status === 'pending_claim')
           .reduce((sum, h) => sum + (Number(h.amount) || 0), 0);
 
         if (Number(inv.pendingProfitClaim || 0) !== pastPendingAmount) {
@@ -983,9 +1085,12 @@ export const Plans = {
       let pendingRates = [];
       let pendingPlanNames = [];
       let pendingCapital = 0;
+      let pendingRateWeighted = 0;
+      let pendingDaysCount = 0;
 
       userInvs.forEach(inv => {
         let hasInvPending = false;
+        const invCapital = Number(inv.capital || 0);
         if (Array.isArray(inv.history)) {
           inv.history.forEach(h => {
             const hIso = DB.parseDateToIso(h.date);
@@ -993,31 +1098,42 @@ export const Plans = {
               const amt = Number(h.amount) || 0;
               totalPending += amt;
               hasInvPending = true;
+              pendingDaysCount++;
               if (h.date) pendingDates.push(h.date);
-              if (h.rate !== undefined && h.rate !== null) pendingRates.push(Number(h.rate));
+              if (h.rate !== undefined && h.rate !== null) {
+                const rowRate = Number(h.rate);
+                pendingRates.push(rowRate);
+                pendingRateWeighted += rowRate * invCapital;
+              }
             }
           });
         } else if (Number(inv.pendingProfitClaim) > 0) {
           totalPending += Number(inv.pendingProfitClaim);
           hasInvPending = true;
+          pendingDaysCount++;
         }
 
         if (hasInvPending) {
-          pendingCapital += Number(inv.capital || 0);
+          pendingCapital += invCapital;
           if (inv.planName) pendingPlanNames.push(inv.planName);
         }
       });
 
-      // Persen yang ditampilkan harus persen TERTIMBANG modal, bukan rata-rata
-      // sederhana antar paket: member dengan 2 paket berbeda modal akan melihat
-      // persen yang tidak cocok dengan nominal kalau dirata-ratakan biasa.
+      // Persen yang ditampilkan = RATA-RATA HARIAN tertimbang modal, bukan
+      // total/modal. Klaim beberapa hari sekaligus (mis. member baru buka
+      // dashboard setelah 3 hari) tidak boleh tampil di luar rentang paket.
       let computedRate = 0;
-      if (pendingCapital > 0 && totalPending > 0) {
-        computedRate = parseFloat(((totalPending / pendingCapital) * 100).toFixed(2));
+      if (pendingCapital > 0 && pendingRateWeighted > 0) {
+        computedRate = parseFloat((pendingRateWeighted / pendingCapital).toFixed(2));
       } else if (pendingRates.length > 0) {
         computedRate = parseFloat((pendingRates.reduce((a, b) => a + b, 0) / pendingRates.length).toFixed(2));
+      } else if (pendingCapital > 0 && totalPending > 0) {
+        computedRate = parseFloat(((totalPending / pendingCapital) * 100).toFixed(2));
       }
-      const computedRateStr = 'Profit ' + String(computedRate || 0).replace('.', ',') + '%';
+      let computedRateStr = 'Profit ' + String(computedRate || 0).replace('.', ',') + '%';
+      if (pendingDaysCount > 1) {
+        computedRateStr += ' (rata-rata ' + pendingDaysCount + ' hari)';
+      }
       const computedPlanName = pendingPlanNames.length > 0 ? Array.from(new Set(pendingPlanNames)).join(', ') : 'Paket AI Trading';
       const lastPendingDate = pendingDates.length > 0 ? pendingDates[pendingDates.length - 1] : null;
       const computedDateStr = this.formatIndoDayDate(lastPendingDate);

@@ -45,6 +45,20 @@ Options -Indexes
 
     # 3.4 Route /admin and /admin/ to admin.html
     RewriteRule ^admin/?$ admin.html [L,QSA]
+    
+    # Canonical 301 Redirect: Strip .html extension from browser address bar
+    RewriteCond %{THE_REQUEST} /aset\.html [NC]
+    RewriteRule ^aset\.html$ aset [R=301,L]
+
+    RewriteCond %{THE_REQUEST} /toko\.html [NC]
+    RewriteRule ^toko\.html$ toko [R=301,L]
+
+    RewriteCond %{THE_REQUEST} /pinjaman\.html [NC]
+    RewriteRule ^pinjaman\.html$ pinjaman [R=301,L]
+
+    RewriteRule ^aset/?$ aset.html [L,QSA]
+    RewriteRule ^toko/?$ toko.html [L,QSA]
+    RewriteRule ^pinjaman/?$ pinjaman.html [L,QSA]
 
     # 3.5 Internal rewrite for clean URLs to .html files (if .html exists)
     RewriteCond %{REQUEST_FILENAME} !-d

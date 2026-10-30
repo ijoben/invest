@@ -439,6 +439,12 @@ Object.assign(App, {
   // Main UI Synchronizer
   renderAll() {
     const user = Auth.getUser();
+    if (user && user.id) {
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_user_id', String(user.id));
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_user_id', String(user.id));
+      } catch(e) {}
+    }
     const db = DB.get();
 
     // 0. Synchronize Web Settings, Branding, Logo, & Favicon
@@ -475,10 +481,19 @@ Object.assign(App, {
           <span class="header-brand-text">${escapeHtml(appName)}</span>
         `;
       };
-      if (ws.logoUrl) {
-        brandBadge.innerHTML = `<img class="header-brand-logo" src="${escapeHtml(ws.logoUrl)}" alt="${escapeHtml(appName)}" decoding="async">`;
+      const renderBrandLogo = (src) => {
+        brandBadge.innerHTML = `<img class="header-brand-logo" src="${escapeHtml(src)}" alt="${escapeHtml(appName)}" decoding="async">`;
         const brandImg = brandBadge.querySelector('img');
         if (brandImg) brandImg.onerror = renderBrandFallback;
+      };
+      // Logo resmi bawaan dipakai bila admin belum mengisi webSettings.logoUrl,
+      // supaya header TIDAK kembali ke ikon perisai lama ("logo lama") setelah
+      // deploy/reset setting. Bila file hilang, onerror kembali ke teks.
+      const fallbackLogoUrl = 'uploads/logo-autotrading-horizontal.svg?v=20261029';
+      if (ws.logoUrl) {
+        renderBrandLogo(ws.logoUrl);
+      } else if (fallbackLogoUrl) {
+        renderBrandLogo(fallbackLogoUrl);
       } else {
         renderBrandFallback();
       }

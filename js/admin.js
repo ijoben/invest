@@ -286,6 +286,29 @@ export const Admin = {
     }
   },
 
+  // NORMALISASI PROFIT TOTAL (semua member / satu member)
+  // Menghitung ulang riwayat, total profit, dan sisa hari dari kalender paket:
+  // 1 hari = modal x rate paket hari itu. Duplikat & nominal di luar rentang
+  // paket hilang. Saldo dompet dan transaksi TIDAK diubah.
+  async normalizeProfit(userId = '', dryRun = false) {
+    try {
+      if (typeof fetch !== 'function') return { success: false, message: 'Fetch tidak tersedia' };
+      const res = await fetch(DB.getApiUrl('admin_profit_normalize'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: DB.getAuthHeaders(),
+        body: JSON.stringify({ userId: userId || '', dryRun: !!dryRun })
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.success) {
+        return { success: false, message: (json && json.message) || `Gagal menormalkan profit (HTTP ${res.status})` };
+      }
+      return json;
+    } catch (e) {
+      return { success: false, message: e.message || 'Koneksi ke server gagal.' };
+    }
+  },
+
   // Save / Update Plan
   async savePlan(planData) {
     const db = DB.get();

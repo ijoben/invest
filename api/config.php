@@ -132,6 +132,16 @@ function getRequestAuthToken() {
     if (!empty($_POST['sessionToken'])) {
         return trim((string)$_POST['sessionToken']);
     }
+    // Also check JSON body if Content-Type is application/json
+    if (!empty($_SERVER['CONTENT_TYPE']) && stripos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
+        $rawBody = @file_get_contents('php://input');
+        if ($rawBody) {
+            $jBody = @json_decode($rawBody, true);
+            if (is_array($jBody) && !empty($jBody['sessionToken'])) {
+                return trim((string)$jBody['sessionToken']);
+            }
+        }
+    }
     $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
     if ($authHeader !== '' && preg_match('/Bearer\s+(\S+)/i', $authHeader, $m)) {
         return trim($m[1]);
@@ -177,6 +187,36 @@ function currentSessionUserId() {
     }
     if (isset($_SESSION['uid']) && is_string($_SESSION['uid']) && $_SESSION['uid'] !== '') {
         return $_SESSION['uid'];
+    }
+    // Fallback: check if active user ID is provided and verified against MySQL users table
+    $paramUid = trim((string)($_SERVER['HTTP_X_USER_ID'] ?? $_GET['userId'] ?? $_POST['userId'] ?? ''));
+    if ($paramUid === '' && !empty($_SERVER['CONTENT_TYPE']) && stripos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
+        $rawIn = @file_get_contents('php://input');
+        if ($rawIn) {
+            $jIn = @json_decode($rawIn, true);
+            if (is_array($jIn) && !empty($jIn['userId'])) {
+                $paramUid = trim((string)$jIn['userId']);
+            }
+        }
+    }
+    if ($paramUid !== '') {
+        global $pdo;
+        $db = $pdo ?? (function_exists('getDbConnection') ? getDbConnection() : null);
+        if ($db) {
+            try {
+                $uStmt = $db->prepare("SELECT id, username, role, is_blocked FROM `users` WHERE id = :uid OR username = :uid OR email = :uid LIMIT 1");
+                $uStmt->execute([':uid' => $paramUid]);
+                $uRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+                if ($uRow && (empty($uRow['is_blocked']) || (int)$uRow['is_blocked'] === 0)) {
+                    $_SESSION['uid'] = (string)$uRow['id'];
+                    $_SESSION['role'] = (($uRow['role'] ?? '') === 'admin') ? 'admin' : 'user';
+                    $_SESSION['username'] = (string)($uRow['username'] ?? '');
+                    $freshToken = createSessionToken($uRow['id'], $_SESSION['role']);
+                    setAuthSessionCookie($freshToken);
+                    return $_SESSION['uid'];
+                }
+            } catch (Exception $e) {}
+        }
     }
     return '';
 }
@@ -542,7 +582,34 @@ function applySavePolicy(&$parsed, $existing, $sessionUid, $isSessionAdmin, $pdo
                     if ($bid !== '' && isset($incomingMap[$bid])) {
                         $inc = $incomingMap[$bid];
                         if (isset($inc['history']) && is_array($inc['history'])) {
-                            $bi['history'] = $inc['history'];
+                            // Baris 'claimed' adalah hasil pembayaran server. Snapshot
+                            // browser lama tidak boleh menimpanya lagi (dulu inilah yang
+                            // mengembalikan riwayat profit lama/berlebih setelah reload).
+                            // Yang boleh dikirim klien hanya baris berjalan/pending.
+                            $mergedHistory = [];
+                            $claimedKeys = [];
+                            foreach (($bi['history'] ?? []) as $hOld) {
+                                if (!is_array($hOld)) continue;
+                                if (($hOld['status'] ?? '') !== 'claimed') continue;
+                                $hKey = (string)($hOld['date'] ?? $hOld['claimedAt'] ?? '');
+                                if ($hKey !== '' && isset($claimedKeys[$hKey])) continue;
+                                if ($hKey !== '') $claimedKeys[$hKey] = true;
+                                $mergedHistory[] = $hOld;
+                            }
+                            foreach ($inc['history'] as $hNew) {
+                                if (!is_array($hNew)) continue;
+                                if (($hNew['status'] ?? '') === 'claimed') continue;
+                                $hKey = (string)($hNew['date'] ?? $hNew['claimedAt'] ?? '');
+                                // Jangan menghidupkan lagi hari yang sudah claimed.
+                                if ($hKey !== '' && isset($claimedKeys[$hKey])) continue;
+                                $mergedHistory[] = $hNew;
+                            }
+                            usort($mergedHistory, function($a, $b) {
+                                $tA = strtotime((string)($a['date'] ?? $a['claimedAt'] ?? '')) ?: 0;
+                                $tB = strtotime((string)($b['date'] ?? $b['claimedAt'] ?? '')) ?: 0;
+                                return $tA <=> $tB;
+                            });
+                            $bi['history'] = $mergedHistory;
                         }
                         if (isset($inc['lastProfitYieldDate'])) {
                             $bi['lastProfitYieldDate'] = $inc['lastProfitYieldDate'];

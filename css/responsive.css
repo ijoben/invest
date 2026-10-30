@@ -159,8 +159,28 @@
    MOBILE HEADER PERFECTION (Screens <= 576px, <= 480px and <= 380px)
    ========================================================================== */
 @media (max-width: 576px) {
+  /* Logo brand TETAP tampil di HP (dulu display:none membuat logo admin tidak
+     pernah kelihatan di mode mobile). Ukurannya dipadatkan supaya sapaan user
+     dan tombol aksi tetap punya ruang. */
   .header-brand-badge {
-    display: none !important; /* Hide central pill on mobile so user greeting and action buttons have abundant breathing space */
+    display: inline-flex !important;
+    padding: 3px 7px;
+    gap: 4px;
+    max-width: 104px;
+    overflow: hidden;
+  }
+  .header-brand-badge .header-brand-logo {
+    height: 18px;
+    max-width: 90px;
+  }
+  .header-brand-text {
+    font-size: 9px;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+  }
+  .header-brand-icon svg {
+    width: 12px;
+    height: 12px;
   }
 }
 
@@ -209,6 +229,19 @@
   .top-header {
     padding: 6px 10px;
     gap: 8px;
+  }
+  .header-brand-badge {
+    max-width: 82px;
+    padding: 2px 6px;
+    gap: 3px;
+  }
+  .header-brand-badge .header-brand-logo {
+    height: 16px;
+    max-width: 70px;
+  }
+  .header-brand-text {
+    font-size: 8px;
+    letter-spacing: 0.2px;
   }
   .header-user {
     gap: 7px;
