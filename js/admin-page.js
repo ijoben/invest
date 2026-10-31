@@ -5433,11 +5433,48 @@ Object.assign(AdminPage, {
     this._setVal('cfgCsWhatsapp', cs.whatsapp || '');
     this._setVal('cfgCsTelegram', cs.telegram || '');
     this._setVal('cfgCsWaMessage', cs.waMessage || 'Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform...');
+    
+    const csFloatingInp = document.getElementById('cfgCsFloatingEnabled');
+    if (csFloatingInp) {
+      const isCsEnabled = (cs.floatingEnabled !== false);
+      csFloatingInp.checked = isCsEnabled;
+      this.toggleCsFloatingLabel(isCsEnabled);
+    }
 
     // Kelas Trading
     this._setVal('cfgKelasWhatsapp', kt.whatsapp || '');
     this._setVal('cfgKelasTelegram', kt.telegram || '');
     this._setVal('cfgKelasDesc', kt.desc || 'Komunitas edukasi trading AI, webinar eksklusif & sinyal pasar harian');
+  },
+
+  toggleCsFloatingLabel(checked) {
+    const label = document.getElementById('cfgCsFloatingStatusLabel');
+    if (label) {
+      label.textContent = checked ? 'AKTIF' : 'NONAKTIF';
+      label.style.color = checked ? '#10B981' : '#EF4444';
+    }
+    const syncToggle = document.getElementById('adminCsFloatingToggle');
+    if (syncToggle && syncToggle.checked !== checked) {
+      syncToggle.checked = checked;
+      const text = document.getElementById('adminCsFloatingStatusText');
+      if (text) {
+        text.textContent = checked ? 'ON' : 'OFF';
+        text.style.color = checked ? '#10B981' : '#EF4444';
+      }
+    }
+  },
+
+  syncCsFloatingToggles(checked) {
+    const mainToggle = document.getElementById('cfgCsFloatingEnabled');
+    if (mainToggle && mainToggle.checked !== checked) {
+      mainToggle.checked = checked;
+      this.toggleCsFloatingLabel(checked);
+    }
+    const text = document.getElementById('adminCsFloatingStatusText');
+    if (text) {
+      text.textContent = checked ? 'ON' : 'OFF';
+      text.style.color = checked ? '#10B981' : '#EF4444';
+    }
   },
 
   /** Save Customer Service Settings */
@@ -5449,15 +5486,25 @@ Object.assign(AdminPage, {
     const wa = document.getElementById('cfgCsWhatsapp')?.value.trim() || '';
     const tg = document.getElementById('cfgCsTelegram')?.value.trim() || '';
     const msg = document.getElementById('cfgCsWaMessage')?.value.trim() || '';
+    const csFloatingEnabled = Boolean(document.getElementById('cfgCsFloatingEnabled')?.checked ?? true);
 
     db.settings.cs.whatsapp = wa;
     db.settings.cs.telegram = tg;
     db.settings.cs.waMessage = msg;
+    db.settings.cs.floatingEnabled = csFloatingEnabled;
 
-    this.showToast('Menyimpan kontak CS ke database...', 'info');
+    this.showToast('info', 'Menyimpan kontak CS & status widget ke database...');
     await DB.save(db);
     await DB.adminSaveSettings({ cs: db.settings.cs });
-    this.showToast('✅ Kontak WhatsApp & Telegram CS berhasil disimpan dan aktif!', 'success');
+
+    try {
+      await this.adminFetch('api/index.php?action=admin_save_cs_settings', {
+        method: 'POST',
+        body: JSON.stringify({ cs_floating_enabled: csFloatingEnabled })
+      });
+    } catch(e) {}
+
+    this.showToast('success', '✅ Kontak CS & Status Tombol Melayang berhasil disimpan dan sinkron!');
   },
 
   /** Save Kelas Trading Settings */
@@ -6529,8 +6576,27 @@ Object.assign(AdminPage, {
           prev.src = d.banner_url;
           prev.style.display = 'block';
         }
-        if (pointsInp && Array.isArray(d.points)) {
-          pointsInp.value = d.points.join('\n');
+        if (pointsInp) {
+          if (Array.isArray(d.points) && d.points.length > 0) {
+            pointsInp.value = d.points.join('\n');
+          } else {
+            pointsInp.value = "bisa beli perak\nbisa beli emas\nbisa beli PPOB\nbisa belanja online\nbisa mendapat pinjaman";
+          }
+        }
+        if (d.cs_floating_enabled !== undefined) {
+          const isCsOn = Boolean(d.cs_floating_enabled);
+          const toggleEl = document.getElementById('adminCsFloatingToggle');
+          if (toggleEl) toggleEl.checked = isCsOn;
+          const statusText = document.getElementById('adminCsFloatingStatusText');
+          if (statusText) {
+            statusText.textContent = isCsOn ? 'ON' : 'OFF';
+            statusText.style.color = isCsOn ? '#10B981' : '#EF4444';
+          }
+          const mainToggle = document.getElementById('cfgCsFloatingEnabled');
+          if (mainToggle) {
+            mainToggle.checked = isCsOn;
+            this.toggleCsFloatingLabel(isCsOn);
+          }
         }
       }
     } catch (e) {
@@ -6577,7 +6643,8 @@ Object.assign(AdminPage, {
           enabled: active,
           title: title,
           banner_url: bannerUrl,
-          points: points
+          points: points,
+          cs_floating_enabled: Boolean(document.getElementById('adminCsFloatingToggle')?.checked ?? true)
         })
       });
       const json = await res.json();

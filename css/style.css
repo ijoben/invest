@@ -1483,12 +1483,33 @@ html, body {
   align-items: flex-end;
   justify-content: center;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.25s ease;
 }
 
 .modal-backdrop.show {
   display: flex;
   opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-backdrop#modalWelcomeLogin {
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+}
+
+.modal-backdrop#modalWelcomeLogin .modal-sheet {
+  border-radius: 20px !important;
+  margin: auto !important;
+  transform: scale(0.92) translateY(16px) !important;
+  opacity: 0 !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease !important;
+}
+
+.modal-backdrop.show#modalWelcomeLogin .modal-sheet {
+  transform: scale(1) translateY(0) !important;
+  opacity: 1 !important;
 }
 
 .modal-sheet {

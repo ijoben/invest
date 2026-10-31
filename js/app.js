@@ -4065,12 +4065,16 @@ Object.assign(App, {
     const modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.remove('show');
+      modal.style.display = 'none';
       document.body.style.overflow = '';
     }
   },
 
   closeAllModals() {
-    document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.modal-backdrop').forEach(m => {
+      m.classList.remove('show');
+      m.style.display = 'none';
+    });
     document.body.style.overflow = '';
   },
 

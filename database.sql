@@ -251,10 +251,11 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES
 ('price_history_gold', '[{"date":"24 Okt","price":1280000},{"date":"25 Okt","price":1285000},{"date":"26 Okt","price":1290000},{"date":"27 Okt","price":1295000},{"date":"28 Okt","price":1290000},{"date":"29 Okt","price":1300000},{"date":"30 Okt","price":1300000}]', 'Riwayat harga emas 7 hari'),
 ('contract_rates_silver', '{"30":0.3,"150":0.5,"365":0.8}', 'Persentase dividen kontrak harian perak untuk tenor 30, 150, 365 hari'),
 ('contract_rates_gold', '{"30":0.25,"150":0.45,"365":0.75}', 'Persentase dividen kontrak harian emas untuk tenor 30, 150, 365 hari'),
-('welcome_popup_config', '{"enabled":true,"title":"Selamat Datang di Auto Trading!","banner_url":"assets/img/welcome-banner.jpg","points":["bisa beli aset perak","bisa beli aset emas","bisa nabung untuk masa depan","bisa invest dengan profit variatif setiap hari","belanja online","pinjaman khsus member aktif ( leader )"]}', 'Konfigurasi iklan pop-up selamat datang setelah login'),
+('welcome_popup_config', '{"enabled":true,"title":"Selamat Datang di Auto Trading!","banner_url":"assets/img/welcome-banner.jpg","points":["bisa beli perak","bisa beli emas","bisa beli PPOB","bisa belanja online","bisa mendapat pinjaman"]}', 'Konfigurasi iklan pop-up selamat datang setelah login'),
 ('gift_bonus_silver_reward', '0.010', 'Hadiah klaim bonus harian perak (Gram)'),
 ('gift_bonus_gold_reward', '0.005', 'Hadiah klaim bonus harian emas (Gram)'),
-('gift_bonus_points_reward', '10', 'Hadiah klaim bonus poin reward')
+('gift_bonus_points_reward', '10', 'Hadiah klaim bonus poin reward'),
+('cs_floating_enabled', '1', 'Status tampilan widget CS melayang di member area (1/0)')
 ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`);
 
 -- 5. Unified System State Seed (Clean Production)

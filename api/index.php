@@ -11221,7 +11221,7 @@ if ($action === 'admin_save_asset_prices') {
     $historyGold = $in['price_history_gold'] ?? null;
 
     try {
-        $up = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) VALUES (:k, :v, :d) ON DUPLICATE KEY UPDATE setting_value = :v, updated_at = NOW()");
+        $up = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) VALUES (:k, :v, :d) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
         
         $up->execute([':k' => 'silver_buy_price', ':v' => (string)$silverBuyPrice, ':d' => 'Harga Beli Perak per Gram']);
         $up->execute([':k' => 'silver_sell_price', ':v' => (string)$silverSellPrice, ':d' => 'Harga Jual Perak per Gram']);
@@ -11446,12 +11446,11 @@ if ($action === 'admin_save_welcome_popup') {
     $title = trim((string)($in['title'] ?? 'Selamat Datang di Auto Trading!'));
     $bannerUrl = trim((string)($in['banner_url'] ?? 'assets/img/welcome-banner.jpg'));
     $points = $in['points'] ?? [
-        "bisa beli aset perak",
-        "bisa beli aset emas",
-        "bisa nabung untuk masa depan",
-        "bisa invest dengan profit variatif setiap hari",
-        "belanja online",
-        "pinjaman khsus member aktif ( leader )"
+        "bisa beli perak",
+        "bisa beli emas",
+        "bisa beli PPOB",
+        "bisa belanja online",
+        "bisa mendapat pinjaman"
     ];
     if (is_string($points)) {
         $points = array_values(array_filter(array_map('trim', explode("\n", $points))));
@@ -11467,8 +11466,16 @@ if ($action === 'admin_save_welcome_popup') {
     try {
         $st = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) 
             VALUES ('welcome_popup_config', :v, 'Konfigurasi iklan pop-up selamat datang setelah login')
-            ON DUPLICATE KEY UPDATE setting_value = :v, updated_at = NOW()");
+            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
         $st->execute([':v' => json_encode($config)]);
+
+        if (isset($in['cs_floating_enabled'])) {
+            $csVal = !empty($in['cs_floating_enabled']) ? '1' : '0';
+            $stCs = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) 
+                VALUES ('cs_floating_enabled', :v, 'Status tampilan widget CS melayang di member area (1/0)')
+                ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+            $stCs->execute([':v' => $csVal]);
+        }
 
         jsonResponse([
             'success' => true,
@@ -11488,12 +11495,11 @@ if ($action === 'get_welcome_popup') {
         'title' => 'Selamat Datang di Auto Trading!',
         'banner_url' => 'assets/img/welcome-banner.jpg',
         'points' => [
-            "bisa beli aset perak",
-            "bisa beli aset emas",
-            "bisa nabung untuk masa depan",
-            "bisa invest dengan profit variatif setiap hari",
-            "belanja online",
-            "pinjaman khsus member aktif ( leader )"
+            "bisa beli perak",
+            "bisa beli emas",
+            "bisa beli PPOB",
+            "bisa belanja online",
+            "bisa mendapat pinjaman"
         ]
     ];
 
@@ -11509,7 +11515,45 @@ if ($action === 'get_welcome_popup') {
         }
     } catch (Exception $e) {}
 
+    $csFloating = true;
+    try {
+        $stCs = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'cs_floating_enabled' LIMIT 1");
+        $stCs->execute();
+        $rowCs = $stCs->fetch();
+        if ($rowCs && isset($rowCs['setting_value'])) {
+            $csFloating = ($rowCs['setting_value'] === '1' || $rowCs['setting_value'] === 'true' || $rowCs['setting_value'] === 1);
+        }
+    } catch(Exception $eCs) {}
+    $config['cs_floating_enabled'] = $csFloating;
+
     jsonResponse(['success' => true, 'data' => $config]);
+}
+
+
+// 4g. Action: Admin Save CS Settings (WhatsApp, Telegram & Floating Toggle)
+if ($action === 'admin_save_cs_settings') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+
+    $csFloating = !empty($in['cs_floating_enabled']) ? '1' : '0';
+    try {
+        $stCs = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) 
+            VALUES ('cs_floating_enabled', :v, 'Status tampilan widget CS melayang di member area (1/0)')
+            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+        $stCs->execute([':v' => $csFloating]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Pengaturan Layanan CS berhasil disimpan!',
+            'cs_floating_enabled' => ($csFloating === '1')
+        ]);
+    } catch(Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal menyimpan pengaturan CS: ' . $e->getMessage()], 500);
+    }
 }
 
 // 5. Action: Get Shop Data

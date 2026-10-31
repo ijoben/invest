@@ -1640,7 +1640,7 @@
            7b. FLOATING CUSTOMER SERVICE (CS) WIDGET (WA & TELEGRAM)
            Matching media_1793379021428_41aea5ac.jpg
            ==================================================================== -->
-      <div class="floating-cs-container" id="floatingCsContainer">
+      <div class="floating-cs-container" id="floatingCsContainer" style="display: none !important;">
         <!-- Floating CS Popup Card -->
         <div class="floating-cs-card" id="floatingCsCard" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -3884,27 +3884,23 @@
         <div id="welcomePopupPointsContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
           <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
             <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
-            <span>bisa beli aset perak</span>
+            <span>bisa beli perak</span>
           </div>
           <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
             <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
-            <span>bisa beli aset emas</span>
+            <span>bisa beli emas</span>
           </div>
           <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
             <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
-            <span>bisa nabung untuk masa depan</span>
+            <span>bisa beli PPOB</span>
           </div>
           <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
             <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
-            <span>bisa invest dengan profit variatif setiap hari</span>
+            <span>bisa belanja online</span>
           </div>
           <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
             <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
-            <span>belanja online</span>
-          </div>
-          <div style="display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #F1F5F9;">
-            <span style="color: #22C55E; font-size: 14px; font-weight: 800; line-height: 1.2;">✓</span>
-            <span>pinjaman khsus member aktif ( leader )</span>
+            <span>bisa mendapat pinjaman</span>
           </div>
         </div>
 
@@ -3997,7 +3993,10 @@
 
     function closeWelcomePopup() {
       const modal = document.getElementById('modalWelcomeLogin');
-      if (modal) modal.style.display = 'none';
+      if (modal) {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+      }
       try {
         sessionStorage.setItem('at_welcome_popup_dismissed', 'true');
       } catch(e) {}
@@ -4024,13 +4023,73 @@
             container.innerHTML = d.points.map(pt => '<div style="display:flex; align-items:flex-start; gap:10px; font-size:12.5px; color:#F1F5F9;"><span style="color:#22C55E; font-size:14px; font-weight:800; line-height:1.2;">✓</span><span>' + pt + '</span></div>').join('');
           }
           modal.style.display = 'flex';
+          modal.classList.add('show');
         }
       } catch(e) {
         console.warn('Welcome popup check:', e);
       }
     }
 
+    // Member-Only Floating CS Widget Sync (Controlled by Admin ON/OFF Toggle)
+    async function syncMemberCsWidgetVisibility() {
+      const csContainer = document.getElementById('floatingCsContainer');
+      if (!csContainer) return;
+      let isLogged = false;
+      try {
+        if (typeof Auth !== 'undefined' && Auth.isLoggedIn) {
+          isLogged = Auth.isLoggedIn();
+        } else if (localStorage.getItem('autotrading_session_token') || sessionStorage.getItem('autotrading_session_token')) {
+          isLogged = true;
+        }
+      } catch(e) {}
+
+      // CS is strictly MEMBER ONLY
+      if (!isLogged) {
+        csContainer.style.setProperty('display', 'none', 'important');
+        return;
+      }
+
+      // Check if Admin has turned CS widget ON
+      try {
+        let isEnabled = true;
+        if (typeof DB !== 'undefined' && DB.get) {
+          const db = DB.get();
+          if (db && db.settings && db.settings.cs && db.settings.cs.floatingEnabled !== undefined) {
+            isEnabled = Boolean(db.settings.cs.floatingEnabled);
+          }
+        }
+        const res = await fetch('api/index.php?action=get_welcome_popup');
+        const json = await res.json();
+        if (json.success && json.data && json.data.cs_floating_enabled !== undefined) {
+          isEnabled = Boolean(json.data.cs_floating_enabled);
+        }
+
+        if (isEnabled) {
+          csContainer.style.removeProperty('display');
+          csContainer.style.display = 'block';
+        } else {
+          csContainer.style.setProperty('display', 'none', 'important');
+        }
+      } catch(e) {
+        if (isLogged) {
+          csContainer.style.removeProperty('display');
+          csContainer.style.display = 'block';
+        }
+      }
+    }
+
+    // Close welcome popup when clicking outside modal sheet
+    document.addEventListener('click', (e) => {
+      const modal = document.getElementById('modalWelcomeLogin');
+      if (modal && e.target === modal) {
+        closeWelcomePopup();
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
+      // Sync Member CS Widget
+      syncMemberCsWidgetVisibility();
+
       // Check if user is logged in before showing welcome login popup
       setTimeout(() => {
         let isLogged = false;
@@ -4044,6 +4103,7 @@
         if (isLogged) {
           checkAndShowWelcomePopup();
         }
+        syncMemberCsWidgetVisibility();
       }, 1200);
     });
   </script>
