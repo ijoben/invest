@@ -86,7 +86,7 @@ Object.assign(AdminPage, {
       if (res.ok && json && json.success) {
         if (json.loggedIn === false) {
           const localToken = (typeof localStorage !== 'undefined' ? localStorage.getItem('autotrading_session_token') : null) ||
-                             (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : null);
+            (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('autotrading_session_token') : null);
           if (!localToken) {
             Auth.logout();
             this.checkAdminAuth();
@@ -96,7 +96,7 @@ Object.assign(AdminPage, {
           try {
             if (typeof localStorage !== 'undefined') localStorage.setItem('autotrading_session_token', json.sessionToken);
             if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('autotrading_session_token', json.sessionToken);
-          } catch(e) {}
+          } catch (e) { }
         }
       }
     } catch (e) {
@@ -116,7 +116,7 @@ Object.assign(AdminPage, {
       }
       if (savedTab === 'dashboard') {
         const sTab = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('autotrading_admin_tab')) ||
-                     (typeof localStorage !== 'undefined' && localStorage.getItem('autotrading_admin_tab'));
+          (typeof localStorage !== 'undefined' && localStorage.getItem('autotrading_admin_tab'));
         if (sTab && this.tabTitles[sTab]) {
           savedTab = sTab;
         }
@@ -599,13 +599,13 @@ Object.assign(AdminPage, {
       if (isPpob) {
         const isPln = t.category === 'pln' || (t.note && t.note.toLowerCase().includes('listrik')) || (t.destinationAccount && t.destinationAccount.toLowerCase().includes('pln'));
         walletSourceHtml = (t.source === 'affiliate' || t.walletSource === 'Wallet Tambah Teman')
-          ? '<span class="badge-status approved" style="font-size:9.5px; background:rgba(34,197,94,0.15); color:#16A34A; border:1px solid rgba(34,197,94,0.3);">Wallet Tim (PPOB)</span>' 
+          ? '<span class="badge-status approved" style="font-size:9.5px; background:rgba(34,197,94,0.15); color:#16A34A; border:1px solid rgba(34,197,94,0.3);">Wallet Tim (PPOB)</span>'
           : '<span class="badge-status approved" style="font-size:9.5px; background:rgba(245,158,11,0.15); color:#D97706; border:1px solid rgba(245,158,11,0.3);">Saldo Utama (PPOB)</span>';
-        
-        destHtml = isPln 
-          ? `<span style="display:inline-flex; align-items:center; gap:4px;">⚡ <strong>PLN:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>` 
+
+        destHtml = isPln
+          ? `<span style="display:inline-flex; align-items:center; gap:4px;">⚡ <strong>PLN:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>`
           : `<span style="display:inline-flex; align-items:center; gap:4px;">📱 <strong>HP:</strong> ${escapeHtml(t.targetNumber || t.destinationAccount || '-')}</span>`;
-        
+
         const nominalStr = t.nominal ? DB.formatIDR(t.nominal) : DB.formatIDR(t.amount);
         amountHtml = `<strong style="color:#D97706;">${nominalStr}</strong> <span style="font-size:10px; color:#64748B;">(Bayar: ${DB.formatIDR(t.amount)})</span>`;
 
@@ -669,8 +669,8 @@ Object.assign(AdminPage, {
     const orphans = db.plans.filter(p => !p.id);
     if (orphans.length > 0) {
       orphans.forEach(p => { p.id = 'plan-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7); });
-      DB.adminSavePlans(db.plans).catch(() => {});
-      DB.save(db).catch(() => {});
+      DB.adminSavePlans(db.plans).catch(() => { });
+      DB.save(db).catch(() => { });
     }
     tbody.innerHTML = db.plans.map(p => {
       const activeInvestorsCount = (db.investments || []).filter(i => i.planId === p.id && i.status === 'active').length;
@@ -918,7 +918,7 @@ Object.assign(AdminPage, {
   renderAffiliateSettings(db) {
     const cfg = db.settings;
     document.getElementById('affCfgSponsor').value = cfg.sponsorBonusPercent || 10;
-    
+
     const r1 = cfg.rabatLevels.find(l => l.level === 1);
     const r2 = cfg.rabatLevels.find(l => l.level === 2);
     const r3 = cfg.rabatLevels.find(l => l.level === 3);
@@ -1478,7 +1478,7 @@ Object.assign(AdminPage, {
     // Filter by search query
     if (this.userSearchQuery) {
       const q = this.userSearchQuery.toLowerCase().trim();
-      filtered = filtered.filter(u => 
+      filtered = filtered.filter(u =>
         (u.username && u.username.toLowerCase().includes(q)) ||
         (u.fullName && u.fullName.toLowerCase().includes(q)) ||
         (u.email && u.email.toLowerCase().includes(q)) ||
@@ -1560,7 +1560,7 @@ Object.assign(AdminPage, {
           <td><strong style="color:#22C55E;">${DB.formatIDR(u.walletBalance)}</strong></td>
           <td><strong style="color:#C89338;">${DB.formatIDR(u.affiliateBalance)}</strong></td>
           <td>${u.points || 0}</td>
-          <td>${escapeHtml(u.referredBy || '-') }</td>
+          <td>${escapeHtml(u.referredBy || '-')}</td>
           <td>
             <div class="btn-action-group" style="justify-content: flex-start; gap: 4px; flex-wrap: nowrap;">
               ${verifyActionBtn}
@@ -1747,7 +1747,7 @@ Object.assign(AdminPage, {
       if (res && res.success) {
         this.showToast(res.message || `Data member "${targetName}" berhasil direset total.`, 'success');
         this.closeResetMemberModal();
-        try { await DB.syncFromCloud(); } catch (e) {}
+        try { await DB.syncFromCloud(); } catch (e) { }
         this.renderAll();
       } else {
         this.showToast((res && res.message) || 'Gagal mereset data member.', 'error');
@@ -1860,12 +1860,12 @@ Object.assign(AdminPage, {
             ? '<div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.4); border-radius:10px; padding:10px 12px; color:#4ADE80; font-size:12px; font-weight:700;">✅ Tidak ada ketidakcocokan perhitungan profit. Nominal sudah sesuai persen paket.</div>'
             : '<div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:10px 12px; color:#FCD34D; font-size:12px; font-weight:700;">⚠️ Ditemukan ' + totalIssues + ' temuan pada ' + users.length + ' member. Tinjau daftar di bawah.</div>') +
           '<div style="margin-top:10px;">' +
-            chip('Paket diperiksa', s.investments || 0, '#38BDF8') +
-            chip('Nominal ≠ persen', s.rateMismatch || 0, '#F59E0B') +
-            chip('Pending ≠ riwayat', s.pendingMismatch || 0, '#A855F7') +
-            chip('Total ≠ riwayat', s.totalMismatch || 0, '#F87171') +
-            chip('Di luar rentang paket', s.outOfRange || 0, '#EF4444') +
-            chip('Tanpa riwayat', s.noHistory || 0, '#94A3B8') +
+          chip('Paket diperiksa', s.investments || 0, '#38BDF8') +
+          chip('Nominal ≠ persen', s.rateMismatch || 0, '#F59E0B') +
+          chip('Pending ≠ riwayat', s.pendingMismatch || 0, '#A855F7') +
+          chip('Total ≠ riwayat', s.totalMismatch || 0, '#F87171') +
+          chip('Di luar rentang paket', s.outOfRange || 0, '#EF4444') +
+          chip('Tanpa riwayat', s.noHistory || 0, '#94A3B8') +
           '</div>';
       }
 
@@ -1890,7 +1890,7 @@ Object.assign(AdminPage, {
       // Pratinjau normalisasi: berapa paket yang masih perlu dirapikan dan
       // berapa kelebihan bayar historis (tidak dipotong otomatis).
       let normPreview = null;
-      try { normPreview = await Admin.normalizeProfit(this.profitAuditUserId, true); } catch (e) {}
+      try { normPreview = await Admin.normalizeProfit(this.profitAuditUserId, true); } catch (e) { }
       const ns = (normPreview && normPreview.success && normPreview.summary) ? normPreview.summary : null;
       if (summaryBox && ns) {
         const fmtRp = (n) => 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
@@ -1966,7 +1966,7 @@ Object.assign(AdminPage, {
       if (res && res.success) {
         const r = res.summary || {};
         this.showToast(`Normalisasi selesai: ${r.investmentsChanged || 0} paket dari ${r.membersAffected || 0} member diperbaiki (${fmt(r.totalOld)} → ${fmt(r.totalNew)}).`, 'success');
-        try { await DB.syncFromCloud(); } catch (e) {}
+        try { await DB.syncFromCloud(); } catch (e) { }
         this.renderAll();
         await this.loadProfitAudit();
       } else {
@@ -2064,7 +2064,7 @@ Object.assign(AdminPage, {
         <td style="white-space:normal; max-width:400px; line-height:1.4;">
           <div style="font-weight:600; color:#F8FAFC;">${a.text}</div>
         </td>
-        <td><span style="font-size:11px; color:#94A3B8;">${new Date(a.createdAt).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</span></td>
+        <td><span style="font-size:11px; color:#94A3B8;">${new Date(a.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></td>
         <td>
           <span class="badge-status ${a.active ? 'approved' : 'rejected'}">
             ${a.active ? '● AKTIF' : '○ NONAKTIF'}
@@ -2508,44 +2508,44 @@ Object.assign(AdminPage, {
     const pagedTxs = sortedTxs.slice(startIdx, startIdx + perPage);
 
     txBody.innerHTML = pagedTxs.map(t => {
-      const isCheckIn = (t.id && t.id.startsWith('TX-CHK-')) || 
-                        t.type === 'checkin' || 
-                        t.type === 'daily_checkin' || 
-                        t.type === 'check_in' || 
-                        (t.paymentMethod && t.paymentMethod.toLowerCase().includes('absen')) || 
-                        (t.note && t.note.toLowerCase().includes('absen'));
+      const isCheckIn = (t.id && t.id.startsWith('TX-CHK-')) ||
+        t.type === 'checkin' ||
+        t.type === 'daily_checkin' ||
+        t.type === 'check_in' ||
+        (t.paymentMethod && t.paymentMethod.toLowerCase().includes('absen')) ||
+        (t.note && t.note.toLowerCase().includes('absen'));
 
-      const isMemberTransferIn = t.type === 'member_transfer' || 
-                                 t.type === 'member_transfer_in' || 
-                                 (t.id && String(t.id).startsWith('TRX-TRFI-')) || 
-                                 (t.note && t.note.toLowerCase().includes('terima transfer'));
+      const isMemberTransferIn = t.type === 'member_transfer' ||
+        t.type === 'member_transfer_in' ||
+        (t.id && String(t.id).startsWith('TRX-TRFI-')) ||
+        (t.note && t.note.toLowerCase().includes('terima transfer'));
 
-      const isMemberTransferOut = t.type === 'member_transfer_out' || 
-                                  (t.id && String(t.id).startsWith('TRX-TRFO-')) || 
-                                  (t.note && t.note.toLowerCase().includes('transfer saldo ke member'));
+      const isMemberTransferOut = t.type === 'member_transfer_out' ||
+        (t.id && String(t.id).startsWith('TRX-TRFO-')) ||
+        (t.note && t.note.toLowerCase().includes('transfer saldo ke member'));
 
       let isPlus = !isMemberTransferOut && (
-                   t.type === 'deposit' || 
-                   t.type === 'bonus' || 
-                   t.type === 'reward' || 
-                   t.type === 'profit_claim' || 
-                   t.type === 'sponsor_bonus' || 
-                   t.type === 'rabat_bonus' || 
-                   t.type === 'leader_bonus' || 
-                   (t.id && t.id.startsWith('TRX-LDR-')) || 
-                   t.type === 'capital_return' || 
-                   t.type === 'affiliate_transfer' || 
-                   isMemberTransferIn || 
-                   isCheckIn
+        t.type === 'deposit' ||
+        t.type === 'bonus' ||
+        t.type === 'reward' ||
+        t.type === 'profit_claim' ||
+        t.type === 'sponsor_bonus' ||
+        t.type === 'rabat_bonus' ||
+        t.type === 'leader_bonus' ||
+        (t.id && t.id.startsWith('TRX-LDR-')) ||
+        t.type === 'capital_return' ||
+        t.type === 'affiliate_transfer' ||
+        isMemberTransferIn ||
+        isCheckIn
       );
       let color = isPlus ? '#4ADE80' : '#F87171';
       let sign = isPlus ? '+' : '-';
-      let typeLabel = isCheckIn ? 'ABSENSI' : 
-                      (isMemberTransferIn ? 'P2P MASUK' : 
-                      (isMemberTransferOut ? 'P2P KELUAR' : (t.type || 'trx').toUpperCase()));
-      let badgeStyle = isCheckIn ? 'style="background:rgba(34,197,94,0.2); color:#4ADE80; border:1px solid rgba(34,197,94,0.45);"' : 
-                       (isMemberTransferIn ? 'style="background:rgba(34,197,94,0.2); color:#4ADE80; border:1px solid rgba(34,197,94,0.45);"' : 
-                       (isMemberTransferOut ? 'style="background:rgba(239,68,68,0.2); color:#F87171; border:1px solid rgba(239,68,68,0.45);"' : ''));
+      let typeLabel = isCheckIn ? 'ABSENSI' :
+        (isMemberTransferIn ? 'P2P MASUK' :
+          (isMemberTransferOut ? 'P2P KELUAR' : (t.type || 'trx').toUpperCase()));
+      let badgeStyle = isCheckIn ? 'style="background:rgba(34,197,94,0.2); color:#4ADE80; border:1px solid rgba(34,197,94,0.45);"' :
+        (isMemberTransferIn ? 'style="background:rgba(34,197,94,0.2); color:#4ADE80; border:1px solid rgba(34,197,94,0.45);"' :
+          (isMemberTransferOut ? 'style="background:rgba(239,68,68,0.2); color:#F87171; border:1px solid rgba(239,68,68,0.45);"' : ''));
 
       return `
         <tr>
@@ -2588,7 +2588,7 @@ Object.assign(AdminPage, {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('autotrading_admin_tab', tabId);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     document.querySelectorAll('.admin-nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
@@ -2652,12 +2652,12 @@ Object.assign(AdminPage, {
         localStorage.removeItem('autotrading_impersonator_token');
         localStorage.removeItem('autotrading_impersonator_user');
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Await the server-side logout so the httpOnly session cookie is destroyed
     // before anything can read it back (action=get would restore currentUser).
-    try { await Auth.logout(); } catch (e) { try { Auth.logout(); } catch (e2) {} }
-    try { this.closeAllModals(); } catch (e) {}
+    try { await Auth.logout(); } catch (e) { try { Auth.logout(); } catch (e2) { } }
+    try { this.closeAllModals(); } catch (e) { }
 
     // Stay on /admin and show the admin login gate. Never bounce to the member
     // area (previously `window.location.href = './'`).
@@ -2727,7 +2727,7 @@ Object.assign(AdminPage, {
     if (userEl) userEl.textContent = trx.username;
     if (amountEl) amountEl.textContent = DB.formatIDR(trx.amount);
     if (methodEl) methodEl.textContent = trx.paymentMethod || 'Deposit';
-    
+
     if (imgEl) {
       if (trx.proofImage) {
         imgEl.src = trx.proofImage;
@@ -3454,7 +3454,7 @@ Object.assign(AdminPage, {
 
     // Re-read the authoritative plan list before claiming success: a save is
     // only complete when MySQL actually returns the updated contract.
-    await DB.syncFromCloud(true).catch(() => {});
+    await DB.syncFromCloud(true).catch(() => { });
     const savedPlans = DB.get().plans || [];
     const saved = savedPlans.find(p => (id ? p.id === id : p.name === name));
     if (!saved || Number(saved.durationDays) !== durationDays) {
@@ -3489,7 +3489,7 @@ Object.assign(AdminPage, {
     }
     // Confirm against MySQL: deleting must be visible on the server, not only
     // in this browser tab, before reporting success.
-    await DB.syncFromCloud(true).catch(() => {});
+    await DB.syncFromCloud(true).catch(() => { });
     if ((DB.get().plans || []).some(p => p.id === planId)) {
       this.showToast('Paket masih ada di database. Silakan coba hapus lagi.', 'error');
       return;
@@ -3750,7 +3750,7 @@ Object.assign(AdminPage, {
       if (blockTagEl) blockTagEl.innerHTML = '<span style="color:#F87171; background:rgba(239,68,68,0.2); padding:2px 8px; border-radius:6px; border:1px solid rgba(239,68,68,0.45);">🔴 DIBLOKIR</span>';
       if (blockInfoBox) {
         blockInfoBox.style.display = 'block';
-        document.getElementById('admMemBlockedAtText').textContent = user.blockedAt ? new Date(user.blockedAt).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) + ' WIB' : '-';
+        document.getElementById('admMemBlockedAtText').textContent = user.blockedAt ? new Date(user.blockedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB' : '-';
         document.getElementById('admMemBlockedReasonText').textContent = user.blockedReason || 'Diblokir oleh Administrator';
       }
       if (blockInputWrap) blockInputWrap.style.display = 'none';
@@ -4137,12 +4137,12 @@ Object.assign(AdminPage, {
     const badge = document.getElementById('bannerModalBadge').value.trim();
     const actionUrl = document.getElementById('bannerModalActionUrl').value;
     const active = document.getElementById('bannerModalActive').value === 'true';
-    
+
     const previewImg = document.getElementById('bannerPreviewImg');
     const typedUrl = document.getElementById('bannerModalUrlInput').value.trim();
     const fileInput = document.getElementById('bannerModalFileInput');
     let imageUrl = '';
-    
+
     if (previewImg && previewImg.src && previewImg.style.display !== 'none' && !previewImg.src.endsWith('/admin.html') && !previewImg.src.endsWith('/admin')) {
       imageUrl = previewImg.src;
     } else if (typedUrl) {
@@ -4680,7 +4680,7 @@ Object.assign(AdminPage, {
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
+
     let iconSvg = `
       <div class="toast-icon-badge">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -5041,65 +5041,65 @@ Object.assign(AdminPage, {
   renderWebSettings() {
     const db = DB.get();
     const cfg = db.settings || {};
-    const ws  = cfg.webSettings || {};
+    const ws = cfg.webSettings || {};
     const seo = cfg.seo || {};
     const social = cfg.social || {};
-    const maint  = cfg.maintenance || {};
+    const maint = cfg.maintenance || {};
 
     // --- General ---
-    this._setVal('cfgSiteAppName',      cfg.appName || 'AUTOTRADING');
-    this._setVal('cfgSiteTagline',      ws.tagline  || 'Platform Investasi & AI Trading Mobile Terpercaya');
-    this._setVal('cfgSiteDomain',       ws.domain   || 'https://autotrading.my.id');
-    this._setVal('cfgSiteCompanyName',  ws.companyName  || 'PT AUTOTRADING INVESTASI');
+    this._setVal('cfgSiteAppName', cfg.appName || 'AUTOTRADING');
+    this._setVal('cfgSiteTagline', ws.tagline || 'Platform Investasi & AI Trading Mobile Terpercaya');
+    this._setVal('cfgSiteDomain', ws.domain || 'https://autotrading.my.id');
+    this._setVal('cfgSiteCompanyName', ws.companyName || 'PT AUTOTRADING INVESTASI');
     this._setVal('cfgSiteContactEmail', ws.contactEmail || 'cs@autotrading.my.id');
-    this._setVal('cfgSiteWhatsapp',     ws.whatsapp     || '');
-    this._setVal('cfgSiteCopyright',    ws.copyright    || `© ${new Date().getFullYear()} AUTOTRADING. All rights reserved.`);
+    this._setVal('cfgSiteWhatsapp', ws.whatsapp || '');
+    this._setVal('cfgSiteCopyright', ws.copyright || `© ${new Date().getFullYear()} AUTOTRADING. All rights reserved.`);
 
     // --- Logo & Favicon ---
-    this._setVal('cfgLogoUrl',    ws.logoUrl    || '');
+    this._setVal('cfgLogoUrl', ws.logoUrl || '');
     this._setVal('cfgFaviconUrl', ws.faviconUrl || '');
     const logoImg = document.getElementById('cfgLogoPreview');
-    const logoPh  = document.getElementById('cfgLogoPlaceholder');
+    const logoPh = document.getElementById('cfgLogoPlaceholder');
     if (ws.logoUrl) {
       if (logoImg) { logoImg.src = ws.logoUrl; logoImg.style.display = ''; }
-      if (logoPh)  { logoPh.style.display = 'none'; }
+      if (logoPh) { logoPh.style.display = 'none'; }
     } else {
       if (logoImg) { logoImg.src = ''; logoImg.style.display = 'none'; }
-      if (logoPh)  { logoPh.style.display = ''; }
+      if (logoPh) { logoPh.style.display = ''; }
     }
     const favImg = document.getElementById('cfgFaviconPreview');
-    const favPh  = document.getElementById('cfgFaviconPlaceholder');
+    const favPh = document.getElementById('cfgFaviconPlaceholder');
     if (ws.faviconUrl) {
       if (favImg) { favImg.src = ws.faviconUrl; favImg.style.display = ''; }
-      if (favPh)  { favPh.style.display = 'none'; }
+      if (favPh) { favPh.style.display = 'none'; }
     } else {
       if (favImg) { favImg.src = ''; favImg.style.display = 'none'; }
-      if (favPh)  { favPh.style.display = ''; }
+      if (favPh) { favPh.style.display = ''; }
     }
 
     // --- Appearance ---
-    this._setVal('cfgColorPrimary',    ws.colorPrimary    || '#C89338');
-    this._setVal('cfgColorPrimaryHex', ws.colorPrimary    || '#C89338');
-    this._setVal('cfgColorBg',         ws.colorBg         || '#0B0F19');
-    this._setVal('cfgColorBgHex',      ws.colorBg         || '#0B0F19');
-    this._setVal('cfgFontFamily',      ws.fontFamily      || 'Inter');
-    this._setVal('cfgDisplayMode',     ws.displayMode     || 'dark');
+    this._setVal('cfgColorPrimary', ws.colorPrimary || '#C89338');
+    this._setVal('cfgColorPrimaryHex', ws.colorPrimary || '#C89338');
+    this._setVal('cfgColorBg', ws.colorBg || '#0B0F19');
+    this._setVal('cfgColorBgHex', ws.colorBg || '#0B0F19');
+    this._setVal('cfgFontFamily', ws.fontFamily || 'Inter');
+    this._setVal('cfgDisplayMode', ws.displayMode || 'dark');
     this.applyThemeColors(ws.colorPrimary, ws.colorBg);
 
     // --- SEO ---
-    this._setVal('cfgSeoTitle',        seo.title       || '');
-    this._setVal('cfgSeoDescription',  seo.description || '');
-    this._setVal('cfgSeoKeywords',     seo.keywords    || '');
-    this._setVal('cfgSeoRobots',       seo.robots      || 'index, follow');
+    this._setVal('cfgSeoTitle', seo.title || '');
+    this._setVal('cfgSeoDescription', seo.description || '');
+    this._setVal('cfgSeoKeywords', seo.keywords || '');
+    this._setVal('cfgSeoRobots', seo.robots || 'index, follow');
     this._setVal('cfgGoogleAnalyticsId', seo.gaId || '');
 
     // --- Social ---
-    this._setVal('cfgSocialTelegram',  social.telegram  || '');
+    this._setVal('cfgSocialTelegram', social.telegram || '');
     this._setVal('cfgSocialInstagram', social.instagram || '');
-    this._setVal('cfgSocialTiktok',    social.tiktok    || '');
-    this._setVal('cfgSocialYoutube',   social.youtube   || '');
-    this._setVal('cfgSocialTwitter',   social.twitter   || '');
-    this._setVal('cfgSocialFacebook',  social.facebook  || '');
+    this._setVal('cfgSocialTiktok', social.tiktok || '');
+    this._setVal('cfgSocialYoutube', social.youtube || '');
+    this._setVal('cfgSocialTwitter', social.twitter || '');
+    this._setVal('cfgSocialFacebook', social.facebook || '');
 
     // --- Maintenance ---
     this._setVal('cfgMaintenanceEnabled', String(maint.enabled || 'false'));
@@ -5313,7 +5313,7 @@ Object.assign(AdminPage, {
     if (!file) return;
 
     const img = document.getElementById(previewId);
-    const ph  = document.getElementById(placeholderId);
+    const ph = document.getElementById(placeholderId);
     const urlInput = document.getElementById(urlInputId);
     const statusEl = statusId ? document.getElementById(statusId) : null;
 
@@ -5321,8 +5321,8 @@ Object.assign(AdminPage, {
     try {
       const localBlob = URL.createObjectURL(file);
       if (img) { img.src = localBlob; img.style.display = ''; }
-      if (ph)  { ph.style.display = 'none'; }
-    } catch(e) {}
+      if (ph) { ph.style.display = 'none'; }
+    } catch (e) { }
 
     if (statusEl) {
       statusEl.style.display = 'block';
@@ -5337,7 +5337,7 @@ Object.assign(AdminPage, {
       if (uploadRes && uploadRes.success && uploadRes.url) {
         if (urlInput) urlInput.value = uploadRes.url;
         if (img) { img.src = uploadRes.url; img.style.display = ''; }
-        if (ph)  { ph.style.display = 'none'; }
+        if (ph) { ph.style.display = 'none'; }
 
         // Simpan otomatis ke pengaturan agar logo/favicon langsung aktif tanpa
         // harus klik "Simpan Tampilan & Logo" lagi.
@@ -5356,7 +5356,7 @@ Object.assign(AdminPage, {
         }
 
         if (savedOk) {
-          await DB.syncFromCloud().catch(() => {});
+          await DB.syncFromCloud().catch(() => { });
           if (isFavicon) {
             let link = document.querySelector("link[rel*='icon']");
             if (!link) {
@@ -5389,7 +5389,7 @@ Object.assign(AdminPage, {
       } else {
         console.warn('Upload image API response error:', uploadRes);
       }
-    } catch(err) {
+    } catch (err) {
       console.error('Upload image exception:', err);
     }
 
@@ -5401,7 +5401,7 @@ Object.assign(AdminPage, {
     const reader = new FileReader();
     reader.onload = (e) => {
       if (img) { img.src = e.target.result; img.style.display = ''; }
-      if (ph)  { ph.style.display = 'none'; }
+      if (ph) { ph.style.display = 'none'; }
       if (urlInput) { urlInput.value = e.target.result; }
       this.showToast('Gambar dimuat sebagai data lokal.', 'info');
     };
@@ -5433,7 +5433,7 @@ Object.assign(AdminPage, {
     this._setVal('cfgCsWhatsapp', cs.whatsapp || '');
     this._setVal('cfgCsTelegram', cs.telegram || '');
     this._setVal('cfgCsWaMessage', cs.waMessage || 'Halo CS Resmi AUTOTRADING, saya ingin berkonsultasi seputar layanan platform...');
-    
+
     const csFloatingInp = document.getElementById('cfgCsFloatingEnabled');
     if (csFloatingInp) {
       const isCsEnabled = (cs.floatingEnabled !== false);
@@ -5500,14 +5500,14 @@ Object.assign(AdminPage, {
     try {
       await this.adminFetch('api/index.php?action=admin_save_cs_settings', {
         method: 'POST',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           cs_floating_enabled: csFloatingEnabled,
           whatsapp: wa,
           telegram: tg,
           wa_message: msg
         })
       });
-    } catch(e) {}
+    } catch (e) { }
 
     this.showToast('success', '✅ Kontak CS & Status Tombol Melayang berhasil disimpan dan sinkron!');
   },
@@ -5780,7 +5780,7 @@ Object.assign(AdminPage, {
     this.showToast('Menyiapkan cadangan data lengkap...', 'info');
     // Direct browser trigger to API with download header
     const downloadUrl = 'api/index.php?action=backup&download=1';
-    
+
     // Also generate immediate client fallback if API is slow
     try {
       const db = DB.get();
@@ -5798,7 +5798,7 @@ Object.assign(AdminPage, {
       };
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
       const filename = `autotrading_full_backup_${new Date().toISOString().slice(0, 10)}_${Date.now()}.json`;
-      
+
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = filename;
@@ -5806,7 +5806,7 @@ Object.assign(AdminPage, {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
-      
+
       this.showToast('Backup JSON lengkap berhasil diunduh!', 'success');
     } catch (e) {
       window.location.href = downloadUrl;
@@ -5935,7 +5935,7 @@ Object.assign(AdminPage, {
         }
 
         this.showToast('Memulihkan dan menyinkronkan data ke MySQL server...', 'info');
-        
+
         // Preserve admin credentials if not in backup
         const currentDb = DB.get();
         const currentAdmin = (currentDb.users || []).find(u => u.role === 'admin' || u.id === 'usr-admin');
@@ -5990,7 +5990,7 @@ Object.assign(AdminPage, {
         // Visual editor: normalize silver history
         let sHistData = d.price_history_silver;
         if (typeof sHistData === 'string') {
-          try { sHistData = JSON.parse(sHistData); } catch(e) { sHistData = []; }
+          try { sHistData = JSON.parse(sHistData); } catch (e) { sHistData = []; }
         }
         if (Array.isArray(sHistData) && sHistData.length > 0) {
           this._silverHistory = sHistData.map((h, i) => {
@@ -6027,7 +6027,7 @@ Object.assign(AdminPage, {
         // Visual editor: normalize gold history
         let gHistData = d.price_history_gold;
         if (typeof gHistData === 'string') {
-          try { gHistData = JSON.parse(gHistData); } catch(e) { gHistData = []; }
+          try { gHistData = JSON.parse(gHistData); } catch (e) { gHistData = []; }
         }
         if (Array.isArray(gHistData) && gHistData.length > 0) {
           this._goldHistory = gHistData.map((h, i) => {
@@ -6076,7 +6076,7 @@ Object.assign(AdminPage, {
                 '<td>Rp ' + Number(t.price_per_gram).toLocaleString('id-ID') + '</td>' +
                 '<td style="font-weight:700; color:' + (isBuy ? '#EF4444' : '#10B981') + ';">Rp ' + Number(t.total_amount).toLocaleString('id-ID') + '</td>' +
                 '<td><span class="admin-badge admin-badge-success">Selesai</span></td>' +
-              '</tr>';
+                '</tr>';
             }).join('');
           }
         }
@@ -6104,7 +6104,7 @@ Object.assign(AdminPage, {
         '<td><input type="text" class="form-input" style="padding: 4px 8px; font-size: 11.5px;" value="' + dateVal + '" oninput="AdminPage.updateSilverHistoryItem(' + idx + ', \'date\', this.value)"></td>' +
         '<td><input type="number" class="form-input" style="padding: 4px 8px; font-size: 11.5px; font-weight: 700; color: #60A5FA;" value="' + priceVal + '" oninput="AdminPage.updateSilverHistoryItem(' + idx + ', \'price\', this.value)"></td>' +
         '<td style="text-align: center;"><button type="button" class="admin-btn-action-danger" style="padding: 3px 8px; font-size: 11px;" onclick="AdminPage.removeSilverHistoryRow(' + idx + ')">✕</button></td>' +
-      '</tr>';
+        '</tr>';
     }).join('');
   },
 
@@ -6120,7 +6120,7 @@ Object.assign(AdminPage, {
   addSilverHistoryRow(date = '', price = 0) {
     if (!this._silverHistory) this._silverHistory = [];
     const curSell = parseInt(document.getElementById('adminSilverSellPrice')?.value) || 35000;
-    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const d = new Date();
     const defaultDate = date || (d.getDate() + ' ' + months[d.getMonth()]);
     this._silverHistory.push({
@@ -6138,7 +6138,7 @@ Object.assign(AdminPage, {
 
   autoGenerateSilverHistory() {
     const curP = parseInt(document.getElementById('adminSilverSellPrice')?.value) || 35000;
-    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const now = new Date();
     const offsets = [-300, -150, -200, 100, -50, 0, 0];
     this._silverHistory = [];
@@ -6167,7 +6167,7 @@ Object.assign(AdminPage, {
         '<td><input type="text" class="form-input" style="padding: 4px 8px; font-size: 11.5px;" value="' + dateVal + '" oninput="AdminPage.updateGoldHistoryItem(' + idx + ', \'date\', this.value)"></td>' +
         '<td><input type="number" class="form-input" style="padding: 4px 8px; font-size: 11.5px; font-weight: 700; color: #F59E0B;" value="' + priceVal + '" oninput="AdminPage.updateGoldHistoryItem(' + idx + ', \'price\', this.value)"></td>' +
         '<td style="text-align: center;"><button type="button" class="admin-btn-action-danger" style="padding: 3px 8px; font-size: 11px;" onclick="AdminPage.removeGoldHistoryRow(' + idx + ')">✕</button></td>' +
-      '</tr>';
+        '</tr>';
     }).join('');
   },
 
@@ -6183,7 +6183,7 @@ Object.assign(AdminPage, {
   addGoldHistoryRow(date = '', price = 0) {
     if (!this._goldHistory) this._goldHistory = [];
     const curSell = parseInt(document.getElementById('adminGoldSellPrice')?.value) || 1380000;
-    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const d = new Date();
     const defaultDate = date || (d.getDate() + ' ' + months[d.getMonth()]);
     this._goldHistory.push({
@@ -6201,7 +6201,7 @@ Object.assign(AdminPage, {
 
   autoGenerateGoldHistory() {
     const curP = parseInt(document.getElementById('adminGoldSellPrice')?.value) || 1380000;
-    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const now = new Date();
     const offsets = [-20000, -15000, -10000, 5000, -5000, 0, 0];
     this._goldHistory = [];
@@ -6307,7 +6307,7 @@ Object.assign(AdminPage, {
               const stock = Number(p.stock) || 0;
               const points = Number(p.points_reward) || 10;
               const priceVal = Number(p.price_amount !== undefined ? p.price_amount : p.price) || 0;
-              const imgHtml = p.image_url ? 
+              const imgHtml = p.image_url ?
                 '<img src="' + p.image_url + '" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #334155;">' :
                 '<div style="width:40px; height:40px; border-radius:6px; background:#1E293B; display:flex; align-items:center; justify-content:center; font-size:16px;">📦</div>';
 
@@ -6319,10 +6319,10 @@ Object.assign(AdminPage, {
                 '<td><span class="admin-badge admin-badge-warning">+' + points + ' Poin</span></td>' +
                 '<td><span class="admin-badge ' + (active ? 'admin-badge-success' : 'admin-badge-danger') + '">' + (active ? 'Aktif' : 'Nonaktif') + '</span></td>' +
                 '<td style="text-align:right;">' +
-                  '<button type="button" class="admin-btn-action-secondary" style="padding:4px 8px; font-size:11px; margin-right:4px;" onclick="AdminPage.openEditShopProductModal(\'' + p.id + '\')">Edit</button>' +
-                  '<button type="button" class="admin-btn-action-danger" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.deleteShopProduct(\'' + p.id + '\')">Hapus</button>' +
+                '<button type="button" class="admin-btn-action-secondary" style="padding:4px 8px; font-size:11px; margin-right:4px;" onclick="AdminPage.openEditShopProductModal(\'' + p.id + '\')">Edit</button>' +
+                '<button type="button" class="admin-btn-action-danger" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.deleteShopProduct(\'' + p.id + '\')">Hapus</button>' +
                 '</td>' +
-              '</tr>';
+                '</tr>';
             }).join('');
           }
         }
@@ -6738,7 +6738,8 @@ Object.assign(AdminPage, {
         const pointsInp = document.getElementById('adminWelcomePopupPoints');
         const prev = document.getElementById('adminWelcomeBannerPreview');
 
-        if (actInp) actInp.value = d.enabled ? '1' : '0';
+        const isWelcomeAct = (d.enabled === true || d.enabled === 1 || d.enabled === '1' || d.enabled === 'true');
+        if (actInp) actInp.value = isWelcomeAct ? '1' : '0';
         if (titleInp) titleInp.value = d.title || 'Selamat Datang di Auto Trading!';
         if (bannerInp) bannerInp.value = d.banner_url || 'assets/img/welcome-banner.jpg';
         if (prev && d.banner_url) {
@@ -6798,7 +6799,8 @@ Object.assign(AdminPage, {
         const ctaInp = document.getElementById('adminGuestPopupCtaText');
         const prev = document.getElementById('adminGuestBannerPreview');
 
-        if (actInp) actInp.value = d.enabled !== false ? '1' : '0';
+        const isGuestAct = (d.enabled !== false && d.enabled !== 0 && d.enabled !== '0' && d.enabled !== 'false');
+        if (actInp) actInp.value = isGuestAct ? '1' : '0';
         if (titleInp) titleInp.value = d.title || 'Selamat Datang di Auto Trading!';
         if (subInp) subInp.value = d.subtitle || 'Solusi Finansial & Investasi Modern Terlengkap';
         if (bannerInp) bannerInp.value = d.banner_url || 'assets/img/welcome-banner.jpg';

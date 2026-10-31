@@ -1088,12 +1088,12 @@
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span class="cs-online-badge">
           <span class="cs-online-dot"></span>
-          Online 24/7
+          Layanan Bantuan 24/7
         </span>
         <button type="button" class="cs-close-btn" onclick="toggleCsWidget(false)" aria-label="Tutup Layanan CS">&times;</button>
       </div>
-      <h4 style="margin: 14px 0 3px 0; font-size: 16px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.2px;">Layanan &amp; Komunitas</h4>
-      <p style="margin: 0 0 16px 0; font-size: 12px; color: #94A3B8;">Hubungi admin atau pantau channel resmi:</p>
+      <h4 style="margin: 14px 0 3px 0; font-size: 16px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.2px;">Customer Service &amp; Konsultasi</h4>
+      <p style="margin: 0 0 16px 0; font-size: 12px; color: #94A3B8;">Hubungi tim representatif resmi AUTOTRADING jika Anda membutuhkan bantuan seputar deposit, penarikan, atau bonus kemitraan.</p>
 
       <!-- Item 1: Chat Admin CS (WhatsApp) -->
       <div class="cs-item-card">
@@ -1104,7 +1104,7 @@
             </svg>
           </div>
           <div>
-            <div style="font-weight: 800; font-size: 14px; color: #FFFFFF;">Chat Admin CS</div>
+            <div style="font-weight: 800; font-size: 14px; color: #FFFFFF;">WhatsApp CS Resmi</div>
             <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">Bantuan deposit, penarikan &amp; akun</div>
           </div>
         </div>
@@ -1123,7 +1123,7 @@
             </svg>
           </div>
           <div>
-            <div style="font-weight: 800; font-size: 14px; color: #FFFFFF;">Channel Resmi</div>
+            <div style="font-weight: 800; font-size: 14px; color: #FFFFFF;">Telegram Support Center</div>
             <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">Pengumuman dividen, promo &amp; event</div>
           </div>
         </div>
@@ -1165,24 +1165,13 @@
     async function syncMemberCsWidgetVisibility() {
       const csContainer = document.getElementById('floatingCsContainer');
       if (!csContainer) return;
-      let isLogged = Boolean(
-        sessionStorage.getItem('autotrading_session_user_id') ||
-        localStorage.getItem('autotrading_session_user_id') ||
-        sessionStorage.getItem('fgt_session_user_id') ||
-        sessionStorage.getItem('autotrading_session_token') ||
-        localStorage.getItem('autotrading_session_token')
-      );
-      if (!isLogged) {
-        csContainer.style.display = 'none';
-        return;
-      }
       try {
         let isEnabled = true;
         const res = await fetch('api/index.php?action=get_welcome_popup');
         const json = await res.json();
         if (json.success && json.data) {
           if (json.data.cs_floating_enabled !== undefined) {
-            isEnabled = Boolean(json.data.cs_floating_enabled);
+            isEnabled = Boolean(json.data.cs_floating_enabled === true || json.data.cs_floating_enabled === 1 || json.data.cs_floating_enabled === '1' || json.data.cs_floating_enabled === 'true');
           }
           if (json.data.cs_whatsapp && document.getElementById('csLinkWhatsapp')) {
             const cleanWa = String(json.data.cs_whatsapp).replace(/[^0-9]/g, '');
@@ -1199,7 +1188,7 @@
         }
         csContainer.style.display = isEnabled ? 'flex' : 'none';
       } catch(e) {
-        if (isLogged) csContainer.style.display = 'flex';
+        csContainer.style.display = 'flex';
       }
     }
 

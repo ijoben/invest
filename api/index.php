@@ -11464,7 +11464,7 @@ if ($action === 'admin_save_welcome_popup') {
     ensureTablesExist($pdo);
     $in = json_decode(file_get_contents('php://input'), true) ?: [];
 
-    $enabled = !empty($in['enabled']);
+    $enabled = filter_var($in['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN);
     $title = trim((string)($in['title'] ?? 'Selamat Datang di Auto Trading!'));
     $bannerUrl = trim((string)($in['banner_url'] ?? 'assets/img/welcome-banner.jpg'));
     if (!empty($bannerUrl) && strpos($bannerUrl, 'data:image') === 0) {
@@ -11593,7 +11593,7 @@ if ($action === 'admin_save_guest_popup') {
     ensureTablesExist($pdo);
     $in = json_decode(file_get_contents('php://input'), true) ?: [];
 
-    $enabled = !empty($in['enabled']);
+    $enabled = filter_var($in['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN);
     $title = trim((string)($in['title'] ?? 'Selamat Datang di Auto Trading!'));
     $subtitle = trim((string)($in['subtitle'] ?? 'Solusi Finansial & Investasi Modern Terlengkap'));
     $bannerUrl = trim((string)($in['banner_url'] ?? 'assets/img/welcome-banner.jpg'));
@@ -12510,14 +12510,15 @@ if ($action === 'apply_asset_contract') {
         }
 
         // Pindahkan dari saldo likuid ke saldo kontrak
-        $pdo->prepare("UPDATE `users` SET {$balanceField} = {$balanceField} - :g, {$contractField} = {$contractField} + :g WHERE id = :uid")
-            ->execute([':g' => $grams, ':uid' => $uid]);
+        $pdo->prepare("UPDATE `users` SET {$balanceField} = {$balanceField} - :g1, {$contractField} = {$contractField} + :g2 WHERE id = :uid")
+            ->execute([':g1' => $grams, ':g2' => $grams, ':uid' => $uid]);
 
         $contractId = 'CTR-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $endDate = date('Y-m-d H:i:s', strtotime("+{$duration} days"));
 
         $pdo->prepare("INSERT INTO `asset_contracts` 
             (id, user_id, username, asset_type, grams, duration_days, daily_rate_percent, daily_yield_grams, total_yield_grams, status, start_date, end_date, created_at)
-            VALUES (:id, :uid, :uname, :atype, :g, :dur, :rate, :dy, :ty, 'active', NOW(), DATE_ADD(NOW(), INTERVAL :dur DAY), NOW())
+            VALUES (:id, :uid, :uname, :atype, :g, :dur, :rate, :dy, :ty, 'active', NOW(), :end_date, NOW())
         ")->execute([
             ':id' => $contractId,
             ':uid' => $uid,
@@ -12527,7 +12528,8 @@ if ($action === 'apply_asset_contract') {
             ':dur' => $duration,
             ':rate' => $dailyRate,
             ':dy' => $dailyYieldGrams,
-            ':ty' => $totalYieldGrams
+            ':ty' => $totalYieldGrams,
+            ':end_date' => $endDate
         ]);
 
         $txId = 'TX-' . $contractId;
