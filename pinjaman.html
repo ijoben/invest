@@ -385,6 +385,173 @@
       background: #E2E8F0;
     }
 
+    /* Floating CS Widget Styles (media_1793379021428_41aea5ac.jpg) */
+    .floating-cs-container {
+      position: fixed;
+      bottom: 24px;
+      right: 16px;
+      z-index: 960;
+      display: none;
+      flex-direction: column;
+      align-items: flex-end;
+      pointer-events: auto;
+    }
+    .floating-cs-pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px 8px 12px;
+      background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 9999px;
+      box-shadow: 0 10px 24px rgba(153, 27, 27, 0.45), 0 3px 8px rgba(0,0,0,0.4);
+      cursor: pointer;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      outline: none;
+      user-select: none;
+    }
+    .floating-cs-pill-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 28px rgba(153, 27, 27, 0.55);
+    }
+    .floating-cs-pill-btn:active {
+      transform: translateY(0) scale(0.97);
+    }
+    .cs-pill-icon-wrap {
+      position: relative;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cs-pill-online-dot {
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 8px;
+      height: 8px;
+      background: #10B981;
+      border: 1.5px solid #1E293B;
+      border-radius: 50%;
+    }
+    .cs-pill-text {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: -0.1px;
+    }
+    .cs-pill-chevron {
+      transition: transform 0.22s ease;
+    }
+    .floating-cs-card {
+      width: 320px;
+      max-width: calc(100vw - 28px);
+      background: #18191D;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 22px;
+      padding: 18px 18px 16px 18px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.85);
+      margin-bottom: 12px;
+      animation: csFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+    }
+    @keyframes csFadeIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .cs-online-badge {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34D399;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 9999px;
+      padding: 4px 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cs-online-dot {
+      width: 6.5px;
+      height: 6.5px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 6px #10B981;
+    }
+    .cs-close-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #27282D;
+      border: none;
+      color: #94A3B8;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .cs-close-btn:hover {
+      background: #3F3F46;
+      color: #FFFFFF;
+    }
+    .cs-item-card {
+      background: #22232A;
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      margin-bottom: 11px;
+    }
+    .cs-icon-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .cs-icon-wa {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1.5px solid rgba(239, 68, 68, 0.35);
+    }
+    .cs-icon-tg {
+      background: rgba(2, 132, 199, 0.12);
+      border: 1.5px solid rgba(2, 132, 199, 0.35);
+    }
+    .cs-btn {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 7px 18px;
+      border-radius: 9999px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      letter-spacing: 0.5px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .cs-btn:hover {
+      transform: scale(1.04);
+    }
+    .cs-btn-chat {
+      background: #DC2626;
+      color: #FFFFFF;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
+    }
+    .cs-btn-join {
+      background: #0284C7;
+      color: #FFFFFF;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45);
+    }
   </style>
 </head>
 <body>
@@ -1279,6 +1446,142 @@
       </div>
     </div>
   </div>
+
+  <!-- Floating CS Widget (Matching media_1793379021428_41aea5ac.jpg) -->
+  <div class="floating-cs-container" id="floatingCsContainer" style="display: none;">
+    <!-- Floating CS Popup Card -->
+    <div class="floating-cs-card" id="floatingCsCard" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="cs-online-badge">
+          <span class="cs-online-dot"></span>
+          Online 24/7
+        </span>
+        <button type="button" class="cs-close-btn" onclick="toggleCsWidget(false)" aria-label="Tutup Layanan CS">&times;</button>
+      </div>
+      <h4 style="margin: 14px 0 3px 0; font-size: 16px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.2px;">Layanan &amp; Komunitas</h4>
+      <p style="margin: 0 0 16px 0; font-size: 12px; color: #94A3B8;">Hubungi admin atau pantau channel resmi:</p>
+
+      <!-- Item 1: Chat Admin CS (WhatsApp) -->
+      <div class="cs-item-card">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="cs-icon-box cs-icon-wa">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <div>
+            <div style="font-weight: 800; font-size: 14px; color: #FFFFFF;">Chat Admin CS</div>
+            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">Bantuan deposit, penarikan &amp; akun</div>
+          </div>
+        </div>
+        <a id="csLinkWhatsapp" href="https://wa.me/6281234567890?text=Halo%20Admin%20CS%20AUTOTRADING,%20saya%20butuh%20bantuan..." target="_blank" rel="noopener noreferrer" class="cs-btn cs-btn-chat">
+          CHAT
+        </a>
+      </div>
+
+      <!-- Item 2: Channel Resmi (Telegram) -->
+      <div class="cs-item-card">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="cs-icon-box cs-icon-tg">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </div>
+          <div>
+            <div style="font-weight: 800; font-size: 14px; color: #FFFFFF;">Channel Resmi</div>
+            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">Pengumuman dividen, promo &amp; event</div>
+          </div>
+        </div>
+        <a id="csLinkTelegram" href="https://t.me/autotrading_channel" target="_blank" rel="noopener noreferrer" class="cs-btn cs-btn-join">
+          GABUNG
+        </a>
+      </div>
+    </div>
+
+    <!-- Floating Red Pill Button -->
+    <button type="button" class="floating-cs-pill-btn" id="floatingCsPillBtn" onclick="toggleCsWidget()" aria-label="Layanan Bantuan CS">
+      <div class="cs-pill-icon-wrap">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="cs-pill-online-dot"></span>
+      </div>
+      <span class="cs-pill-text">Chat Admin</span>
+      <svg class="cs-pill-chevron" id="csPillChevron" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    let _csWidgetOpen = false;
+    function toggleCsWidget(forceState) {
+      const card = document.getElementById('floatingCsCard');
+      const chevron = document.getElementById('csPillChevron');
+      if (!card) return;
+      _csWidgetOpen = (forceState !== undefined) ? forceState : !_csWidgetOpen;
+      card.style.display = _csWidgetOpen ? 'block' : 'none';
+      if (chevron) {
+        chevron.style.transform = _csWidgetOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+      }
+    }
+    window.toggleCsWidget = toggleCsWidget;
+
+    async function syncMemberCsWidgetVisibility() {
+      const csContainer = document.getElementById('floatingCsContainer');
+      if (!csContainer) return;
+      let isLogged = Boolean(
+        sessionStorage.getItem('autotrading_session_user_id') ||
+        localStorage.getItem('autotrading_session_user_id') ||
+        sessionStorage.getItem('fgt_session_user_id') ||
+        sessionStorage.getItem('autotrading_session_token') ||
+        localStorage.getItem('autotrading_session_token')
+      );
+      if (!isLogged) {
+        csContainer.style.display = 'none';
+        return;
+      }
+      try {
+        let isEnabled = true;
+        const res = await fetch('api/index.php?action=get_welcome_popup');
+        const json = await res.json();
+        if (json.success && json.data) {
+          if (json.data.cs_floating_enabled !== undefined) {
+            isEnabled = Boolean(json.data.cs_floating_enabled);
+          }
+          if (json.data.cs_whatsapp && document.getElementById('csLinkWhatsapp')) {
+            const cleanWa = String(json.data.cs_whatsapp).replace(/[^0-9]/g, '');
+            const msg = encodeURIComponent(json.data.cs_wa_message || 'Halo Admin CS AUTOTRADING, saya butuh bantuan...');
+            document.getElementById('csLinkWhatsapp').href = 'https://wa.me/' + cleanWa + '?text=' + msg;
+          }
+          if (json.data.cs_telegram && document.getElementById('csLinkTelegram')) {
+            let tg = String(json.data.cs_telegram).trim();
+            if (tg && !tg.startsWith('http')) {
+              tg = 'https://t.me/' + tg.replace(/^@/, '');
+            }
+            document.getElementById('csLinkTelegram').href = tg;
+          }
+        }
+        csContainer.style.display = isEnabled ? 'flex' : 'none';
+      } catch(e) {
+        if (isLogged) csContainer.style.display = 'flex';
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const csContainer = document.getElementById('floatingCsContainer');
+      const csCard = document.getElementById('floatingCsCard');
+      if (csCard && csCard.style.display === 'block' && csContainer && !csContainer.contains(e.target)) {
+        toggleCsWidget(false);
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      syncMemberCsWidgetVisibility();
+      setTimeout(syncMemberCsWidgetVisibility, 800);
+    });
+  </script>
 
 </body>
 </html>

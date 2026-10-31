@@ -570,6 +570,10 @@ Object.assign(App, {
     try { this.renderCurrentTab(user, db); } catch (e) { console.warn('renderCurrentTab err:', e); }
     // 3. Ensure live member transaction tickers are always updated across views
     try { this.renderRiwayatTickers(); } catch (e) { console.warn('renderRiwayatTickers err:', e); }
+    // 4. Sync Floating CS Widget for members
+    if (typeof window !== 'undefined' && typeof window.syncMemberCsWidgetVisibility === 'function') {
+      try { window.syncMemberCsWidgetVisibility(); } catch (e) {}
+    }
   },
 
   // Render components specific to the Home Tab
@@ -5436,6 +5440,12 @@ Object.assign(App, {
         } catch (e) {}
         this.renderAll();
         this.checkAutoOpenDailyCheckIn();
+        if (typeof window !== 'undefined' && typeof window.syncMemberCsWidgetVisibility === 'function') {
+          try { window.syncMemberCsWidgetVisibility(); } catch (e) {}
+        }
+        if (typeof window !== 'undefined' && typeof window.checkAndShowWelcomePopup === 'function') {
+          try { window.checkAndShowWelcomePopup(); } catch (e) {}
+        }
       }
     } else {
       if (res.requiresVerification && res.user) {

@@ -5500,7 +5500,12 @@ Object.assign(AdminPage, {
     try {
       await this.adminFetch('api/index.php?action=admin_save_cs_settings', {
         method: 'POST',
-        body: JSON.stringify({ cs_floating_enabled: csFloatingEnabled })
+        body: JSON.stringify({ 
+          cs_floating_enabled: csFloatingEnabled,
+          whatsapp: wa,
+          telegram: tg,
+          wa_message: msg
+        })
       });
     } catch(e) {}
 
@@ -5975,16 +5980,30 @@ Object.assign(AdminPage, {
         const sCbBal = document.getElementById('adminSilverCashbackBal');
         const sCbYield = document.getElementById('adminSilverCashbackYield');
         const sFee = document.getElementById('adminMintingFeeSilver');
-        const sHist = document.getElementById('adminPriceHistorySilver');
 
         if (sBuy) sBuy.value = d.silver_buy_price || 40000;
         if (sSell) sSell.value = d.silver_sell_price || 35000;
         if (sCbBal) sCbBal.value = d.silver_cashback_balance || 105;
         if (sCbYield) sCbYield.value = d.silver_cashback_yield || 4.136;
         if (sFee) sFee.value = d.minting_fee_silver || 25000;
-        if (sHist && d.price_history_silver) {
-          sHist.value = typeof d.price_history_silver === 'string' ? d.price_history_silver : JSON.stringify(d.price_history_silver);
+
+        // Visual editor: normalize silver history
+        let sHistData = d.price_history_silver;
+        if (typeof sHistData === 'string') {
+          try { sHistData = JSON.parse(sHistData); } catch(e) { sHistData = []; }
         }
+        if (Array.isArray(sHistData) && sHistData.length > 0) {
+          this._silverHistory = sHistData.map((h, i) => {
+            if (typeof h === 'object' && h !== null) {
+              return { date: String(h.date || ('Hari ' + (i + 1))), price: parseInt(h.price) || 0 };
+            }
+            return { date: 'Hari ' + (i + 1), price: parseInt(h) || 0 };
+          });
+        } else {
+          this._silverHistory = [];
+        }
+        this.renderSilverHistoryRows();
+
         if (d.contract_rates_silver) {
           const crs = typeof d.contract_rates_silver === 'string' ? JSON.parse(d.contract_rates_silver) : d.contract_rates_silver;
           if (document.getElementById('adminSilverContractRate30')) document.getElementById('adminSilverContractRate30').value = crs['30'] || 0.30;
@@ -5998,16 +6017,29 @@ Object.assign(AdminPage, {
         const gCbBal = document.getElementById('adminGoldCashbackBal');
         const gCbYield = document.getElementById('adminGoldCashbackYield');
         const gFee = document.getElementById('adminMintingFeeGold');
-        const gHist = document.getElementById('adminPriceHistoryGold');
 
         if (gBuy) gBuy.value = d.gold_buy_price || 1450000;
         if (gSell) gSell.value = d.gold_sell_price || 1380000;
         if (gCbBal) gCbBal.value = d.gold_cashback_balance || 10;
         if (gCbYield) gCbYield.value = d.gold_cashback_yield || 0.35;
         if (gFee) gFee.value = d.minting_fee_gold || 85000;
-        if (gHist && d.price_history_gold) {
-          gHist.value = typeof d.price_history_gold === 'string' ? d.price_history_gold : JSON.stringify(d.price_history_gold);
+
+        // Visual editor: normalize gold history
+        let gHistData = d.price_history_gold;
+        if (typeof gHistData === 'string') {
+          try { gHistData = JSON.parse(gHistData); } catch(e) { gHistData = []; }
         }
+        if (Array.isArray(gHistData) && gHistData.length > 0) {
+          this._goldHistory = gHistData.map((h, i) => {
+            if (typeof h === 'object' && h !== null) {
+              return { date: String(h.date || ('Hari ' + (i + 1))), price: parseInt(h.price) || 0 };
+            }
+            return { date: 'Hari ' + (i + 1), price: parseInt(h) || 0 };
+          });
+        } else {
+          this._goldHistory = [];
+        }
+        this.renderGoldHistoryRows();
         if (d.contract_rates_gold) {
           const crg = typeof d.contract_rates_gold === 'string' ? JSON.parse(d.contract_rates_gold) : d.contract_rates_gold;
           if (document.getElementById('adminGoldContractRate30')) document.getElementById('adminGoldContractRate30').value = crg['30'] || 0.25;
@@ -6054,14 +6086,147 @@ Object.assign(AdminPage, {
     }
   },
 
+  _silverHistory: [],
+  _goldHistory: [],
+
+  renderSilverHistoryRows() {
+    const tbody = document.getElementById('adminSilverHistoryTableBody');
+    if (!tbody) return;
+    if (!this._silverHistory || this._silverHistory.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94A3B8; padding:12px;">Belum ada titik data riwayat perak. Klik "+ Tambah Titik" atau "⚡ Isi 7 Hari Otomatis".</td></tr>';
+      return;
+    }
+    tbody.innerHTML = this._silverHistory.map((item, idx) => {
+      const dateVal = item.date !== undefined ? item.date : ('Hari ' + (idx + 1));
+      const priceVal = parseInt(item.price) || 0;
+      return '<tr>' +
+        '<td style="text-align: center; color: #94A3B8; font-weight: 700;">' + (idx + 1) + '</td>' +
+        '<td><input type="text" class="form-input" style="padding: 4px 8px; font-size: 11.5px;" value="' + dateVal + '" oninput="AdminPage.updateSilverHistoryItem(' + idx + ', \'date\', this.value)"></td>' +
+        '<td><input type="number" class="form-input" style="padding: 4px 8px; font-size: 11.5px; font-weight: 700; color: #60A5FA;" value="' + priceVal + '" oninput="AdminPage.updateSilverHistoryItem(' + idx + ', \'price\', this.value)"></td>' +
+        '<td style="text-align: center;"><button type="button" class="admin-btn-action-danger" style="padding: 3px 8px; font-size: 11px;" onclick="AdminPage.removeSilverHistoryRow(' + idx + ')">✕</button></td>' +
+      '</tr>';
+    }).join('');
+  },
+
+  updateSilverHistoryItem(idx, key, val) {
+    if (!this._silverHistory[idx]) return;
+    if (key === 'price') {
+      this._silverHistory[idx].price = parseInt(val) || 0;
+    } else {
+      this._silverHistory[idx].date = String(val).trim();
+    }
+  },
+
+  addSilverHistoryRow(date = '', price = 0) {
+    if (!this._silverHistory) this._silverHistory = [];
+    const curSell = parseInt(document.getElementById('adminSilverSellPrice')?.value) || 35000;
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const d = new Date();
+    const defaultDate = date || (d.getDate() + ' ' + months[d.getMonth()]);
+    this._silverHistory.push({
+      date: defaultDate,
+      price: price || curSell
+    });
+    this.renderSilverHistoryRows();
+  },
+
+  removeSilverHistoryRow(idx) {
+    if (!this._silverHistory) return;
+    this._silverHistory.splice(idx, 1);
+    this.renderSilverHistoryRows();
+  },
+
+  autoGenerateSilverHistory() {
+    const curP = parseInt(document.getElementById('adminSilverSellPrice')?.value) || 35000;
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const now = new Date();
+    const offsets = [-300, -150, -200, 100, -50, 0, 0];
+    this._silverHistory = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const dateLabel = d.getDate() + ' ' + months[d.getMonth()];
+      const p = Math.max(1000, curP + offsets[6 - i]);
+      this._silverHistory.push({ date: dateLabel, price: p });
+    }
+    this.renderSilverHistoryRows();
+    this.showToast('info', '7 titik riwayat tren perak berhasil di-generate!');
+  },
+
+  renderGoldHistoryRows() {
+    const tbody = document.getElementById('adminGoldHistoryTableBody');
+    if (!tbody) return;
+    if (!this._goldHistory || this._goldHistory.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94A3B8; padding:12px;">Belum ada titik data riwayat emas. Klik "+ Tambah Titik" atau "⚡ Isi 7 Hari Otomatis".</td></tr>';
+      return;
+    }
+    tbody.innerHTML = this._goldHistory.map((item, idx) => {
+      const dateVal = item.date !== undefined ? item.date : ('Hari ' + (idx + 1));
+      const priceVal = parseInt(item.price) || 0;
+      return '<tr>' +
+        '<td style="text-align: center; color: #94A3B8; font-weight: 700;">' + (idx + 1) + '</td>' +
+        '<td><input type="text" class="form-input" style="padding: 4px 8px; font-size: 11.5px;" value="' + dateVal + '" oninput="AdminPage.updateGoldHistoryItem(' + idx + ', \'date\', this.value)"></td>' +
+        '<td><input type="number" class="form-input" style="padding: 4px 8px; font-size: 11.5px; font-weight: 700; color: #F59E0B;" value="' + priceVal + '" oninput="AdminPage.updateGoldHistoryItem(' + idx + ', \'price\', this.value)"></td>' +
+        '<td style="text-align: center;"><button type="button" class="admin-btn-action-danger" style="padding: 3px 8px; font-size: 11px;" onclick="AdminPage.removeGoldHistoryRow(' + idx + ')">✕</button></td>' +
+      '</tr>';
+    }).join('');
+  },
+
+  updateGoldHistoryItem(idx, key, val) {
+    if (!this._goldHistory[idx]) return;
+    if (key === 'price') {
+      this._goldHistory[idx].price = parseInt(val) || 0;
+    } else {
+      this._goldHistory[idx].date = String(val).trim();
+    }
+  },
+
+  addGoldHistoryRow(date = '', price = 0) {
+    if (!this._goldHistory) this._goldHistory = [];
+    const curSell = parseInt(document.getElementById('adminGoldSellPrice')?.value) || 1380000;
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const d = new Date();
+    const defaultDate = date || (d.getDate() + ' ' + months[d.getMonth()]);
+    this._goldHistory.push({
+      date: defaultDate,
+      price: price || curSell
+    });
+    this.renderGoldHistoryRows();
+  },
+
+  removeGoldHistoryRow(idx) {
+    if (!this._goldHistory) return;
+    this._goldHistory.splice(idx, 1);
+    this.renderGoldHistoryRows();
+  },
+
+  autoGenerateGoldHistory() {
+    const curP = parseInt(document.getElementById('adminGoldSellPrice')?.value) || 1380000;
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const now = new Date();
+    const offsets = [-20000, -15000, -10000, 5000, -5000, 0, 0];
+    this._goldHistory = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const dateLabel = d.getDate() + ' ' + months[d.getMonth()];
+      const p = Math.max(100000, curP + offsets[6 - i]);
+      this._goldHistory.push({ date: dateLabel, price: p });
+    }
+    this.renderGoldHistoryRows();
+    this.showToast('info', '7 titik riwayat tren emas berhasil di-generate!');
+  },
+
   async saveAssetPrices() {
     const sBuy = parseInt(document.getElementById('adminSilverBuyPrice')?.value) || 40000;
     const sSell = parseInt(document.getElementById('adminSilverSellPrice')?.value) || 35000;
     const sCbBal = parseFloat(document.getElementById('adminSilverCashbackBal')?.value) || 105;
     const sCbYield = parseFloat(document.getElementById('adminSilverCashbackYield')?.value) || 4.136;
     const sFee = parseInt(document.getElementById('adminMintingFeeSilver')?.value) || 25000;
-    let sHist = document.getElementById('adminPriceHistorySilver')?.value || '';
-    try { sHist = JSON.parse(sHist); } catch (e) { sHist = sHist.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n)); }
+
+    // Collect from interactive visual history rows
+    const sHist = (this._silverHistory || []).map(item => ({
+      date: String(item.date || '').trim(),
+      price: parseInt(item.price) || 0
+    })).filter(item => item.price > 0);
 
     const sR30 = parseFloat(document.getElementById('adminSilverContractRate30')?.value) || 0.30;
     const sR150 = parseFloat(document.getElementById('adminSilverContractRate150')?.value) || 0.50;
@@ -6072,8 +6237,12 @@ Object.assign(AdminPage, {
     const gCbBal = parseFloat(document.getElementById('adminGoldCashbackBal')?.value) || 10;
     const gCbYield = parseFloat(document.getElementById('adminGoldCashbackYield')?.value) || 0.35;
     const gFee = parseInt(document.getElementById('adminMintingFeeGold')?.value) || 85000;
-    let gHist = document.getElementById('adminPriceHistoryGold')?.value || '';
-    try { gHist = JSON.parse(gHist); } catch (e) { gHist = gHist.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n)); }
+
+    // Collect from interactive visual history rows
+    const gHist = (this._goldHistory || []).map(item => ({
+      date: String(item.date || '').trim(),
+      price: parseInt(item.price) || 0
+    })).filter(item => item.price > 0);
 
     const gR30 = parseFloat(document.getElementById('adminGoldContractRate30')?.value) || 0.25;
     const gR150 = parseFloat(document.getElementById('adminGoldContractRate150')?.value) || 0.45;
@@ -6598,9 +6767,114 @@ Object.assign(AdminPage, {
             this.toggleCsFloatingLabel(isCsOn);
           }
         }
+        if (d.cs_whatsapp && document.getElementById('cfgCsWhatsapp')) {
+          document.getElementById('cfgCsWhatsapp').value = d.cs_whatsapp;
+        }
+        if (d.cs_telegram && document.getElementById('cfgCsTelegram')) {
+          document.getElementById('cfgCsTelegram').value = d.cs_telegram;
+        }
+        if (d.cs_wa_message && document.getElementById('cfgCsWaMessage')) {
+          document.getElementById('cfgCsWaMessage').value = d.cs_wa_message;
+        }
       }
+      this.loadGuestPopupAdmin();
     } catch (e) {
       console.error('Error loading welcome popup admin:', e);
+    }
+  },
+
+  // === GUEST POPUP PROMO (SEBELUM LOGIN) SETTINGS ===
+  async loadGuestPopupAdmin() {
+    try {
+      const res = await fetch('api/index.php?action=get_guest_popup');
+      const json = await res.json();
+      if (json.success && json.data) {
+        const d = json.data;
+        const actInp = document.getElementById('adminGuestPopupActive');
+        const titleInp = document.getElementById('adminGuestPopupTitle');
+        const subInp = document.getElementById('adminGuestPopupSubtitle');
+        const bannerInp = document.getElementById('adminGuestPopupBanner');
+        const pointsInp = document.getElementById('adminGuestPopupPoints');
+        const ctaInp = document.getElementById('adminGuestPopupCtaText');
+        const prev = document.getElementById('adminGuestBannerPreview');
+
+        if (actInp) actInp.value = d.enabled !== false ? '1' : '0';
+        if (titleInp) titleInp.value = d.title || 'Selamat Datang di Auto Trading!';
+        if (subInp) subInp.value = d.subtitle || 'Solusi Finansial & Investasi Modern Terlengkap';
+        if (bannerInp) bannerInp.value = d.banner_url || 'assets/img/welcome-banner.jpg';
+        if (ctaInp) ctaInp.value = d.cta_text || 'Masuk / Daftar Akun';
+        if (prev && d.banner_url) {
+          prev.src = d.banner_url;
+          prev.style.display = 'block';
+        }
+        if (pointsInp) {
+          if (Array.isArray(d.points) && d.points.length > 0) {
+            pointsInp.value = d.points.join('\n');
+          } else {
+            pointsInp.value = "bisa beli perak\nbisa beli emas\nbisa beli PPOB\nbisa belanja online\nbisa mendapat pinjaman";
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error loading guest popup admin:', e);
+    }
+  },
+
+  previewGuestBanner(url) {
+    const prev = document.getElementById('adminGuestBannerPreview');
+    if (prev) {
+      if (url && url.trim()) {
+        prev.src = url.trim();
+        prev.style.display = 'block';
+      } else {
+        prev.style.display = 'none';
+      }
+    }
+  },
+
+  handleGuestBannerUpload(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const urlInp = document.getElementById('adminGuestPopupBanner');
+      if (urlInp) urlInp.value = dataUrl;
+      this.previewGuestBanner(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  },
+
+  async saveGuestPopup() {
+    const active = document.getElementById('adminGuestPopupActive')?.value === '1';
+    const title = document.getElementById('adminGuestPopupTitle')?.value.trim() || 'Selamat Datang di Auto Trading!';
+    const subtitle = document.getElementById('adminGuestPopupSubtitle')?.value.trim() || 'Solusi Finansial & Investasi Modern Terlengkap';
+    const bannerUrl = document.getElementById('adminGuestPopupBanner')?.value.trim() || 'assets/img/welcome-banner.jpg';
+    const ctaText = document.getElementById('adminGuestPopupCtaText')?.value.trim() || 'Masuk / Daftar Akun';
+    const pointsRaw = document.getElementById('adminGuestPopupPoints')?.value || '';
+    const points = pointsRaw.split('\n').map(s => s.trim()).filter(Boolean);
+
+    try {
+      const res = await this.adminFetch('api/index.php?action=admin_save_guest_popup', {
+        method: 'POST',
+        body: JSON.stringify({
+          enabled: active,
+          title: title,
+          subtitle: subtitle,
+          banner_url: bannerUrl,
+          points: points,
+          cta_text: ctaText,
+          cta_action: 'login'
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        this.showToast('success', json.message || 'Pengaturan pop-up sebelum login berhasil disimpan!');
+      } else {
+        this.showToast('error', json.message || 'Gagal menyimpan pengaturan pop-up.');
+      }
+    } catch (e) {
+      this.showToast('error', 'Koneksi error: ' + e.message);
     }
   },
 

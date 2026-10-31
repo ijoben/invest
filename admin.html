@@ -1705,10 +1705,34 @@
                 <small style="font-size: 10px; color: #94A3B8;">Ongkos cetak fisik &amp; sertifikat per gram.</small>
               </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Data Riwayat Tren Grafik Perak 7 Hari (JSON array atau koma):</label>
-              <input type="text" class="form-input" id="adminPriceHistorySilver" placeholder="[38000, 38500, 39000, 39200, 39500, 39800, 40000]" value="[38000, 38500, 39000, 39200, 39500, 39800, 40000]">
-              <small style="font-size: 10px; color: #94A3B8;">Dihubungkan langsung ke kurva grafik SVG perak di halaman member.</small>
+            <div class="form-group" style="margin-top: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <label class="form-label" style="font-weight: 700; color: #F8FAFC; margin-bottom: 2px;">📈 Riwayat Tren Grafik Perak (Visual &amp; Mudah Diedit):</label>
+                  <small style="font-size: 11px; color: #94A3B8;">Daftar harga dan tanggal yang membentuk grafik tren perak di beranda member.</small>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="admin-btn-action-secondary" style="padding: 4px 10px; font-size: 11px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #93C5FD;" onclick="AdminPage.autoGenerateSilverHistory()">⚡ Isi 7 Hari Otomatis</button>
+                  <button type="button" class="admin-btn-action-primary" style="padding: 4px 10px; font-size: 11px; background: #2563EB;" onclick="AdminPage.addSilverHistoryRow()">+ Tambah Titik</button>
+                </div>
+              </div>
+
+              <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; overflow: hidden; max-height: 220px; overflow-y: auto;">
+                <table class="admin-table" style="margin: 0; font-size: 12px;">
+                  <thead>
+                    <tr>
+                      <th style="width: 45px; text-align: center;">No</th>
+                      <th style="width: 140px;">Hari / Tanggal</th>
+                      <th>Harga / Gram (Rp)</th>
+                      <th style="width: 70px; text-align: center;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminSilverHistoryTableBody">
+                    <tr><td colspan="4" style="text-align: center; color: #94A3B8; padding: 12px;">Memuat riwayat tren perak...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <input type="hidden" id="adminPriceHistorySilver" value="">
             </div>
             <!-- Persentase Dividen Kontrak Perak -->
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(148, 163, 184, 0.25);">
@@ -1763,10 +1787,34 @@
                 <small style="font-size: 10px; color: #94A3B8;">Ongkos cetak fisik &amp; sertifikat per gram.</small>
               </div>
             </div>
-            <div class="form-group">
-              <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Data Riwayat Tren Grafik Emas 7 Hari (JSON array atau koma):</label>
-              <input type="text" class="form-input" id="adminPriceHistoryGold" placeholder="[1410000, 1415000, 1420000, 1430000, 1435000, 1445000, 1450000]" value="[1410000, 1415000, 1420000, 1430000, 1435000, 1445000, 1450000]">
-              <small style="font-size: 10px; color: #94A3B8;">Dihubungkan langsung ke kurva grafik SVG emas di halaman member.</small>
+            <div class="form-group" style="margin-top: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <label class="form-label" style="font-weight: 700; color: #F8FAFC; margin-bottom: 2px;">📈 Riwayat Tren Grafik Emas (Visual &amp; Mudah Diedit):</label>
+                  <small style="font-size: 11px; color: #94A3B8;">Daftar harga dan tanggal yang membentuk grafik tren emas di beranda member.</small>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="admin-btn-action-secondary" style="padding: 4px 10px; font-size: 11px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #FCD34D;" onclick="AdminPage.autoGenerateGoldHistory()">⚡ Isi 7 Hari Otomatis</button>
+                  <button type="button" class="admin-btn-action-primary" style="padding: 4px 10px; font-size: 11px; background: #D97706;" onclick="AdminPage.addGoldHistoryRow()">+ Tambah Titik</button>
+                </div>
+              </div>
+
+              <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; overflow: hidden; max-height: 220px; overflow-y: auto;">
+                <table class="admin-table" style="margin: 0; font-size: 12px;">
+                  <thead>
+                    <tr>
+                      <th style="width: 45px; text-align: center;">No</th>
+                      <th style="width: 140px;">Hari / Tanggal</th>
+                      <th>Harga / Gram (Rp)</th>
+                      <th style="width: 70px; text-align: center;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminGoldHistoryTableBody">
+                    <tr><td colspan="4" style="text-align: center; color: #94A3B8; padding: 12px;">Memuat riwayat tren emas...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <input type="hidden" id="adminPriceHistoryGold" value="">
             </div>
             <!-- Persentase Dividen Kontrak Emas -->
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(245, 158, 11, 0.28);">
@@ -2274,7 +2322,7 @@
         </button>
         <button type="button" class="admin-settings-tab" data-settings-tab="welcome_popup" role="tab" aria-selected="false" onclick="AdminPage.switchSettingsTab('welcome_popup')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-          <span>Iklan Pop-up Login</span>
+          <span>Iklan Pop-up (Tamu &amp; Member)</span>
         </button>
       </div>
 
@@ -2687,6 +2735,73 @@
 
       <!-- ===== TAB: IKLAN POP-UP LOGIN (Banner & Pesan Promo Selamat Datang) ===== -->
       <div id="settings-tab-welcome_popup" class="admin-settings-tab-pane" style="display:none;">
+        <!-- Card 1: Pop-up Promo Sebelum Login (Tamu / Pengunjung) -->
+        <div class="admin-card" style="margin-bottom:20px; border-left: 4px solid #3B82F6;">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">📢 Konfigurasi Pop-up Promo Sebelum Login (Tamu / Pengunjung)</h3>
+              <p style="font-size:11.5px;color:#94A3B8;margin-top:4px;">Kelola gambar banner, judul, teks promo, dan tombol ajakan (CTA) yang muncul untuk pengunjung website sebelum melakukan login.</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label class="form-label" style="margin:0; font-size:12px; color:#F8FAFC;">Status Pop-up:</label>
+              <select class="form-input" id="adminGuestPopupActive" style="width:130px; padding:6px 10px; font-weight:700;">
+                <option value="1">🟢 Aktif</option>
+                <option value="0">🔴 Nonaktif</option>
+              </select>
+            </div>
+          </div>
+          <div class="admin-card-body">
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label" style="font-weight:700; color:#F8FAFC;">Judul Pop-up Sebelum Login:</label>
+              <input type="text" class="form-input" id="adminGuestPopupTitle" placeholder="Selamat Datang di Auto Trading!" value="Selamat Datang di Auto Trading!">
+              <small style="font-size:11px; color:#94A3B8;">Judul besar di bagian atas pop-up sebelum login.</small>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label" style="font-weight:700; color:#F8FAFC;">Subjudul / Deskripsi Singkat:</label>
+              <input type="text" class="form-input" id="adminGuestPopupSubtitle" placeholder="Solusi Finansial &amp; Investasi Modern Terlengkap" value="Solusi Finansial &amp; Investasi Modern Terlengkap">
+              <small style="font-size:11px; color:#94A3B8;">Keterangan singkat di bawah judul promo.</small>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label" style="font-weight:700; color:#F8FAFC;">URL / Path Banner Gambar Iklan Pop-up:</label>
+              <div style="display:flex; gap:10px;">
+                <input type="text" class="form-input" id="adminGuestPopupBanner" placeholder="assets/img/welcome-banner.jpg" value="assets/img/welcome-banner.jpg" oninput="AdminPage.previewGuestBanner(this.value)">
+                <label class="admin-btn-action-secondary" style="padding:8px 14px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap;">
+                  <span>📁 Upload Banner</span>
+                  <input type="file" accept="image/*" style="display:none;" onchange="AdminPage.handleGuestBannerUpload(this)">
+                </label>
+              </div>
+              <div id="adminGuestBannerPreviewContainer" style="margin-top:10px; max-width:420px; border-radius:10px; overflow:hidden; border:1px solid #334155; background:#0F172A;">
+                <img id="adminGuestBannerPreview" src="assets/img/welcome-banner.jpg" style="width:100%; height:auto; display:block;" onerror="this.style.display='none'">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label" style="font-weight:700; color:#F8FAFC;">Daftar Poin Keunggulan / Pesan Promo (1 baris per poin):</label>
+              <textarea class="form-input" id="adminGuestPopupPoints" rows="6" style="font-size:13px; line-height:1.6;" placeholder="bisa beli perak&#10;bisa beli emas&#10;bisa beli PPOB&#10;bisa belanja online&#10;bisa mendapat pinjaman">bisa beli perak
+bisa beli emas
+bisa beli PPOB
+bisa belanja online
+bisa mendapat pinjaman</textarea>
+              <small style="font-size:11px; color:#94A3B8;">Tiap baris teks akan dirender menjadi poin centang hijau di dalam dialog pop-up tamu.</small>
+            </div>
+
+            <div class="form-group" style="margin-bottom:20px;">
+              <label class="form-label" style="font-weight:700; color:#F8FAFC;">Teks Tombol Aksi (CTA Button):</label>
+              <input type="text" class="form-input" id="adminGuestPopupCtaText" placeholder="Masuk / Daftar Akun" value="Masuk / Daftar Akun">
+              <small style="font-size:11px; color:#94A3B8;">Tombol ini akan otomatis membuka modal login/pendaftaran member.</small>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+              <button type="button" class="admin-btn-action-primary" style="background:linear-gradient(135deg,#3B82F6,#1D4ED8); padding:10px 20px; font-weight:800;" onclick="AdminPage.saveGuestPopup()">
+                <span>💾 Simpan Pop-up Sebelum Login</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Pop-up Promo Setelah Login (Member Terdaftar) -->
         <div class="admin-card" style="margin-bottom:20px; border-left: 4px solid #F59E0B;">
           <div class="admin-card-header">
             <div>

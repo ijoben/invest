@@ -507,6 +507,9 @@ export const Auth = {
   // logout gate) can await it; fire-and-forget callers keep working.
   async logout() {
     DB.clearSession();
+    if (typeof window !== 'undefined' && typeof window.syncMemberCsWidgetVisibility === 'function') {
+      try { window.syncMemberCsWidgetVisibility(); } catch (e) {}
+    }
     try {
       if (typeof fetch === 'function') {
         await fetch(DB.getApiUrl('logout'), {

@@ -638,6 +638,7 @@ function ensureTablesExist($pdo) {
             if (!$colPointsReward) {
                 $pdo->exec("ALTER TABLE `shop_products` ADD COLUMN `points_reward` INT(11) DEFAULT 10 AFTER `stock`");
             }
+            $pdo->exec("ALTER TABLE `shop_products` MODIFY COLUMN `image_url` MEDIUMTEXT DEFAULT NULL");
         } catch(Exception $ePointsRew) {}
 
         try {
@@ -760,6 +761,7 @@ function ensureTablesExist($pdo) {
                 ('contract_rates_silver', '{\"30\":0.3,\"150\":0.5,\"365\":0.8}', 'Persentase dividen kontrak harian perak untuk tenor 30, 150, 365 hari'),
                 ('contract_rates_gold', '{\"30\":0.25,\"150\":0.45,\"365\":0.75}', 'Persentase dividen kontrak harian emas untuk tenor 30, 150, 365 hari'),
                 ('welcome_popup_config', '{\"enabled\":true,\"title\":\"Selamat Datang di Auto Trading!\",\"banner_url\":\"assets/img/welcome-banner.jpg\",\"points\":[\"bisa beli aset perak\",\"bisa beli aset emas\",\"bisa nabung untuk masa depan\",\"bisa invest dengan profit variatif setiap hari\",\"belanja online\",\"pinjaman khsus member aktif ( leader )\"]}', 'Konfigurasi iklan pop-up selamat datang setelah login'),
+                ('guest_popup_config', '{\"enabled\":true,\"title\":\"Selamat Datang di Auto Trading!\",\"subtitle\":\"Solusi Finansial & Investasi Modern Terlengkap\",\"banner_url\":\"assets/img/welcome-banner.jpg\",\"points\":[\"bisa beli perak\",\"bisa beli emas\",\"bisa beli PPOB\",\"bisa belanja online\",\"bisa mendapat pinjaman\"],\"cta_text\":\"Masuk / Daftar Akun\"}', 'Konfigurasi iklan pop-up untuk tamu sebelum login'),
                 ('gift_bonus_silver_reward', '0.010', 'Hadiah klaim bonus harian perak (Gram)'),
                 ('gift_bonus_gold_reward', '0.005', 'Hadiah klaim bonus harian emas (Gram)'),
                 ('gift_bonus_points_reward', '10', 'Hadiah klaim bonus poin reward')
@@ -11300,10 +11302,27 @@ if ($action === 'admin_save_shop_product') {
         $id = 'prod-' . strtolower(substr(md5(uniqid(mt_rand(), true)), 0, 8));
     }
 
+    // Auto-convert base64 image data URI to physical file in /uploads/
+    if (!empty($imageUrl) && strpos($imageUrl, 'data:image') === 0) {
+        $savedUrl = saveBase64ImageFile($imageUrl, 'shop_' . preg_replace('/[^a-zA-Z0-9_\-]/', '', $id));
+        if ($savedUrl) {
+            $imageUrl = $savedUrl;
+        }
+    }
+
     try {
         $st = $pdo->prepare("INSERT INTO `shop_products` (id, name, category, description, price_amount, price_type, image_url, stock, points_reward, status, created_at)
             VALUES (:id, :name, :cat, :desc, :price, :ptype, :img, :stock, :prew, :status, NOW())
-            ON DUPLICATE KEY UPDATE name = :name, category = :cat, description = :desc, price_amount = :price, price_type = :ptype, image_url = :img, stock = :stock, points_reward = :prew, status = :status");
+            ON DUPLICATE KEY UPDATE 
+                name = VALUES(name), 
+                category = VALUES(category), 
+                description = VALUES(description), 
+                price_amount = VALUES(price_amount), 
+                price_type = VALUES(price_type), 
+                image_url = VALUES(image_url), 
+                stock = VALUES(stock), 
+                points_reward = VALUES(points_reward), 
+                status = VALUES(status)");
         $st->execute([
             ':id' => $id,
             ':name' => $name,
@@ -11320,7 +11339,10 @@ if ($action === 'admin_save_shop_product') {
         jsonResponse([
             'success' => true,
             'message' => 'Produk toko online berhasil disimpan.',
-            'data' => ['id' => $id]
+            'data' => [
+                'id' => $id,
+                'image_url' => $imageUrl
+            ]
         ]);
     } catch (Exception $e) {
         jsonResponse(['success' => false, 'message' => 'Gagal menyimpan produk: ' . $e->getMessage()], 500);
@@ -11445,6 +11467,12 @@ if ($action === 'admin_save_welcome_popup') {
     $enabled = !empty($in['enabled']);
     $title = trim((string)($in['title'] ?? 'Selamat Datang di Auto Trading!'));
     $bannerUrl = trim((string)($in['banner_url'] ?? 'assets/img/welcome-banner.jpg'));
+    if (!empty($bannerUrl) && strpos($bannerUrl, 'data:image') === 0) {
+        $savedBanner = saveBase64ImageFile($bannerUrl, 'welcome_banner_' . time());
+        if ($savedBanner) {
+            $bannerUrl = $savedBanner;
+        }
+    }
     $points = $in['points'] ?? [
         "bisa beli perak",
         "bisa beli emas",
@@ -11526,6 +11554,127 @@ if ($action === 'get_welcome_popup') {
     } catch(Exception $eCs) {}
     $config['cs_floating_enabled'] = $csFloating;
 
+    $csWhatsapp = '6281234567890';
+    $csTelegram = 'https://t.me/autotrading_channel';
+    $csWaMessage = 'Halo CS Resmi AUTOTRADING, saya butuh bantuan seputar akun...';
+    try {
+        $stWa = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'cs_whatsapp' LIMIT 1");
+        $stWa->execute();
+        $rowWa = $stWa->fetch();
+        if ($rowWa && !empty($rowWa['setting_value'])) {
+            $csWhatsapp = $rowWa['setting_value'];
+        }
+        $stTg = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'cs_telegram' LIMIT 1");
+        $stTg->execute();
+        $rowTg = $stTg->fetch();
+        if ($rowTg && !empty($rowTg['setting_value'])) {
+            $csTelegram = $rowTg['setting_value'];
+        }
+        $stMsg = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'cs_wa_message' LIMIT 1");
+        $stMsg->execute();
+        $rowMsg = $stMsg->fetch();
+        if ($rowMsg && !empty($rowMsg['setting_value'])) {
+            $csWaMessage = $rowMsg['setting_value'];
+        }
+    } catch(Exception $e) {}
+    $config['cs_whatsapp'] = $csWhatsapp;
+    $config['cs_telegram'] = $csTelegram;
+    $config['cs_wa_message'] = $csWaMessage;
+
+    jsonResponse(['success' => true, 'data' => $config]);
+}
+
+// 4g-1. Action: Admin Save Guest Pre-Login Popup (Popup Tamu Sebelum Login)
+if ($action === 'admin_save_guest_popup') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+
+    $enabled = !empty($in['enabled']);
+    $title = trim((string)($in['title'] ?? 'Selamat Datang di Auto Trading!'));
+    $subtitle = trim((string)($in['subtitle'] ?? 'Solusi Finansial & Investasi Modern Terlengkap'));
+    $bannerUrl = trim((string)($in['banner_url'] ?? 'assets/img/welcome-banner.jpg'));
+    $ctaText = trim((string)($in['cta_text'] ?? 'Masuk / Daftar Akun'));
+    $ctaAction = trim((string)($in['cta_action'] ?? 'login'));
+
+    if (!empty($bannerUrl) && strpos($bannerUrl, 'data:image') === 0) {
+        $savedBanner = saveBase64ImageFile($bannerUrl, 'guest_banner_' . time());
+        if ($savedBanner) {
+            $bannerUrl = $savedBanner;
+        }
+    }
+
+    $points = $in['points'] ?? [
+        "bisa beli perak",
+        "bisa beli emas",
+        "bisa beli PPOB",
+        "bisa belanja online",
+        "bisa mendapat pinjaman"
+    ];
+    if (is_string($points)) {
+        $points = array_values(array_filter(array_map('trim', explode("\n", $points))));
+    }
+
+    $config = [
+        'enabled' => $enabled,
+        'title' => $title,
+        'subtitle' => $subtitle,
+        'banner_url' => $bannerUrl,
+        'points' => $points,
+        'cta_text' => $ctaText,
+        'cta_action' => $ctaAction
+    ];
+
+    try {
+        $st = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) 
+            VALUES ('guest_popup_config', :v, 'Konfigurasi iklan pop-up untuk tamu sebelum login')
+            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+        $st->execute([':v' => json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
+
+        jsonResponse([
+            'success' => true,
+            'message' => 'Pengaturan pop-up sebelum login berhasil disimpan!',
+            'data' => $config
+        ]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal menyimpan pengaturan pop-up sebelum login: ' . $e->getMessage()], 500);
+    }
+}
+
+// 4g-2. Action: Get Guest Pre-Login Popup Config (Tamu / Pengunjung Sebelum Login)
+if ($action === 'get_guest_popup') {
+    ensureTablesExist($pdo);
+    $config = [
+        'enabled' => true,
+        'title' => 'Selamat Datang di Auto Trading!',
+        'subtitle' => 'Solusi Finansial & Investasi Modern Terlengkap',
+        'banner_url' => 'assets/img/welcome-banner.jpg',
+        'points' => [
+            "bisa beli perak",
+            "bisa beli emas",
+            "bisa beli PPOB",
+            "bisa belanja online",
+            "bisa mendapat pinjaman"
+        ],
+        'cta_text' => 'Masuk / Daftar Akun',
+        'cta_action' => 'login'
+    ];
+
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = 'guest_popup_config' LIMIT 1");
+        $st->execute();
+        $row = $st->fetch();
+        if ($row && !empty($row['setting_value'])) {
+            $dec = json_decode($row['setting_value'], true);
+            if (is_array($dec)) {
+                $config = array_merge($config, $dec);
+            }
+        }
+    } catch (Exception $e) {}
+
     jsonResponse(['success' => true, 'data' => $config]);
 }
 
@@ -11546,6 +11695,30 @@ if ($action === 'admin_save_cs_settings') {
             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
         $stCs->execute([':v' => $csFloating]);
 
+        if (isset($in['whatsapp']) || isset($in['cs_whatsapp'])) {
+            $wa = isset($in['whatsapp']) ? trim($in['whatsapp']) : trim($in['cs_whatsapp']);
+            $stWa = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) 
+                VALUES ('cs_whatsapp', :v, 'Nomor WhatsApp Admin CS')
+                ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+            $stWa->execute([':v' => $wa]);
+        }
+
+        if (isset($in['telegram']) || isset($in['cs_telegram'])) {
+            $tg = isset($in['telegram']) ? trim($in['telegram']) : trim($in['cs_telegram']);
+            $stTg = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) 
+                VALUES ('cs_telegram', :v, 'Link Channel/Akun Telegram CS')
+                ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+            $stTg->execute([':v' => $tg]);
+        }
+
+        if (isset($in['wa_message']) || isset($in['cs_wa_message'])) {
+            $msg = isset($in['wa_message']) ? trim($in['wa_message']) : trim($in['cs_wa_message']);
+            $stMsg = $pdo->prepare("INSERT INTO `settings` (setting_key, setting_value, description) 
+                VALUES ('cs_wa_message', :v, 'Pesan Awal WhatsApp CS')
+                ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+            $stMsg->execute([':v' => $msg]);
+        }
+
         jsonResponse([
             'success' => true,
             'message' => 'Pengaturan Layanan CS berhasil disimpan!',
@@ -11563,7 +11736,9 @@ if ($action === 'get_shop_data') {
     $isAdmin = (currentSessionRole() === 'admin');
 
     try {
-        $pStmt = $pdo->query("SELECT * FROM `shop_products` WHERE status = 'active' ORDER BY price_amount ASC");
+        $pStmt = $isAdmin 
+            ? $pdo->query("SELECT * FROM `shop_products` ORDER BY created_at DESC, price_amount ASC")
+            : $pdo->query("SELECT * FROM `shop_products` WHERE status = 'active' ORDER BY price_amount ASC");
         $products = $pStmt->fetchAll();
 
         $orders = [];
