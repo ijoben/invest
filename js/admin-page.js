@@ -6081,6 +6081,7 @@ Object.assign(AdminPage, {
           }
         }
       }
+      this.loadMetalInstallmentsAdmin();
     } catch (e) {
       console.error('Error loading asset admin:', e);
     }
@@ -6283,6 +6284,127 @@ Object.assign(AdminPage, {
         this.loadAssetAdmin();
       } else {
         this.showToast('error', json.message || 'Gagal menyimpan harga aset.');
+      }
+    } catch (e) {
+      this.showToast('error', 'Koneksi error: ' + e.message);
+    }
+  },
+
+  async loadMetalInstallmentsAdmin() {
+    const tbody = document.getElementById('adminMetalInstallmentsTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#94A3B8; padding:20px;">Memuat data pengajuan cicilan...</td></tr>';
+    try {
+      const res = await this.adminFetch('api/index.php?action=admin_get_metal_installments');
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        const items = json.data;
+        if (items.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#94A3B8; padding:20px;">Belum ada pengajuan cicilan logam mulia.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = items.map(t => {
+          const isGold = (t.metal_type || '').toLowerCase() === 'gold';
+          const metalBadge = isGold 
+            ? '<span class="admin-badge admin-badge-warning">🥇 EMAS</span>' 
+            : '<span class="admin-badge admin-badge-info">🥈 PERAK</span>';
+          
+          let statusBadge = '';
+          if (t.status === 'pending') {
+            statusBadge = '<span class="admin-badge admin-badge-warning">Menunggu</span>';
+          } else if (t.status === 'approved') {
+            statusBadge = '<span class="admin-badge admin-badge-info">Disetujui</span>';
+          } else if (t.status === 'completed') {
+            statusBadge = '<span class="admin-badge admin-badge-success">Lunas</span>';
+          } else if (t.status === 'rejected') {
+            statusBadge = '<span class="admin-badge admin-badge-danger">Ditolak</span>';
+          } else {
+            statusBadge = '<span class="admin-badge">' + (t.status || '-') + '</span>';
+          }
+
+          let ktpHtml = '<span style="color:#64748B; font-size:11px;">Tidak ada</span>';
+          if (t.ktp_image) {
+            const escapedImg = String(t.ktp_image).replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            const escapedName = String(t.full_name || t.username || '').replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            ktpHtml = '<button type="button" class="admin-btn-action-secondary" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.openKtpModal(\'' + escapedImg + '\', \'' + escapedName + '\')">🖼️ Lihat KTP</button>';
+          }
+
+          let actionHtml = '-';
+          if (t.status === 'pending') {
+            actionHtml = '<button type="button" class="admin-btn-action-primary" style="padding:4px 8px; font-size:11px; margin-right:4px;" onclick="AdminPage.updateMetalInstallmentStatus(' + t.id + ', \'approved\')">Setujui</button>' +
+              '<button type="button" class="admin-btn-action-danger" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.updateMetalInstallmentStatus(' + t.id + ', \'rejected\')">Tolak</button>';
+          } else if (t.status === 'approved') {
+            actionHtml = '<button type="button" class="admin-btn-action-success" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.updateMetalInstallmentStatus(' + t.id + ', \'completed\')">Tandai Lunas</button>';
+          }
+
+          const safeName = String(t.full_name || '-');
+          const safeNik = String(t.nik || '-');
+          const safePhone = String(t.phone || '-');
+          const safeAddress = String(t.address || '-');
+
+          return '<tr>' +
+            '<td style="font-family:var(--font-mono); font-size:11px;"><strong>#MC-' + t.id + '</strong></td>' +
+            '<td style="font-size:11px; color:#94A3B8;">' + (t.created_at || '-') + '</td>' +
+            '<td><strong>' + (t.username || '-') + '</strong></td>' +
+            '<td>' +
+              '<div><strong>' + safeName + '</strong> <span style="font-size:11px; color:#94A3B8;">(' + safeNik + ')</span></div>' +
+              '<div style="font-size:11px; color:#94A3B8;">📱 ' + safePhone + '</div>' +
+              '<div style="font-size:11px; color:#CBD5E1; max-width:240px; line-height:1.3; margin-top:2px;">📍 ' + safeAddress + '</div>' +
+            '</td>' +
+            '<td style="text-align:center;">' + ktpHtml + '</td>' +
+            '<td>' + metalBadge + '<div style="margin-top:4px;"><strong>' + Number(t.grams).toFixed(3) + ' gr</strong></div></td>' +
+            '<td>' +
+              '<div>Tenor: <strong>' + t.tenor_months + ' Bulan</strong></div>' +
+              '<div style="font-size:11px; color:#94A3B8;">DP: Rp ' + Number(t.dp_amount).toLocaleString('id-ID') + '</div>' +
+              '<div style="font-size:11px; color:#10B981; font-weight:700;">Rp ' + Number(t.monthly_installment).toLocaleString('id-ID') + '/bln</div>' +
+              '<div style="font-size:10.5px; color:#60A5FA;">Terbayar: ' + (t.paid_installments || 0) + '/' + t.tenor_months + ' bln</div>' +
+            '</td>' +
+            '<td>' + statusBadge + '</td>' +
+            '<td style="text-align:right;">' + actionHtml + '</td>' +
+            '</tr>';
+        }).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#EF4444; padding:20px;">Gagal memuat data cicilan: ' + (json.message || 'Error server') + '</td></tr>';
+      }
+    } catch (e) {
+      console.error('Error loading metal installments admin:', e);
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#EF4444; padding:20px;">Terjadi kesalahan: ' + e.message + '</td></tr>';
+    }
+  },
+
+  openKtpModal(imgUrl, applicantName) {
+    const modal = document.getElementById('adminKtpPreviewModal');
+    const img = document.getElementById('adminKtpModalImg');
+    const title = document.getElementById('adminKtpModalTitle');
+    if (!modal) return;
+    if (img) img.src = imgUrl;
+    if (title) title.textContent = 'Lampiran Foto KTP: ' + (applicantName || 'Pemohon');
+    modal.style.display = 'flex';
+  },
+
+  closeKtpModal() {
+    const modal = document.getElementById('adminKtpPreviewModal');
+    const img = document.getElementById('adminKtpModalImg');
+    if (modal) modal.style.display = 'none';
+    if (img) img.src = '';
+  },
+
+  async updateMetalInstallmentStatus(id, newStatus) {
+    const actionLabel = newStatus === 'approved' ? 'menyetujui' : (newStatus === 'rejected' ? 'menolak' : 'menandai lunas');
+    if (!confirm('Apakah Anda yakin ingin ' + actionLabel + ' pengajuan cicilan #' + id + '?')) {
+      return;
+    }
+    try {
+      const res = await this.adminFetch('api/index.php?action=admin_update_metal_installment', {
+        method: 'POST',
+        body: JSON.stringify({ id, status: newStatus })
+      });
+      const json = await res.json();
+      if (json.success) {
+        this.showToast('success', json.message || 'Status cicilan berhasil diperbarui!');
+        this.loadMetalInstallmentsAdmin();
+      } else {
+        this.showToast('error', json.message || 'Gagal memperbarui status cicilan.');
       }
     } catch (e) {
       this.showToast('error', 'Koneksi error: ' + e.message);
