@@ -697,6 +697,21 @@ function ensureTablesExist($pdo) {
       INDEX `idx_status` (`status`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
+    try {
+        $colPaid = $pdo->query("SHOW COLUMNS FROM `metal_installments` LIKE 'paid_installments'")->fetch();
+        if (!$colPaid) {
+            $pdo->exec("ALTER TABLE `metal_installments` ADD COLUMN `paid_installments` INT NOT NULL DEFAULT 0 AFTER `status`");
+        }
+        $colDue = $pdo->query("SHOW COLUMNS FROM `metal_installments` LIKE 'next_due_date'")->fetch();
+        if (!$colDue) {
+            $pdo->exec("ALTER TABLE `metal_installments` ADD COLUMN `next_due_date` DATETIME DEFAULT NULL AFTER `paid_installments`");
+        }
+        $colNotes = $pdo->query("SHOW COLUMNS FROM `metal_installments` LIKE 'admin_notes'")->fetch();
+        if (!$colNotes) {
+            $pdo->exec("ALTER TABLE `metal_installments` ADD COLUMN `admin_notes` TEXT DEFAULT NULL AFTER `next_due_date`");
+        }
+    } catch(Exception $e) {}
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS `leader_loans` (
             `id` VARCHAR(64) NOT NULL PRIMARY KEY,
             `user_id` VARCHAR(64) NOT NULL,
@@ -10735,6 +10750,8 @@ if ($action === 'get_asset_data') {
     $points = 0;
     $txs = [];
     $activeContracts = [];
+    $userInstallments = [];
+    $userMintingOrders = [];
 
     if ($uid !== '') {
         try {
@@ -10780,6 +10797,14 @@ if ($action === 'get_asset_data') {
             $claimCheck = $pdo->prepare("SELECT COUNT(*) FROM `asset_transactions` WHERE user_id = :uid AND type = 'gift_bonus' AND DATE(created_at) = CURDATE()");
             $claimCheck->execute([':uid' => $uid]);
             $hasClaimedGiftToday = ((int)$claimCheck->fetchColumn() > 0);
+
+            $instStmt = $pdo->prepare("SELECT * FROM `metal_installments` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 50");
+            $instStmt->execute([':uid' => $uid]);
+            $userInstallments = $instStmt->fetchAll();
+
+            $mintStmt = $pdo->prepare("SELECT * FROM `shop_orders` WHERE user_id = :uid AND product_id = 'mint-physical' ORDER BY created_at DESC LIMIT 50");
+            $mintStmt->execute([':uid' => $uid]);
+            $userMintingOrders = $mintStmt->fetchAll();
         } catch (Exception $e) {}
     } else {
         $hasClaimedGiftToday = false;
@@ -10826,7 +10851,9 @@ if ($action === 'get_asset_data') {
             'wallet_balance' => $walletBalance,
             'points' => $points,
             'last_update' => $updateTime,
-            'transactions' => $txs
+            'transactions' => $txs,
+            'installments' => $userInstallments,
+            'minting_orders' => $userMintingOrders
         ]
     ]);
 }
@@ -12627,6 +12654,8 @@ if ($action === 'order_physical_minting') {
 
     $in = json_decode(file_get_contents('php://input'), true) ?: [];
     $grams = (float)($in['grams'] ?? 5);
+    $assetType = strtolower(trim((string)($in['asset_type'] ?? 'silver')));
+    if ($assetType !== 'gold') $assetType = 'silver';
     $recName = trim((string)($in['recipient_name'] ?? ''));
     $recPhone = trim((string)($in['recipient_phone'] ?? ''));
     $address = trim((string)($in['shipping_address'] ?? ''));
@@ -12635,47 +12664,72 @@ if ($action === 'order_physical_minting') {
         jsonResponse(['success' => false, 'message' => 'Lengkapi nama, nomor WhatsApp, dan alamat pengiriman fisik.'], 400);
     }
 
-    $mintingFee = 15000; // Biaya cetak & sertifikat resmi
+    $feeKey = ($assetType === 'gold') ? 'minting_fee_gold' : 'minting_fee_silver';
+    $defaultFee = ($assetType === 'gold') ? 50000 : 25000;
+    $feePerGram = $defaultFee;
+    try {
+        $stFee = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = :sk LIMIT 1");
+        $stFee->execute([':sk' => $feeKey]);
+        $rFee = $stFee->fetch();
+        if ($rFee && (int)$rFee['setting_value'] > 0) $feePerGram = (int)$rFee['setting_value'];
+    } catch (Exception $e) {}
+    $totalMintingFee = (int)round($grams * $feePerGram);
 
     try {
         if (!$pdo->inTransaction()) $pdo->beginTransaction();
 
-        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $balanceField = ($assetType === 'gold') ? 'gold_balance' : 'silver_balance';
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, {$balanceField} FROM `users` WHERE id = :uid FOR UPDATE");
         $uStmt->execute([':uid' => $uid]);
         $u = $uStmt->fetch();
 
-        if ((float)$u['silver_balance'] < $grams) {
+        $metalName = ($assetType === 'gold') ? 'Emas' : 'Perak';
+
+        if ((float)$u[$balanceField] < $grams) {
             $pdo->rollBack();
-            jsonResponse(['success' => false, 'message' => 'Saldo perak digital tidak mencukupi untuk dicetak fisik.'], 400);
+            jsonResponse(['success' => false, 'message' => "Saldo {$metalName} digital tidak mencukupi untuk dicetak fisik (Saldo Anda: " . number_format((float)$u[$balanceField], 3) . " Gram)."], 400);
         }
-        if ((int)$u['wallet_balance'] < $mintingFee) {
+        if ((int)$u['wallet_balance'] < $totalMintingFee) {
             $pdo->rollBack();
-            jsonResponse(['success' => false, 'message' => 'Saldo dompet utama tidak mencukupi untuk biaya cetak & sertifikat resmi (Rp 15.000).'], 400);
+            $shortfall = $totalMintingFee - (int)$u['wallet_balance'];
+            jsonResponse(['success' => false, 'message' => 'Saldo dompet utama tidak mencukupi untuk biaya cetak & sertifikat resmi (Kurang Rp ' . number_format($shortfall, 0, ',', '.') . ').'], 400);
         }
 
-        $pdo->prepare("UPDATE `users` SET silver_balance = silver_balance - :g, wallet_balance = wallet_balance - :fee WHERE id = :uid")->execute([
+        $pdo->prepare("UPDATE `users` SET {$balanceField} = {$balanceField} - :g, wallet_balance = wallet_balance - :fee WHERE id = :uid")->execute([
             ':g' => $grams,
-            ':fee' => $mintingFee,
+            ':fee' => $totalMintingFee,
             ':uid' => $uid
         ]);
 
         $orderId = 'MINT-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $productTitle = 'Cetak Keping Fisik ' . $metalName . ' Murni ' . number_format($grams, 0) . ' Gram Bersertifikat';
         $pdo->prepare("INSERT INTO `shop_orders` (id, user_id, username, product_id, product_name, amount, recipient_name, recipient_phone, shipping_address, notes, status, created_at) VALUES (:id, :uid, :uname, 'mint-physical', :pname, :amt, :rname, :rphone, :addr, :notes, 'pending', NOW())")->execute([
             ':id' => $orderId,
             ':uid' => $uid,
             ':uname' => $u['username'],
-            ':pname' => 'Cetak Keping Fisik Perak Murni ' . number_format($grams, 0) . ' Gram Bersertifikat',
-            ':amt' => $mintingFee,
+            ':pname' => $productTitle,
+            ':amt' => $totalMintingFee,
             ':rname' => $recName,
             ':rphone' => $recPhone,
             ':addr' => $address,
-            ':notes' => 'Pengajuan cetak logam fisik bersertifikat'
+            ':notes' => 'Logam: ' . $metalName . ', ' . $grams . ' Gram'
+        ]);
+
+        $txId = 'TX-' . $orderId;
+        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'mint_physical', :atype, :g, :ppg, :tot, 'completed', NOW())")->execute([
+            ':id' => $txId,
+            ':uid' => $uid,
+            ':uname' => $u['username'],
+            ':atype' => $assetType,
+            ':g' => $grams,
+            ':ppg' => $feePerGram,
+            ':tot' => $totalMintingFee
         ]);
 
         $pdo->commit();
         jsonResponse([
             'success' => true,
-            'message' => 'Pengajuan cetak keping fisik perak murni ' . number_format($grams, 0) . ' Gram berhasil! Keping fisik akan segera dicetak dan dikirimkan ke alamat Anda.'
+            'message' => 'Pengajuan cetak keping fisik ' . $metalName . ' murni ' . number_format($grams, 0) . ' Gram berhasil! Keping fisik bersertifikat akan segera dicetak dan dikirimkan ke alamat Anda.'
         ]);
     } catch(Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -12868,6 +12922,171 @@ if ($action === 'submit_metal_installment') {
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         jsonResponse(['success' => false, 'message' => 'Gagal memproses pengajuan cicilan: ' . $e->getMessage()], 500);
+    }
+}
+
+// 18b. Action: Admin Get Metal Installments (Daftar Pengajuan Cicilan Logam Mulia)
+if ($action === 'admin_get_metal_installments') {
+    requireAdmin();
+    ensureTablesExist($pdo);
+    try {
+        $st = $pdo->query("SELECT * FROM `metal_installments` ORDER BY created_at DESC LIMIT 100");
+        $rows = $st->fetchAll();
+        jsonResponse(['success' => true, 'data' => $rows]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal mengambil data cicilan: ' . $e->getMessage()], 500);
+    }
+}
+
+// 18c. Action: Admin Update Metal Installment Status (Setujui / Tolak / Selesai Cicilan)
+if ($action === 'admin_update_metal_installment') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireAdmin();
+    ensureTablesExist($pdo);
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $id = trim((string)($in['id'] ?? ''));
+    $status = trim((string)($in['status'] ?? ''));
+    $adminNotes = trim((string)($in['admin_notes'] ?? ''));
+
+    if ($id === '' || !in_array($status, ['approved', 'rejected', 'completed', 'pending'], true)) {
+        jsonResponse(['success' => false, 'message' => 'Parameter id dan status tidak valid.'], 400);
+    }
+
+    try {
+        $st = $pdo->prepare("SELECT * FROM `metal_installments` WHERE id = :id LIMIT 1");
+        $st->execute([':id' => $id]);
+        $row = $st->fetch();
+        if (!$row) {
+            jsonResponse(['success' => false, 'message' => 'Data pengajuan cicilan tidak ditemukan.'], 404);
+        }
+
+        if ($status === 'approved') {
+            $up = $pdo->prepare("UPDATE `metal_installments` SET status = 'approved', next_due_date = DATE_ADD(NOW(), INTERVAL 30 DAY), admin_notes = :notes WHERE id = :id");
+            $up->execute([':notes' => $adminNotes ?: 'Pengajuan cicilan disetujui admin', ':id' => $id]);
+            $msg = 'Pengajuan cicilan berhasil disetujui. Tagihan angsuran pertama telah diaktifkan.';
+        } elseif ($status === 'rejected') {
+            $up = $pdo->prepare("UPDATE `metal_installments` SET status = 'rejected', admin_notes = :notes WHERE id = :id");
+            $up->execute([':notes' => $adminNotes ?: 'Pengajuan cicilan ditolak admin', ':id' => $id]);
+            $msg = 'Pengajuan cicilan telah ditolak.';
+        } elseif ($status === 'completed') {
+            $up = $pdo->prepare("UPDATE `metal_installments` SET status = 'completed', admin_notes = :notes WHERE id = :id");
+            $up->execute([':notes' => $adminNotes ?: 'Cicilan dinyatakan lunas dan keping fisik siap dikirim', ':id' => $id]);
+            $msg = 'Status cicilan berhasil diubah menjadi Lunas.';
+        } else {
+            $up = $pdo->prepare("UPDATE `metal_installments` SET status = 'pending', admin_notes = :notes WHERE id = :id");
+            $up->execute([':notes' => $adminNotes, ':id' => $id]);
+            $msg = 'Status cicilan dikembalikan ke pending.';
+        }
+
+        jsonResponse(['success' => true, 'message' => $msg]);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Gagal mengubah status cicilan: ' . $e->getMessage()], 500);
+    }
+}
+
+// 18d. Action: Pay Metal Installment (Pembayaran Angsuran Cicilan Logam oleh Member)
+if ($action === 'pay_metal_installment') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
+    }
+    requireLogin();
+    ensureTablesExist($pdo);
+    $uid = currentSessionUserId();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?: [];
+    $id = trim((string)($in['id'] ?? ''));
+
+    if ($id === '') {
+        jsonResponse(['success' => false, 'message' => 'ID cicilan tidak valid.'], 400);
+    }
+
+    try {
+        if (!$pdo->inTransaction()) $pdo->beginTransaction();
+
+        $st = $pdo->prepare("SELECT * FROM `metal_installments` WHERE id = :id AND user_id = :uid FOR UPDATE");
+        $st->execute([':id' => $id, ':uid' => $uid]);
+        $row = $st->fetch();
+
+        if (!$row) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Data cicilan tidak ditemukan.'], 404);
+        }
+
+        if ($row['status'] !== 'approved' && $row['status'] !== 'pending') {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Cicilan ini tidak dalam status aktif pembayaran (Status: ' . $row['status'] . ').'], 400);
+        }
+
+        $paidCount = (int)($row['paid_installments'] ?? 0);
+        $tenor = (int)$row['tenor_months'];
+        if ($paidCount >= $tenor) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Seluruh angsuran cicilan ini sudah lunas 100%.'], 400);
+        }
+
+        $monthlyAmount = (int)$row['monthly_installment'];
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, points FROM `users` WHERE id = :uid FOR UPDATE");
+        $uStmt->execute([':uid' => $uid]);
+        $u = $uStmt->fetch();
+
+        if ((int)$u['wallet_balance'] < $monthlyAmount) {
+            $pdo->rollBack();
+            $shortfall = $monthlyAmount - (int)$u['wallet_balance'];
+            jsonResponse([
+                'success' => false,
+                'message' => 'Saldo dompet tidak mencukupi untuk membayar angsuran bulanan (Kurang Rp ' . number_format($shortfall, 0, ',', '.') . '). Silakan deposit saldo terlebih dahulu.'
+            ], 400);
+        }
+
+        // Debet saldo dompet
+        $newWallet = (int)$u['wallet_balance'] - $monthlyAmount;
+        $newPaidCount = $paidCount + 1;
+        $isFinished = ($newPaidCount >= $tenor);
+
+        $pdo->prepare("UPDATE `users` SET wallet_balance = :wb WHERE id = :uid")->execute([':wb' => $newWallet, ':uid' => $uid]);
+
+        // Jika lunas, dapat 50 poin
+        if ($isFinished) {
+            $pdo->prepare("UPDATE `users` SET points = points + 50 WHERE id = :uid")->execute([':uid' => $uid]);
+        }
+
+        // Update cicilan
+        $newStatus = $isFinished ? 'completed' : 'approved';
+        $upStmt = $pdo->prepare("UPDATE `metal_installments` SET paid_installments = :paid, status = :st, next_due_date = DATE_ADD(COALESCE(next_due_date, NOW()), INTERVAL 30 DAY) WHERE id = :id");
+        $upStmt->execute([':paid' => $newPaidCount, ':st' => $newStatus, ':id' => $id]);
+
+        // Catat transaksi
+        $txId = 'INST-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        $metalName = ($row['metal_type'] === 'gold') ? 'Emas' : 'Perak';
+        $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, notes, created_at) VALUES (:id, :uid, :uname, 'metal_installment_payment', :amt, 'completed', 'Saldo Utama', 'wallet', :dest, :txid, :notes, NOW())")->execute([
+            ':id' => 'TRX-' . $txId,
+            ':uid' => $uid,
+            ':uname' => $u['username'],
+            ':amt' => $monthlyAmount,
+            ':dest' => 'Angsuran Cicilan ' . $metalName,
+            ':txid' => $txId,
+            ':notes' => 'Pembayaran angsuran bulan ke-' . $newPaidCount . ' dari ' . $tenor . ' bulan'
+        ]);
+
+        $pdo->commit();
+
+        $finishMsg = $isFinished ? ' Selamat! Cicilan Anda telah LUNAS 100% dan Anda memperoleh bonus +50 Poin! Keping fisik bersertifikat segera dikirim.' : ' Angsuran bulan ke-' . $newPaidCount . ' dari ' . $tenor . ' bulan berhasil dibayar.';
+        jsonResponse([
+            'success' => true,
+            'message' => 'Pembayaran angsuran berhasil diproses!' . $finishMsg,
+            'data' => [
+                'paid_installments' => $newPaidCount,
+                'tenor_months' => $tenor,
+                'status' => $newStatus,
+                'wallet_balance' => $newWallet
+            ]
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        jsonResponse(['success' => false, 'message' => 'Gagal membayar angsuran: ' . $e->getMessage()], 500);
     }
 }
 
