@@ -12909,6 +12909,7 @@ if ($action === 'submit_metal_installment') {
         jsonResponse([
             'success' => true,
             'message' => 'Pengajuan cicilan logam fisik ' . $grams . ' Gram ' . ($metalType === 'gold' ? 'Emas' : 'Perak') . ' berhasil dikirim! Tim admin akan segera memverifikasi kelengkapan berkas Anda.',
+            'installment_id' => $cicilId,
             'data' => [
                 'installment_id' => $cicilId,
                 'metal_type' => $metalType,
@@ -13061,14 +13062,14 @@ if ($action === 'pay_metal_installment') {
         // Catat transaksi
         $txId = 'INST-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
         $metalName = ($row['metal_type'] === 'gold') ? 'Emas' : 'Perak';
-        $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, notes, created_at) VALUES (:id, :uid, :uname, 'metal_installment_payment', :amt, 'completed', 'Saldo Utama', 'wallet', :dest, :txid, :notes, NOW())")->execute([
+        $destDesc = 'Angsuran ' . $metalName . ' Bulan ' . $newPaidCount . '/' . $tenor;
+        $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'metal_installment_payment', :amt, 'completed', 'Saldo Utama', 'wallet', :dest, :txid, NOW())")->execute([
             ':id' => 'TRX-' . $txId,
             ':uid' => $uid,
             ':uname' => $u['username'],
             ':amt' => $monthlyAmount,
-            ':dest' => 'Angsuran Cicilan ' . $metalName,
-            ':txid' => $txId,
-            ':notes' => 'Pembayaran angsuran bulan ke-' . $newPaidCount . ' dari ' . $tenor . ' bulan'
+            ':dest' => $destDesc,
+            ':txid' => $txId
         ]);
 
         $pdo->commit();

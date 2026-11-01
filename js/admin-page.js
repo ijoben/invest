@@ -6331,19 +6331,19 @@ Object.assign(AdminPage, {
 
           let actionHtml = '-';
           if (t.status === 'pending') {
-            actionHtml = '<button type="button" class="admin-btn-action-primary" style="padding:4px 8px; font-size:11px; margin-right:4px;" onclick="AdminPage.updateMetalInstallmentStatus(' + t.id + ', \'approved\')">Setujui</button>' +
-              '<button type="button" class="admin-btn-action-danger" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.updateMetalInstallmentStatus(' + t.id + ', \'rejected\')">Tolak</button>';
+            actionHtml = '<button type="button" class="admin-btn-action-primary" style="padding:4px 8px; font-size:11px; margin-right:4px;" onclick="AdminPage.updateMetalInstallmentStatus(\'' + t.id + '\', \'approved\')">Setujui</button>' +
+              '<button type="button" class="admin-btn-action-danger" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.updateMetalInstallmentStatus(\'' + t.id + '\', \'rejected\')">Tolak</button>';
           } else if (t.status === 'approved') {
-            actionHtml = '<button type="button" class="admin-btn-action-success" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.updateMetalInstallmentStatus(' + t.id + ', \'completed\')">Tandai Lunas</button>';
+            actionHtml = '<button type="button" class="admin-btn-action-success" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.updateMetalInstallmentStatus(\'' + t.id + '\', \'completed\')">Tandai Lunas</button>';
           }
 
           const safeName = String(t.full_name || '-');
           const safeNik = String(t.nik || '-');
           const safePhone = String(t.phone || '-');
-          const safeAddress = String(t.address || '-');
+          const safeAddress = String(t.shipping_address || t.address || '-');
 
           return '<tr>' +
-            '<td style="font-family:var(--font-mono); font-size:11px;"><strong>#MC-' + t.id + '</strong></td>' +
+            '<td style="font-family:var(--font-mono); font-size:11px;"><strong>' + (String(t.id).startsWith('CCL-') ? t.id : ('#MC-' + t.id)) + '</strong></td>' +
             '<td style="font-size:11px; color:#94A3B8;">' + (t.created_at || '-') + '</td>' +
             '<td><strong>' + (t.username || '-') + '</strong></td>' +
             '<td>' +
