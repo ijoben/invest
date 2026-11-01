@@ -4747,8 +4747,10 @@
         modal.classList.remove('show');
         modal.style.display = 'none';
       }
+      document.body.style.overflow = '';
       try {
         sessionStorage.setItem('at_guest_popup_dismissed', 'true');
+        sessionStorage.setItem('at_guest_popup_shown', 'true');
       } catch (e) { }
     }
 
@@ -4763,7 +4765,7 @@
 
     async function checkAndShowGuestPopup() {
       try {
-        if (sessionStorage.getItem('at_guest_popup_dismissed') === 'true') {
+        if (sessionStorage.getItem('at_guest_popup_dismissed') === 'true' || sessionStorage.getItem('at_guest_popup_shown') === 'true') {
           return;
         }
         const res = await fetch('api/index.php?action=get_guest_popup');
@@ -4802,14 +4804,16 @@
         modal.classList.remove('show');
         modal.style.display = 'none';
       }
+      document.body.style.overflow = '';
       try {
         sessionStorage.setItem('at_welcome_popup_dismissed', 'true');
+        sessionStorage.setItem('at_welcome_popup_shown', 'true');
       } catch (e) { }
     }
 
     async function checkAndShowWelcomePopup() {
       try {
-        if (sessionStorage.getItem('at_welcome_popup_dismissed') === 'true') {
+        if (sessionStorage.getItem('at_welcome_popup_dismissed') === 'true' || sessionStorage.getItem('at_welcome_popup_shown') === 'true') {
           return;
         }
         const res = await fetch('api/index.php?action=get_welcome_popup');
@@ -4906,11 +4910,11 @@
     // Close welcome / guest popup or floating CS card when clicking outside
     document.addEventListener('click', (e) => {
       const modal = document.getElementById('modalWelcomeLogin');
-      if (modal && e.target === modal) {
+      if (modal && modal.style.display !== 'none' && (e.target === modal || (!modal.querySelector('.modal-sheet')?.contains(e.target) && modal.contains(e.target)))) {
         closeWelcomePopup();
       }
       const modalGuest = document.getElementById('modalGuestPromo');
-      if (modalGuest && e.target === modalGuest) {
+      if (modalGuest && modalGuest.style.display !== 'none' && (e.target === modalGuest || (!modalGuest.querySelector('.modal-sheet')?.contains(e.target) && modalGuest.contains(e.target)))) {
         closeGuestPopup();
       }
       const csContainer = document.getElementById('floatingCsContainer');

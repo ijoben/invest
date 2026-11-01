@@ -1100,6 +1100,37 @@
       </div>
     </div>
 
+    <!-- PROGRES TABUNGAN FISIK MENUJU TARGET -->
+    <div class="section-card" id="cardSavingsProgressSection">
+      <div class="section-header">
+        <div class="section-title">💰 Progres Tabungan Fisik</div>
+        <span style="font-size: 11px; font-weight: 800; color: #10B981;" id="savingsGoalLabel">0 / 50 Gram (0%)</span>
+      </div>
+      <p style="font-size: 11px; color: #64748B; margin-top: 2px; margin-bottom: 10px;" id="savingsGoalDetailText">
+        Kumpulkan gramasi sedikit demi sedikit menuju target keping fisik bersertifikat resmi.
+      </p>
+      <div style="background: #E2E8F0; border-radius: 8px; height: 10px; overflow: hidden; margin-bottom: 8px;">
+        <div id="savingsGoalProgressBar" style="background: linear-gradient(90deg, #F59E0B, #10B981); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748B;">
+        <span id="savingsGoalRemainingText">Kurang 50 Gram lagi menuju target</span>
+        <button type="button" class="btn" style="padding: 4px 10px; font-size: 11px; font-weight: 700; background: #0F172A; color: #fff; border-radius: 6px;" onclick="openModalTabungan()">+ Setor Tabungan</button>
+      </div>
+    </div>
+
+    <!-- KONTRAK DIVIDEN AKTIF & RINCIAN PROGRES TENOR -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📜 Progres Kontrak Dividen Aktif</div>
+        <span style="font-size: 11px; color: var(--text-muted);" id="contractsCountBadge">0 Kontrak</span>
+      </div>
+      <p style="font-size: 11px; color: #64748B; margin-top: 2px; margin-bottom: 14px;">Pantau rincian perjalanan masa kontrak dividen harian, hari selesai kontrak, dan akumulasi bagi hasil.</p>
+
+      <div id="memberContractsList">
+        <div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px;">Memuat data kontrak...</div>
+      </div>
+    </div>
+
     <!-- RIWAYAT TRANSAKSI ASET -->
     <div class="section-card">
       <div class="section-header">
@@ -1952,6 +1983,10 @@
       // Render Price Chart
       renderPriceChart();
 
+      // Render Savings Progress & Active Contracts
+      renderSavingsProgress();
+      renderContracts();
+
       // Render Transactions
       renderTransactions();
 
@@ -2051,6 +2086,136 @@
       svg.innerHTML = svgContent;
     }
 
+    function renderSavingsProgress() {
+      const isGold = (currentAssetType === 'gold');
+      const targetSavings = isGold ? 10 : 50;
+      const currentSavings = isGold ? Number(currentData.gold_savings_balance || 0) : Number(currentData.silver_savings_balance || 0);
+      const progressPct = Math.min(100, Math.round((currentSavings / targetSavings) * 100));
+      const remainingGrams = Math.max(0, targetSavings - currentSavings);
+
+      const labelEl = document.getElementById('savingsGoalLabel');
+      const barEl = document.getElementById('savingsGoalProgressBar');
+      const detailEl = document.getElementById('savingsGoalDetailText');
+      const remainingEl = document.getElementById('savingsGoalRemainingText');
+
+      if (labelEl) labelEl.innerText = `${formatNumber(currentSavings, 3)} / ${targetSavings} Gram (${progressPct}%)`;
+      if (barEl) barEl.style.width = `${progressPct}%`;
+      if (detailEl) {
+        if (progressPct >= 100) {
+          detailEl.innerHTML = `<span style="color:#10B981; font-weight:800;">🎉 Target Tabungan ${targetSavings} Gram ${isGold ? 'Emas' : 'Perak'} Tercapai! Siap Dicetak Fisik.</span>`;
+        } else {
+          detailEl.innerHTML = `Kumpulkan gramasi sedikit demi sedikit menuju target ${targetSavings} Gram ${isGold ? 'Emas' : 'Perak'} untuk pencetakan keping fisik bersertifikat resmi platform.`;
+        }
+      }
+      if (remainingEl) {
+        remainingEl.innerText = (remainingGrams <= 0) ? '🎯 Target Terpenuhi 100%' : `Kurang ${formatNumber(remainingGrams, 3)} Gram lagi menuju target`;
+      }
+    }
+
+    function renderContracts() {
+      const container = document.getElementById('memberContractsList');
+      if (!container) return;
+      const isGold = (currentAssetType === 'gold');
+      const targetAsset = isGold ? 'gold' : 'silver';
+      const allContracts = currentData.user_contracts || [];
+      const contracts = allContracts.filter(c => (c.asset_type || 'silver') === targetAsset);
+      const badge = document.getElementById('contractsCountBadge');
+      if (badge) badge.innerText = contracts.length + ' Kontrak';
+
+      if (contracts.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:#94A3B8; font-size:12px;">Belum ada kontrak dividen ${isGold ? 'emas' : 'perak'} yang aktif. Klik menu <strong>Kontrak</strong> di atas untuk mengaktifkan dividen harian.</div>`;
+        return;
+      }
+
+      container.innerHTML = contracts.map(c => {
+        const isGoldContract = (c.asset_type === 'gold');
+        const metalLabel = isGoldContract ? 'Emas Murni 99.99%' : 'Perak Murni 99.9%';
+        const metalIcon = isGoldContract ? '🥇' : '🥈';
+        const metalBadgeClass = isGoldContract ? 'badge-gold' : 'badge-silver';
+
+        // Hitung tanggal dan progres
+        const startDate = new Date(c.start_date || c.created_at);
+        const endDate = new Date(c.end_date);
+        const now = new Date();
+        const durationDays = Number(c.duration_days) || 30;
+
+        const totalMs = Math.max(1, endDate.getTime() - startDate.getTime());
+        const elapsedMs = Math.max(0, Math.min(totalMs, now.getTime() - startDate.getTime()));
+        const elapsedDays = Math.min(durationDays, Math.floor(elapsedMs / (1000 * 60 * 60 * 24)) + 1);
+        const remainingDays = Math.max(0, durationDays - elapsedDays);
+        const progressPct = Math.min(100, Math.round((elapsedMs / totalMs) * 100));
+
+        const isFinished = (c.status === 'completed' || now >= endDate);
+        const statusText = isFinished ? 'Selesai (100%)' : 'Aktif Berjalan';
+        const statusBg = isFinished ? '#DCFCE7' : '#EFF6FF';
+        const statusColor = isFinished ? '#166534' : '#1D4ED8';
+        const statusBorder = isFinished ? '#86EFAC' : '#93C5FD';
+
+        const gramsVal = Number(c.grams) || 0;
+        const dailyRate = Number(c.daily_rate_percent) || 0;
+        const dailyYield = Number(c.daily_yield_grams) || 0;
+        const totalYield = Number(c.total_yield_grams) || 0;
+
+        const buyPrice = isGoldContract ? (currentData.gold_buy_price || 1350000) : (currentData.silver_buy_price || 18500);
+        const dailyRp = Math.round(dailyYield * buyPrice);
+        const totalYieldRp = Math.round(totalYield * buyPrice);
+
+        const fmtStartDate = c.start_date ? c.start_date.substring(0, 16) : '-';
+        const fmtEndDate = c.end_date ? c.end_date.substring(0, 16) : '-';
+
+        return `
+          <div style="background:#FFFFFF; border:1.5px solid #E2E8F0; border-radius:14px; padding:15px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span class="tx-type-badge ${metalBadgeClass}">${metalIcon} ${metalLabel}</span>
+                  <strong style="font-size:14px; color:#0F172A;">${formatNumber(gramsVal, 3)} Gram</strong>
+                </div>
+                <div style="font-size:10.5px; color:#64748B; margin-top:3px;">ID Kontrak: <strong>#${c.id}</strong> · Tenor: <strong>${durationDays} Hari</strong></div>
+              </div>
+              <span style="font-size:10.5px; font-weight:800; padding:4px 9px; border-radius:8px; background:${statusBg}; color:${statusColor}; border:1px solid ${statusBorder};">
+                ${statusText}
+              </span>
+            </div>
+
+            <!-- Progress Bar Breakdown -->
+            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:12px; margin-bottom:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; margin-bottom:6px;">
+                <span style="color:#64748B;">Progres Masa Kontrak:</span>
+                <strong style="color:#0F172A;">Hari ke-${elapsedDays} dari ${durationDays} Hari (${progressPct}%)</strong>
+              </div>
+              <div style="background:#E2E8F0; border-radius:6px; height:9px; overflow:hidden; margin-bottom:6px;">
+                <div style="background:linear-gradient(90deg, #3B82F6, #10B981); height:100%; width:${progressPct}%; transition:width 0.3s ease;"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:10px; color:#64748B;">
+                <span>Mulai: ${fmtStartDate}</span>
+                <span>${isFinished ? 'Telah Berakhir' : `Sisa ${remainingDays} Hari lagi`}</span>
+                <span>Selesai: ${fmtEndDate}</span>
+              </div>
+            </div>
+
+            <!-- Rincian Hasil & Dividen Harian -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px;">
+              <div style="background:#F1F5F9; border-radius:8px; padding:8px 10px;">
+                <span style="color:#64748B;">Dividen Harian (${dailyRate}%/hari):</span>
+                <div style="font-weight:800; color:#10B981; font-size:12px; margin-top:2px;">+${formatNumber(dailyYield, 4)} Gr / hari</div>
+                <div style="font-size:10px; color:#64748B;">Est. +${formatRupiah(dailyRp)}/hari</div>
+              </div>
+              <div style="background:#F1F5F9; border-radius:8px; padding:8px 10px;">
+                <span style="color:#64748B;">Total Estimasi Hasil Akhir:</span>
+                <div style="font-weight:800; color:#2563EB; font-size:12px; margin-top:2px;">+${formatNumber(totalYield, 4)} Gr</div>
+                <div style="font-size:10px; color:#64748B;">Est. +${formatRupiah(totalYieldRp)}</div>
+              </div>
+            </div>
+
+            <div style="margin-top:10px; font-size:10px; color:#64748B; background:#FFFBEB; border:1px solid #FCD34D; border-radius:8px; padding:6px 10px; line-height:1.4;">
+              🔒 <strong>Proteksi Modal:</strong> Modal kontrak senilai <strong>${formatNumber(gramsVal, 3)} Gr</strong> beserta seluruh hasil dividen otomatis masuk ke saldo aset siap jual setelah kontrak mencapai hari ke-${durationDays}.
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     function setTxFilter(filter) {
       currentTxFilter = filter;
       document.querySelectorAll('.filter-chip').forEach(c => {
@@ -2084,23 +2249,150 @@
       }
 
       txWrap.innerHTML = filtered.map(t => {
-        const isBuy = t.type === 'buy';
-        const isGoldTx = t.asset_type === 'gold';
+        const isGoldTx = (t.asset_type === 'gold');
+        const metalBadgeClass = isGoldTx ? 'badge-gold' : 'badge-silver';
+        const metalName = isGoldTx ? 'EMAS' : 'PERAK';
+        const gramsVal = Number(t.grams) || 0;
+
+        if (t.type === 'contract') {
+          // Task 1: Rincian transaksi kontrak perak dan emas beserta progress sampai selesai
+          const matchedContract = (currentData.user_contracts || []).find(c => c.id === t.id.replace('TX-', '') || c.id === t.id) || {};
+          const durationDays = Number(matchedContract.duration_days || t.price_per_gram || 30);
+          const startDateStr = matchedContract.start_date || t.created_at || 'Baru saja';
+          const endDateStr = matchedContract.end_date || '-';
+          const dailyRate = Number(matchedContract.daily_rate_percent || 0.3);
+          const dailyYieldGrams = Number(matchedContract.daily_yield_grams || (gramsVal * (dailyRate / 100)));
+          const totalYieldGrams = Number(matchedContract.total_yield_grams || (dailyYieldGrams * durationDays));
+
+          let elapsedDays = 1;
+          let progressPct = 0;
+          let isMatured = (t.status === 'completed' || matchedContract.status === 'completed');
+
+          if (matchedContract.start_date && matchedContract.end_date) {
+            const start = new Date(matchedContract.start_date).getTime();
+            const end = new Date(matchedContract.end_date).getTime();
+            const now = Date.now();
+            const totalMs = Math.max(1, end - start);
+            const elapsedMs = Math.max(0, Math.min(totalMs, now - start));
+            elapsedDays = Math.min(durationDays, Math.floor(elapsedMs / (1000 * 60 * 60 * 24)) + 1);
+            progressPct = Math.min(100, Math.round((elapsedMs / totalMs) * 100));
+            if (now >= end) isMatured = true;
+          }
+
+          const contractStatusBadge = isMatured
+            ? '<span class="tx-type-badge badge-buy">SELESAI (100%)</span>'
+            : '<span class="tx-type-badge badge-gold">AKTIF BERJALAN</span>';
+
+          return `
+            <div class="tx-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span class="tx-type-badge badge-buy">📜 KONTRAK</span>
+                    <span class="tx-type-badge ${metalBadgeClass}">${metalName}</span>
+                    <strong style="font-size: 13.5px; color: #0F172A;">${formatNumber(gramsVal, 3)} Gram</strong>
+                    <span style="font-size: 10.5px; background: #EEF2F6; color: #334155; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${durationDays} Hari</span>
+                  </div>
+                  <div style="font-size: 10.5px; color: #64748B; margin-top: 3px;">
+                    Mulai: ${startDateStr.substring(0, 16)} · Selesai: ${endDateStr.substring(0, 16)}
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  ${contractStatusBadge}
+                  <div style="font-size: 10.5px; color: #10B981; font-weight: 800; margin-top: 3px;">+${dailyRate}%/hari</div>
+                </div>
+              </div>
+
+              <!-- Progress Bar Masa Kontrak -->
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 4px;">
+                  <span style="color: #64748B;">Perjalanan Masa Kontrak:</span>
+                  <strong style="color: #0F172A;">Hari ke-${elapsedDays} dari ${durationDays} Hari (${progressPct}%)</strong>
+                </div>
+                <div style="background: #E2E8F0; border-radius: 4px; height: 7px; overflow: hidden;">
+                  <div style="background: linear-gradient(90deg, #3B82F6, #10B981); height: 100%; width: ${progressPct}%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #64748B; margin-top: 4px;">
+                  <span>Dividen: +${formatNumber(dailyYieldGrams, 4)} gr/hr</span>
+                  <span style="font-weight: 700; color: #2563EB;">Total Hasil Akhir: +${formatNumber(totalYieldGrams, 4)} gr</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (t.type === 'savings') {
+          // Task 2: Riwayat transaksi tabungan progress aktif menabung sampai selesai
+          const targetSavings = isGoldTx ? 10 : 50;
+          const currentSavingsBal = isGoldTx ? Number(currentData.gold_savings_balance || 0) : Number(currentData.silver_savings_balance || 0);
+          const savingsPct = Math.min(100, Math.round((currentSavingsBal / targetSavings) * 100));
+
+          return `
+            <div class="tx-item" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span class="tx-type-badge badge-gold">💰 SETOR TABUNGAN</span>
+                    <span class="tx-type-badge ${metalBadgeClass}">${metalName}</span>
+                    <strong style="font-size: 13.5px; color: #0F172A;">+${formatNumber(gramsVal, 3)} Gram</strong>
+                  </div>
+                  <div style="font-size: 10.5px; color: #64748B; margin-top: 3px;">
+                    @ ${formatRupiah(t.price_per_gram)}/gr · ${t.created_at || 'Baru saja'}
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 13px; font-weight: 800; color: #DC2626;">
+                    -${formatRupiah(t.total_amount)}
+                  </div>
+                  <span style="font-size: 9.5px; color: #16A34A; font-weight: 700;">Sukses Masuk Tabungan</span>
+                </div>
+              </div>
+
+              <!-- Progress Menuju Target -->
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 3px;">
+                  <span style="color: #64748B;">Target Tabungan Fisik:</span>
+                  <strong style="color: #10B981;">${formatNumber(currentSavingsBal, 2)} / ${targetSavings} Gram (${savingsPct}%)</strong>
+                </div>
+                <div style="background: #E2E8F0; border-radius: 4px; height: 6px; overflow: hidden;">
+                  <div style="background: linear-gradient(90deg, #F59E0B, #10B981); height: 100%; width: ${savingsPct}%;"></div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        const isBuy = (t.type === 'buy');
+        const isGift = (t.type === 'gift_bonus');
+        let typeBadge = isBuy ? 'BELI' : 'JUAL';
+        let badgeClass = isBuy ? 'badge-buy' : 'badge-sell';
+        let amountSign = isBuy ? '-' : '+';
+        let amountColor = isBuy ? '#DC2626' : '#16A34A';
+        let amountText = `${amountSign}${formatRupiah(t.total_amount)}`;
+
+        if (isGift) {
+          typeBadge = '🎁 HADIAH';
+          badgeClass = 'badge-gold';
+          amountSign = '+';
+          amountColor = '#10B981';
+          amountText = `+${formatNumber(gramsVal, 4)} Gr`;
+        }
+
         return `
           <div class="tx-item">
             <div>
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span class="tx-type-badge ${isBuy ? 'badge-buy' : 'badge-sell'}">${isBuy ? 'BELI' : 'JUAL'}</span>
-                <span class="tx-type-badge ${isGoldTx ? 'badge-gold' : 'badge-silver'}">${isGoldTx ? 'EMAS' : 'PERAK'}</span>
-                <strong style="font-size: 13px; color: #0F172A;">${formatNumber(t.grams, 3)} Gram</strong>
+                <span class="tx-type-badge ${badgeClass}">${typeBadge}</span>
+                <span class="tx-type-badge ${metalBadgeClass}">${metalName}</span>
+                <strong style="font-size: 13px; color: #0F172A;">${formatNumber(gramsVal, 3)} Gram</strong>
               </div>
               <div style="font-size: 10.5px; color: #64748B; margin-top: 2px;">
-                @ ${formatRupiah(t.price_per_gram)}/gr · ${t.created_at || 'Baru saja'}
+                ${isGift ? 'Bonus Klaim Harian' : `@ ${formatRupiah(t.price_per_gram)}/gr`} · ${t.created_at || 'Baru saja'}
               </div>
             </div>
             <div style="text-align: right;">
-              <div style="font-size: 13px; font-weight: 800; color: ${isBuy ? '#DC2626' : '#16A34A'};">
-                ${isBuy ? '-' : '+'}${formatRupiah(t.total_amount)}
+              <div style="font-size: 13px; font-weight: 800; color: ${amountColor};">
+                ${amountText}
               </div>
               <span style="font-size: 9.5px; color: #16A34A; font-weight: 700;">Selesai</span>
             </div>
@@ -2154,6 +2446,11 @@
         const progressPct = Math.min(100, Math.round((paid / tenor) * 100));
         const monthlyAmt = Number(t.monthly_installment) || 0;
 
+        const dpIsWallet = (t.dp_payment_method === 'wallet');
+        let dpStatusHtml = dpIsWallet
+          ? `${formatRupiah(t.dp_amount)} <span style="color:#10B981; font-weight:800; font-size:11px;">(Lunas Saldo)</span>`
+          : `${formatRupiah(t.dp_amount)} <span style="color:#D97706; font-weight:800; font-size:11px;">(Menunggu Transfer)</span>`;
+
         let actionAreaHtml = '';
         if (t.status === 'approved') {
           if (paid < tenor) {
@@ -2193,12 +2490,26 @@
             </div>
           `;
         } else if (t.status === 'pending') {
-          actionAreaHtml = `
-            <div style="background:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; padding:10px; margin-top:12px; text-align:center;">
-              <span style="font-size:11.5px; font-weight:700; color:#92400E;">⏳ Berkas Pengajuan Sedang Diverifikasi</span>
-              <div style="font-size:10.5px; color:#B45309; margin-top:2px;">DP senilai ${formatRupiah(t.dp_amount)} telah diamankan di sistem. Jadwal angsuran akan aktif setelah diverifikasi admin.</div>
-            </div>
-          `;
+          if (dpIsWallet) {
+            actionAreaHtml = `
+              <div style="background:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; padding:10px; margin-top:12px; text-align:center;">
+                <span style="font-size:11.5px; font-weight:700; color:#92400E;">⏳ Berkas Pengajuan Sedang Diverifikasi</span>
+                <div style="font-size:10.5px; color:#B45309; margin-top:2px;">DP senilai ${formatRupiah(t.dp_amount)} telah diamankan dari saldo dompet. Jadwal angsuran akan aktif setelah diverifikasi admin.</div>
+              </div>
+            `;
+          } else {
+            actionAreaHtml = `
+              <div style="background:#FFFBEB; border:1.5px solid #F59E0B; border-radius:12px; padding:12px; margin-top:12px; text-align:center;">
+                <span style="font-size:12px; font-weight:800; color:#B45309;">⚠️ Menunggu Pembayaran DP (Transfer Bank / QRIS)</span>
+                <div style="font-size:11px; color:#92400E; margin-top:4px; line-height:1.4;">
+                  Silakan transfer Uang Muka DP senilai <strong>${formatRupiah(t.dp_amount)}</strong> ke rekening resmi platform AUTOTRADING, lalu kirimkan konfirmasi bukti transfer ke Admin CS.
+                </div>
+                <a href="https://wa.me/6281234567890?text=${encodeURIComponent('Halo Admin CS AUTOTRADING, saya ingin konfirmasi transfer DP Cicilan Logam ID #' + t.id + ' sebesar ' + formatRupiah(t.dp_amount))}" target="_blank" class="btn" style="display:inline-flex; align-items:center; gap:6px; background:#10B981; color:#fff; font-size:11.5px; font-weight:700; padding:8px 16px; border-radius:8px; margin-top:8px; text-decoration:none;">
+                  <span>📲 Konfirmasi Transfer DP ke CS</span>
+                </a>
+              </div>
+            `;
+          }
         } else if (t.status === 'rejected') {
           actionAreaHtml = `
             <div style="background:#FEF2F2; border:1px solid #FCA5A5; border-radius:12px; padding:10px; margin-top:12px; text-align:center;">
@@ -2227,11 +2538,11 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#F8FAFC; border-radius:10px; padding:10px; margin-top:8px; font-size:11px;">
               <div>
                 <span style="color:#64748B;">Total Nilai Logam:</span>
-                <div style="font-weight:800; color:#0F172A; font-size:12px;">${formatRupiah(t.total_price)}</div>
+                <div style="font-weight:800; color:#0F172A; font-size:12px;">${formatRupiah(t.total_value || t.total_price)}</div>
               </div>
               <div>
                 <span style="color:#64748B;">Uang Muka (DP 20%):</span>
-                <div style="font-weight:800; color:#10B981; font-size:12px;">${formatRupiah(t.dp_amount)} (Lunas)</div>
+                <div style="font-weight:800; font-size:12px;">${dpStatusHtml}</div>
               </div>
               <div>
                 <span style="color:#64748B;">Tenor Pilihan:</span>
@@ -2737,7 +3048,7 @@
     function openModalTabungan() {
       if (!checkMemberAccess()) return;
       const isGold = (currentAssetType === 'gold');
-      const bal = isGold ? (currentData.gold_balance || 0) : (currentData.silver_balance || 0);
+      const bal = isGold ? Number(currentData.gold_savings_balance || 0) : Number(currentData.silver_savings_balance || 0);
       const target = isGold ? 10 : 50;
       const pct = Math.min(100, Math.round((bal / target) * 100));
       document.getElementById('tabunganProgressLabel').innerText = formatNumber(bal, 2) + ' / ' + target + ' Gram (' + pct + '%)';

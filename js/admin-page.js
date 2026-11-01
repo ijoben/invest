@@ -6342,23 +6342,27 @@ Object.assign(AdminPage, {
           const safePhone = String(t.phone || '-');
           const safeAddress = String(t.shipping_address || t.address || '-');
 
-          return '<tr>' +
-            '<td style="font-family:var(--font-mono); font-size:11px;"><strong>' + (String(t.id).startsWith('CCL-') ? t.id : ('#MC-' + t.id)) + '</strong></td>' +
-            '<td style="font-size:11px; color:#94A3B8;">' + (t.created_at || '-') + '</td>' +
-            '<td><strong>' + (t.username || '-') + '</strong></td>' +
-            '<td>' +
-              '<div><strong>' + safeName + '</strong> <span style="font-size:11px; color:#94A3B8;">(' + safeNik + ')</span></div>' +
-              '<div style="font-size:11px; color:#94A3B8;">📱 ' + safePhone + '</div>' +
-              '<div style="font-size:11px; color:#CBD5E1; max-width:240px; line-height:1.3; margin-top:2px;">📍 ' + safeAddress + '</div>' +
-            '</td>' +
-            '<td style="text-align:center;">' + ktpHtml + '</td>' +
-            '<td>' + metalBadge + '<div style="margin-top:4px;"><strong>' + Number(t.grams).toFixed(3) + ' gr</strong></div></td>' +
-            '<td>' +
-              '<div>Tenor: <strong>' + t.tenor_months + ' Bulan</strong></div>' +
-              '<div style="font-size:11px; color:#94A3B8;">DP: Rp ' + Number(t.dp_amount).toLocaleString('id-ID') + '</div>' +
-              '<div style="font-size:11px; color:#10B981; font-weight:700;">Rp ' + Number(t.monthly_installment).toLocaleString('id-ID') + '/bln</div>' +
-              '<div style="font-size:10.5px; color:#60A5FA;">Terbayar: ' + (t.paid_installments || 0) + '/' + t.tenor_months + ' bln</div>' +
-            '</td>' +
+              const dpIsWallet = (t.dp_payment_method === 'wallet');
+              const dpBadge = dpIsWallet
+                ? '<span class="admin-badge admin-badge-success" style="font-size:9.5px; padding:2px 6px; margin-left:4px;">Lunas Saldo</span>'
+                : '<span class="admin-badge admin-badge-warning" style="font-size:9.5px; padding:2px 6px; margin-left:4px;">Transfer Bank</span>';
+              return '<tr>' +
+                '<td style="font-family:var(--font-mono); font-size:11px;"><strong>' + (String(t.id).startsWith('CCL-') ? t.id : ('#MC-' + t.id)) + '</strong></td>' +
+                '<td style="font-size:11px; color:#94A3B8;">' + (t.created_at || '-') + '</td>' +
+                '<td><strong>' + (t.username || '-') + '</strong></td>' +
+                '<td>' +
+                  '<div><strong>' + safeName + '</strong> <span style="font-size:11px; color:#94A3B8;">(' + safeNik + ')</span></div>' +
+                  '<div style="font-size:11px; color:#94A3B8;">📱 ' + safePhone + '</div>' +
+                  '<div style="font-size:11px; color:#CBD5E1; max-width:240px; line-height:1.3; margin-top:2px;">📍 ' + safeAddress + '</div>' +
+                '</td>' +
+                '<td style="text-align:center;">' + ktpHtml + '</td>' +
+                '<td>' + metalBadge + '<div style="margin-top:4px;"><strong>' + Number(t.grams).toFixed(3) + ' gr</strong></div></td>' +
+                '<td>' +
+                  '<div>Tenor: <strong>' + t.tenor_months + ' Bulan</strong></div>' +
+                  '<div style="font-size:11px; color:#CBD5E1; margin:2px 0;">DP: Rp ' + Number(t.dp_amount).toLocaleString('id-ID') + dpBadge + '</div>' +
+                  '<div style="font-size:11px; color:#10B981; font-weight:700;">Rp ' + Number(t.monthly_installment).toLocaleString('id-ID') + '/bln</div>' +
+                  '<div style="font-size:10.5px; color:#60A5FA;">Terbayar: ' + (t.paid_installments || 0) + '/' + t.tenor_months + ' bln</div>' +
+                '</td>' +
             '<td>' + statusBadge + '</td>' +
             '<td style="text-align:right;">' + actionHtml + '</td>' +
             '</tr>';
@@ -6473,17 +6477,21 @@ Object.assign(AdminPage, {
     if (preview) { preview.style.display = 'none'; preview.src = ''; }
     if (placeholder) placeholder.style.display = 'flex';
 
-    modal.classList.add('active');
+    modal.style.display = 'flex';
+    this.openModal('modalShopProductAdmin');
   },
 
   openEditShopProductModal(id) {
     const p = (this._cachedShopProducts || []).find(item => item.id == id);
-    if (!p) return;
+    if (!p) {
+      this.showToast('error', 'Produk ID #' + id + ' tidak ditemukan');
+      return;
+    }
     const modal = document.getElementById('modalShopProductAdmin');
     if (!modal) return;
 
     document.getElementById('shopProductModalId').value = p.id;
-    document.getElementById('shopProductModalHeaderTitle').textContent = 'Edit Produk: ' + p.name;
+    document.getElementById('shopProductModalHeaderTitle').textContent = 'Edit Produk: ' + (p.name || ('#' + p.id));
     document.getElementById('shopProductModalName').value = p.name || '';
     document.getElementById('shopProductModalCategory').value = p.category || 'online';
     document.getElementById('shopProductModalPrice').value = (p.price_amount !== undefined ? p.price_amount : p.price) || '';
@@ -6503,7 +6511,8 @@ Object.assign(AdminPage, {
       if (placeholder) placeholder.style.display = 'flex';
     }
 
-    modal.classList.add('active');
+    modal.style.display = 'flex';
+    this.openModal('modalShopProductAdmin');
   },
 
   handleShopProductFile(input) {
@@ -6536,7 +6545,10 @@ Object.assign(AdminPage, {
 
   closeShopProductModal() {
     const modal = document.getElementById('modalShopProductAdmin');
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+      modal.style.display = 'none';
+      this.closeModal('modalShopProductAdmin');
+    }
   },
 
   async saveShopProduct() {

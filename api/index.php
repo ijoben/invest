@@ -10798,7 +10798,8 @@ if ($action === 'get_asset_data') {
             $claimCheck->execute([':uid' => $uid]);
             $hasClaimedGiftToday = ((int)$claimCheck->fetchColumn() > 0);
 
-            $instStmt = $pdo->prepare("SELECT * FROM `metal_installments` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 50");
+            // Exclude large ktp_image to optimize mobile performance and prevent freezes
+            $instStmt = $pdo->prepare("SELECT id, user_id, username, full_name, nik, phone, email, occupation, shipping_address, metal_type, grams, tenor_months, total_value, dp_amount, monthly_installment, paid_installments, next_due_date, dp_payment_method, status, admin_notes, created_at FROM `metal_installments` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 50");
             $instStmt->execute([':uid' => $uid]);
             $userInstallments = $instStmt->fetchAll();
 
@@ -12560,14 +12561,25 @@ if ($action === 'apply_asset_contract') {
         ]);
 
         $txId = 'TX-' . $contractId;
+        $settingPriceKey = ($assetType === 'gold') ? 'gold_buy_price' : 'silver_buy_price';
+        $defaultPrice = ($assetType === 'gold') ? 1350000 : 18500;
+        $curPrice = $defaultPrice;
+        try {
+            $stPrice = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = :sk LIMIT 1");
+            $stPrice->execute([':sk' => $settingPriceKey]);
+            $rp = $stPrice->fetch();
+            if ($rp && (int)$rp['setting_value'] > 0) $curPrice = (int)$rp['setting_value'];
+        } catch(Exception $e) {}
+
+        $contractTotalRp = (int)round($grams * $curPrice);
         $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'contract', :atype, :g, :price, :tot, 'active', NOW())")->execute([
             ':id' => $txId,
             ':uid' => $uid,
             ':uname' => $u['username'],
             ':atype' => $assetType,
             ':g' => $grams,
-            ':price' => $duration,
-            ':tot' => (int)round($dailyRate * 100)
+            ':price' => $curPrice,
+            ':tot' => $contractTotalRp
         ]);
 
         $pdo->commit();
@@ -12582,8 +12594,8 @@ if ($action === 'apply_asset_contract') {
     }
 }
 
-// 15. Action: Save Silver Savings (Setor Tabungan Perak)
-if ($action === 'save_silver_savings') {
+// 15. Action: Save Metal Savings (Setor Tabungan Perak & Emas)
+if ($action === 'save_silver_savings' || $action === 'save_metal_savings') {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         jsonResponse(['success' => false, 'message' => 'Method not allowed. Use POST.'], 405);
     }
@@ -12593,6 +12605,8 @@ if ($action === 'save_silver_savings') {
 
     $in = json_decode(file_get_contents('php://input'), true) ?: [];
     $grams = (float)($in['grams'] ?? 0);
+    $assetType = strtolower(trim((string)($in['asset_type'] ?? 'silver')));
+    if ($assetType !== 'gold') $assetType = 'silver';
 
     if ($grams <= 0) {
         jsonResponse(['success' => false, 'message' => 'Masukkan gramasi tabungan yang valid.'], 400);
@@ -12601,32 +12615,40 @@ if ($action === 'save_silver_savings') {
     try {
         if (!$pdo->inTransaction()) $pdo->beginTransaction();
 
-        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        $balanceCol = ($assetType === 'gold') ? 'gold_savings_balance' : 'silver_savings_balance';
+        $settingPriceKey = ($assetType === 'gold') ? 'gold_buy_price' : 'silver_buy_price';
+        $defaultPrice = ($assetType === 'gold') ? 1350000 : 18500;
+        $metalLabel = ($assetType === 'gold') ? 'Emas' : 'Perak';
+
+        $uStmt = $pdo->prepare("SELECT id, username, wallet_balance, {$balanceCol} FROM `users` WHERE id = :uid FOR UPDATE");
         $uStmt->execute([':uid' => $uid]);
         $u = $uStmt->fetch();
 
-        // Ambil harga beli perak
-        $st = $pdo->query("SELECT setting_value FROM `settings` WHERE setting_key = 'silver_buy_price' LIMIT 1")->fetch();
-        $buyPrice = isset($st['setting_value']) ? (int)$st['setting_value'] : 40000;
+        // Ambil harga beli resmi
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = :sk LIMIT 1");
+        $st->execute([':sk' => $settingPriceKey]);
+        $rPrice = $st->fetch();
+        $buyPrice = (isset($rPrice['setting_value']) && (int)$rPrice['setting_value'] > 0) ? (int)$rPrice['setting_value'] : $defaultPrice;
         $totalCost = (int)round($grams * $buyPrice);
 
         if ((int)$u['wallet_balance'] < $totalCost) {
             $pdo->rollBack();
-            jsonResponse(['success' => false, 'message' => 'Saldo dompet utama tidak mencukupi untuk menabung ' . number_format($grams, 3) . ' Gram (Dibutuhkan: Rp ' . number_format($totalCost, 0, ',', '.') . ').'], 400);
+            jsonResponse(['success' => false, 'message' => "Saldo dompet utama tidak mencukupi untuk menabung {$metalLabel} " . number_format($grams, 3) . " Gram (Dibutuhkan: Rp " . number_format($totalCost, 0, ',', '.') . "). Silakan deposit saldo terlebih dahulu."], 400);
         }
 
-        // Potong saldo dan tambah gramasi perak
-        $pdo->prepare("UPDATE `users` SET wallet_balance = wallet_balance - :cost, silver_balance = silver_balance + :g WHERE id = :uid")->execute([
+        // Potong saldo dompet dan tambah gramasi tabungan
+        $pdo->prepare("UPDATE `users` SET wallet_balance = wallet_balance - :cost, {$balanceCol} = {$balanceCol} + :g WHERE id = :uid")->execute([
             ':cost' => $totalCost,
             ':g' => $grams,
             ':uid' => $uid
         ]);
 
         $txId = 'SAV-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
-        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'savings', 'silver', :g, :price, :tot, 'completed', NOW())")->execute([
+        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'savings', :atype, :g, :price, :tot, 'completed', NOW())")->execute([
             ':id' => $txId,
             ':uid' => $uid,
             ':uname' => $u['username'],
+            ':atype' => $assetType,
             ':g' => $grams,
             ':price' => $buyPrice,
             ':tot' => $totalCost
@@ -12635,7 +12657,7 @@ if ($action === 'save_silver_savings') {
         $pdo->commit();
         jsonResponse([
             'success' => true,
-            'message' => 'Setoran tabungan perak ' . number_format($grams, 3) . ' Gram (Rp ' . number_format($totalCost, 0, ',', '.') . ') berhasil ditambahkan ke portofolio Anda!'
+            'message' => "Setoran tabungan {$metalLabel} " . number_format($grams, 3) . " Gram (Rp " . number_format($totalCost, 0, ',', '.') . ") berhasil ditambahkan ke saldo tabungan Anda!"
         ]);
     } catch(Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -12874,6 +12896,16 @@ if ($action === 'submit_metal_installment') {
             // Catat transaksi ledger
             $txId = 'DP-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
             $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'cicil_dp', :amount, 'completed', 'Saldo Utama', 'wallet', 'DP Cicilan Logam', :txid, NOW())")->execute([
+                ':id' => 'TRX-' . $txId,
+                ':uid' => $uid,
+                ':uname' => $user['username'],
+                ':amount' => $dpAmount,
+                ':txid' => $txId
+            ]);
+        } else {
+            // Bayar DP via Transfer Bank / QRIS: catat riwayat transaksi pending untuk verifikasi
+            $txId = 'DP-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+            $pdo->prepare("INSERT INTO `transactions` (id, user_id, username, type, amount, status, payment_method, wallet_source, destination_account, txid, created_at) VALUES (:id, :uid, :uname, 'cicil_dp_transfer', :amount, 'pending', 'Transfer Bank / QRIS', 'external', 'DP Cicilan Logam (Menunggu Transfer)', :txid, NOW())")->execute([
                 ':id' => 'TRX-' . $txId,
                 ':uid' => $uid,
                 ':uname' => $user['username'],
