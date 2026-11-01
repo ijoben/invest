@@ -1120,6 +1120,32 @@
       </div>
     </div>
 
+    <!-- RIWAYAT & TAGIHAN CICILAN LOGAM MULIA -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📅 Riwayat &amp; Tagihan Cicilan Logam</div>
+        <span style="font-size: 11px; color: var(--text-muted);" id="installmentsCountBadge">0 Pengajuan</span>
+      </div>
+      <p style="font-size: 11px; color: #64748B; margin-top: 2px; margin-bottom: 14px;">Pantau pengajuan cicilan, jadwal angsuran bulanan, dan lakukan pembayaran angsuran langsung dari saldo dompet.</p>
+
+      <div id="memberInstallmentsList">
+        <div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px;">Memuat data cicilan...</div>
+      </div>
+    </div>
+
+    <!-- RIWAYAT PENGAJUAN CETAK FISIK -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📦 Riwayat Pengajuan Cetak Fisik</div>
+        <span style="font-size: 11px; color: var(--text-muted);" id="mintingOrdersCountBadge">0 Pengajuan</span>
+      </div>
+      <p style="font-size: 11px; color: #64748B; margin-top: 2px; margin-bottom: 14px;">Status permohonan pencetakan keping fisik bersertifikat resmi beserta alamat dan nomor resi pengiriman.</p>
+
+      <div id="memberMintingList">
+        <div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px;">Memuat riwayat cetak fisik...</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- MODAL BELI ASET (DENGAN CEK SALDO DOMPET & SHORTFALL DEPOSIT) -->
@@ -1929,6 +1955,10 @@
       // Render Transactions
       renderTransactions();
 
+      // Render Installments & Minting History
+      renderInstallments();
+      renderMintingOrders();
+
       // Sync Cetak Modal Fee
       updateCetakFeeDisplay();
     }
@@ -2073,6 +2103,287 @@
                 ${isBuy ? '-' : '+'}${formatRupiah(t.total_amount)}
               </div>
               <span style="font-size: 9.5px; color: #16A34A; font-weight: 700;">Selesai</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderInstallments() {
+      const container = document.getElementById('memberInstallmentsList');
+      if (!container) return;
+      const items = currentData.installments || [];
+      const badge = document.getElementById('installmentsCountBadge');
+      if (badge) badge.innerText = items.length + ' Pengajuan';
+
+      if (items.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:22px; color:#94A3B8; font-size:12px;">Belum ada riwayat pengajuan cicilan logam mulia. Klik menu <strong>Cicilan Fisik</strong> untuk mengajukan perak atau emas.</div>';
+        return;
+      }
+
+      container.innerHTML = items.map(t => {
+        const isGold = (t.metal_type || '').toLowerCase() === 'gold';
+        const metalLabel = isGold ? 'EMAS MURNI 99.99%' : 'PERAK MURNI 99.9%';
+        const metalIcon = isGold ? '🥇' : '🥈';
+        const metalBadgeClass = isGold ? 'badge-gold' : 'badge-silver';
+
+        let statusText = 'Menunggu Verifikasi';
+        let statusBg = '#FEF3C7';
+        let statusColor = '#92400E';
+        let statusBorder = '#FCD34D';
+
+        if (t.status === 'approved') {
+          statusText = 'Disetujui / Aktif';
+          statusBg = '#DBEAFE';
+          statusColor = '#1E40AF';
+          statusBorder = '#93C5FD';
+        } else if (t.status === 'completed') {
+          statusText = 'Lunas & Siap Kirim';
+          statusBg = '#DCFCE7';
+          statusColor = '#166534';
+          statusBorder = '#86EFAC';
+        } else if (t.status === 'rejected') {
+          statusText = 'Ditolak';
+          statusBg = '#FEE2E2';
+          statusColor = '#991B1B';
+          statusBorder = '#FCA5A5';
+        }
+
+        const paid = Number(t.paid_installments) || 0;
+        const tenor = Number(t.tenor_months) || 1;
+        const progressPct = Math.min(100, Math.round((paid / tenor) * 100));
+        const monthlyAmt = Number(t.monthly_installment) || 0;
+
+        let actionAreaHtml = '';
+        if (t.status === 'approved') {
+          if (paid < tenor) {
+            const nextMonth = paid + 1;
+            const dueDateStr = t.next_due_date ? t.next_due_date.substring(0, 10) : '30 hari kalender';
+            actionAreaHtml = `
+              <div style="background:#F8FAFC; border:1.5px solid #E2E8F0; border-radius:12px; padding:12px; margin-top:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <span style="font-size:11.5px; font-weight:700; color:#0F172A;">Tagihan Angsuran Bulan ke-${nextMonth}</span>
+                  <span style="font-size:11px; color:#EF4444; font-weight:700;">Jatuh tempo: ${dueDateStr}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+                  <span style="font-size:11px; color:#64748B;">Nominal yang harus dibayar:</span>
+                  <span style="font-size:15px; font-weight:900; color:#10B981;">${formatRupiah(monthlyAmt)}</span>
+                </div>
+                <button type="button" class="btn btn-primary" style="width:100%; padding:10px; font-size:12.5px; font-weight:800; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="payInstallment(${t.id}, ${monthlyAmt}, ${nextMonth}, ${tenor})">
+                  <span>💳 Bayar Angsuran Bulan ke-${nextMonth} Sekarang</span>
+                </button>
+                <div style="font-size:10px; color:#64748B; text-align:center; margin-top:5px;">
+                  *Dipotong langsung dari Saldo Dompet. Pelunasan tepat waktu berhadiah +50 Poin Reward.
+                </div>
+              </div>
+            `;
+          } else {
+            actionAreaHtml = `
+              <div style="background:#ECFDF5; border:1px solid #86EFAC; border-radius:12px; padding:10px; margin-top:12px; text-align:center;">
+                <span style="font-size:12px; font-weight:800; color:#166534;">🎉 Seluruh Angsuran (${tenor} Bulan) Telah Lunas!</span>
+                <div style="font-size:11px; color:#15803D; margin-top:2px;">Fisik logam bersertifikat segera dikirim ke alamat terdaftar. +50 Poin telah dikreditkan ke akun Anda.</div>
+              </div>
+            `;
+          }
+        } else if (t.status === 'completed') {
+          actionAreaHtml = `
+            <div style="background:#ECFDF5; border:1px solid #86EFAC; border-radius:12px; padding:10px; margin-top:12px; text-align:center;">
+              <span style="font-size:12px; font-weight:800; color:#166534;">✅ Status Cicilan: LUNAS &amp; SELESAI</span>
+              <div style="font-size:11px; color:#15803D; margin-top:2px;">Terima kasih telah mencicil logam mulia. +50 Poin Reward berhasil diperoleh.</div>
+            </div>
+          `;
+        } else if (t.status === 'pending') {
+          actionAreaHtml = `
+            <div style="background:#FFFBEB; border:1px solid #FCD34D; border-radius:12px; padding:10px; margin-top:12px; text-align:center;">
+              <span style="font-size:11.5px; font-weight:700; color:#92400E;">⏳ Berkas Pengajuan Sedang Diverifikasi</span>
+              <div style="font-size:10.5px; color:#B45309; margin-top:2px;">DP senilai ${formatRupiah(t.dp_amount)} telah diamankan di sistem. Jadwal angsuran akan aktif setelah diverifikasi admin.</div>
+            </div>
+          `;
+        } else if (t.status === 'rejected') {
+          actionAreaHtml = `
+            <div style="background:#FEF2F2; border:1px solid #FCA5A5; border-radius:12px; padding:10px; margin-top:12px; text-align:center;">
+              <span style="font-size:11.5px; font-weight:700; color:#991B1B;">❌ Pengajuan Tidak Disetujui</span>
+              <div style="font-size:10.5px; color:#B91C1C; margin-top:2px;">Silakan hubungi Layanan CS untuk informasi persyaratan dokumen permohonan.</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div style="background:#FFFFFF; border:1.5px solid #E2E8F0; border-radius:14px; padding:15px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span class="tx-type-badge ${metalBadgeClass}">${metalIcon} ${metalLabel}</span>
+                  <strong style="font-size:13.5px; color:#0F172A;">${formatNumber(t.grams, 3)} Gram</strong>
+                </div>
+                <div style="font-size:10.5px; color:#64748B; margin-top:3px;">ID: #MC-${t.id} · Diajukan: ${t.created_at || 'Baru saja'}</div>
+              </div>
+              <span style="font-size:10.5px; font-weight:800; padding:4px 9px; border-radius:8px; background:${statusBg}; color:${statusColor}; border:1px solid ${statusBorder};">
+                ${statusText}
+              </span>
+            </div>
+
+            <!-- Detail Nilai & DP -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#F8FAFC; border-radius:10px; padding:10px; margin-top:8px; font-size:11px;">
+              <div>
+                <span style="color:#64748B;">Total Nilai Logam:</span>
+                <div style="font-weight:800; color:#0F172A; font-size:12px;">${formatRupiah(t.total_price)}</div>
+              </div>
+              <div>
+                <span style="color:#64748B;">Uang Muka (DP 20%):</span>
+                <div style="font-weight:800; color:#10B981; font-size:12px;">${formatRupiah(t.dp_amount)} (Lunas)</div>
+              </div>
+              <div>
+                <span style="color:#64748B;">Tenor Pilihan:</span>
+                <div style="font-weight:700; color:#0F172A;">${t.tenor_months} Bulan</div>
+              </div>
+              <div>
+                <span style="color:#64748B;">Angsuran per Bulan:</span>
+                <div style="font-weight:800; color:#2563EB;">${formatRupiah(t.monthly_installment)}</div>
+              </div>
+            </div>
+
+            <!-- Progress Tenor -->
+            <div style="margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:5px;">
+                <span style="color:#64748B;">Progres Angsuran:</span>
+                <strong style="color:#0F172A;">${paid} dari ${tenor} Bulan (${progressPct}%)</strong>
+              </div>
+              <div style="background:#E2E8F0; border-radius:6px; height:8px; overflow:hidden;">
+                <div style="background:linear-gradient(90deg, #3B82F6, #10B981); height:100%; width:${progressPct}%; transition:width 0.3s ease;"></div>
+              </div>
+            </div>
+
+            <!-- Action Area / Due Date / Payment Button -->
+            ${actionAreaHtml}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function payInstallment(id, amount, monthNum, totalTenor) {
+      if (!checkMemberAccess()) return;
+      const walletBal = Number(currentData.wallet_balance) || 0;
+      if (walletBal < amount) {
+        const shortfall = amount - walletBal;
+        showAppPopup({
+          title: 'Saldo Dompet Tidak Cukup',
+          message: `Saldo dompet Anda ${formatRupiah(walletBal)}, dibutuhkan ${formatRupiah(amount)} untuk angsuran bulan ke-${monthNum}. Kurang ${formatRupiah(shortfall)}. Silakan deposit saldo terlebih dahulu.`,
+          type: 'warning',
+          showCancel: true,
+          confirmText: 'Deposit Sekarang',
+          onConfirm: () => { window.location.href = 'deposit.html'; }
+        });
+        return;
+      }
+
+      showAppPopup({
+        title: 'Konfirmasi Pembayaran Angsuran',
+        message: `Apakah Anda ingin membayar angsuran bulan ke-${monthNum} dari ${totalTenor} sebesar ${formatRupiah(amount)} menggunakan Saldo Dompet Anda?`,
+        type: 'info',
+        showCancel: true,
+        confirmText: 'Ya, Bayar Sekarang',
+        onConfirm: async () => {
+          try {
+            const res = await fetch(getApiUrl('pay_metal_installment'), getAuthFetchOptions('POST', { id }));
+            const json = await res.json();
+            handleApiSessionToken(json);
+            if (json.success) {
+              showAppPopup({
+                title: 'Pembayaran Berhasil!',
+                message: json.message || 'Angsuran berhasil dibayar.',
+                type: 'success',
+                onConfirm: () => { loadAssetData(); }
+              });
+            } else {
+              showAppPopup({
+                title: 'Gagal Membayar',
+                message: json.message || 'Pembayaran angsuran gagal.',
+                type: 'error'
+              });
+            }
+          } catch (e) {
+            showAppPopup({
+              title: 'Gangguan Koneksi',
+              message: 'Terjadi kesalahan: ' + e.message,
+              type: 'error'
+            });
+          }
+        }
+      });
+    }
+
+    function renderMintingOrders() {
+      const container = document.getElementById('memberMintingList');
+      if (!container) return;
+      const orders = currentData.minting_orders || [];
+      const badge = document.getElementById('mintingOrdersCountBadge');
+      if (badge) badge.innerText = orders.length + ' Pengajuan';
+
+      if (orders.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:22px; color:#94A3B8; font-size:12px;">Belum ada riwayat permohonan cetak fisik. Klik menu <strong>Cetak Fisik</strong> untuk mencetak saldo logam mulia menjadi keping fisik bersertifikat.</div>';
+        return;
+      }
+
+      container.innerHTML = orders.map(o => {
+        const isGold = (o.asset_type || '').toLowerCase() === 'gold';
+        const metalIcon = isGold ? '🥇' : '🥈';
+        const metalLabel = isGold ? 'Emas Murni 99.99%' : 'Perak Murni 99.9%';
+        const metalBadgeClass = isGold ? 'badge-gold' : 'badge-silver';
+
+        let statusText = 'Diproses';
+        let statusBg = '#FEF3C7';
+        let statusColor = '#92400E';
+        let statusBorder = '#FCD34D';
+
+        if (o.status === 'shipped') {
+          statusText = 'Dikirim';
+          statusBg = '#DBEAFE';
+          statusColor = '#1E40AF';
+          statusBorder = '#93C5FD';
+        } else if (o.status === 'completed') {
+          statusText = 'Selesai & Diterima';
+          statusBg = '#DCFCE7';
+          statusColor = '#166534';
+          statusBorder = '#86EFAC';
+        } else if (o.status === 'cancelled') {
+          statusText = 'Dibatalkan';
+          statusBg = '#FEE2E2';
+          statusColor = '#991B1B';
+          statusBorder = '#FCA5A5';
+        }
+
+        const fee = Number(o.fee_amount || o.total_amount) || 0;
+        const resiHtml = o.tracking_number ? `<div style="font-size:11px; color:#2563EB; font-weight:700; margin-top:3px;">No. Resi Pengiriman: ${o.tracking_number}</div>` : '';
+
+        return `
+          <div style="background:#FFFFFF; border:1.5px solid #E2E8F0; border-radius:14px; padding:14px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span class="tx-type-badge ${metalBadgeClass}">${metalIcon} ${metalLabel}</span>
+                  <strong style="font-size:13px; color:#0F172A;">${formatNumber(o.grams, 3)} Gram</strong>
+                </div>
+                <div style="font-size:10.5px; color:#64748B; margin-top:2px;">ID Pesanan: #ORD-${o.id} · ${o.created_at || 'Baru saja'}</div>
+              </div>
+              <span style="font-size:10.5px; font-weight:800; padding:4px 9px; border-radius:8px; background:${statusBg}; color:${statusColor}; border:1px solid ${statusBorder};">
+                ${statusText}
+              </span>
+            </div>
+
+            <div style="background:#F8FAFC; border-radius:10px; padding:10px; margin-top:6px; font-size:11px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:#64748B;">Biaya Cetak &amp; Sertifikat:</span>
+                <strong style="color:#0F172A;">${formatRupiah(fee)}</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:#64748B;">Penerima:</span>
+                <span style="color:#0F172A; font-weight:600;">${o.recipient_name || '-'} (${o.recipient_phone || '-'})</span>
+              </div>
+              <div style="color:#64748B; margin-top:2px; line-height:1.3;">
+                📍 ${o.shipping_address || '-'}
+              </div>
+              ${resiHtml}
             </div>
           </div>
         `;
