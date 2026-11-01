@@ -19,8 +19,8 @@
   
   <!-- CSS Stylesheets -->
   <link rel="stylesheet" href="css/style.css?v=20261029_profit_fix2">
-  <link rel="stylesheet" href="css/admin.css?v=20261029_profit_fix2">
-  <link rel="stylesheet" href="css/responsive.css?v=20261029_profit_fix2">
+  <link rel="stylesheet" href="css/admin.css?v=20261101_aset_perak_resp">
+  <link rel="stylesheet" href="css/responsive.css?v=20261101_aset_perak_resp">
   <!-- Early Theme & Branding Initializer -->
   <script>
     (function() {
@@ -1661,8 +1661,8 @@
          ==================================================================== -->
     <section id="pane-aset_perak" class="admin-view-panel">
       <!-- Setting Harga Perak & Emas, Cashback, Biaya Cetak, dan Grafik -->
-      <div class="admin-card" style="margin-bottom: 20px;">
-        <div class="admin-card-header">
+      <div class="admin-card admin-asset-main-card" style="margin-bottom: 20px;">
+        <div class="admin-card-header admin-asset-card-header">
           <div>
             <h3 class="admin-card-title">🪙 Pengaturan Dual Aset: Perak &amp; Emas (Harga, Cashback, Cetak Fisik &amp; Grafik)</h3>
             <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Atur harga beli dan jual real-time, saldo &amp; yield cashback harian, biaya cetak fisik per gram, serta data riwayat tren grafik 7 hari untuk Perak dan Emas.</p>
@@ -1671,14 +1671,14 @@
             <span>💾 Simpan Pengaturan Semua Logam</span>
           </button>
         </div>
-        <div style="padding: 16px;">
+        <div class="admin-asset-card-body">
           <!-- Subsection 1: Aset Perak -->
-          <div style="background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+          <div class="admin-asset-box silver-box">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
               <span style="font-size: 18px;">🥈</span>
               <strong style="font-size: 14px; color: #E2E8F0;">Pengaturan Aset Perak (Silver Bullion)</strong>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 12px;">
+            <div class="admin-asset-inputs-grid">
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Harga Beli Perak / Gram (Rp):</label>
                 <input type="number" class="form-input" id="adminSilverBuyPrice" placeholder="40000" value="40000">
@@ -1706,25 +1706,25 @@
               </div>
             </div>
             <div class="form-group" style="margin-top: 14px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+              <div class="admin-asset-history-actions-bar">
                 <div>
                   <label class="form-label" style="font-weight: 700; color: #F8FAFC; margin-bottom: 2px;">📈 Riwayat Tren Grafik Perak (Visual &amp; Mudah Diedit):</label>
                   <small style="font-size: 11px; color: #94A3B8;">Daftar harga dan tanggal yang membentuk grafik tren perak di beranda member.</small>
                 </div>
-                <div style="display: flex; gap: 6px;">
-                  <button type="button" class="admin-btn-action-secondary" style="padding: 4px 10px; font-size: 11px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #93C5FD;" onclick="AdminPage.autoGenerateSilverHistory()">⚡ Isi 7 Hari Otomatis</button>
-                  <button type="button" class="admin-btn-action-primary" style="padding: 4px 10px; font-size: 11px; background: #2563EB;" onclick="AdminPage.addSilverHistoryRow()">+ Tambah Titik</button>
+                <div class="admin-asset-history-btn-group">
+                  <button type="button" class="admin-btn-action-secondary" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #93C5FD;" onclick="AdminPage.autoGenerateSilverHistory()">⚡ Isi 7 Hari Otomatis</button>
+                  <button type="button" class="admin-btn-action-primary" style="background: #2563EB;" onclick="AdminPage.addSilverHistoryRow()">+ Tambah Titik</button>
                 </div>
               </div>
 
-              <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; overflow: hidden; max-height: 220px; overflow-y: auto;">
-                <table class="admin-table" style="margin: 0; font-size: 12px;">
+              <div class="admin-asset-history-scroll-wrap">
+                <table class="admin-table admin-asset-history-table">
                   <thead>
                     <tr>
-                      <th style="width: 45px; text-align: center;">No</th>
-                      <th style="width: 140px;">Hari / Tanggal</th>
-                      <th>Harga / Gram (Rp)</th>
-                      <th style="width: 70px; text-align: center;">Aksi</th>
+                      <th style="width: 38px; text-align: center;">No</th>
+                      <th style="width: 120px;">Hari / Tanggal</th>
+                      <th style="min-width: 110px;">Harga / Gram (Rp)</th>
+                      <th style="width: 50px; text-align: center;">Aksi</th>
                     </tr>
                   </thead>
                   <tbody id="adminSilverHistoryTableBody">
@@ -1737,7 +1737,7 @@
             <!-- Persentase Dividen Kontrak Perak -->
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(148, 163, 184, 0.25);">
               <label class="form-label" style="font-weight: 700; color: #E2E8F0; margin-bottom: 8px;">📜 Persentase Dividen Harian Kontrak Perak (Masa Kontrak 30, 150, 365 Hari):</label>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+              <div class="admin-asset-tenor-grid">
                 <div class="form-group">
                   <label class="form-label" style="font-size: 11px; color: #94A3B8;">Tenor 30 Hari (% / hari):</label>
                   <input type="number" step="0.01" class="form-input" id="adminSilverContractRate30" placeholder="0.30" value="0.30">
@@ -1755,12 +1755,12 @@
           </div>
 
           <!-- Subsection 2: Aset Emas -->
-          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.28); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+          <div class="admin-asset-box gold-box">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
               <span style="font-size: 18px;">🥇</span>
               <strong style="font-size: 14px; color: #FBBF24;">Pengaturan Aset Emas (Gold Bullion)</strong>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 12px;">
+            <div class="admin-asset-inputs-grid">
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Harga Beli Emas / Gram (Rp):</label>
                 <input type="number" class="form-input" id="adminGoldBuyPrice" placeholder="1450000" value="1450000">
@@ -1788,25 +1788,25 @@
               </div>
             </div>
             <div class="form-group" style="margin-top: 14px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+              <div class="admin-asset-history-actions-bar">
                 <div>
                   <label class="form-label" style="font-weight: 700; color: #F8FAFC; margin-bottom: 2px;">📈 Riwayat Tren Grafik Emas (Visual &amp; Mudah Diedit):</label>
                   <small style="font-size: 11px; color: #94A3B8;">Daftar harga dan tanggal yang membentuk grafik tren emas di beranda member.</small>
                 </div>
-                <div style="display: flex; gap: 6px;">
-                  <button type="button" class="admin-btn-action-secondary" style="padding: 4px 10px; font-size: 11px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #FCD34D;" onclick="AdminPage.autoGenerateGoldHistory()">⚡ Isi 7 Hari Otomatis</button>
-                  <button type="button" class="admin-btn-action-primary" style="padding: 4px 10px; font-size: 11px; background: #D97706;" onclick="AdminPage.addGoldHistoryRow()">+ Tambah Titik</button>
+                <div class="admin-asset-history-btn-group">
+                  <button type="button" class="admin-btn-action-secondary" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #FCD34D;" onclick="AdminPage.autoGenerateGoldHistory()">⚡ Isi 7 Hari Otomatis</button>
+                  <button type="button" class="admin-btn-action-primary" style="background: #D97706;" onclick="AdminPage.addGoldHistoryRow()">+ Tambah Titik</button>
                 </div>
               </div>
 
-              <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; overflow: hidden; max-height: 220px; overflow-y: auto;">
-                <table class="admin-table" style="margin: 0; font-size: 12px;">
+              <div class="admin-asset-history-scroll-wrap">
+                <table class="admin-table admin-asset-history-table">
                   <thead>
                     <tr>
-                      <th style="width: 45px; text-align: center;">No</th>
-                      <th style="width: 140px;">Hari / Tanggal</th>
-                      <th>Harga / Gram (Rp)</th>
-                      <th style="width: 70px; text-align: center;">Aksi</th>
+                      <th style="width: 38px; text-align: center;">No</th>
+                      <th style="width: 120px;">Hari / Tanggal</th>
+                      <th style="min-width: 110px;">Harga / Gram (Rp)</th>
+                      <th style="width: 50px; text-align: center;">Aksi</th>
                     </tr>
                   </thead>
                   <tbody id="adminGoldHistoryTableBody">
@@ -1819,7 +1819,7 @@
             <!-- Persentase Dividen Kontrak Emas -->
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(245, 158, 11, 0.28);">
               <label class="form-label" style="font-weight: 700; color: #FBBF24; margin-bottom: 8px;">📜 Persentase Dividen Harian Kontrak Emas (Masa Kontrak 30, 150, 365 Hari):</label>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+              <div class="admin-asset-tenor-grid">
                 <div class="form-group">
                   <label class="form-label" style="font-size: 11px; color: #94A3B8;">Tenor 30 Hari (% / hari):</label>
                   <input type="number" step="0.01" class="form-input" id="adminGoldContractRate30" placeholder="0.25" value="0.25">
@@ -1837,12 +1837,12 @@
           </div>
 
           <!-- Subsection 3: Hadiah Klaim Bonus Ikon (Perak & Emas) -->
-          <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.28); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+          <div class="admin-asset-box gift-box">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
               <span style="font-size: 18px;">🎁</span>
               <strong style="font-size: 14px; color: #C084FC;">Pengaturan Hadiah Klaim Bonus Harian Member (Ikon Hadiah 🎁)</strong>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+            <div class="admin-asset-inputs-grid">
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700; color: #F8FAFC;">Bonus Perak / Klaim (Gram):</label>
                 <input type="number" step="0.001" class="form-input" id="adminGiftBonusSilver" placeholder="0.010" value="0.010">
@@ -1861,7 +1861,7 @@
             </div>
           </div>
 
-          <div style="display: flex; justify-content: flex-end;">
+          <div class="admin-asset-bottom-save-wrap">
             <button type="button" class="admin-btn-action-primary" onclick="AdminPage.saveAssetPrices()">
               <span>💾 Simpan Semua Pengaturan Logam (Perak &amp; Emas)</span>
             </button>
@@ -1870,8 +1870,8 @@
       </div>
 
       <!-- Card: Pengajuan & Riwayat Cicilan Logam Mulia -->
-      <div class="admin-card" style="margin-bottom: 20px;">
-        <div class="admin-card-header">
+      <div class="admin-card admin-asset-installments-card" style="margin-bottom: 20px;">
+        <div class="admin-card-header admin-asset-card-header">
           <div>
             <h3 class="admin-card-title">📅 Pengajuan &amp; Riwayat Cicilan Logam Mulia (Perak &amp; Emas)</h3>
             <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Kelola pengajuan cicilan fisik member, verifikasi data pemohon &amp; KTP, setujui atau tolak permohonan cicilan.</p>
@@ -1880,19 +1880,20 @@
             <span>🔄 Refresh Cicilan</span>
           </button>
         </div>
+        <div class="admin-table-swipe-hint"><span class="swipe-hint-icon">👉</span> Geser tabel ke samping untuk melihat KTP, Tenor &amp; Aksi verifikasi cicilan</div>
         <div class="admin-table-container">
-          <table class="admin-table">
+          <table class="admin-table admin-metal-installments-table">
             <thead>
               <tr>
                 <th style="width: 100px;">ID Cicil</th>
                 <th style="width: 120px;">Waktu</th>
-                <th style="width: 120px;">Member</th>
+                <th style="width: 110px;">Member</th>
                 <th style="min-width: 190px;">Data Pemohon &amp; Alamat</th>
                 <th style="width: 90px; text-align: center;">Foto KTP</th>
                 <th style="width: 110px;">Logam &amp; Gram</th>
                 <th style="min-width: 160px;">Tenor &amp; Pembayaran</th>
-                <th style="width: 110px;">Status</th>
-                <th style="width: 160px; text-align: right;">Aksi Admin</th>
+                <th style="width: 100px;">Status</th>
+                <th style="width: 150px; text-align: right;">Aksi Admin</th>
               </tr>
             </thead>
             <tbody id="adminMetalInstallmentsTableBody">
@@ -1903,8 +1904,8 @@
       </div>
 
       <!-- Riwayat Transaksi Aset Seluruh Member -->
-      <div class="admin-card">
-        <div class="admin-card-header">
+      <div class="admin-card admin-asset-tx-card">
+        <div class="admin-card-header admin-asset-card-header">
           <div>
             <h3 class="admin-card-title">📋 Riwayat Transaksi Jual &amp; Beli Aset Seluruh Member</h3>
             <p style="font-size: 11px; color: #94A3B8; margin-top: 4px;">Seluruh catatan transaksi beli (potong wallet) dan jual (masuk wallet) aset perak/emas.</p>
@@ -1913,8 +1914,9 @@
             <span>🔄 Refresh</span>
           </button>
         </div>
+        <div class="admin-table-swipe-hint"><span class="swipe-hint-icon">👉</span> Geser tabel ke samping untuk melihat rincian transaksi</div>
         <div class="admin-table-container">
-          <table class="admin-table">
+          <table class="admin-table admin-asset-tx-table">
             <thead>
               <tr>
                 <th style="width: 120px;">ID Transaksi</th>
@@ -4633,7 +4635,7 @@ bisa mendapat pinjaman</textarea>
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Admin Page Script -->
-  <script type="module" src="js/admin-page.js?v=20261029_profit_fix2"></script>
+  <script type="module" src="js/admin-page.js?v=20261101_aset_perak_resp"></script>
 
 </body>
 </html>

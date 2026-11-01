@@ -6102,8 +6102,8 @@ Object.assign(AdminPage, {
       const priceVal = parseInt(item.price) || 0;
       return '<tr>' +
         '<td style="text-align: center; color: #94A3B8; font-weight: 700;">' + (idx + 1) + '</td>' +
-        '<td><input type="text" class="form-input" style="padding: 4px 8px; font-size: 11.5px;" value="' + dateVal + '" oninput="AdminPage.updateSilverHistoryItem(' + idx + ', \'date\', this.value)"></td>' +
-        '<td><input type="number" class="form-input" style="padding: 4px 8px; font-size: 11.5px; font-weight: 700; color: #60A5FA;" value="' + priceVal + '" oninput="AdminPage.updateSilverHistoryItem(' + idx + ', \'price\', this.value)"></td>' +
+        '<td><input type="text" class="form-input" style="padding: 4px 6px; font-size: 11px; width: 100%; box-sizing: border-box;" value="' + dateVal + '" oninput="AdminPage.updateSilverHistoryItem(' + idx + ', \'date\', this.value)"></td>' +
+        '<td><input type="number" class="form-input" style="padding: 4px 6px; font-size: 11px; font-weight: 700; color: #60A5FA; width: 100%; box-sizing: border-box;" value="' + priceVal + '" oninput="AdminPage.updateSilverHistoryItem(' + idx + ', \'price\', this.value)"></td>' +
         '<td style="text-align: center;"><button type="button" class="admin-btn-action-danger" style="padding: 3px 8px; font-size: 11px;" onclick="AdminPage.removeSilverHistoryRow(' + idx + ')">✕</button></td>' +
         '</tr>';
     }).join('');
@@ -6165,8 +6165,8 @@ Object.assign(AdminPage, {
       const priceVal = parseInt(item.price) || 0;
       return '<tr>' +
         '<td style="text-align: center; color: #94A3B8; font-weight: 700;">' + (idx + 1) + '</td>' +
-        '<td><input type="text" class="form-input" style="padding: 4px 8px; font-size: 11.5px;" value="' + dateVal + '" oninput="AdminPage.updateGoldHistoryItem(' + idx + ', \'date\', this.value)"></td>' +
-        '<td><input type="number" class="form-input" style="padding: 4px 8px; font-size: 11.5px; font-weight: 700; color: #F59E0B;" value="' + priceVal + '" oninput="AdminPage.updateGoldHistoryItem(' + idx + ', \'price\', this.value)"></td>' +
+        '<td><input type="text" class="form-input" style="padding: 4px 6px; font-size: 11px; width: 100%; box-sizing: border-box;" value="' + dateVal + '" oninput="AdminPage.updateGoldHistoryItem(' + idx + ', \'date\', this.value)"></td>' +
+        '<td><input type="number" class="form-input" style="padding: 4px 6px; font-size: 11px; font-weight: 700; color: #F59E0B; width: 100%; box-sizing: border-box;" value="' + priceVal + '" oninput="AdminPage.updateGoldHistoryItem(' + idx + ', \'price\', this.value)"></td>' +
         '<td style="text-align: center;"><button type="button" class="admin-btn-action-danger" style="padding: 3px 8px; font-size: 11px;" onclick="AdminPage.removeGoldHistoryRow(' + idx + ')">✕</button></td>' +
         '</tr>';
     }).join('');
@@ -6305,10 +6305,10 @@ Object.assign(AdminPage, {
         }
         tbody.innerHTML = items.map(t => {
           const isGold = (t.metal_type || '').toLowerCase() === 'gold';
-          const metalBadge = isGold 
-            ? '<span class="admin-badge admin-badge-warning">🥇 EMAS</span>' 
+          const metalBadge = isGold
+            ? '<span class="admin-badge admin-badge-warning">🥇 EMAS</span>'
             : '<span class="admin-badge admin-badge-info">🥈 PERAK</span>';
-          
+
           let statusBadge = '';
           if (t.status === 'pending') {
             statusBadge = '<span class="admin-badge admin-badge-warning">Menunggu</span>';
@@ -6342,27 +6342,23 @@ Object.assign(AdminPage, {
           const safePhone = String(t.phone || '-');
           const safeAddress = String(t.shipping_address || t.address || '-');
 
-              const dpIsWallet = (t.dp_payment_method === 'wallet');
-              const dpBadge = dpIsWallet
-                ? '<span class="admin-badge admin-badge-success" style="font-size:9.5px; padding:2px 6px; margin-left:4px;">Lunas Saldo</span>'
-                : '<span class="admin-badge admin-badge-warning" style="font-size:9.5px; padding:2px 6px; margin-left:4px;">Transfer Bank</span>';
-              return '<tr>' +
-                '<td style="font-family:var(--font-mono); font-size:11px;"><strong>' + (String(t.id).startsWith('CCL-') ? t.id : ('#MC-' + t.id)) + '</strong></td>' +
-                '<td style="font-size:11px; color:#94A3B8;">' + (t.created_at || '-') + '</td>' +
-                '<td><strong>' + (t.username || '-') + '</strong></td>' +
-                '<td>' +
-                  '<div><strong>' + safeName + '</strong> <span style="font-size:11px; color:#94A3B8;">(' + safeNik + ')</span></div>' +
-                  '<div style="font-size:11px; color:#94A3B8;">📱 ' + safePhone + '</div>' +
-                  '<div style="font-size:11px; color:#CBD5E1; max-width:240px; line-height:1.3; margin-top:2px;">📍 ' + safeAddress + '</div>' +
-                '</td>' +
-                '<td style="text-align:center;">' + ktpHtml + '</td>' +
-                '<td>' + metalBadge + '<div style="margin-top:4px;"><strong>' + Number(t.grams).toFixed(3) + ' gr</strong></div></td>' +
-                '<td>' +
-                  '<div>Tenor: <strong>' + t.tenor_months + ' Bulan</strong></div>' +
-                  '<div style="font-size:11px; color:#CBD5E1; margin:2px 0;">DP: Rp ' + Number(t.dp_amount).toLocaleString('id-ID') + dpBadge + '</div>' +
-                  '<div style="font-size:11px; color:#10B981; font-weight:700;">Rp ' + Number(t.monthly_installment).toLocaleString('id-ID') + '/bln</div>' +
-                  '<div style="font-size:10.5px; color:#60A5FA;">Terbayar: ' + (t.paid_installments || 0) + '/' + t.tenor_months + ' bln</div>' +
-                '</td>' +
+          return '<tr>' +
+            '<td style="font-family:var(--font-mono); font-size:11px;"><strong>' + (String(t.id).startsWith('CCL-') ? t.id : ('#MC-' + t.id)) + '</strong></td>' +
+            '<td style="font-size:11px; color:#94A3B8;">' + (t.created_at || '-') + '</td>' +
+            '<td><strong>' + (t.username || '-') + '</strong></td>' +
+            '<td style="white-space: normal; min-width: 180px;">' +
+            '<div><strong>' + safeName + '</strong> <span style="font-size:11px; color:#94A3B8;">(' + safeNik + ')</span></div>' +
+            '<div style="font-size:11px; color:#94A3B8;">📱 ' + safePhone + '</div>' +
+            '<div style="font-size:11px; color:#CBD5E1; max-width:240px; line-height:1.3; margin-top:2px; word-break: break-word;">📍 ' + safeAddress + '</div>' +
+            '</td>' +
+            '<td style="text-align:center;">' + ktpHtml + '</td>' +
+            '<td>' + metalBadge + '<div style="margin-top:4px;"><strong>' + Number(t.grams).toFixed(3) + ' gr</strong></div></td>' +
+            '<td style="white-space: normal; min-width: 150px;">' +
+            '<div>Tenor: <strong>' + t.tenor_months + ' Bulan</strong></div>' +
+            '<div style="font-size:11px; color:#94A3B8;">DP: Rp ' + Number(t.dp_amount).toLocaleString('id-ID') + '</div>' +
+            '<div style="font-size:11px; color:#10B981; font-weight:700;">Rp ' + Number(t.monthly_installment).toLocaleString('id-ID') + '/bln</div>' +
+            '<div style="font-size:10.5px; color:#60A5FA;">Terbayar: ' + (t.paid_installments || 0) + '/' + t.tenor_months + ' bln</div>' +
+            '</td>' +
             '<td>' + statusBadge + '</td>' +
             '<td style="text-align:right;">' + actionHtml + '</td>' +
             '</tr>';
@@ -6477,21 +6473,17 @@ Object.assign(AdminPage, {
     if (preview) { preview.style.display = 'none'; preview.src = ''; }
     if (placeholder) placeholder.style.display = 'flex';
 
-    modal.style.display = 'flex';
-    this.openModal('modalShopProductAdmin');
+    modal.classList.add('active');
   },
 
   openEditShopProductModal(id) {
     const p = (this._cachedShopProducts || []).find(item => item.id == id);
-    if (!p) {
-      this.showToast('error', 'Produk ID #' + id + ' tidak ditemukan');
-      return;
-    }
+    if (!p) return;
     const modal = document.getElementById('modalShopProductAdmin');
     if (!modal) return;
 
     document.getElementById('shopProductModalId').value = p.id;
-    document.getElementById('shopProductModalHeaderTitle').textContent = 'Edit Produk: ' + (p.name || ('#' + p.id));
+    document.getElementById('shopProductModalHeaderTitle').textContent = 'Edit Produk: ' + p.name;
     document.getElementById('shopProductModalName').value = p.name || '';
     document.getElementById('shopProductModalCategory').value = p.category || 'online';
     document.getElementById('shopProductModalPrice').value = (p.price_amount !== undefined ? p.price_amount : p.price) || '';
@@ -6511,8 +6503,7 @@ Object.assign(AdminPage, {
       if (placeholder) placeholder.style.display = 'flex';
     }
 
-    modal.style.display = 'flex';
-    this.openModal('modalShopProductAdmin');
+    modal.classList.add('active');
   },
 
   handleShopProductFile(input) {
@@ -6545,10 +6536,7 @@ Object.assign(AdminPage, {
 
   closeShopProductModal() {
     const modal = document.getElementById('modalShopProductAdmin');
-    if (modal) {
-      modal.style.display = 'none';
-      this.closeModal('modalShopProductAdmin');
-    }
+    if (modal) modal.classList.remove('active');
   },
 
   async saveShopProduct() {

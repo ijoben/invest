@@ -2039,6 +2039,139 @@ html, body.admin-body {
   scrollbar-width: thin !important;
 }
 
+/* ==========================================================================
+   11B. PANEL KELOLA ASET PERAK & EMAS BASE STYLES (#pane-aset_perak)
+   ========================================================================== */
+#pane-aset_perak {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-asset-card-body {
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.admin-asset-box {
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.admin-asset-box.silver-box {
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.admin-asset-box.gold-box {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.admin-asset-box.gift-box {
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+}
+
+.admin-asset-inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-asset-tenor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-asset-history-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-asset-history-btn-group {
+  display: flex;
+  gap: 6px;
+}
+
+.admin-asset-history-btn-group button {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.admin-asset-history-scroll-wrap {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  max-height: 240px;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.admin-asset-history-table {
+  margin: 0;
+  font-size: 12px;
+  width: 100%;
+  min-width: 320px;
+  border-collapse: collapse;
+}
+
+.admin-asset-history-table th,
+.admin-asset-history-table td {
+  padding: 8px 10px;
+}
+
+.admin-asset-history-table input.form-input {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.admin-asset-bottom-save-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-table-swipe-hint {
+  display: none;
+  font-size: 11px;
+  color: #94A3B8;
+  padding: 6px 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.25);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-table-swipe-hint .swipe-hint-icon {
+  font-size: 13px;
+}
+
 @media (max-width: 768px) {
   .admin-standalone-container {
     padding: 12px 10px 60px 10px !important;
@@ -2166,5 +2299,165 @@ html, body.admin-body {
     padding: 4px 6px !important;
     font-size: 10px !important;
   }
+
+  /* Panel Aset Perak & Emas (#pane-aset_perak) Mobile Optimization */
+  #pane-aset_perak {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  #pane-aset_perak .admin-card {
+    padding: 12px 10px !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  #pane-aset_perak .admin-asset-card-body {
+    padding: 6px 0 !important;
+  }
+
+  #pane-aset_perak .admin-asset-box {
+    padding: 12px 10px !important;
+    margin-bottom: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  #pane-aset_perak .admin-asset-card-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  #pane-aset_perak .admin-asset-card-header .admin-card-title {
+    font-size: 13.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  #pane-aset_perak .admin-asset-card-header .admin-btn-action-primary,
+  #pane-aset_perak .admin-asset-card-header .admin-btn-action-secondary {
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    padding: 10px 14px !important;
+    font-size: 12px !important;
+  }
+
+  #pane-aset_perak .admin-asset-inputs-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* Biaya cetak fits full width across the 2 cols on mobile */
+  #pane-aset_perak .admin-asset-inputs-grid .form-group:nth-child(5) {
+    grid-column: span 2 !important;
+  }
+
+  #pane-aset_perak .admin-asset-tenor-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  #pane-aset_perak .admin-asset-history-actions-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  #pane-aset_perak .admin-asset-history-btn-group {
+    display: flex !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  #pane-aset_perak .admin-asset-history-btn-group button {
+    flex: 1 !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 7px 8px !important;
+    font-size: 11px !important;
+  }
+
+  #pane-aset_perak .admin-asset-bottom-save-wrap {
+    justify-content: center !important;
+    width: 100% !important;
+  }
+
+  #pane-aset_perak .admin-asset-bottom-save-wrap .admin-btn-action-primary {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px 14px !important;
+    font-size: 12.5px !important;
+    box-sizing: border-box !important;
+  }
+
+  #pane-aset_perak .admin-table-swipe-hint {
+    display: flex !important;
+  }
+
+  #pane-aset_perak .admin-table-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    border-radius: 8px !important;
+  }
+
+  #pane-aset_perak .admin-metal-installments-table {
+    min-width: 860px !important;
+  }
+
+  #pane-aset_perak .admin-asset-tx-table {
+    min-width: 720px !important;
+  }
+
+  #pane-aset_perak .admin-asset-history-table {
+    min-width: 320px !important;
+  }
+
+  #pane-aset_perak .admin-asset-history-table th,
+  #pane-aset_perak .admin-asset-history-table td {
+    padding: 6px 6px !important;
+    font-size: 11px !important;
+  }
+
+  #pane-aset_perak .admin-asset-history-table input.form-input {
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+    height: 30px !important;
+    min-width: 70px !important;
+  }
 }
+
+/* Micro Mobile (<= 480px) */
+@media (max-width: 480px) {
+  #pane-aset_perak .admin-asset-inputs-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  #pane-aset_perak .admin-asset-inputs-grid .form-group:nth-child(5) {
+    grid-column: span 1 !important;
+  }
+
+  #pane-aset_perak .admin-asset-tenor-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  #pane-aset_perak .admin-asset-card-header .admin-card-title {
+    font-size: 13px !important;
+  }
+
+  #pane-aset_perak .admin-asset-box {
+    padding: 10px 8px !important;
+  }
+}
+
 
