@@ -106,8 +106,8 @@
   </script>
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/style.css?v=20261018_full_audit">
-  <link rel="stylesheet" href="css/responsive.css?v=20261018_full_audit">
+  <link rel="stylesheet" href="css/style.css?v=20261102_freeze_fix">
+  <link rel="stylesheet" href="css/responsive.css?v=20261102_freeze_fix">
   <style>
     /* Floating CS Widget Styles (Matching media_1793379021428_41aea5ac.jpg) */
     .floating-cs-container {
@@ -118,6 +118,11 @@
       display: none;
       flex-direction: column;
       align-items: flex-end;
+      pointer-events: none;
+    }
+
+    .floating-cs-pill-btn,
+    .floating-cs-card {
       pointer-events: auto;
     }
 
@@ -4679,7 +4684,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Javascript Modules Entry Point -->
-  <script type="module" src="js/app.js?v=20261018_full_audit"></script>
+  <script type="module" src="js/app.js?v=20261102_freeze_fix"></script>
 
 
   <!-- Module Session Bridge & Member Gate -->
@@ -4792,6 +4797,9 @@
           }
           modal.style.display = 'flex';
           modal.classList.add('show');
+          try {
+            sessionStorage.setItem('at_guest_popup_shown', 'true');
+          } catch (e) { }
         }
       } catch (e) {
         console.warn('Guest popup check:', e);
@@ -4834,6 +4842,9 @@
           }
           modal.style.display = 'flex';
           modal.classList.add('show');
+          try {
+            sessionStorage.setItem('at_welcome_popup_shown', 'true');
+          } catch (e) { }
         }
       } catch (e) {
         console.warn('Welcome popup check:', e);
@@ -4924,7 +4935,17 @@
       }
     });
 
+    // Clean up body overflow & backdrops on navigation return (prevent stuck screen / freeze)
+    window.addEventListener('pageshow', () => {
+      document.body.style.overflow = '';
+      document.querySelectorAll('.modal-backdrop:not(.show)').forEach(m => {
+        m.style.display = 'none';
+        m.style.pointerEvents = 'none';
+      });
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
+      document.body.style.overflow = '';
       // Sync Member CS Widget immediately
       syncMemberCsWidgetVisibility();
 

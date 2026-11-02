@@ -2460,4 +2460,22 @@ html, body.admin-body {
   }
 }
 
+/* Modal Backdrop & Dialog System in Admin */
+.modal-backdrop.show,
+.modal-backdrop.active,
+.admin-modal-backdrop.show,
+.admin-modal-backdrop.active {
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+}
+
+.modal-backdrop:not(.show):not(.active),
+.admin-modal-backdrop:not(.show):not(.active) {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
 

@@ -7,8 +7,8 @@
   <link rel="apple-touch-icon" href="uploads/logo-favicon.png?v=20261030_v3">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Aset Logam Mulia (Perak &amp; Emas) - AUTOTRADING</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/style.css?v=20261102_reorder_dp">
+  <link rel="stylesheet" href="css/responsive.css?v=20261102_reorder_dp">
   <style>
     :root {
       --primary-green: #00B368;
@@ -1100,39 +1100,8 @@
       </div>
     </div>
 
-    <!-- PROGRES TABUNGAN FISIK MENUJU TARGET -->
-    <div class="section-card" id="cardSavingsProgressSection">
-      <div class="section-header">
-        <div class="section-title">💰 Progres Tabungan Fisik</div>
-        <span style="font-size: 11px; font-weight: 800; color: #10B981;" id="savingsGoalLabel">0 / 50 Gram (0%)</span>
-      </div>
-      <p style="font-size: 11px; color: #64748B; margin-top: 2px; margin-bottom: 10px;" id="savingsGoalDetailText">
-        Kumpulkan gramasi sedikit demi sedikit menuju target keping fisik bersertifikat resmi.
-      </p>
-      <div style="background: #E2E8F0; border-radius: 8px; height: 10px; overflow: hidden; margin-bottom: 8px;">
-        <div id="savingsGoalProgressBar" style="background: linear-gradient(90deg, #F59E0B, #10B981); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
-      </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748B;">
-        <span id="savingsGoalRemainingText">Kurang 50 Gram lagi menuju target</span>
-        <button type="button" class="btn" style="padding: 4px 10px; font-size: 11px; font-weight: 700; background: #0F172A; color: #fff; border-radius: 6px;" onclick="openModalTabungan()">+ Setor Tabungan</button>
-      </div>
-    </div>
-
-    <!-- KONTRAK DIVIDEN AKTIF & RINCIAN PROGRES TENOR -->
-    <div class="section-card">
-      <div class="section-header">
-        <div class="section-title">📜 Progres Kontrak Dividen Aktif</div>
-        <span style="font-size: 11px; color: var(--text-muted);" id="contractsCountBadge">0 Kontrak</span>
-      </div>
-      <p style="font-size: 11px; color: #64748B; margin-top: 2px; margin-bottom: 14px;">Pantau rincian perjalanan masa kontrak dividen harian, hari selesai kontrak, dan akumulasi bagi hasil.</p>
-
-      <div id="memberContractsList">
-        <div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px;">Memuat data kontrak...</div>
-      </div>
-    </div>
-
-    <!-- RIWAYAT TRANSAKSI ASET -->
-    <div class="section-card">
+    <!-- 1. RIWAYAT TRANSAKSI ASET -->
+    <div class="section-card" id="cardAssetTxHistorySection">
       <div class="section-header">
         <div class="section-title">📋 Riwayat Transaksi Aset</div>
         <span style="font-size: 11px; color: var(--text-muted);" id="txCountBadge">0 Transaksi</span>
@@ -1151,7 +1120,38 @@
       </div>
     </div>
 
-    <!-- RIWAYAT & TAGIHAN CICILAN LOGAM MULIA -->
+    <!-- 2. PROGRES TABUNGAN FISIK MENUJU TARGET -->
+    <div class="section-card" id="cardSavingsProgressSection">
+      <div class="section-header">
+        <div class="section-title">💰 Progres Tabungan Fisik</div>
+        <span style="font-size: 11px; font-weight: 800; color: #10B981;" id="savingsGoalLabel">0 / 50 Gram (0%)</span>
+      </div>
+      <p style="font-size: 11px; color: #64748B; margin-top: 2px; margin-bottom: 10px;" id="savingsGoalDetailText">
+        Kumpulkan gramasi sedikit demi sedikit menuju target keping fisik bersertifikat resmi.
+      </p>
+      <div style="background: #E2E8F0; border-radius: 8px; height: 10px; overflow: hidden; margin-bottom: 8px;">
+        <div id="savingsGoalProgressBar" style="background: linear-gradient(90deg, #F59E0B, #10B981); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748B;">
+        <span id="savingsGoalRemainingText">Kurang 50 Gram lagi menuju target</span>
+        <button type="button" class="btn" style="padding: 4px 10px; font-size: 11px; font-weight: 700; background: #0F172A; color: #fff; border-radius: 6px;" onclick="openModalTabungan()">+ Setor Tabungan</button>
+      </div>
+    </div>
+
+    <!-- 3. KONTRAK DIVIDEN AKTIF & RINCIAN PROGRES TENOR -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📜 Progres Kontrak Dividen Aktif</div>
+        <span style="font-size: 11px; color: var(--text-muted);" id="contractsCountBadge">0 Kontrak</span>
+      </div>
+      <p style="font-size: 11px; color: #64748B; margin-top: 2px; margin-bottom: 14px;">Pantau rincian perjalanan masa kontrak dividen harian, hari selesai kontrak, dan akumulasi bagi hasil.</p>
+
+      <div id="memberContractsList">
+        <div style="text-align: center; padding: 20px; color: #94A3B8; font-size: 12px;">Memuat data kontrak...</div>
+      </div>
+    </div>
+
+    <!-- 4. RIWAYAT & TAGIHAN CICILAN LOGAM MULIA -->
     <div class="section-card">
       <div class="section-header">
         <div class="section-title">📅 Riwayat &amp; Tagihan Cicilan Logam</div>
@@ -1164,7 +1164,7 @@
       </div>
     </div>
 
-    <!-- RIWAYAT PENGAJUAN CETAK FISIK -->
+    <!-- 5. RIWAYAT PENGAJUAN CETAK FISIK -->
     <div class="section-card">
       <div class="section-header">
         <div class="section-title">📦 Riwayat Pengajuan Cetak Fisik</div>
@@ -1398,8 +1398,15 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Setor Gramasi Tabungan (Gram):</label>
-        <input type="number" step="0.001" min="0.1" class="input-field" id="tabunganGramsInput" value="1" oninput="calcTabunganPreview()">
+        <label class="form-label" style="font-weight: 800;">Pilihan Nominal Setoran Gramasi:</label>
+        <div class="tenor-btn-group" id="tabunganPresetGroup" style="margin-bottom: 8px;">
+          <button type="button" class="tenor-btn active" id="btnTabunganPreset5" onclick="setTabunganGram(5)">5 Gr</button>
+          <button type="button" class="tenor-btn" id="btnTabunganPreset15" onclick="setTabunganGram(15)">15 Gr</button>
+          <button type="button" class="tenor-btn" id="btnTabunganPreset25" onclick="setTabunganGram(25)">25 Gr</button>
+          <button type="button" class="tenor-btn" id="btnTabunganPreset50" onclick="setTabunganGram(50)">50 Gr</button>
+        </div>
+        <div style="font-size: 11px; color: #64748B; margin-bottom: 4px;">Atau Masukkan Gramasi Kustom (Gram):</div>
+        <input type="number" step="0.001" min="0.1" class="input-field" id="tabunganGramsInput" value="5" oninput="handleTabunganCustomGram(this.value)">
       </div>
 
       <div class="form-group">
@@ -1548,10 +1555,63 @@
       <!-- 7. Pilihan Metode Bayar Uang Muka (DP 20%) -->
       <div class="form-group">
         <label class="form-label" style="font-weight: 800;">7. Metode Pembayaran Uang Muka (DP 20%):</label>
-        <select class="input-field" id="cicilDpPaymentMethod">
+        <select class="input-field" id="cicilDpPaymentMethod" onchange="toggleCicilDpTransferInfo(this.value)">
           <option value="wallet">Potong Saldo Dompet Utama (Cepat &amp; Instan)</option>
           <option value="transfer">Transfer Bank / QRIS Manual (Verifikasi Admin)</option>
         </select>
+      </div>
+
+      <!-- Kotak Rekening & QRIS untuk DP Transfer (Muncul bila metode transfer dipilih) -->
+      <div id="cicilDpTransferInfoBox" style="display: none; background: #FFFBEB; border: 1.5px solid #F59E0B; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+        <div style="font-size: 12px; font-weight: 800; color: #B45309; margin-bottom: 6px;">
+          💳 Instruksi Transfer Uang Muka (DP 20%):
+        </div>
+        <div style="font-size: 11px; color: #92400E; margin-bottom: 10px; line-height: 1.4;">
+          Silakan transfer pembayaran DP ke salah satu nomor rekening Bank resmi atau scan QRIS berikut:
+        </div>
+
+        <!-- Rekening BCA -->
+        <div style="background: #FFFFFF; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: #0F172A;">Bank Central Asia (BCA)</div>
+            <div style="font-size: 13.5px; font-weight: 900; color: #1E3A8A; letter-spacing: 0.5px;">8271928374</div>
+            <div style="font-size: 10px; color: #64748B;">a.n. PT AUTOTRADING INVESTASI</div>
+          </div>
+          <button type="button" onclick="copyToClipboard('8271928374', 'Nomor Rekening BCA berhasil disalin!')" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
+            📋 Salin
+          </button>
+        </div>
+
+        <!-- Rekening Mandiri -->
+        <div style="background: #FFFFFF; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: #0F172A;">Bank Mandiri</div>
+            <div style="font-size: 13.5px; font-weight: 900; color: #1E3A8A; letter-spacing: 0.5px;">1370029384721</div>
+            <div style="font-size: 10px; color: #64748B;">a.n. PT AUTOTRADING INVESTASI</div>
+          </div>
+          <button type="button" onclick="copyToClipboard('1370029384721', 'Nomor Rekening Mandiri berhasil disalin!')" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
+            📋 Salin
+          </button>
+        </div>
+
+        <!-- Rekening BRI -->
+        <div style="background: #FFFFFF; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: #0F172A;">Bank BRI</div>
+            <div style="font-size: 13.5px; font-weight: 900; color: #1E3A8A; letter-spacing: 0.5px;">034101002938531</div>
+            <div style="font-size: 10px; color: #64748B;">a.n. PT AUTOTRADING INVESTASI</div>
+          </div>
+          <button type="button" onclick="copyToClipboard('034101002938531', 'Nomor Rekening BRI berhasil disalin!')" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
+            📋 Salin
+          </button>
+        </div>
+
+        <!-- Scan QRIS Resmi -->
+        <div style="background: #FFFFFF; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 800; color: #0F172A; margin-bottom: 4px;">Atau Scan Barcode QRIS Resmi (NMID: ID1029384756201):</div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2" alt="QRIS AUTOTRADING" style="width: 170px; height: 170px; margin: 4px auto; display: block; border-radius: 6px; border: 1px solid #E2E8F0;">
+          <div style="font-size: 10px; color: #64748B; margin-top: 4px;">Mendukung seluruh Bank &amp; E-Wallet Indonesia (BCA, Mandiri, BRI, BNI, OVO, Dana, GoPay)</div>
+        </div>
       </div>
 
       <!-- 8. Persetujuan S&K -->
@@ -2499,14 +2559,62 @@
             `;
           } else {
             actionAreaHtml = `
-              <div style="background:#FFFBEB; border:1.5px solid #F59E0B; border-radius:12px; padding:12px; margin-top:12px; text-align:center;">
-                <span style="font-size:12px; font-weight:800; color:#B45309;">⚠️ Menunggu Pembayaran DP (Transfer Bank / QRIS)</span>
-                <div style="font-size:11px; color:#92400E; margin-top:4px; line-height:1.4;">
-                  Silakan transfer Uang Muka DP senilai <strong>${formatRupiah(t.dp_amount)}</strong> ke rekening resmi platform AUTOTRADING, lalu kirimkan konfirmasi bukti transfer ke Admin CS.
+              <div style="background:#FFFBEB; border:1.5px solid #F59E0B; border-radius:12px; padding:12px; margin-top:12px;">
+                <div style="text-align:center; margin-bottom:8px;">
+                  <span style="font-size:12px; font-weight:800; color:#B45309;">⚠️ Menunggu Pembayaran DP (Transfer Bank / QRIS)</span>
+                  <div style="font-size:11px; color:#92400E; margin-top:4px; line-height:1.4;">
+                    Silakan transfer Uang Muka DP senilai <strong style="font-size:13.5px; color:#B45309;">${formatRupiah(t.dp_amount)}</strong> ke rekening BANK resmi atau scan barcode QRIS platform di bawah ini:
+                  </div>
                 </div>
-                <a href="https://wa.me/6281234567890?text=${encodeURIComponent('Halo Admin CS AUTOTRADING, saya ingin konfirmasi transfer DP Cicilan Logam ID #' + t.id + ' sebesar ' + formatRupiah(t.dp_amount))}" target="_blank" class="btn" style="display:inline-flex; align-items:center; gap:6px; background:#10B981; color:#fff; font-size:11.5px; font-weight:700; padding:8px 16px; border-radius:8px; margin-top:8px; text-decoration:none;">
-                  <span>📲 Konfirmasi Transfer DP ke CS</span>
-                </a>
+
+                <!-- Rekening BCA -->
+                <div style="background:#FFFFFF; border:1px solid #FCD34D; border-radius:8px; padding:8px 10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div style="font-size:10.5px; font-weight:800; color:#0F172A;">Bank Central Asia (BCA)</div>
+                    <div style="font-size:13px; font-weight:900; color:#1E3A8A; letter-spacing:0.5px;">8271928374</div>
+                    <div style="font-size:9.5px; color:#64748B;">a.n. PT AUTOTRADING INVESTASI</div>
+                  </div>
+                  <button type="button" onclick="copyToClipboard('8271928374', 'Nomor Rekening BCA disalin!')" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:6px; cursor:pointer;">
+                    📋 Salin
+                  </button>
+                </div>
+
+                <!-- Rekening Mandiri -->
+                <div style="background:#FFFFFF; border:1px solid #FCD34D; border-radius:8px; padding:8px 10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div style="font-size:10.5px; font-weight:800; color:#0F172A;">Bank Mandiri</div>
+                    <div style="font-size:13px; font-weight:900; color:#1E3A8A; letter-spacing:0.5px;">1370029384721</div>
+                    <div style="font-size:9.5px; color:#64748B;">a.n. PT AUTOTRADING INVESTASI</div>
+                  </div>
+                  <button type="button" onclick="copyToClipboard('1370029384721', 'Nomor Rekening Mandiri disalin!')" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:6px; cursor:pointer;">
+                    📋 Salin
+                  </button>
+                </div>
+
+                <!-- Rekening BRI -->
+                <div style="background:#FFFFFF; border:1px solid #FCD34D; border-radius:8px; padding:8px 10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div style="font-size:10.5px; font-weight:800; color:#0F172A;">Bank BRI</div>
+                    <div style="font-size:13px; font-weight:900; color:#1E3A8A; letter-spacing:0.5px;">034101002938531</div>
+                    <div style="font-size:9.5px; color:#64748B;">a.n. PT AUTOTRADING INVESTASI</div>
+                  </div>
+                  <button type="button" onclick="copyToClipboard('034101002938531', 'Nomor Rekening BRI disalin!')" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:6px; cursor:pointer;">
+                    📋 Salin
+                  </button>
+                </div>
+
+                <!-- QRIS Image Box -->
+                <div style="background:#FFFFFF; border:1px solid #FCD34D; border-radius:8px; padding:8px; text-align:center; margin-bottom:8px;">
+                  <div style="font-size:10.5px; font-weight:800; color:#0F172A; margin-bottom:4px;">Scan Barcode QRIS Resmi (NMID: ID1029384756201):</div>
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2" alt="QRIS AUTOTRADING" style="width:140px; height:140px; margin:2px auto; display:block; border-radius:6px; border:1px solid #E2E8F0;">
+                  <div style="font-size:9.5px; color:#64748B; margin-top:2px;">BCA, Mandiri, BRI, BNI, OVO, GoPay, Dana, ShopeePay</div>
+                </div>
+
+                <div style="text-align:center;">
+                  <a href="https://wa.me/6281234567890?text=${encodeURIComponent('Halo Admin CS AUTOTRADING, saya ingin konfirmasi transfer DP Cicilan Logam ID #' + t.id + ' sebesar ' + formatRupiah(t.dp_amount))}" target="_blank" class="btn" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; background:#10B981; color:#fff; font-size:11.5px; font-weight:700; padding:8px 16px; border-radius:8px; text-decoration:none; width:100%; box-sizing:border-box;">
+                    <span>📲 Konfirmasi Transfer DP ke CS</span>
+                  </a>
+                </div>
               </div>
             `;
           }
@@ -3045,6 +3153,23 @@
     }
 
     // Sub-Feature 2: Tabungan
+    function setTabunganGram(g) {
+      const inp = document.getElementById('tabunganGramsInput');
+      if (inp) inp.value = g;
+      [5, 15, 25, 50].forEach(preset => {
+        const btn = document.getElementById('btnTabunganPreset' + preset);
+        if (btn) btn.classList.toggle('active', preset === g);
+      });
+      calcTabunganPreview();
+    }
+    function handleTabunganCustomGram(val) {
+      const num = parseFloat(val) || 0;
+      [5, 15, 25, 50].forEach(preset => {
+        const btn = document.getElementById('btnTabunganPreset' + preset);
+        if (btn) btn.classList.toggle('active', preset === num);
+      });
+      calcTabunganPreview();
+    }
     function openModalTabungan() {
       if (!checkMemberAccess()) return;
       const isGold = (currentAssetType === 'gold');
@@ -3054,7 +3179,7 @@
       document.getElementById('tabunganProgressLabel').innerText = formatNumber(bal, 2) + ' / ' + target + ' Gram (' + pct + '%)';
       document.getElementById('tabunganProgressBar').style.width = pct + '%';
       document.getElementById('tabunganUserWalletBal').innerText = formatRupiah(currentData.wallet_balance || 0);
-      calcTabunganPreview();
+      setTabunganGram(5);
       document.getElementById('modalTabungan').style.display = 'flex';
     }
     function closeModalTabungan() { document.getElementById('modalTabungan').style.display = 'none'; }
@@ -3154,6 +3279,13 @@
       reader.readAsDataURL(file);
     }
 
+    function toggleCicilDpTransferInfo(method) {
+      const box = document.getElementById('cicilDpTransferInfoBox');
+      if (box) {
+        box.style.display = (method === 'transfer') ? 'block' : 'none';
+      }
+    }
+
     function openModalCicil() {
       if (!checkMemberAccess()) return;
       const u = getCurrentUserLocal();
@@ -3166,6 +3298,8 @@
       setCicilMetal(currentAssetType);
       setCicilKeping(10);
       setCicilTenor(3);
+      const dpMethod = document.getElementById('cicilDpPaymentMethod')?.value || 'wallet';
+      toggleCicilDpTransferInfo(dpMethod);
       document.getElementById('modalCicil').style.display = 'flex';
     }
 

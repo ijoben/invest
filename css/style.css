@@ -1488,9 +1488,14 @@ html, body {
 }
 
 .modal-backdrop.show {
-  display: flex;
-  opacity: 1;
-  pointer-events: auto;
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.modal-backdrop:not(.show) {
+  display: none !important;
+  pointer-events: none !important;
 }
 
 .modal-backdrop#modalWelcomeLogin {

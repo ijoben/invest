@@ -3961,6 +3961,8 @@ Object.assign(App, {
     }
     const modal = document.getElementById(modalId);
     if (modal) {
+      modal.style.display = 'flex';
+      modal.style.pointerEvents = 'auto';
       modal.classList.add('show');
       document.body.style.overflow = 'hidden';
       if (modalId === 'notifModal') {
@@ -3998,6 +4000,8 @@ Object.assign(App, {
     // Open authModal directly without triggering redirection loops
     const modal = document.getElementById('authModal');
     if (modal) {
+      modal.style.display = 'flex';
+      modal.style.pointerEvents = 'auto';
       modal.classList.add('show');
       document.body.style.overflow = 'hidden';
     }
@@ -4070,6 +4074,7 @@ Object.assign(App, {
     if (modal) {
       modal.classList.remove('show');
       modal.style.display = 'none';
+      modal.style.pointerEvents = 'none';
       document.body.style.overflow = '';
     }
   },
@@ -4078,6 +4083,7 @@ Object.assign(App, {
     document.querySelectorAll('.modal-backdrop').forEach(m => {
       m.classList.remove('show');
       m.style.display = 'none';
+      m.style.pointerEvents = 'none';
     });
     document.body.style.overflow = '';
   },

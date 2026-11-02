@@ -4662,16 +4662,28 @@ Object.assign(AdminPage, {
   // Modals & Toast
   openModal(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.add('show');
+    if (el) {
+      el.style.display = 'flex';
+      el.classList.add('show');
+      el.classList.add('active');
+    }
   },
 
   closeModal(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.remove('show');
+    if (el) {
+      el.classList.remove('show');
+      el.classList.remove('active');
+      el.style.display = 'none';
+    }
   },
 
   closeAllModals() {
-    document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.modal-backdrop').forEach(m => {
+      m.classList.remove('show');
+      m.classList.remove('active');
+      m.style.display = 'none';
+    });
   },
 
   showToast(message, type = 'info') {
@@ -6473,12 +6485,17 @@ Object.assign(AdminPage, {
     if (preview) { preview.style.display = 'none'; preview.src = ''; }
     if (placeholder) placeholder.style.display = 'flex';
 
+    modal.style.display = 'flex';
+    modal.classList.add('show');
     modal.classList.add('active');
   },
 
   openEditShopProductModal(id) {
-    const p = (this._cachedShopProducts || []).find(item => item.id == id);
-    if (!p) return;
+    const p = (this._cachedShopProducts || []).find(item => String(item.id) === String(id));
+    if (!p) {
+      this.showToast('error', 'Produk tidak ditemukan dalam data sementara.');
+      return;
+    }
     const modal = document.getElementById('modalShopProductAdmin');
     if (!modal) return;
 
@@ -6503,6 +6520,8 @@ Object.assign(AdminPage, {
       if (placeholder) placeholder.style.display = 'flex';
     }
 
+    modal.style.display = 'flex';
+    modal.classList.add('show');
     modal.classList.add('active');
   },
 
@@ -6536,7 +6555,11 @@ Object.assign(AdminPage, {
 
   closeShopProductModal() {
     const modal = document.getElementById('modalShopProductAdmin');
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+      modal.classList.remove('active');
+      modal.classList.remove('show');
+      modal.style.display = 'none';
+    }
   },
 
   async saveShopProduct() {
