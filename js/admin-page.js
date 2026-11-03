@@ -6070,6 +6070,44 @@ Object.assign(AdminPage, {
           document.getElementById('adminGiftBonusPoints').value = d.gift_bonus_points_reward;
         }
 
+        // Milestone Tiers Silver
+        const mSil = d.milestone_tiers_silver || {};
+        if (mSil.bronze) {
+          if (document.getElementById('adminTierSilverBronzeReq')) document.getElementById('adminTierSilverBronzeReq').value = mSil.bronze.req ?? 10;
+          if (document.getElementById('adminTierSilverBronzeBonus')) document.getElementById('adminTierSilverBronzeBonus').value = mSil.bronze.bonus ?? 0.25;
+        }
+        if (mSil.silver) {
+          if (document.getElementById('adminTierSilverSilverReq')) document.getElementById('adminTierSilverSilverReq').value = mSil.silver.req ?? 25;
+          if (document.getElementById('adminTierSilverSilverBonus')) document.getElementById('adminTierSilverSilverBonus').value = mSil.silver.bonus ?? 0.75;
+        }
+        if (mSil.gold) {
+          if (document.getElementById('adminTierSilverGoldReq')) document.getElementById('adminTierSilverGoldReq').value = mSil.gold.req ?? 50;
+          if (document.getElementById('adminTierSilverGoldBonus')) document.getElementById('adminTierSilverGoldBonus').value = mSil.gold.bonus ?? 2.0;
+        }
+        if (mSil.platinum) {
+          if (document.getElementById('adminTierSilverPlatinumReq')) document.getElementById('adminTierSilverPlatinumReq').value = mSil.platinum.req ?? 100;
+          if (document.getElementById('adminTierSilverPlatinumBonus')) document.getElementById('adminTierSilverPlatinumBonus').value = mSil.platinum.bonus ?? 5.0;
+        }
+
+        // Milestone Tiers Gold
+        const mGold = d.milestone_tiers_gold || {};
+        if (mGold.bronze) {
+          if (document.getElementById('adminTierGoldBronzeReq')) document.getElementById('adminTierGoldBronzeReq').value = mGold.bronze.req ?? 5;
+          if (document.getElementById('adminTierGoldBronzeBonus')) document.getElementById('adminTierGoldBronzeBonus').value = mGold.bronze.bonus ?? 0.05;
+        }
+        if (mGold.silver) {
+          if (document.getElementById('adminTierGoldSilverReq')) document.getElementById('adminTierGoldSilverReq').value = mGold.silver.req ?? 10;
+          if (document.getElementById('adminTierGoldSilverBonus')) document.getElementById('adminTierGoldSilverBonus').value = mGold.silver.bonus ?? 0.15;
+        }
+        if (mGold.gold) {
+          if (document.getElementById('adminTierGoldGoldReq')) document.getElementById('adminTierGoldGoldReq').value = mGold.gold.req ?? 25;
+          if (document.getElementById('adminTierGoldGoldBonus')) document.getElementById('adminTierGoldGoldBonus').value = mGold.gold.bonus ?? 0.5;
+        }
+        if (mGold.platinum) {
+          if (document.getElementById('adminTierGoldPlatinumReq')) document.getElementById('adminTierGoldPlatinumReq').value = mGold.platinum.req ?? 50;
+          if (document.getElementById('adminTierGoldPlatinumBonus')) document.getElementById('adminTierGoldPlatinumBonus').value = mGold.platinum.bonus ?? 1.5;
+        }
+
         const tbody = document.getElementById('adminAssetTxTableBody');
         if (tbody) {
           const txs = d.transactions || [];
@@ -6265,6 +6303,46 @@ Object.assign(AdminPage, {
     const giftGold = parseFloat(document.getElementById('adminGiftBonusGold')?.value) || 0.005;
     const giftPts = parseInt(document.getElementById('adminGiftBonusPoints')?.value) || 10;
 
+    // Milestone Tiers Perak
+    const mSilPayload = {
+      bronze: {
+        req: parseFloat(document.getElementById('adminTierSilverBronzeReq')?.value) || 10,
+        bonus: parseFloat(document.getElementById('adminTierSilverBronzeBonus')?.value) || 0.25
+      },
+      silver: {
+        req: parseFloat(document.getElementById('adminTierSilverSilverReq')?.value) || 25,
+        bonus: parseFloat(document.getElementById('adminTierSilverSilverBonus')?.value) || 0.75
+      },
+      gold: {
+        req: parseFloat(document.getElementById('adminTierSilverGoldReq')?.value) || 50,
+        bonus: parseFloat(document.getElementById('adminTierSilverGoldBonus')?.value) || 2.0
+      },
+      platinum: {
+        req: parseFloat(document.getElementById('adminTierSilverPlatinumReq')?.value) || 100,
+        bonus: parseFloat(document.getElementById('adminTierSilverPlatinumBonus')?.value) || 5.0
+      }
+    };
+
+    // Milestone Tiers Emas
+    const mGoldPayload = {
+      bronze: {
+        req: parseFloat(document.getElementById('adminTierGoldBronzeReq')?.value) || 5,
+        bonus: parseFloat(document.getElementById('adminTierGoldBronzeBonus')?.value) || 0.05
+      },
+      silver: {
+        req: parseFloat(document.getElementById('adminTierGoldSilverReq')?.value) || 10,
+        bonus: parseFloat(document.getElementById('adminTierGoldSilverBonus')?.value) || 0.15
+      },
+      gold: {
+        req: parseFloat(document.getElementById('adminTierGoldGoldReq')?.value) || 25,
+        bonus: parseFloat(document.getElementById('adminTierGoldGoldBonus')?.value) || 0.5
+      },
+      platinum: {
+        req: parseFloat(document.getElementById('adminTierGoldPlatinumReq')?.value) || 50,
+        bonus: parseFloat(document.getElementById('adminTierGoldPlatinumBonus')?.value) || 1.5
+      }
+    };
+
     try {
       const res = await this.adminFetch('api/index.php?action=admin_save_asset_prices', {
         method: 'POST',
@@ -6287,7 +6365,9 @@ Object.assign(AdminPage, {
 
           gift_bonus_silver_reward: giftSil,
           gift_bonus_gold_reward: giftGold,
-          gift_bonus_points_reward: giftPts
+          gift_bonus_points_reward: giftPts,
+          milestone_tiers_silver: mSilPayload,
+          milestone_tiers_gold: mGoldPayload
         })
       });
       const json = await res.json();
@@ -6307,6 +6387,7 @@ Object.assign(AdminPage, {
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#94A3B8; padding:20px;">Memuat data pengajuan cicilan...</td></tr>';
     try {
+      this._metalInstallmentsMap = {};
       const res = await this.adminFetch('api/index.php?action=admin_get_metal_installments');
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
@@ -6316,6 +6397,8 @@ Object.assign(AdminPage, {
           return;
         }
         tbody.innerHTML = items.map(t => {
+          this._metalInstallmentsMap[String(t.id)] = t;
+
           const isGold = (t.metal_type || '').toLowerCase() === 'gold';
           const metalBadge = isGold
             ? '<span class="admin-badge admin-badge-warning">🥇 EMAS</span>'
@@ -6336,9 +6419,7 @@ Object.assign(AdminPage, {
 
           let ktpHtml = '<span style="color:#64748B; font-size:11px;">Tidak ada</span>';
           if (t.ktp_image) {
-            const escapedImg = String(t.ktp_image).replace(/"/g, '&quot;').replace(/'/g, "\\'");
-            const escapedName = String(t.full_name || t.username || '').replace(/"/g, '&quot;').replace(/'/g, "\\'");
-            ktpHtml = '<button type="button" class="admin-btn-action-secondary" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.openKtpModal(\'' + escapedImg + '\', \'' + escapedName + '\')">🖼️ Lihat KTP</button>';
+            ktpHtml = '<button type="button" class="admin-btn-action-secondary" style="padding:4px 8px; font-size:11px;" onclick="AdminPage.openKtpModal(\'' + String(t.id).replace(/'/g, "\\'") + '\')">🖼️ Lihat KTP</button>';
           }
 
           let actionHtml = '-';
@@ -6384,20 +6465,27 @@ Object.assign(AdminPage, {
     }
   },
 
-  openKtpModal(imgUrl, applicantName) {
+  openKtpModal(id) {
     const modal = document.getElementById('adminKtpPreviewModal');
     const img = document.getElementById('adminKtpModalImg');
     const title = document.getElementById('adminKtpModalTitle');
     if (!modal) return;
+    const item = (this._metalInstallmentsMap && this._metalInstallmentsMap[String(id)]) || {};
+    const imgUrl = item.ktp_image || '';
+    const applicantName = item.full_name || item.username || 'Pemohon';
     if (img) img.src = imgUrl;
-    if (title) title.textContent = 'Lampiran Foto KTP: ' + (applicantName || 'Pemohon');
+    if (title) title.textContent = 'Lampiran Foto KTP: ' + applicantName;
+    modal.classList.add('show', 'active');
     modal.style.display = 'flex';
   },
 
   closeKtpModal() {
     const modal = document.getElementById('adminKtpPreviewModal');
     const img = document.getElementById('adminKtpModalImg');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.classList.remove('show', 'active');
+      modal.style.display = 'none';
+    }
     if (img) img.src = '';
   },
 

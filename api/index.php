@@ -779,7 +779,9 @@ function ensureTablesExist($pdo) {
                 ('guest_popup_config', '{\"enabled\":true,\"title\":\"Selamat Datang di Auto Trading!\",\"subtitle\":\"Solusi Finansial & Investasi Modern Terlengkap\",\"banner_url\":\"assets/img/welcome-banner.jpg\",\"points\":[\"bisa beli perak\",\"bisa beli emas\",\"bisa beli PPOB\",\"bisa belanja online\",\"bisa mendapat pinjaman\"],\"cta_text\":\"Masuk / Daftar Akun\"}', 'Konfigurasi iklan pop-up untuk tamu sebelum login'),
                 ('gift_bonus_silver_reward', '0.010', 'Hadiah klaim bonus harian perak (Gram)'),
                 ('gift_bonus_gold_reward', '0.005', 'Hadiah klaim bonus harian emas (Gram)'),
-                ('gift_bonus_points_reward', '10', 'Hadiah klaim bonus poin reward')
+                ('gift_bonus_points_reward', '10', 'Hadiah klaim bonus poin reward'),
+                ('milestone_tiers_silver', '{\"bronze\":{\"req\":10,\"bonus\":0.25},\"silver\":{\"req\":25,\"bonus\":0.75},\"gold\":{\"req\":50,\"bonus\":2.0},\"platinum\":{\"req\":100,\"bonus\":5.0}}', 'Pengaturan milestone tier perak'),
+                ('milestone_tiers_gold', '{\"bronze\":{\"req\":5,\"bonus\":0.05},\"silver\":{\"req\":10,\"bonus\":0.15},\"gold\":{\"req\":25,\"bonus\":0.5},\"platinum\":{\"req\":50,\"bonus\":1.5}}', 'Pengaturan milestone tier emas')
             ");
         } catch(Exception $eSet) {}
 
@@ -10671,6 +10673,19 @@ if ($action === 'get_asset_data') {
     $contractRatesSilver = ['30' => 0.3, '150' => 0.5, '365' => 0.8];
     $contractRatesGold = ['30' => 0.25, '150' => 0.45, '365' => 0.75];
 
+    $milestoneTiersSilver = [
+        'bronze' => ['req' => 10.0, 'bonus' => 0.25],
+        'silver' => ['req' => 25.0, 'bonus' => 0.75],
+        'gold' => ['req' => 50.0, 'bonus' => 2.0],
+        'platinum' => ['req' => 100.0, 'bonus' => 5.0]
+    ];
+    $milestoneTiersGold = [
+        'bronze' => ['req' => 5.0, 'bonus' => 0.05],
+        'silver' => ['req' => 10.0, 'bonus' => 0.15],
+        'gold' => ['req' => 25.0, 'bonus' => 0.50],
+        'platinum' => ['req' => 50.0, 'bonus' => 1.50]
+    ];
+
     $giftBonusSilver = 0.0100;
     $giftBonusGold = 0.0050;
     $giftBonusPoints = 10;
@@ -10704,7 +10719,8 @@ if ($action === 'get_asset_data') {
             'gold_buy_price', 'gold_sell_price', 'gold_cashback_balance', 'gold_cashback_yield', 'gold_last_update',
             'minting_fee_silver', 'minting_fee_gold', 'price_history_silver', 'price_history_gold',
             'contract_rates_silver', 'contract_rates_gold',
-            'gift_bonus_silver_reward', 'gift_bonus_gold_reward', 'gift_bonus_points_reward'
+            'gift_bonus_silver_reward', 'gift_bonus_gold_reward', 'gift_bonus_points_reward',
+            'milestone_tiers_silver', 'milestone_tiers_gold'
         )");
         $st->execute();
         $rows = $st->fetchAll();
@@ -10737,6 +10753,14 @@ if ($action === 'get_asset_data') {
             if ($k === 'gift_bonus_silver_reward' && !empty($v)) $giftBonusSilver = (float)$v;
             if ($k === 'gift_bonus_gold_reward' && !empty($v)) $giftBonusGold = (float)$v;
             if ($k === 'gift_bonus_points_reward' && !empty($v)) $giftBonusPoints = (int)$v;
+            if ($k === 'milestone_tiers_silver' && !empty($v)) {
+                $dec = json_decode($v, true);
+                if (is_array($dec)) $milestoneTiersSilver = $dec;
+            }
+            if ($k === 'milestone_tiers_gold' && !empty($v)) {
+                $dec = json_decode($v, true);
+                if (is_array($dec)) $milestoneTiersGold = $dec;
+            }
         }
     } catch (Exception $e) {}
 
@@ -10752,6 +10776,30 @@ if ($action === 'get_asset_data') {
     $activeContracts = [];
     $userInstallments = [];
     $userMintingOrders = [];
+
+    // Load payment gateways from system state
+    $gws = [];
+    try {
+        $state = loadMainState($pdo);
+        $settings = isset($state['settings']) && is_array($state['settings']) ? $state['settings'] : [];
+        $gws = isset($settings['paymentGateways']) && is_array($settings['paymentGateways']) ? $settings['paymentGateways'] : [];
+    } catch(Exception $eGw) {}
+
+    if (empty($gws['banks']) || !is_array($gws['banks'])) {
+        $gws['banks'] = [
+            ['id' => 'bca', 'name' => 'Bank Central Asia (BCA)', 'accountNo' => '8271928374', 'accountName' => 'PT AUTOTRADING INVESTASI', 'active' => true],
+            ['id' => 'mandiri', 'name' => 'Bank Mandiri', 'accountNo' => '1370029384721', 'accountName' => 'PT AUTOTRADING INVESTASI', 'active' => true],
+            ['id' => 'bri', 'name' => 'Bank BRI', 'accountNo' => '034101002938531', 'accountName' => 'PT AUTOTRADING INVESTASI', 'active' => true]
+        ];
+    }
+    if (empty($gws['qris']) || !is_array($gws['qris'])) {
+        $gws['qris'] = [
+            'active' => true,
+            'merchantName' => 'AUTOTRADING OFFICIAL QRIS',
+            'nmid' => 'ID1029384756201',
+            'imageUrl' => 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2'
+        ];
+    }
 
     if ($uid !== '') {
         try {
@@ -10770,21 +10818,90 @@ if ($action === 'get_asset_data') {
             }
 
             // Req 1 & 2: Saldo cashback dan hasil cashback mengacu ke kontrak aktif dividen yang sedang berjalan
-            $cbSilStmt = $pdo->prepare("SELECT COALESCE(SUM(grams), 0) AS total_principal, COALESCE(SUM(daily_yield_grams), 0) AS total_daily_yield FROM `asset_contracts` WHERE user_id = :uid AND asset_type = 'silver' AND status = 'active'");
-            $cbSilStmt->execute([':uid' => $uid]);
-            $cbSil = $cbSilStmt->fetch();
-            if ($cbSil) {
-                $silverCashbackBal = (float)$cbSil['total_principal'];
-                $silverCashbackYield = (float)$cbSil['total_daily_yield'];
-            }
+            // Akumulasi hasil kontrak berjalan dihitung proporsional dari tanggal mulai hingga hari ini
+            $cbSilContracts = $pdo->prepare("SELECT * FROM `asset_contracts` WHERE user_id = :uid AND asset_type = 'silver' AND status = 'active'");
+            $cbSilContracts->execute([':uid' => $uid]);
+            $silverContracts = $cbSilContracts->fetchAll();
 
-            $cbGoldStmt = $pdo->prepare("SELECT COALESCE(SUM(grams), 0) AS total_principal, COALESCE(SUM(daily_yield_grams), 0) AS total_daily_yield FROM `asset_contracts` WHERE user_id = :uid AND asset_type = 'gold' AND status = 'active'");
-            $cbGoldStmt->execute([':uid' => $uid]);
-            $cbGold = $cbGoldStmt->fetch();
-            if ($cbGold) {
-                $goldCashbackBal = (float)$cbGold['total_principal'];
-                $goldCashbackYield = (float)$cbGold['total_daily_yield'];
+            $silverCashbackBal = 0.0;
+            $silverCashbackYield = 0.0;
+            $silverDailyYieldRate = 0.0;
+
+            foreach ($silverContracts as $c) {
+                $silverCashbackBal += (float)$c['grams'];
+                $silverDailyYieldRate += (float)$c['daily_yield_grams'];
+
+                $startTs = strtotime($c['start_date'] ?: $c['created_at']);
+                $dur = (int)$c['duration_days'];
+                $dailyYield = (float)$c['daily_yield_grams'];
+                $totalYield = (float)$c['total_yield_grams'];
+                $accDb = (float)($c['accumulated_yield_grams'] ?? 0);
+
+                $nowTs = time();
+                $elapsedSec = max(0, $nowTs - $startTs);
+                $elapsedDays = (int)floor($elapsedSec / 86400) + 1;
+                if ($elapsedDays > $dur) $elapsedDays = $dur;
+                if ($elapsedDays < 0) $elapsedDays = 0;
+
+                $runningYield = round($elapsedDays * $dailyYield, 4);
+                if ($totalYield > 0 && $runningYield > $totalYield) {
+                    $runningYield = $totalYield;
+                }
+                $cYield = max($accDb, $runningYield);
+
+                if ($cYield > $accDb) {
+                    try {
+                        $pdo->prepare("UPDATE `asset_contracts` SET accumulated_yield_grams = :y WHERE id = :cid")
+                            ->execute([':y' => $cYield, ':cid' => $c['id']]);
+                    } catch(Exception $eUpYield) {}
+                }
+
+                $silverCashbackYield += $cYield;
             }
+            $silverCashbackBal = round($silverCashbackBal, 4);
+            $silverCashbackYield = round($silverCashbackYield, 4);
+
+            $cbGoldContracts = $pdo->prepare("SELECT * FROM `asset_contracts` WHERE user_id = :uid AND asset_type = 'gold' AND status = 'active'");
+            $cbGoldContracts->execute([':uid' => $uid]);
+            $goldContracts = $cbGoldContracts->fetchAll();
+
+            $goldCashbackBal = 0.0;
+            $goldCashbackYield = 0.0;
+            $goldDailyYieldRate = 0.0;
+
+            foreach ($goldContracts as $c) {
+                $goldCashbackBal += (float)$c['grams'];
+                $goldDailyYieldRate += (float)$c['daily_yield_grams'];
+
+                $startTs = strtotime($c['start_date'] ?: $c['created_at']);
+                $dur = (int)$c['duration_days'];
+                $dailyYield = (float)$c['daily_yield_grams'];
+                $totalYield = (float)$c['total_yield_grams'];
+                $accDb = (float)($c['accumulated_yield_grams'] ?? 0);
+
+                $nowTs = time();
+                $elapsedSec = max(0, $nowTs - $startTs);
+                $elapsedDays = (int)floor($elapsedSec / 86400) + 1;
+                if ($elapsedDays > $dur) $elapsedDays = $dur;
+                if ($elapsedDays < 0) $elapsedDays = 0;
+
+                $runningYield = round($elapsedDays * $dailyYield, 4);
+                if ($totalYield > 0 && $runningYield > $totalYield) {
+                    $runningYield = $totalYield;
+                }
+                $cYield = max($accDb, $runningYield);
+
+                if ($cYield > $accDb) {
+                    try {
+                        $pdo->prepare("UPDATE `asset_contracts` SET accumulated_yield_grams = :y WHERE id = :cid")
+                            ->execute([':y' => $cYield, ':cid' => $c['id']]);
+                    } catch(Exception $eUpYield) {}
+                }
+
+                $goldCashbackYield += $cYield;
+            }
+            $goldCashbackBal = round($goldCashbackBal, 4);
+            $goldCashbackYield = round($goldCashbackYield, 4);
 
             $ctrStmt = $pdo->prepare("SELECT * FROM `asset_contracts` WHERE user_id = :uid ORDER BY created_at DESC LIMIT 20");
             $ctrStmt->execute([':uid' => $uid]);
@@ -10806,9 +10923,22 @@ if ($action === 'get_asset_data') {
             $mintStmt = $pdo->prepare("SELECT * FROM `shop_orders` WHERE user_id = :uid AND product_id = 'mint-physical' ORDER BY created_at DESC LIMIT 50");
             $mintStmt->execute([':uid' => $uid]);
             $userMintingOrders = $mintStmt->fetchAll();
+
+            $claimedMilestones = ['silver' => [], 'gold' => []];
+            try {
+                $clStmt = $pdo->prepare("SELECT type, asset_type FROM `asset_transactions` WHERE user_id = :uid AND type LIKE 'reward_%'");
+                $clStmt->execute([':uid' => $uid]);
+                foreach ($clStmt->fetchAll() as $clRow) {
+                    $mType = strtolower($clRow['asset_type'] ?? 'silver');
+                    if ($mType !== 'gold') $mType = 'silver';
+                    $tKey = str_replace('reward_', '', strtolower($clRow['type']));
+                    $claimedMilestones[$mType][$tKey] = true;
+                }
+            } catch (Exception $eCl) {}
         } catch (Exception $e) {}
     } else {
         $hasClaimedGiftToday = false;
+        $claimedMilestones = ['silver' => [], 'gold' => []];
     }
 
     jsonResponse([
@@ -10825,6 +10955,7 @@ if ($action === 'get_asset_data') {
             'silver_total_balance' => round($silverBalance + $silverSavingsBalance + $silverContractBalance, 4),
             'cashback_balance' => $silverCashbackBal,
             'cashback_yield' => $silverCashbackYield,
+            'cashback_daily_rate' => $silverDailyYieldRate,
             'estimated_rupiah' => (int)round($silverBalance * $silverSellPrice),
             'price_history_silver' => $priceHistorySilver,
             'minting_fee_silver' => $mintingFeeSilver,
@@ -10838,15 +10969,20 @@ if ($action === 'get_asset_data') {
             'gold_total_balance' => round($goldBalance + $goldSavingsBalance + $goldContractBalance, 4),
             'gold_cashback_balance' => $goldCashbackBal,
             'gold_cashback_yield' => $goldCashbackYield,
+            'gold_cashback_daily_rate' => $goldDailyYieldRate,
             'gold_estimated_rupiah' => (int)round($goldBalance * $goldSellPrice),
             'price_history_gold' => $priceHistoryGold,
             'minting_fee_gold' => $mintingFeeGold,
             'contract_rates_gold' => $contractRatesGold,
-            // Hadiah Bonus Klaim
+            'payment_gateways' => $gws,
+            // Hadiah Bonus Klaim & Milestone Tiers
             'gift_bonus_silver_reward' => $giftBonusSilver,
             'gift_bonus_gold_reward' => $giftBonusGold,
             'gift_bonus_points_reward' => $giftBonusPoints,
             'has_claimed_gift_today' => $hasClaimedGiftToday,
+            'milestone_tiers_silver' => $milestoneTiersSilver,
+            'milestone_tiers_gold' => $milestoneTiersGold,
+            'claimed_milestones' => $claimedMilestones,
             // Kontrak & Umum
             'user_contracts' => $activeContracts,
             'wallet_balance' => $walletBalance,
@@ -11296,7 +11432,17 @@ if ($action === 'admin_save_asset_prices') {
             $up->execute([':k' => 'gift_bonus_points_reward', ':v' => (string)(int)$in['gift_bonus_points_reward'], ':d' => 'Hadiah bonus klaim poin reward']);
         }
 
-        jsonResponse(['success' => true, 'message' => 'Pengaturan harga aset perak, emas, bonus, dan biaya cetak berhasil diperbarui.']);
+        // Pengaturan Milestone Tier Akumulasi (Bronze, Silver, Gold, Platinum)
+        if (isset($in['milestone_tiers_silver'])) {
+            $mSilVal = is_array($in['milestone_tiers_silver']) ? json_encode($in['milestone_tiers_silver']) : (string)$in['milestone_tiers_silver'];
+            $up->execute([':k' => 'milestone_tiers_silver', ':v' => $mSilVal, ':d' => 'Pengaturan target & bonus milestone tier perak']);
+        }
+        if (isset($in['milestone_tiers_gold'])) {
+            $mGoldVal = is_array($in['milestone_tiers_gold']) ? json_encode($in['milestone_tiers_gold']) : (string)$in['milestone_tiers_gold'];
+            $up->execute([':k' => 'milestone_tiers_gold', ':v' => $mGoldVal, ':d' => 'Pengaturan target & bonus milestone tier emas']);
+        }
+
+        jsonResponse(['success' => true, 'message' => 'Pengaturan harga aset perak, emas, bonus, milestone tier, dan biaya cetak berhasil diperbarui.']);
     } catch (Exception $e) {
         jsonResponse(['success' => false, 'message' => 'Gagal menyimpan harga aset: ' . $e->getMessage()], 500);
     }
@@ -12769,50 +12915,92 @@ if ($action === 'claim_asset_reward') {
     $uid = currentSessionUserId();
 
     $in = json_decode(file_get_contents('php://input'), true) ?: [];
-    $tier = trim((string)($in['tier'] ?? 'bronze'));
+    $tier = strtolower(trim((string)($in['tier'] ?? 'bronze')));
+    $metalType = strtolower(trim((string)($in['asset_type'] ?? 'silver')));
+    if ($metalType !== 'gold') $metalType = 'silver';
 
-    $rewards = [
+    $defaultSilver = [
         'bronze' => ['req' => 10.0, 'bonus' => 0.25],
         'silver' => ['req' => 25.0, 'bonus' => 0.75],
         'gold' => ['req' => 50.0, 'bonus' => 2.0],
         'platinum' => ['req' => 100.0, 'bonus' => 5.0]
     ];
+    $defaultGold = [
+        'bronze' => ['req' => 5.0, 'bonus' => 0.05],
+        'silver' => ['req' => 10.0, 'bonus' => 0.15],
+        'gold' => ['req' => 25.0, 'bonus' => 0.50],
+        'platinum' => ['req' => 50.0, 'bonus' => 1.50]
+    ];
+
+    $settingKey = ($metalType === 'gold') ? 'milestone_tiers_gold' : 'milestone_tiers_silver';
+    $rewards = ($metalType === 'gold') ? $defaultGold : $defaultSilver;
+
+    try {
+        $st = $pdo->prepare("SELECT setting_value FROM `settings` WHERE setting_key = :k LIMIT 1");
+        $st->execute([':k' => $settingKey]);
+        $row = $st->fetch();
+        if ($row && !empty($row['setting_value'])) {
+            $dec = json_decode($row['setting_value'], true);
+            if (is_array($dec)) {
+                foreach ($dec as $tk => $tv) {
+                    if (isset($rewards[$tk]) && is_array($tv)) {
+                        $rewards[$tk]['req'] = (float)($tv['req'] ?? $rewards[$tk]['req']);
+                        $rewards[$tk]['bonus'] = (float)($tv['bonus'] ?? $rewards[$tk]['bonus']);
+                    }
+                }
+            }
+        }
+    } catch(Exception $eS) {}
 
     if (!isset($rewards[$tier])) {
         jsonResponse(['success' => false, 'message' => 'Tier hadiah tidak valid.'], 400);
     }
 
     $rew = $rewards[$tier];
+    $balanceField = ($metalType === 'gold') ? 'gold_balance' : 'silver_balance';
+    $metalName = ($metalType === 'gold') ? 'Emas' : 'Perak';
 
     try {
         if (!$pdo->inTransaction()) $pdo->beginTransaction();
 
-        $uStmt = $pdo->prepare("SELECT id, username, silver_balance FROM `users` WHERE id = :uid FOR UPDATE");
+        // 1. Cek apakah user sudah pernah klaim tier ini
+        $typeReward = 'reward_' . $tier;
+        $checkStmt = $pdo->prepare("SELECT id FROM `asset_transactions` WHERE user_id = :uid AND type = :t AND asset_type = :at LIMIT 1");
+        $checkStmt->execute([':uid' => $uid, ':t' => $typeReward, ':at' => $metalType]);
+        if ($checkStmt->fetch()) {
+            $pdo->rollBack();
+            jsonResponse(['success' => false, 'message' => 'Anda sudah pernah mengklaim hadiah milestone tier ' . ucfirst($tier) . ' ' . $metalName . '.'], 400);
+        }
+
+        $uStmt = $pdo->prepare("SELECT id, username, {$balanceField} FROM `users` WHERE id = :uid FOR UPDATE");
         $uStmt->execute([':uid' => $uid]);
         $u = $uStmt->fetch();
 
-        if ((float)$u['silver_balance'] < $rew['req']) {
+        $curBal = (float)($u[$balanceField] ?? 0);
+        if ($curBal < $rew['req']) {
             $pdo->rollBack();
             jsonResponse([
                 'success' => false,
-                'message' => 'Anda belum mencapai target akumulasi ' . $rew['req'] . ' Gram untuk klaim hadiah tier ini (Aset Anda saat ini: ' . number_format((float)$u['silver_balance'], 3) . ' Gram).'
+                'message' => 'Anda belum mencapai target akumulasi ' . $rew['req'] . ' Gram untuk klaim hadiah tier ini (Aset ' . $metalName . ' Anda saat ini: ' . number_format($curBal, 3) . ' Gram).'
             ], 400);
         }
 
-        $pdo->prepare("UPDATE `users` SET silver_balance = silver_balance + :bonus WHERE id = :uid")->execute([':bonus' => $rew['bonus'], ':uid' => $uid]);
+        $pdo->prepare("UPDATE `users` SET {$balanceField} = {$balanceField} + :bonus WHERE id = :uid")->execute([':bonus' => $rew['bonus'], ':uid' => $uid]);
 
         $txId = 'REW-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
-        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, 'reward', 'silver', :g, 0, 0, 'completed', NOW())")->execute([
+        $pdo->prepare("INSERT INTO `asset_transactions` (id, user_id, username, type, asset_type, grams, price_per_gram, total_amount, status, created_at) VALUES (:id, :uid, :uname, :type, :atype, :g, 0, 0, 'completed', NOW())")->execute([
             ':id' => $txId,
             ':uid' => $uid,
             ':uname' => $u['username'],
+            ':type' => $typeReward,
+            ':atype' => $metalType,
             ':g' => $rew['bonus']
         ]);
 
         $pdo->commit();
         jsonResponse([
             'success' => true,
-            'message' => 'Selamat! Bonus hadiah reward milestone sebesar ' . $rew['bonus'] . ' Gram telah berhasil ditambahkan ke saldo aset Anda.'
+            'message' => 'Selamat! Bonus hadiah reward milestone tier ' . ucfirst($tier) . ' sebesar ' . $rew['bonus'] . ' Gram ' . $metalName . ' telah berhasil ditambahkan ke saldo aset Anda.'
         ]);
     } catch(Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();

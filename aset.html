@@ -1243,22 +1243,8 @@
 
       <!-- Mode 2: Deposit Langsung (Transfer Bank / QRIS) -->
       <div id="buyDirectDepoSection" style="display: none; background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 14px; padding: 14px; margin-bottom: 14px;">
-        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-          <span style="font-size: 16px;">🏦</span>
-          <strong style="font-size: 12.5px; color: #0F172A;">Rekening Tujuan Transfer Resmi:</strong>
-        </div>
-
-        <div style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px; padding: 10px; margin-bottom: 10px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <span style="font-size: 10px; font-weight: 800; color: #2563EB; background: #DBEAFE; padding: 2px 6px; border-radius: 6px;">SEABANK</span>
-              <div style="font-size: 14px; font-weight: 900; color: #0F172A; font-family: monospace; margin: 4px 0;" id="depoBankAcc">901284135116</div>
-              <div style="font-size: 11px; color: #64748B;">a/n EDY IRAWAN</div>
-            </div>
-            <button type="button" onclick="copyToClipboard('901284135116', 'Nomor Rekening SEABANK berhasil disalin!')" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #0F172A; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px; cursor: pointer;">
-              📋 Salin
-            </button>
-          </div>
+        <div id="buyDirectDepoBankContainer">
+          <!-- Rendered via renderOfficialPaymentAccountsHtml() -->
         </div>
 
         <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 10px; padding: 10px; margin-bottom: 10px; font-size: 11.5px; color: #92400E;">
@@ -1563,55 +1549,7 @@
 
       <!-- Kotak Rekening & QRIS untuk DP Transfer (Muncul bila metode transfer dipilih) -->
       <div id="cicilDpTransferInfoBox" style="display: none; background: #FFFBEB; border: 1.5px solid #F59E0B; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-        <div style="font-size: 12px; font-weight: 800; color: #B45309; margin-bottom: 6px;">
-          💳 Instruksi Transfer Uang Muka (DP 20%):
-        </div>
-        <div style="font-size: 11px; color: #92400E; margin-bottom: 10px; line-height: 1.4;">
-          Silakan transfer pembayaran DP ke salah satu nomor rekening Bank resmi atau scan QRIS berikut:
-        </div>
-
-        <!-- Rekening BCA -->
-        <div style="background: #FFFFFF; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-size: 11px; font-weight: 800; color: #0F172A;">Bank Central Asia (BCA)</div>
-            <div style="font-size: 13.5px; font-weight: 900; color: #1E3A8A; letter-spacing: 0.5px;">8271928374</div>
-            <div style="font-size: 10px; color: #64748B;">a.n. PT AUTOTRADING INVESTASI</div>
-          </div>
-          <button type="button" onclick="copyToClipboard('8271928374', 'Nomor Rekening BCA berhasil disalin!')" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
-            📋 Salin
-          </button>
-        </div>
-
-        <!-- Rekening Mandiri -->
-        <div style="background: #FFFFFF; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-size: 11px; font-weight: 800; color: #0F172A;">Bank Mandiri</div>
-            <div style="font-size: 13.5px; font-weight: 900; color: #1E3A8A; letter-spacing: 0.5px;">1370029384721</div>
-            <div style="font-size: 10px; color: #64748B;">a.n. PT AUTOTRADING INVESTASI</div>
-          </div>
-          <button type="button" onclick="copyToClipboard('1370029384721', 'Nomor Rekening Mandiri berhasil disalin!')" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
-            📋 Salin
-          </button>
-        </div>
-
-        <!-- Rekening BRI -->
-        <div style="background: #FFFFFF; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-size: 11px; font-weight: 800; color: #0F172A;">Bank BRI</div>
-            <div style="font-size: 13.5px; font-weight: 900; color: #1E3A8A; letter-spacing: 0.5px;">034101002938531</div>
-            <div style="font-size: 10px; color: #64748B;">a.n. PT AUTOTRADING INVESTASI</div>
-          </div>
-          <button type="button" onclick="copyToClipboard('034101002938531', 'Nomor Rekening BRI berhasil disalin!')" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
-            📋 Salin
-          </button>
-        </div>
-
-        <!-- Scan QRIS Resmi -->
-        <div style="background: #FFFFFF; border: 1px solid #FCD34D; border-radius: 8px; padding: 10px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 800; color: #0F172A; margin-bottom: 4px;">Atau Scan Barcode QRIS Resmi (NMID: ID1029384756201):</div>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2" alt="QRIS AUTOTRADING" style="width: 170px; height: 170px; margin: 4px auto; display: block; border-radius: 6px; border: 1px solid #E2E8F0;">
-          <div style="font-size: 10px; color: #64748B; margin-top: 4px;">Mendukung seluruh Bank &amp; E-Wallet Indonesia (BCA, Mandiri, BRI, BNI, OVO, Dana, GoPay)</div>
-        </div>
+        <!-- Rendered dynamically via renderOfficialPaymentAccountsHtml() -->
       </div>
 
       <!-- 8. Persetujuan S&K -->
@@ -1708,36 +1646,38 @@
         Milestone Target Akumulasi Portofolio:
       </p>
 
-      <div class="reward-tier-card">
-        <div>
-          <div class="reward-tier-title">🥉 Tier Bronze (10 Gram)</div>
-          <div class="reward-tier-desc">Bonus Hadiah: <strong>+0.25 Gram Aset</strong></div>
+      <div id="hadiahMilestoneTiersContainer">
+        <div class="reward-tier-card">
+          <div>
+            <div class="reward-tier-title">🥉 Tier Bronze (10 Gram)</div>
+            <div class="reward-tier-desc">Bonus Hadiah: <strong>+0.25 Gram Aset</strong></div>
+          </div>
+          <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('bronze')">Klaim</button>
         </div>
-        <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('bronze')">Klaim</button>
-      </div>
 
-      <div class="reward-tier-card">
-        <div>
-          <div class="reward-tier-title">🥈 Tier Silver (25 Gram)</div>
-          <div class="reward-tier-desc">Bonus Hadiah: <strong>+0.75 Gram Aset</strong></div>
+        <div class="reward-tier-card">
+          <div>
+            <div class="reward-tier-title">🥈 Tier Silver (25 Gram)</div>
+            <div class="reward-tier-desc">Bonus Hadiah: <strong>+0.75 Gram Aset</strong></div>
+          </div>
+          <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('silver')">Klaim</button>
         </div>
-        <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('silver')">Klaim</button>
-      </div>
 
-      <div class="reward-tier-card">
-        <div>
-          <div class="reward-tier-title">🥇 Tier Gold (50 Gram)</div>
-          <div class="reward-tier-desc">Bonus Hadiah: <strong>+2.00 Gram Aset</strong></div>
+        <div class="reward-tier-card">
+          <div>
+            <div class="reward-tier-title">🥇 Tier Gold (50 Gram)</div>
+            <div class="reward-tier-desc">Bonus Hadiah: <strong>+2.00 Gram Aset</strong></div>
+          </div>
+          <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('gold')">Klaim</button>
         </div>
-        <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('gold')">Klaim</button>
-      </div>
 
-      <div class="reward-tier-card">
-        <div>
-          <div class="reward-tier-title">💎 Tier Platinum (100 Gram)</div>
-          <div class="reward-tier-desc">Bonus Hadiah: <strong>+5.00 Gram Aset</strong></div>
+        <div class="reward-tier-card">
+          <div>
+            <div class="reward-tier-title">💎 Tier Platinum (100 Gram)</div>
+            <div class="reward-tier-desc">Bonus Hadiah: <strong>+5.00 Gram Aset</strong></div>
+          </div>
+          <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('platinum')">Klaim</button>
         </div>
-        <button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah('platinum')">Klaim</button>
       </div>
 
       <div style="font-size: 11px; text-align: center; color: #64748B; margin-top: 10px;">
@@ -1788,6 +1728,7 @@
       wallet_balance: 0,
       points: 0,
       last_update: '',
+      payment_gateways: null,
       transactions: []
     };
     let currentTxFilter = 'all';
@@ -1946,6 +1887,84 @@
 
     function formatNumber(num, dec = 3) {
       return Number(num || 0).toLocaleString('id-ID', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function getOfficialPaymentGateways() {
+      const gws = (currentData && currentData.payment_gateways) || {};
+      let banks = Array.isArray(gws.banks) ? gws.banks : [];
+      if (banks.length === 0) {
+        banks = [
+          { id: 'bca', name: 'Bank Central Asia (BCA)', accountNo: '8271928374', accountName: 'PT AUTOTRADING INVESTASI', active: true },
+          { id: 'mandiri', name: 'Bank Mandiri', accountNo: '1370029384721', accountName: 'PT AUTOTRADING INVESTASI', active: true },
+          { id: 'bri', name: 'Bank BRI', accountNo: '034101002938531', accountName: 'PT AUTOTRADING INVESTASI', active: true }
+        ];
+      }
+      const qris = (gws.qris && typeof gws.qris === 'object') ? gws.qris : {
+        active: true,
+        merchantName: 'AUTOTRADING OFFICIAL QRIS',
+        nmid: 'ID1029384756201',
+        imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2'
+      };
+      return { banks: banks.filter(b => b.active !== false), qris };
+    }
+
+    function renderOfficialPaymentAccountsHtml(options = {}) {
+      const { banks, qris } = getOfficialPaymentGateways();
+      const title = options.title || 'Rekening Tujuan Transfer Resmi & QRIS:';
+      const subtitle = options.subtitle || 'Silakan transfer ke salah satu rekening Bank resmi atau scan barcode QRIS berikut:';
+      const isYellow = options.theme === 'yellow';
+
+      const cardBg = '#FFFFFF';
+      const cardBorder = isYellow ? '#FCD34D' : '#CBD5E1';
+      const titleColor = isYellow ? '#B45309' : '#0F172A';
+      const subColor = isYellow ? '#92400E' : '#64748B';
+
+      let html = `
+        <div style="margin-bottom: 8px;">
+          <div style="font-size: 12px; font-weight: 800; color: ${titleColor}; margin-bottom: 4px;">💳 ${title}</div>
+          <div style="font-size: 11px; color: ${subColor}; line-height: 1.4;">${subtitle}</div>
+        </div>
+      `;
+
+      if (banks.length > 0) {
+        banks.forEach(b => {
+          html += `
+            <div style="background: ${cardBg}; border: 1px solid ${cardBorder}; border-radius: 9px; padding: 9px 11px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+              <div>
+                <div style="font-size: 11px; font-weight: 800; color: #1E293B;">${escapeHtml(b.name)}</div>
+                <div style="font-size: 13.5px; font-weight: 900; color: #1E3A8A; font-family: monospace; letter-spacing: 0.5px; margin: 2px 0;">${escapeHtml(b.accountNo)}</div>
+                <div style="font-size: 10px; color: #64748B;">a.n. ${escapeHtml(b.accountName)}</div>
+              </div>
+              <button type="button" onclick="copyToClipboard('${escapeHtml(b.accountNo)}', 'Nomor rekening ${escapeHtml(b.name)} berhasil disalin!')" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 7px; cursor: pointer;">
+                📋 Salin
+              </button>
+            </div>
+          `;
+        });
+      }
+
+      if (qris && qris.active !== false && qris.imageUrl) {
+        html += `
+          <div style="background: ${cardBg}; border: 1px solid ${cardBorder}; border-radius: 9px; padding: 10px; text-align: center; margin-top: 6px;">
+            <div style="font-size: 11px; font-weight: 800; color: #0F172A; margin-bottom: 3px;">Atau Scan Barcode QRIS Resmi (${escapeHtml(qris.merchantName || 'AUTOTRADING OFFICIAL QRIS')}):</div>
+            ${qris.nmid ? `<div style="font-size: 10px; color: #64748B; font-family: monospace; margin-bottom: 4px;">NMID: ${escapeHtml(qris.nmid)}</div>` : ''}
+            <img src="${escapeHtml(qris.imageUrl)}" alt="QRIS AUTOTRADING" style="width: 170px; height: 170px; margin: 4px auto; display: block; border-radius: 6px; border: 1px solid #E2E8F0; object-fit: contain; background: #fff;">
+            <div style="font-size: 9.5px; color: #64748B; margin-top: 5px;">Mendukung BCA, Mandiri, BRI, BNI, OVO, Dana, GoPay, ShopeePay &amp; Seluruh Bank Indonesia</div>
+          </div>
+        `;
+      }
+
+      return html;
     }
 
     async function loadAssetData() {
@@ -2148,7 +2167,7 @@
 
     function renderSavingsProgress() {
       const isGold = (currentAssetType === 'gold');
-      const targetSavings = isGold ? 10 : 50;
+      const targetSavings = 50; // Target tabungan fisik disamakan 50 Gram untuk perak dan emas
       const currentSavings = isGold ? Number(currentData.gold_savings_balance || 0) : Number(currentData.silver_savings_balance || 0);
       const progressPct = Math.min(100, Math.round((currentSavings / targetSavings) * 100));
       const remainingGrams = Math.max(0, targetSavings - currentSavings);
@@ -2219,6 +2238,8 @@
         const buyPrice = isGoldContract ? (currentData.gold_buy_price || 1350000) : (currentData.silver_buy_price || 18500);
         const dailyRp = Math.round(dailyYield * buyPrice);
         const totalYieldRp = Math.round(totalYield * buyPrice);
+        const accYield = Math.min(totalYield, Math.max(Number(c.accumulated_yield_grams) || 0, Math.round(elapsedDays * dailyYield * 10000) / 10000));
+        const accYieldRp = Math.round(accYield * buyPrice);
 
         const fmtStartDate = c.start_date ? c.start_date.substring(0, 16) : '-';
         const fmtEndDate = c.end_date ? c.end_date.substring(0, 16) : '-';
@@ -2251,6 +2272,18 @@
                 <span>Mulai: ${fmtStartDate}</span>
                 <span>${isFinished ? 'Telah Berakhir' : `Sisa ${remainingDays} Hari lagi`}</span>
                 <span>Selesai: ${fmtEndDate}</span>
+              </div>
+            </div>
+
+            <!-- Hasil Berjalan Terkumpul yang sinkron dengan Hasil Cashback -->
+            <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span style="font-size:11.5px; color:#1E40AF; font-weight:800;">Hasil Berjalan Terkumpul (Hari ke-${elapsedDays}):</span>
+                <div style="font-size:10px; color:#3B82F6; margin-top:2px;">Akumulasi otomatis masuk ke Saldo Hasil Cashback</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:900; color:#1D4ED8; font-size:13.5px;">+${formatNumber(accYield, 4)} Gr</div>
+                <div style="font-size:10px; color:#1E40AF; font-weight:600;">Est. +${formatRupiah(accYieldRp)}</div>
               </div>
             </div>
 
@@ -2374,7 +2407,8 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #64748B; margin-top: 4px;">
                   <span>Dividen: +${formatNumber(dailyYieldGrams, 4)} gr/hr</span>
-                  <span style="font-weight: 700; color: #2563EB;">Total Hasil Akhir: +${formatNumber(totalYieldGrams, 4)} gr</span>
+                  <span style="font-weight: 700; color: #1D4ED8;">Terkumpul: +${formatNumber(Math.min(totalYieldGrams, Math.round(elapsedDays * dailyYieldGrams * 10000) / 10000), 4)} gr</span>
+                  <span style="font-weight: 700; color: #2563EB;">Hasil Akhir: +${formatNumber(totalYieldGrams, 4)} gr</span>
                 </div>
               </div>
             </div>
@@ -2383,7 +2417,7 @@
 
         if (t.type === 'savings') {
           // Task 2: Riwayat transaksi tabungan progress aktif menabung sampai selesai
-          const targetSavings = isGoldTx ? 10 : 50;
+          const targetSavings = 50; // Target tabungan fisik disamakan 50 Gram untuk perak dan emas
           const currentSavingsBal = isGoldTx ? Number(currentData.gold_savings_balance || 0) : Number(currentData.silver_savings_balance || 0);
           const savingsPct = Math.min(100, Math.round((currentSavingsBal / targetSavings) * 100));
 
@@ -2562,53 +2596,12 @@
               <div style="background:#FFFBEB; border:1.5px solid #F59E0B; border-radius:12px; padding:12px; margin-top:12px;">
                 <div style="text-align:center; margin-bottom:8px;">
                   <span style="font-size:12px; font-weight:800; color:#B45309;">⚠️ Menunggu Pembayaran DP (Transfer Bank / QRIS)</span>
-                  <div style="font-size:11px; color:#92400E; margin-top:4px; line-height:1.4;">
-                    Silakan transfer Uang Muka DP senilai <strong style="font-size:13.5px; color:#B45309;">${formatRupiah(t.dp_amount)}</strong> ke rekening BANK resmi atau scan barcode QRIS platform di bawah ini:
-                  </div>
                 </div>
-
-                <!-- Rekening BCA -->
-                <div style="background:#FFFFFF; border:1px solid #FCD34D; border-radius:8px; padding:8px 10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-                  <div>
-                    <div style="font-size:10.5px; font-weight:800; color:#0F172A;">Bank Central Asia (BCA)</div>
-                    <div style="font-size:13px; font-weight:900; color:#1E3A8A; letter-spacing:0.5px;">8271928374</div>
-                    <div style="font-size:9.5px; color:#64748B;">a.n. PT AUTOTRADING INVESTASI</div>
-                  </div>
-                  <button type="button" onclick="copyToClipboard('8271928374', 'Nomor Rekening BCA disalin!')" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:6px; cursor:pointer;">
-                    📋 Salin
-                  </button>
-                </div>
-
-                <!-- Rekening Mandiri -->
-                <div style="background:#FFFFFF; border:1px solid #FCD34D; border-radius:8px; padding:8px 10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-                  <div>
-                    <div style="font-size:10.5px; font-weight:800; color:#0F172A;">Bank Mandiri</div>
-                    <div style="font-size:13px; font-weight:900; color:#1E3A8A; letter-spacing:0.5px;">1370029384721</div>
-                    <div style="font-size:9.5px; color:#64748B;">a.n. PT AUTOTRADING INVESTASI</div>
-                  </div>
-                  <button type="button" onclick="copyToClipboard('1370029384721', 'Nomor Rekening Mandiri disalin!')" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:6px; cursor:pointer;">
-                    📋 Salin
-                  </button>
-                </div>
-
-                <!-- Rekening BRI -->
-                <div style="background:#FFFFFF; border:1px solid #FCD34D; border-radius:8px; padding:8px 10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                  <div>
-                    <div style="font-size:10.5px; font-weight:800; color:#0F172A;">Bank BRI</div>
-                    <div style="font-size:13px; font-weight:900; color:#1E3A8A; letter-spacing:0.5px;">034101002938531</div>
-                    <div style="font-size:9.5px; color:#64748B;">a.n. PT AUTOTRADING INVESTASI</div>
-                  </div>
-                  <button type="button" onclick="copyToClipboard('034101002938531', 'Nomor Rekening BRI disalin!')" style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:6px; cursor:pointer;">
-                    📋 Salin
-                  </button>
-                </div>
-
-                <!-- QRIS Image Box -->
-                <div style="background:#FFFFFF; border:1px solid #FCD34D; border-radius:8px; padding:8px; text-align:center; margin-bottom:8px;">
-                  <div style="font-size:10.5px; font-weight:800; color:#0F172A; margin-bottom:4px;">Scan Barcode QRIS Resmi (NMID: ID1029384756201):</div>
-                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=00020101021226580016ID.CO.QRIS.WWW01189360001400001029385204581253033605802ID5920AUTOTRADING_OFFICIAL6007JAKARTA61051234062070703A016304E8A2" alt="QRIS AUTOTRADING" style="width:140px; height:140px; margin:2px auto; display:block; border-radius:6px; border:1px solid #E2E8F0;">
-                  <div style="font-size:9.5px; color:#64748B; margin-top:2px;">BCA, Mandiri, BRI, BNI, OVO, GoPay, Dana, ShopeePay</div>
-                </div>
+                ${renderOfficialPaymentAccountsHtml({
+                  title: 'Rekening Pembayaran DP:',
+                  subtitle: 'Silakan transfer Uang Muka DP senilai <strong style="font-size:13px; color:#B45309;">' + formatRupiah(t.dp_amount) + '</strong> ke salah satu rekening BANK resmi atau scan barcode QRIS platform di bawah ini:',
+                  theme: 'yellow'
+                })}
 
                 <div style="text-align:center;">
                   <a href="https://wa.me/6281234567890?text=${encodeURIComponent('Halo Admin CS AUTOTRADING, saya ingin konfirmasi transfer DP Cicilan Logam ID #' + t.id + ' sebesar ' + formatRupiah(t.dp_amount))}" target="_blank" class="btn" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; background:#10B981; color:#fff; font-size:11.5px; font-weight:700; padding:8px 16px; border-radius:8px; text-decoration:none; width:100%; box-sizing:border-box;">
@@ -2845,7 +2838,16 @@
           cardDepo.style.background = '#EFF6FF';
         }
         if (secWallet) secWallet.style.display = 'none';
-        if (secDepo) secDepo.style.display = 'block';
+        if (secDepo) {
+          secDepo.style.display = 'block';
+          const bankBox = document.getElementById('buyDirectDepoBankContainer');
+          if (bankBox) {
+            bankBox.innerHTML = renderOfficialPaymentAccountsHtml({
+              title: 'Rekening Resmi Beli Aset:',
+              subtitle: 'Silakan transfer senilai tagihan ke salah satu rekening Bank resmi atau scan QRIS berikut:'
+            });
+          }
+        }
         if (btnConfirm) {
           btnConfirm.innerText = 'Kirim Tiket & Pesan Aset via Transfer Bank';
           btnConfirm.disabled = false;
@@ -2870,6 +2872,13 @@
       document.getElementById('beliModal').style.display = 'flex';
       buyDepoUniqueCode = Math.floor(100 + Math.random() * 899);
       selectBuyPayMethod('wallet');
+      const bankBox = document.getElementById('buyDirectDepoBankContainer');
+      if (bankBox) {
+        bankBox.innerHTML = renderOfficialPaymentAccountsHtml({
+          title: 'Rekening Resmi Beli Aset:',
+          subtitle: 'Silakan transfer senilai tagihan ke salah satu rekening Bank resmi atau scan QRIS berikut:'
+        });
+      }
       syncBeliFromGrams();
     }
     function closeBeliModal() {
@@ -2975,15 +2984,17 @@
           const res = await fetch(getApiUrl('buy_asset_direct_deposit'), getAuthFetchOptions('POST', {
             metal_type: currentAssetType,
             grams: grams,
-            payment_channel: 'seabank',
+            payment_channel: 'bank_transfer',
             sender_name: senderName
           }));
           const json = await res.json();
           handleApiSessionToken(json);
           if (json.success) {
+            const { banks } = getOfficialPaymentGateways();
+            const bankListSummary = banks.map(b => `• ${b.name}: ${b.accountNo} (a.n. ${b.accountName})`).join('\n');
             showAppPopup({
               title: 'Tiket Pembayaran Berhasil Dibuat!',
-              message: 'Tiket pemesanan ' + grams + ' gr ' + (isGold ? 'Emas' : 'Perak') + ' telah dibuat (' + json.data.ticket_id + ').\n\nSilakan transfer TEPAT senilai:\n' + formatRupiah(json.data.final_amount) + '\n\nke rekening SEABANK: 901284135116 (a/n EDY IRAWAN).\n\nLogam fisik akan langsung dikreditkan ke saldo akun Anda setelah dana diterima.',
+              message: 'Tiket pemesanan ' + grams + ' gr ' + (isGold ? 'Emas' : 'Perak') + ' telah dibuat (' + json.data.ticket_id + ').\n\nSilakan transfer TEPAT senilai:\n' + formatRupiah(json.data.final_amount) + '\n\nke Rekening Bank Resmi AUTOTRADING:\n' + bankListSummary + '\n\natau scan QRIS platform resmi di formulir.\n\nLogam fisik akan langsung dikreditkan ke saldo akun Anda setelah dana diterima.',
               type: 'success',
               onConfirm: () => { closeBeliModal(); loadAssetData(); }
             });
@@ -3174,7 +3185,7 @@
       if (!checkMemberAccess()) return;
       const isGold = (currentAssetType === 'gold');
       const bal = isGold ? Number(currentData.gold_savings_balance || 0) : Number(currentData.silver_savings_balance || 0);
-      const target = isGold ? 10 : 50;
+      const target = 50; // Target tabungan fisik disamakan 50 Gram untuk perak dan emas
       const pct = Math.min(100, Math.round((bal / target) * 100));
       document.getElementById('tabunganProgressLabel').innerText = formatNumber(bal, 2) + ' / ' + target + ' Gram (' + pct + '%)';
       document.getElementById('tabunganProgressBar').style.width = pct + '%';
@@ -3282,7 +3293,16 @@
     function toggleCicilDpTransferInfo(method) {
       const box = document.getElementById('cicilDpTransferInfoBox');
       if (box) {
-        box.style.display = (method === 'transfer') ? 'block' : 'none';
+        if (method === 'transfer') {
+          box.innerHTML = renderOfficialPaymentAccountsHtml({
+            title: 'Instruksi Transfer Uang Muka (DP 20%):',
+            subtitle: 'Silakan transfer pembayaran DP ke salah satu nomor rekening Bank resmi atau scan QRIS berikut:',
+            theme: 'yellow'
+          });
+          box.style.display = 'block';
+        } else {
+          box.style.display = 'none';
+        }
       }
     }
 
@@ -3453,6 +3473,57 @@
           btnClaim.innerText = '🎁 Klaim Bonus Hadiah Sekarang';
           btnClaim.style.background = '';
         }
+      }
+
+      // Render Milestone Tier Cards (Bronze, Silver, Gold, Platinum)
+      const tiersContainer = document.getElementById('hadiahMilestoneTiersContainer');
+      if (tiersContainer) {
+        const defaultSilTiers = {
+          bronze: { req: 10, bonus: 0.25 },
+          silver: { req: 25, bonus: 0.75 },
+          gold: { req: 50, bonus: 2.0 },
+          platinum: { req: 100, bonus: 5.0 }
+        };
+        const defaultGoldTiers = {
+          bronze: { req: 5, bonus: 0.05 },
+          silver: { req: 10, bonus: 0.15 },
+          gold: { req: 25, bonus: 0.5 },
+          platinum: { req: 50, bonus: 1.5 }
+        };
+        const activeTiers = isGold
+          ? (currentData.milestone_tiers_gold || defaultGoldTiers)
+          : (currentData.milestone_tiers_silver || defaultSilTiers);
+
+        const claimedMap = (currentData.claimed_milestones && currentData.claimed_milestones[currentAssetType]) || {};
+
+        const tierDefs = [
+          { key: 'bronze', name: 'Tier Bronze', icon: '🥉' },
+          { key: 'silver', name: 'Tier Silver', icon: '🥈' },
+          { key: 'gold', name: 'Tier Gold', icon: '🥇' },
+          { key: 'platinum', name: 'Tier Platinum', icon: '💎' }
+        ];
+
+        tiersContainer.innerHTML = tierDefs.map(t => {
+          const cfg = activeTiers[t.key] || { req: 0, bonus: 0 };
+          const reqGram = Number(cfg.req || 0);
+          const bonusGram = Number(cfg.bonus || 0);
+          const isClaimed = !!claimedMap[t.key];
+
+          let btnHtml = '';
+          if (isClaimed) {
+            btnHtml = '<button type="button" class="reward-tier-btn" style="background:#64748B; cursor:default;" disabled>✅ Diklaim</button>';
+          } else {
+            btnHtml = '<button type="button" class="reward-tier-btn" onclick="submitKlaimHadiah(\'' + t.key + '\')">Klaim</button>';
+          }
+
+          return '<div class="reward-tier-card">' +
+            '<div>' +
+              '<div class="reward-tier-title">' + t.icon + ' ' + t.name + ' (' + reqGram + ' Gram)</div>' +
+              '<div class="reward-tier-desc">Bonus Hadiah: <strong>+' + bonusGram + ' Gram ' + rewardMetal + '</strong></div>' +
+            '</div>' +
+            btnHtml +
+          '</div>';
+        }).join('');
       }
 
       document.getElementById('modalHadiah').style.display = 'flex';
